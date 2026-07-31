@@ -19,17 +19,21 @@ readonly WORKBENCH_ENV_FILE="/root/.workbench-env"
 # been observed taking ~3 minutes on a fresh VM; give it comfortable headroom.
 readonly MAX_WAIT_SECONDS=600
 
-waited=0
-while [[ ! -f "${WORKBENCH_ENV_FILE}" && "${waited}" -lt "${MAX_WAIT_SECONDS}" ]]; do
-  sleep 1
-  waited=$((waited + 1))
-done
-
-if [[ -f "${WORKBENCH_ENV_FILE}" ]]; then
-  # shellcheck disable=SC1090
-  source "${WORKBENCH_ENV_FILE}"
+if [[ "${SKIP_WORKBENCH_WAIT:-false}" == "true" ]]; then
+  echo "SKIP_WORKBENCH_WAIT=true; not waiting for ${WORKBENCH_ENV_FILE} (local dev mode)." >&2
 else
-  echo "WARNING: ${WORKBENCH_ENV_FILE} not found after ${MAX_WAIT_SECONDS}s; starting without Workbench environment variables." >&2
+  waited=0
+  while [[ ! -f "${WORKBENCH_ENV_FILE}" && "${waited}" -lt "${MAX_WAIT_SECONDS}" ]]; do
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  if [[ -f "${WORKBENCH_ENV_FILE}" ]]; then
+    # shellcheck disable=SC1090
+    source "${WORKBENCH_ENV_FILE}"
+  else
+    echo "WARNING: ${WORKBENCH_ENV_FILE} not found after ${MAX_WAIT_SECONDS}s; starting without Workbench environment variables." >&2
+  fi
 fi
 
 exec java -jar /app/app.jar

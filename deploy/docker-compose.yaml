@@ -12,6 +12,11 @@ services:
     # here at container start -- they're fetched by post-startup.sh only
     # after the container is already running (see .devcontainer.json and
     # entrypoint.sh), so they can't be passed via this environment: block.
+    environment:
+      # Set to "true" for local dev to skip entrypoint.sh's wait for
+      # /root/.workbench-env, which is only ever created by Workbench's
+      # postCreateCommand and never appears on a plain local `docker compose up`.
+      - SKIP_WORKBENCH_WAIT=${SKIP_WORKBENCH_WAIT:-false}
     volumes:
       - .:/workspace:cached
     # The port specified here will be forwarded and accessible from the
