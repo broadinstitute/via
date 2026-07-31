@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variant Interpretation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --text-primary: #22245B;
+    --text-body: #2B2B33;
+    --text-secondary: #5B5F73;
+    --text-muted: #9598A6;
+    --text-accent: #3B7DBF;
+    --accent-orange: #E8834E;
+    --accent-orange-hover: #D9723D;
+    --surface-0: #F6F5F2;
+    --surface-1: #FBFAF8;
+    --surface-2: #FFFFFF;
+    --border: #E2E1DC;
+    --border-strong: #C7C6C0;
+    --bg-accent: #D8E6EE;
+    --radius: 8px;
+  }
+
+  body {
+    font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--surface-0);
+    color: var(--text-body);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .hero {
+    position: relative;
+    padding: 48px 20px 90px;
+    overflow: hidden;
+    background-image: url('/Users/mbemis/Desktop/imputation-top-background.png');
+    background-size: cover;
+    background-position: top center;
+  }
+
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15,20,50,0.45) 0%, rgba(15,20,50,0.55) 100%);
+  }
+
+  .hero-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 10px;
+    letter-spacing: -0.3px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+
+  .hero p {
+    font-size: 13.5px;
+    color: rgba(255,255,255,0.92);
+    max-width: 460px;
+    margin: 0 auto;
+    line-height: 1.6;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.2);
+  }
+
+  .main {
+    max-width: 900px;
+    margin: -54px auto 0;
+    padding: 0 20px 48px;
+    position: relative;
+    z-index: 3;
+  }
+
+  .steps-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: stretch;
+    position: relative;
+  }
+
+  .connector {
+    position: absolute;
+    top: 50%;
+    left: calc(100% - 340px);
+    width: 20px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-accent);
+    z-index: 4;
+  }
+
+  .step-panel {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(34,36,91,0.14);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .step-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .step-number {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--text-accent);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-header h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-accent);
+    flex: 1;
+  }
+
+  .tag {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+  }
+  .tag.limit { color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); }
+  .tag.optional { color: var(--text-accent); background: var(--bg-accent); }
+
+  .step-body {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .step-body textarea,
+  .step-body input {
+    width: 100%;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Courier New', monospace;
+    color: var(--text-body);
+    background: var(--surface-1);
+  }
+
+  .step-body textarea:focus,
+  .step-body input:focus {
+    outline: none;
+    border-color: var(--text-accent);
+    background: var(--surface-2);
+  }
+
+  .step-body textarea {
+    resize: vertical;
+    min-height: 210px;
+    line-height: 1.6;
+    flex: 1;
+  }
+
+  .field-hint {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .value-callout {
+    background: var(--bg-accent);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 9px 12px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .value-callout svg { flex-shrink: 0; margin-top: 2px; color: var(--text-accent); }
+  .value-callout b { color: var(--text-primary); }
+
+  .search-btn {
+    width: 100%;
+    background: var(--accent-orange);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 13px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .search-btn:hover { background: var(--accent-orange-hover); }
+  .search-btn svg { flex-shrink: 0; }
+
+  @media (max-width: 720px) {
+    .steps-row { grid-template-columns: 1fr; }
+    .connector { display: none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-inner">
+      <h1>Variant Interpretation</h1>
+      <p>Rule candidate variants in or out by comparing them against All of Us's full participant cohort, no coding required.</p>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="steps-row">
+      <div class="step-panel">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <h2>Candidate variants</h2>
+          <span class="tag limit">limit 50</span>
+        </div>
+        <div class="step-body">
+          <textarea id="variantsInput" placeholder="8-11708582-C-T&#10;8-11708590-G-GAA&#10;8-11708598-T-C"></textarea>
+          <div class="field-hint">One variant per line, entered as chr-pos-ref-alt (e.g. 8-11708582-C-T).</div>
+        </div>
+      </div>
+
+      <div class="step-panel">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <h2>Phenotype</h2>
+          <span class="tag optional">Optional</span>
+        </div>
+        <div class="step-body">
+          <input type="text" id="hpoInput" placeholder="e.g. HP:0001636">
+          <div class="field-hint">Enter an HPO term (e.g. HP:0001636).</div>
+          <div class="value-callout">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7c.5.4.9 1 .9 1.7v.6h6.2v-.6c0-.7.4-1.3.9-1.7A7 7 0 0 0 12 2Z"></path></svg>
+            <span><b>Unlock the full power of All of Us by providing a phenotype.</b> See how often each variant shows up specifically among All of Us participants who share this phenotype.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <button class="search-btn" onclick="runSearch()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      Search
+    </button>
+
+  </div>
+
+<script>
+  function runSearch() {
+    const variants = document.getElementById('variantsInput').value.trim();
+    const hpo = document.getElementById('hpoInput').value.trim();
+    if (!variants) {
+      alert('Please enter at least one candidate variant.');
+      return;
+    }
+    alert('In the real app, this would run the search and take you to the results screen with:\n\nVariants:\n' + variants + (hpo ? '\n\nPhenotype: ' + hpo : '\n\n(No phenotype entered — showing cohort-wide data only.)'));
+  }
+</script>
+
+</body>
+</html>

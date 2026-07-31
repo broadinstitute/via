@@ -1,0 +1,17 @@
+# Backend (Gradle)
+api/build/
+api/.gradle/
+# Populated at container-build time by copying the built frontend in.
+api/src/main/resources/static/
+
+# Frontend (Node/Vite)
+ui/node_modules/
+ui/dist/
+ui/*.tsbuildinfo
+
+# IDE
+.idea/
+*.iml
+
+# macOS
+.DS_Store

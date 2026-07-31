@@ -1,0 +1,24 @@
+.panel {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(34, 36, 91, 0.06);
+}
+
+.header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-1);
+}
+
+.header h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-accent);
+}

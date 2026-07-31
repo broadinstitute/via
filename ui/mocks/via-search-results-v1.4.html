@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variant Interpretation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    /* All of Us-inspired palette */
+    --text-primary: #22245B;      /* navy indigo — headings, big numbers */
+    --text-body: #2B2B33;         /* dense table/body text */
+    --text-secondary: #5B5F73;    /* labels */
+    --text-muted: #9598A6;        /* least emphasis */
+    --text-accent: #3B7DBF;       /* medium blue — card titles, links, badges */
+    --text-success: #3B6D11;
+    --text-warning: #854F0B;
+    --text-danger: #A32D2D;
+    --accent-orange: #E8834E;     /* primary CTA, used sparingly */
+    --accent-orange-hover: #D9723D;
+    --surface-0: #F6F5F2;         /* page background */
+    --surface-1: #FBFAF8;         /* panel header background */
+    --surface-2: #FFFFFF;         /* card background */
+    --border: #E2E1DC;
+    --border-strong: #C7C6C0;
+    --bg-accent: #D8E6EE;         /* pale blue pill background */
+    --bg-success: #EAF3DE;
+    --bg-warning: #FAEEDA;
+    --bg-danger: #FCEBEB;
+    --radius: 8px;
+  }
+
+  body {
+    font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--surface-0);
+    color: var(--text-body);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .topbar .case-info { display: flex; align-items: center; gap: 20px; }
+  .topbar .case-info span b { color: var(--text-primary); font-weight: 600; }
+
+  .search-lead {
+    font-weight: 600;
+    color: var(--text-primary);
+    padding-right: 16px;
+    border-right: 1px solid var(--border);
+  }
+
+  .search-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+  }
+
+  .value-badge {
+    background: var(--bg-accent);
+    color: var(--text-accent);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .value-badge.mono-val {
+    font-family: 'SF Mono', 'Courier New', monospace;
+  }
+
+  .edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-accent);
+    cursor: pointer;
+  }
+
+  .edit-btn:hover { background: var(--bg-accent); }
+
+  .search-drawer {
+    display: none;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+  }
+
+  .search-drawer.open { display: block; }
+
+  .drawer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .drawer-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+
+  .drawer-field textarea,
+  .drawer-field input {
+    width: 100%;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--text-body);
+    background: var(--surface-2);
+  }
+
+  .drawer-field textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+
+  .drawer-field .hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
+  .drawer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .drawer-btn-secondary {
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .drawer-btn-secondary:hover { background: var(--surface-1); }
+
+  .drawer-btn-primary {
+    background: var(--accent-orange);
+    border: none;
+    border-radius: var(--radius);
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+  }
+
+  .drawer-btn-primary:hover { background: var(--accent-orange-hover); }
+
+  .user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .user svg { color: var(--text-accent); flex-shrink: 0; }
+
+  .main {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .top-row {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(34, 36, 91, 0.06);
+  }
+
+  .panel-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface-1);
+  }
+
+  .panel-header h2 { font-size: 13px; font-weight: 600; color: var(--text-accent); }
+  .panel-header .sub { font-size: 11px; color: var(--text-muted); }
+  .n-count { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+  .custom-scroll-wrap { position: relative; }
+
+  .table-scroll {
+    overflow: auto;
+    max-height: 425px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-right: 12px;
+  }
+  .table-scroll::-webkit-scrollbar { display: none; }
+
+  .fake-track {
+    position: absolute;
+    top: 0;
+    right: 4px;
+    width: 6px;
+    height: 100%;
+    background: var(--border);
+    border-radius: 3px;
+  }
+  .fake-thumb {
+    position: absolute;
+    right: 4px;
+    width: 6px;
+    background: var(--text-accent);
+    border-radius: 3px;
+    transition: background 0.15s ease;
+  }
+  .custom-scroll-wrap:hover .fake-thumb { background: #2E63A0; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-1);
+    text-align: left;
+    padding: 8px 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    z-index: 1;
+  }
+
+  /* Column-group styling for the cohort-wide table (AoU vs gnomAD) */
+  .cohort-table { --tint-aou: #EBF3FA; --tint-gnomad: #F1F0EC; }
+
+  .cohort-table .group-row th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cohort-table .group-row th.group-aou {
+    background: var(--tint-aou);
+    color: var(--text-accent);
+    border-left: 2px solid var(--text-accent);
+  }
+
+  .group-qualifier {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+
+  .cohort-table .group-row th.group-gnomad {
+    background: var(--tint-gnomad);
+    color: var(--text-secondary);
+    border-left: 2px solid var(--border-strong);
+  }
+
+  .cohort-table .column-row th { top: 24px; }
+
+  .cohort-table .column-row th:nth-child(5),
+  .cohort-table .column-row th:nth-child(6),
+  .cohort-table .column-row th:nth-child(7) {
+    background: var(--tint-aou);
+  }
+
+  .cohort-table .column-row th:nth-child(8),
+  .cohort-table .column-row th:nth-child(9),
+  .cohort-table .column-row th:nth-child(10) {
+    background: var(--tint-gnomad);
+  }
+
+  .cohort-table .column-row th:nth-child(5) { border-left: 2px solid var(--text-accent); }
+  .cohort-table .column-row th:nth-child(8) { border-left: 2px solid var(--border-strong); }
+
+  .cohort-table tbody tr:not(.detail-row) td:nth-child(5),
+  .cohort-table tbody tr:not(.detail-row) td:nth-child(6),
+  .cohort-table tbody tr:not(.detail-row) td:nth-child(7) {
+    background: var(--tint-aou);
+  }
+
+  .cohort-table tbody tr:not(.detail-row) td:nth-child(8),
+  .cohort-table tbody tr:not(.detail-row) td:nth-child(9),
+  .cohort-table tbody tr:not(.detail-row) td:nth-child(10) {
+    background: var(--tint-gnomad);
+  }
+
+  .cohort-table tbody tr:not(.detail-row) td:nth-child(5) { border-left: 2px solid var(--text-accent); }
+  .cohort-table tbody tr:not(.detail-row) td:nth-child(8) { border-left: 2px solid var(--border-strong); }
+
+  tbody td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-body);
+  }
+
+  tbody tr:hover { background: var(--surface-1); }
+
+  .mono { font-family: 'SF Mono', 'Courier New', monospace; font-size: 11.5px; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .tag-path { background: var(--bg-danger); color: var(--text-danger); }
+  .tag-vus { background: var(--bg-warning); color: var(--text-warning); }
+  .tag-benign { background: var(--bg-success); color: var(--text-success); }
+
+  .clinvar-cell { display: inline-flex; align-items: center; gap: 6px; }
+  .icon-link-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-2);
+    border-radius: 5px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .icon-link-btn:hover { background: var(--surface-1); border-color: var(--text-accent); color: var(--text-accent); }
+
+  .subpop-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 11px;
+    padding: 2px 8px 2px 6px;
+    border-radius: 10px;
+  }
+
+  .subpop-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Dot colors matched to the ancestry breakdown chart */
+  .subpop-dot.subpop-EUR { background: #F9C854; }
+  .subpop-dot.subpop-AFR { background: #2078B4; }
+  .subpop-dot.subpop-AMR { background: #6DACE4; }
+  .subpop-dot.subpop-EAS { background: #A27BD7; }
+  .subpop-dot.subpop-SAS { background: #8CCA90; }
+  .subpop-dot.subpop-MID { background: #CB2D4C; }
+  .subpop-dot.subpop-OTH { background: #B3AEAD; }
+
+
+  .expand-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    border-radius: 4px;
+  }
+  .expand-btn:hover { background: var(--surface-1); color: var(--text-accent); }
+  .expand-btn svg { transition: transform 0.15s ease; }
+  .expand-btn.expanded svg { transform: rotate(90deg); }
+
+  .detail-row { display: none; }
+  .detail-row.open { display: table-row; }
+  .detail-row td { background: var(--surface-1); padding: 0; }
+
+  .detail-panel {
+    display: flex;
+    gap: 32px;
+    padding: 12px 16px;
+    white-space: normal;
+  }
+
+  .detail-hgvs { flex-shrink: 0; }
+  .detail-hgvs .label,
+  .detail-subpops .label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+  }
+  .detail-hgvs .value {
+    font-family: 'SF Mono', 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--text-body);
+    line-height: 1.5;
+  }
+
+  .detail-subpops { flex: 1; }
+  .subpop-grid { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+  .subpop-grid-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .subpop-grid-item b { color: var(--text-primary); font-weight: 600; }
+  .subpop-grid-item .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+  .detail-placeholder {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 4px 0;
+  }
+
+  .plof-hc { font-weight: 700; color: var(--text-primary); }
+  .plof-lc { font-weight: 400; color: var(--text-muted); }
+  .plof-na { color: var(--text-muted); cursor: help; }
+  .cell-na { color: var(--text-muted); font-style: italic; }
+
+  .tooltip-icon {
+    background: var(--text-accent);
+    color: #fff;
+    cursor: help;
+    font-size: 9px;
+    font-weight: 600;
+    border: none;
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+  }
+
+  .hpo-body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+
+  .crosswalk-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .crosswalk-text { flex: 1; min-width: 0; }
+  .crosswalk-text .row { display: flex; flex-direction: column; }
+  .crosswalk-text .code-line { display: flex; align-items: center; gap: 5px; }
+  .crosswalk-text .code { font-size: 11px; font-weight: 600; color: var(--text-accent); font-family: monospace; }
+  .crosswalk-text .desc { font-size: 12px; color: var(--text-primary); font-weight: 500; }
+
+  .copy-btn {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .copy-btn:hover { background: var(--surface-2); color: var(--text-accent); }
+  .copy-btn.copied { color: var(--text-success); }
+
+  .copy-row-btn {
+    background: none;
+    border: none;
+    padding: 3px;
+    cursor: pointer;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    border-radius: 3px;
+  }
+  .copy-row-btn:hover { background: var(--surface-1); color: var(--text-accent); }
+  .copy-row-btn.copied { color: var(--text-success); }
+
+  .count-badge {
+    text-align: center;
+    flex-shrink: 0;
+    padding-left: 10px;
+    border-left: 1px solid var(--border);
+  }
+  .count-badge .num { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+  .count-badge .lbl { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.3; width: 64px; }
+
+  .donut-hero-wrap { display: flex; justify-content: center; margin-bottom: 12px; }
+  .donut {
+    width: 190px;
+    height: 190px;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+    background: conic-gradient(
+      #F9C854 0% 48.3%,
+      #2078B4 48.3% 68%,
+      #6DACE4 68% 85.8%,
+      #B3AEAD 85.8% 94.8%,
+      #A27BD7 94.8% 97.8%,
+      #8CCA90 97.8% 99.8%,
+      #CB2D4C 99.8% 100%
+    );
+  }
+  .donut::after {
+    content: '';
+    position: absolute;
+    inset: 30px;
+    border-radius: 50%;
+    background: var(--surface-2);
+  }
+  .donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  .ancestry-legend-strip { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; }
+  .legend-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+  .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+
+  .breakdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .breakdown-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+
+  .breakdown-tabs {
+    display: inline-flex;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .breakdown-tab {
+    background: none;
+    border: none;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .breakdown-tab:hover { color: var(--text-accent); }
+  .breakdown-tab.active { background: var(--surface-2); color: var(--text-accent); box-shadow: 0 1px 2px rgba(34,36,91,0.12); }
+
+  .donut-panel { display: none; }
+  .donut-panel.active { display: block; }
+
+  .bottom-panel {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(34, 36, 91, 0.06);
+  }
+
+  .bottom-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface-1);
+  }
+
+  .bottom-header h2 { font-size: 13px; font-weight: 600; color: var(--text-accent); }
+  .bottom-header .actions { display: flex; gap: 8px; align-items: center; }
+  .selected-count { font-size: 12px; color: var(--text-secondary); }
+
+  button.export-btn {
+    background: var(--accent-orange);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  button.export-btn:hover { background: var(--accent-orange-hover); }
+
+  .an-note {
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .bottom-table-scroll {
+    overflow: auto;
+    max-height: 346px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-right: 12px;
+  }
+  .bottom-table-scroll::-webkit-scrollbar { display: none; }
+
+  input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--text-accent); }
+
+  .delta-up { color: var(--text-danger); font-weight: 600; }
+  .delta-flat { color: var(--text-secondary); }
+
+  @media (max-width: 900px) {
+    .top-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="case-info">
+      <span class="search-lead">Search terms</span>
+      <span class="search-field">Candidate variants <span class="value-badge">21 entered</span></span>
+      <span class="search-field">Phenotype <span class="value-badge mono-val">HP:0001636</span></span>
+      <button class="edit-btn" onclick="toggleDrawer()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+        </svg>
+        Modify search
+      </button>
+    </div>
+    <div class="user">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path>
+      </svg>
+      Lee Lichtenstein
+    </div>
+  </div>
+
+  <div class="search-drawer" id="searchDrawer">
+    <div class="drawer-grid">
+      <div class="drawer-field">
+        <label>Candidate genes or variants (limit 50)</label>
+        <textarea id="drawerVariants" rows="10">8-11708582-C-T
+8-11708590-G-GAA
+8-11708598-T-C
+8-11708605-A-G
+8-11708613-C-T
+8-11708621-G-T
+8-11708629-T-A
+8-11708637-A-C
+8-11708645-CGGGG-C
+8-11708653-A-G
+8-11708661-C-T
+8-11708669-G-A
+8-11708677-T-C
+8-11708685-A-T
+8-11708693-C-G
+8-11708701-G-T
+8-11708709-A-C
+8-11708717-T-G
+8-11708725-C-A
+8-11708733-G-C
+8-11708741-A-G</textarea>
+        <div class="hint">21 of 50 candidate variants entered</div>
+      </div>
+      <div class="drawer-field">
+        <label>Phenotype (HPO term — limit 1)</label>
+        <input type="text" id="drawerHpo" value="HP:0001636">
+      </div>
+    </div>
+    <div class="drawer-actions">
+      <button class="drawer-btn-secondary" onclick="toggleDrawer()">Cancel</button>
+      <button class="drawer-btn-primary" onclick="rerunSearch()">Search</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <div class="top-row">
+
+      <!-- Cohort-wide variant annotation panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Candidate variants — all participants</h2>
+          <span class="sub">Showing 21 results</span>
+        </div>
+        <div class="custom-scroll-wrap">
+        <div class="table-scroll" id="topScrollArea">
+          <table class="cohort-table">
+            <thead>
+              <tr class="group-row">
+                <th colspan="4"></th>
+                <th colspan="3" class="group-aou">All of Us <span class="group-qualifier">— max subpopulation</span> <span class="tooltip-icon" title="Values below reflect the AoU subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire cohort.">i</span></th>
+                <th colspan="3" class="group-gnomad">gnomAD <span class="tooltip-icon" title="Data shown is from gnomAD v3.1.2 and may differ from the current release.">i</span></th>
+                <th colspan="3"></th>
+              </tr>
+              <tr class="column-row">
+                <th></th>
+                <th>Variant</th>
+                <th>Gene</th>
+                <th>Classification</th>
+                <th>Subpopulation</th>
+                <th>AF</th>
+                <th>AC / AN</th>
+                <th>AF</th>
+                <th>AC / AN</th>
+                <th></th>
+                <th>ClinVar</th>
+                <th>SpliceAI</th>
+                <th>pLOF</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708582-C-T</td>
+                <td>GATA4</td>
+                <td>Missense</td>
+                <td><span class="subpop-badge"><span class="subpop-dot subpop-EUR"></span>EUR</span></td>
+                <td>0.0034</td>
+                <td>1,735 / 517,466</td>
+                <td>0.0040</td>
+                <td>612 / 152,312</td>
+                <td><a class="icon-link-btn" href="#" title="Open in gnomAD">↗</a></td>
+                <td><span class="clinvar-cell"><span class="tag tag-vus">VUS</span><a class="icon-link-btn" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=8-11708582-C-T" title="View in ClinVar">↗</a></span></td>
+                <td>0.09</td>
+                <td><span class="plof-na" title="LOFTEE does not score this consequence type">—</span></td>
+              </tr>
+                            <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708590-G-GAA</td>
+                <td>GATA4</td>
+                <td>Frameshift</td>
+                <td><span class="subpop-badge"><span class="subpop-dot subpop-AFR"></span>AFR</span></td>
+                <td>0.0018</td>
+                <td>388 / 211,058</td>
+                <td>0.0006</td>
+                <td>89 / 152,312</td>
+                <td><a class="icon-link-btn" href="#" title="Open in gnomAD">↗</a></td>
+                <td><span class="clinvar-cell"><span class="tag tag-path">Pathogenic</span><a class="icon-link-btn" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=8-11708590-G-GAA" title="View in ClinVar">↗</a></span></td>
+                <td>0.07</td>
+                <td><span class="plof-hc">HC</span></td>
+              </tr>
+                            <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708598-T-C</td>
+                <td>GATA4</td>
+                <td>Synonymous</td>
+                <td><span class="subpop-badge"><span class="subpop-dot subpop-EUR"></span>EUR</span></td>
+                <td>0.0500</td>
+                <td>25,895 / 517,466</td>
+                <td>0.0489</td>
+                <td>7,452 / 152,312</td>
+                <td><a class="icon-link-btn" href="#" title="Open in gnomAD">↗</a></td>
+                <td><span class="clinvar-cell"><span class="tag tag-benign">Benign</span><a class="icon-link-btn" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=8-11708598-T-C" title="View in ClinVar">↗</a></span></td>
+                <td>0.02</td>
+                <td><span class="plof-na" title="LOFTEE does not score this consequence type">—</span></td>
+              </tr>
+                            <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708605-A-G</td>
+                <td>GATA4</td>
+                <td>Missense</td>
+                <td><span class="subpop-badge"><span class="subpop-dot subpop-AMR"></span>AMR</span></td>
+                <td>0.0062</td>
+                <td>1,190 / 190,702</td>
+                <td>0.0013</td>
+                <td>203 / 152,312</td>
+                <td><a class="icon-link-btn" href="#" title="Open in gnomAD">↗</a></td>
+                <td><span class="clinvar-cell"><span class="tag tag-vus">VUS</span><a class="icon-link-btn" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=8-11708605-A-G" title="View in ClinVar">↗</a></span></td>
+                <td>0.04</td>
+                <td><span class="plof-na" title="LOFTEE does not score this consequence type">—</span></td>
+              </tr>
+                            <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708613-C-T</td>
+                <td>GATA4</td>
+                <td>Nonsense</td>
+                <td><span class="subpop-badge"><span class="subpop-dot subpop-EUR"></span>EUR</span></td>
+                <td>0.0002</td>
+                <td>127 / 517,466</td>
+                <td>0.0001</td>
+                <td>22 / 152,312</td>
+                <td><a class="icon-link-btn" href="#" title="Open in gnomAD">↗</a></td>
+                <td><span class="clinvar-cell"><span class="tag tag-path">Pathogenic</span><a class="icon-link-btn" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=8-11708613-C-T" title="View in ClinVar">↗</a></span></td>
+                <td>0.02</td>
+                <td><span class="plof-hc">HC</span></td>
+              </tr>
+                            <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708621-G-T</td>
+                <td>GATA4</td>
+                <td>Splice site</td>
+                <td><span class="subpop-badge"><span class="subpop-dot subpop-EAS"></span>EAS</span></td>
+                <td>0.0040</td>
+                <td>128 / 32,140</td>
+                <td>0.0004</td>
+                <td>58 / 152,312</td>
+                <td><a class="icon-link-btn" href="#" title="Open in gnomAD">↗</a></td>
+                <td><span class="clinvar-cell"><span class="tag tag-vus">VUS</span><a class="icon-link-btn" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=8-11708621-G-T" title="View in ClinVar">↗</a></span></td>
+                <td>0.77</td>
+                <td><span class="plof-hc">HC</span></td>
+              </tr>
+                            <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708629-T-A</td>
+                <td>GATA4</td>
+                <td>Missense</td>
+                <td><span class="subpop-badge"><span class="subpop-dot subpop-SAS"></span>SAS</span></td>
+                <td>0.0050</td>
+                <td>107 / 21,428</td>
+                <td>0.0002</td>
+                <td>31 / 152,312</td>
+                <td><a class="icon-link-btn" href="#" title="Open in gnomAD">↗</a></td>
+                <td><span class="clinvar-cell"><span class="tag tag-vus">VUS</span><a class="icon-link-btn" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=8-11708629-T-A" title="View in ClinVar">↗</a></span></td>
+                <td>0.08</td>
+                <td><span class="plof-na" title="LOFTEE does not score this consequence type">—</span></td>
+              </tr>
+                            <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708637-A-C</td>
+                <td>GATA4</td>
+                <td>Missense</td>
+                <td><span class="subpop-badge"><span class="subpop-dot subpop-EUR"></span>EUR</span></td>
+                <td>0.0733</td>
+                <td>37,954 / 517,466</td>
+                <td>0.0669</td>
+                <td>10,190 / 152,312</td>
+                <td><a class="icon-link-btn" href="#" title="Open in gnomAD">↗</a></td>
+                <td><span class="clinvar-cell"><span class="tag tag-benign">Benign</span><a class="icon-link-btn" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=8-11708637-A-C" title="View in ClinVar">↗</a></span></td>
+                <td>0.01</td>
+                <td><span class="plof-na" title="LOFTEE does not score this consequence type">—</span></td>
+              </tr>
+                            <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708645-CGGGG-C</td>
+                <td>GATA4</td>
+                <td>Frameshift</td>
+                <td><span class="subpop-badge"><span class="subpop-dot subpop-OTH"></span>OTH</span></td>
+                <td>0.0050</td>
+                <td>486 / 96,422</td>
+                <td>0.0001</td>
+                <td>9 / 152,312</td>
+                <td><a class="icon-link-btn" href="#" title="Open in gnomAD">↗</a></td>
+                <td><span class="clinvar-cell"><span class="tag tag-path">Pathogenic</span><a class="icon-link-btn" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=8-11708645-CGGGG-C" title="View in ClinVar">↗</a></span></td>
+                <td>0.08</td>
+                <td><span class="plof-hc">HC</span></td>
+              </tr>
+                            <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708653-A-G</td>
+                <td>GATA4</td>
+                <td>Nonsense</td>
+                <td><span class="subpop-badge"><span class="subpop-dot subpop-EUR"></span>EUR</span></td>
+                <td>0.0033</td>
+                <td>1,707 / 517,466</td>
+                <td>0.0369</td>
+                <td>5,620 / 152,312</td>
+                <td><a class="icon-link-btn" href="#" title="Open in gnomAD">↗</a></td>
+                <td><span class="clinvar-cell"><span class="tag tag-benign">Benign</span><a class="icon-link-btn" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=8-11708653-A-G" title="View in ClinVar">↗</a></span></td>
+                <td>0.02</td>
+                <td><span class="plof-na" title="LOFTEE does not score this consequence type">—</span></td>
+              </tr>
+                            <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708661-C-T</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708669-G-A</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708677-T-C</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708685-A-T</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708693-C-G</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708701-G-T</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708709-A-C</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708717-T-G</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708725-C-A</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708733-G-C</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><button class="expand-btn" onclick="toggleDetail(this)" aria-label="Expand row for more detail">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                </button></td>
+                <td class="mono">8-11708741-A-G</td>
+                <td>GATA4</td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+                <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              </tr>
+              <tr class="detail-row">
+                <td colspan="13">
+                  <div class="detail-panel">
+                    <div class="detail-placeholder">Not mocked yet, coming soon :) Will show stats on each subpopulation</div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="fake-track"></div>
+        <div class="fake-thumb" id="topThumb"></div>
+        </div>
+      </div>
+
+      <!-- HPO / phenotype panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Phenotype filter</h2>
+        </div>
+        <div class="hpo-body">
+          <div class="crosswalk-card">
+            <div class="crosswalk-text">
+              <div class="row">
+                <div class="code-line">
+                  <span class="code">HPO — HP:0001636</span>
+                  <button class="copy-btn" onclick="copyCode('HP:0001636', this)" title="Copy HPO code" aria-label="Copy HPO code">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                    </svg>
+                  </button>
+                </div>
+                <span class="desc">Tetralogy of Fallot</span>
+              </div>
+              <div class="row" style="margin-top: 6px;">
+                <div class="code-line">
+                  <span class="code">OMOP — 313867</span>
+                  <button class="copy-btn" onclick="copyCode('313867', this)" title="Copy OMOP concept ID" aria-label="Copy OMOP concept ID">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                    </svg>
+                  </button>
+                </div>
+                <span class="desc">Tetralogy of Fallot</span>
+              </div>
+            </div>
+            <div class="count-badge">
+              <div class="num">214</div>
+              <div class="lbl">participants matched</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="breakdown-header">
+              <div class="breakdown-title">Participant breakdown</div>
+              <div class="breakdown-tabs">
+                <button class="breakdown-tab active" data-tab="ancestry" onclick="switchBreakdown('ancestry')">Ancestry</button>
+                <button class="breakdown-tab" data-tab="age" onclick="switchBreakdown('age')">Age</button>
+              </div>
+            </div>
+
+            <!-- Ancestry donut -->
+            <div class="donut-panel active" id="panelAncestry">
+              <div class="donut-hero-wrap">
+                <div class="donut" style="background: conic-gradient(
+                  #F9C854 0% 48.3%,
+                  #2078B4 48.3% 68%,
+                  #6DACE4 68% 85.8%,
+                  #B3AEAD 85.8% 94.8%,
+                  #A27BD7 94.8% 97.8%,
+                  #8CCA90 97.8% 99.8%,
+                  #CB2D4C 99.8% 100%
+                );">
+                  <div class="donut-center">% of<br>alleles</div>
+                </div>
+              </div>
+              <div class="ancestry-legend-strip">
+                <span class="legend-chip"><span class="legend-dot" style="background: #F9C854;"></span>EUR 48.3%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #2078B4;"></span>AFR 19.7%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #6DACE4;"></span>AMR 17.8%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #B3AEAD;"></span>OTH 9%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #A27BD7;"></span>EAS 3%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #8CCA90;"></span>SAS 2%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #CB2D4C;"></span>MID 0.2%</span>
+              </div>
+            </div>
+
+            <!-- Age donut -->
+            <div class="donut-panel" id="panelAge">
+              <div class="donut-hero-wrap">
+                <div class="donut" style="background: conic-gradient(
+                  #DCEEF7 0% 1.4%,
+                  #B8DCEF 1.4% 7.9%,
+                  #8DC6E5 7.9% 21.9%,
+                  #5FAEDA 21.9% 43.4%,
+                  #3B8FC4 43.4% 69.6%,
+                  #2569A0 69.6% 91.5%,
+                  #17456F 91.5% 100%
+                );">
+                  <div class="donut-center">% of<br>participants</div>
+                </div>
+              </div>
+              <div class="ancestry-legend-strip">
+                <span class="legend-chip"><span class="legend-dot" style="background: #DCEEF7;"></span>0–17 1.4%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #B8DCEF;"></span>18–29 6.5%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #8DC6E5;"></span>30–39 14.0%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #5FAEDA;"></span>40–49 21.5%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #3B8FC4;"></span>50–59 26.2%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #2569A0;"></span>60–69 21.9%</span>
+                <span class="legend-chip"><span class="legend-dot" style="background: #17456F;"></span>70+ 8.5%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom panel: variant info specific to filtered participants -->
+    <div class="bottom-panel">
+      <div class="bottom-header">
+        <h2>Candidate variants — phenotype-matched participants only <span class="n-count">(n = 214)</span></h2>
+        <div class="actions">
+          <span class="selected-count" id="selectedCount">21 of 21 included</span>
+          <button class="export-btn" onclick="exportTSV()">Export TSV</button>
+        </div>
+      </div>
+      <div class="custom-scroll-wrap">
+      <div class="bottom-table-scroll" id="bottomScrollArea">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAll" checked onclick="toggleAll(this)"></th>
+              <th>Variant</th>
+              <th>Gene</th>
+              <th>Classification</th>
+              <th>Cohort AC <span class="tooltip-icon" title="TODO">i</span></th>
+              <th>Cohort AN <span class="tooltip-icon" title="TODO">i</span></th>
+              <th>Cohort AF <span class="tooltip-icon" title="TODO">i</span></th>
+              <th>Homozygotes</th>
+              <th>Heterozygotes</th>
+              <th>ClinVar P/LP in trans <span class="tooltip-icon" title="TODO">i</span></th>
+              <th>AF Ratio <span class="tooltip-icon" title="TODO">i</span></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="variantRows">
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708582-C-T</td>
+              <td>GATA4</td>
+              <td>Missense</td>
+              <td>1</td>
+              <td>428</td>
+              <td>0.0023</td>
+              <td>0</td>
+              <td>1</td>
+              <td>0</td>
+              <td class="delta-flat">0.7x</td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708590-G-GAA</td>
+              <td>GATA4</td>
+              <td>Frameshift</td>
+              <td>32</td>
+              <td>428</td>
+              <td>0.0748</td>
+              <td>4</td>
+              <td>24</td>
+              <td>2</td>
+              <td><span class="delta-up">40.7x</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708598-T-C</td>
+              <td>GATA4</td>
+              <td>Synonymous</td>
+              <td>21</td>
+              <td>428</td>
+              <td>0.0491</td>
+              <td>1</td>
+              <td>19</td>
+              <td>0</td>
+              <td class="delta-flat">1.0x</td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708605-A-G</td>
+              <td>GATA4</td>
+              <td>Missense</td>
+              <td>3</td>
+              <td>428</td>
+              <td>0.0070</td>
+              <td>0</td>
+              <td>3</td>
+              <td>0</td>
+              <td class="delta-flat">1.1x</td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708613-C-T</td>
+              <td>GATA4</td>
+              <td>Nonsense</td>
+              <td>0</td>
+              <td>428</td>
+              <td>0.0000</td>
+              <td>0</td>
+              <td>0</td>
+              <td>0</td>
+              <td class="delta-flat">0.0x</td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708621-G-T</td>
+              <td>GATA4</td>
+              <td>Splice site</td>
+              <td>2</td>
+              <td>428</td>
+              <td>0.0047</td>
+              <td>0</td>
+              <td>2</td>
+              <td>0</td>
+              <td class="delta-flat">1.2x</td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708629-T-A</td>
+              <td>GATA4</td>
+              <td>Missense</td>
+              <td>2</td>
+              <td>428</td>
+              <td>0.0047</td>
+              <td>0</td>
+              <td>2</td>
+              <td>0</td>
+              <td class="delta-flat">0.9x</td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708637-A-C</td>
+              <td>GATA4</td>
+              <td>Missense</td>
+              <td>31</td>
+              <td>428</td>
+              <td>0.0724</td>
+              <td>1</td>
+              <td>29</td>
+              <td>0</td>
+              <td class="delta-flat">1.0x</td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708645-CGGGG-C</td>
+              <td>GATA4</td>
+              <td>Frameshift</td>
+              <td>2</td>
+              <td>428</td>
+              <td>0.0047</td>
+              <td>0</td>
+              <td>2</td>
+              <td>1</td>
+              <td class="delta-flat">0.9x</td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708653-A-G</td>
+              <td>GATA4</td>
+              <td>Nonsense</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708661-C-T</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708669-G-A</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708677-T-C</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708685-A-T</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708693-C-G</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708701-G-T</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708709-A-C</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708717-T-G</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708725-C-A</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708733-G-C</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="row-check" checked onclick="updateCount()"></td>
+              <td class="mono">8-11708741-A-G</td>
+              <td>GATA4</td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td><span class="cell-na">n/a</span></td>
+              <td>
+                <button class="copy-row-btn" onclick="copyRow(this)" title="Copy row" aria-label="Copy row">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="fake-track"></div>
+      <div class="fake-thumb" id="bottomThumb"></div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+  function setupCustomScrollbar(scrollAreaId, thumbId) {
+    const scrollArea = document.getElementById(scrollAreaId);
+    const thumb = document.getElementById(thumbId);
+    if (!scrollArea || !thumb) return;
+
+    function updateThumb() {
+      const trackHeight = scrollArea.clientHeight;
+      const contentHeight = scrollArea.scrollHeight;
+      if (contentHeight <= trackHeight) {
+        thumb.style.display = 'none';
+        return;
+      }
+      thumb.style.display = 'block';
+      const thumbHeight = Math.max((trackHeight / contentHeight) * trackHeight, 24);
+      const maxThumbTop = trackHeight - thumbHeight;
+      const scrollRatio = scrollArea.scrollTop / (contentHeight - trackHeight);
+      thumb.style.height = thumbHeight + 'px';
+      thumb.style.top = (scrollRatio * maxThumbTop) + 'px';
+    }
+
+    scrollArea.addEventListener('scroll', updateThumb);
+    window.addEventListener('resize', updateThumb);
+    updateThumb();
+  }
+
+  setupCustomScrollbar('topScrollArea', 'topThumb');
+  setupCustomScrollbar('bottomScrollArea', 'bottomThumb');
+
+  function copyRow(btn) {
+    const row = btn.closest('tr');
+    const cells = Array.from(row.querySelectorAll('td'));
+    // Skip the checkbox cell (first) and this button's own cell (last)
+    const values = cells.slice(1, -1).map(td => td.textContent.trim());
+    const text = values.join('\t');
+
+    function showCopied() {
+      const original = btn.innerHTML;
+      btn.classList.add('copied');
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      setTimeout(() => {
+        btn.innerHTML = original;
+        btn.classList.remove('copied');
+      }, 1200);
+    }
+
+    function fallbackCopy() {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); showCopied(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(showCopied).catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  }
+
+  function copyCode(text, btn) {
+    function showCopied() {
+      const original = btn.innerHTML;
+      btn.classList.add('copied');
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      setTimeout(() => {
+        btn.innerHTML = original;
+        btn.classList.remove('copied');
+      }, 1200);
+    }
+
+    function fallbackCopy() {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); showCopied(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(showCopied).catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  }
+
+  function toggleDetail(btn) {
+    btn.classList.toggle('expanded');
+    const row = btn.closest('tr');
+    const detailRow = row.nextElementSibling;
+    if (detailRow && detailRow.classList.contains('detail-row')) {
+      detailRow.classList.toggle('open');
+    }
+  }
+
+  function switchBreakdown(which) {
+    document.querySelectorAll('.breakdown-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === which));
+    document.getElementById('panelAncestry').classList.toggle('active', which === 'ancestry');
+    document.getElementById('panelAge').classList.toggle('active', which === 'age');
+  }
+
+  function toggleDrawer() {
+    document.getElementById('searchDrawer').classList.toggle('open');
+  }
+
+  function rerunSearch() {
+    alert('In a real app, this would re-query All of Us with:\n\nVariants: ' + document.getElementById('drawerVariants').value + '\nPhenotype: ' + document.getElementById('drawerHpo').value);
+    toggleDrawer();
+  }
+
+  function toggleAll(source) {
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = source.checked);
+    updateCount();
+  }
+
+  function updateCount() {
+    const all = document.querySelectorAll('.row-check');
+    const checked = document.querySelectorAll('.row-check:checked');
+    document.getElementById('selectedCount').textContent = checked.length + ' of ' + all.length + ' included';
+    document.getElementById('selectAll').checked = checked.length === all.length;
+  }
+
+  function exportTSV() {
+    const rows = document.querySelectorAll('#variantRows tr');
+    let tsv = 'variant\tgene\tclassification\tfiltered_ac\tfiltered_an\tfiltered_af\tn_homalt\tn_het\tclinvar_plp_in_trans\taf_ratio\tincluded\n';
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      const checked = cells[0].querySelector('input').checked;
+      const values = [
+        cells[1].textContent.trim(),
+        cells[2].textContent.trim(),
+        cells[3].textContent.trim(),
+        cells[4].textContent.trim(),
+        cells[5].textContent.trim(),
+        cells[6].textContent.trim(),
+        cells[7].textContent.trim(),
+        cells[8].textContent.trim(),
+        cells[9].textContent.trim(),
+        cells[10].textContent.trim(),
+        checked ? 'TRUE' : 'FALSE'
+      ];
+      tsv += values.join('\t') + '\n';
+    });
+
+    const blob = new Blob([tsv], { type: 'text/tab-separated-values' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'variant_filtering_results.tsv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+</script>
+
+</body>
+</html>

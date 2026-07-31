@@ -1,0 +1,260 @@
+openapi: 3.0.3
+info:
+  title: Variant Interpretation Backend API
+  description: API for the variant interpretation application.
+  version: 0.1.0
+servers:
+  - url: /
+paths:
+  /api/hello:
+    get:
+      operationId: hello
+      summary: Returns a greeting along with the current server time.
+      tags:
+        - hello
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelloResponse"
+  /api/profile:
+    get:
+      operationId: profile
+      summary: Returns details about the current Workbench user.
+      tags:
+        - profile
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+  /api/search-results:
+    get:
+      operationId: searchResults
+      summary: >-
+        Returns the candidate variant search results. Currently always
+        returns the same illustrative dataset regardless of search terms,
+        until a real search is wired up.
+      tags:
+        - searchResults
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResultsResponse"
+components:
+  schemas:
+    HelloResponse:
+      type: object
+      required:
+        - timestamp
+      properties:
+        timestamp:
+          type: string
+          description: Current server time (ISO-8601 instant).
+          example: "2026-07-28T19:20:05.415Z"
+    UserProfile:
+      type: object
+      required:
+        - userEmail
+      properties:
+        userEmail:
+          type: string
+          description: >-
+            Email address of the Workbench user, from the OWNER_EMAIL
+            environment variable.
+          example: "researcher@example.org"
+    SearchResultsResponse:
+      type: object
+      required:
+        - searchSummary
+        - phenotypeCrosswalk
+        - ancestryBreakdown
+        - ageBreakdown
+        - cohortVariants
+        - filteredVariants
+      properties:
+        searchSummary:
+          $ref: "#/components/schemas/SearchSummary"
+        phenotypeCrosswalk:
+          $ref: "#/components/schemas/PhenotypeCrosswalk"
+        ancestryBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownSegment"
+        ageBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/BreakdownSegment"
+        cohortVariants:
+          type: array
+          items:
+            $ref: "#/components/schemas/CohortVariant"
+        filteredVariants:
+          type: array
+          items:
+            $ref: "#/components/schemas/FilteredVariant"
+    SearchSummary:
+      type: object
+      required:
+        - variantsRaw
+        - variantsEnteredCount
+        - variantsLimit
+        - hpoTerm
+      properties:
+        variantsRaw:
+          type: string
+          description: The raw, newline-separated candidate variants as entered.
+        variantsEnteredCount:
+          type: integer
+        variantsLimit:
+          type: integer
+        hpoTerm:
+          type: string
+    PhenotypeCrosswalk:
+      type: object
+      required:
+        - hpoCode
+        - omopCode
+        - description
+        - participantCount
+      properties:
+        hpoCode:
+          type: string
+          example: "HP:0001636"
+        omopCode:
+          type: string
+          example: "313867"
+        description:
+          type: string
+          example: "Tetralogy of Fallot"
+        participantCount:
+          type: integer
+    BreakdownSegment:
+      type: object
+      required:
+        - label
+        - percent
+        - color
+      properties:
+        label:
+          type: string
+        percent:
+          type: number
+        color:
+          type: string
+          description: Hex color used to render this segment.
+          example: "#F9C854"
+    CohortVariant:
+      type: object
+      required:
+        - variant
+        - gene
+        - annotated
+      properties:
+        variant:
+          type: string
+          example: "8-11708582-C-T"
+        gene:
+          type: string
+        annotated:
+          type: boolean
+          description: >-
+            False when this variant has no consequence annotation at all;
+            every other field below is only meaningful when true.
+        classification:
+          type: string
+          nullable: true
+          example: "Missense"
+        subpopulation:
+          type: string
+          nullable: true
+          enum: [EUR, AFR, AMR, EAS, SAS, MID, OTH]
+        aouAf:
+          type: number
+          nullable: true
+        aouAc:
+          type: integer
+          nullable: true
+        aouAn:
+          type: integer
+          nullable: true
+        gnomadAf:
+          type: number
+          nullable: true
+        gnomadAc:
+          type: integer
+          nullable: true
+        gnomadAn:
+          type: integer
+          nullable: true
+        gnomadUrl:
+          type: string
+          nullable: true
+        clinvarSignificance:
+          type: string
+          nullable: true
+          enum: [Pathogenic, VUS, Benign]
+        clinvarUrl:
+          type: string
+          nullable: true
+        spliceAi:
+          type: number
+          nullable: true
+        plof:
+          type: string
+          nullable: true
+          description: >-
+            "HC" (high-confidence LOF) or null. Null means either "not
+            scored by LOFTEE" (when annotated) or n/a (when not annotated).
+          enum: [HC]
+    FilteredVariant:
+      type: object
+      required:
+        - variant
+        - gene
+        - hasStats
+      properties:
+        variant:
+          type: string
+          example: "8-11708582-C-T"
+        gene:
+          type: string
+        classification:
+          type: string
+          nullable: true
+          description: >-
+            Some variants have consequence annotation even when
+            phenotype-filtered cohort stats don't exist yet.
+        hasStats:
+          type: boolean
+          description: >-
+            False when phenotype-filtered cohort stats aren't available;
+            the numeric fields below are only meaningful when true.
+        cohortAc:
+          type: integer
+          nullable: true
+        cohortAn:
+          type: integer
+          nullable: true
+        cohortAf:
+          type: number
+          nullable: true
+        homozygotes:
+          type: integer
+          nullable: true
+        heterozygotes:
+          type: integer
+          nullable: true
+        clinvarPlpInTrans:
+          type: integer
+          nullable: true
+        afRatio:
+          type: number
+          nullable: true

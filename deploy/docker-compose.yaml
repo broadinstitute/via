@@ -1,0 +1,38 @@
+services:
+  app:
+    # The container name must be "application-server"
+    container_name: "application-server"
+    build:
+      # The ui/ and api/ source lives at the repository root, so
+      # the build context is set there instead of this folder.
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: always
+    # Workbench values (OWNER_EMAIL, GOOGLE_PROJECT, etc.) aren't available
+    # here at container start -- they're fetched by post-startup.sh only
+    # after the container is already running (see .devcontainer.json and
+    # entrypoint.sh), so they can't be passed via this environment: block.
+    volumes:
+      - .:/workspace:cached
+    # The port specified here will be forwarded and accessible from the
+    # Workbench UI. The Spring Boot backend serves both the API and the
+    # built frontend on this single port.
+    ports:
+      - 8080:8080
+    # The service must be connected to the "app-network" Docker network
+    networks:
+      - app-network
+    # SYS_ADMIN and fuse are required to mount workspace resources into the
+    # container.
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    security_opt:
+      - apparmor:unconfined
+
+networks:
+  # The Docker network must be named "app-network". This is an external network
+  # that is created outside of this docker-compose file.
+  app-network:
+    external: true

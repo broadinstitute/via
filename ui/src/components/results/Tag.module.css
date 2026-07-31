@@ -1,0 +1,22 @@
+.tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.path {
+  background: var(--bg-danger);
+  color: var(--text-danger);
+}
+
+.vus {
+  background: var(--bg-warning);
+  color: var(--text-warning);
+}
+
+.benign {
+  background: var(--bg-success);
+  color: var(--text-success);
+}

@@ -1,0 +1,92 @@
+.panel {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(34, 36, 91, 0.14);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.number {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--text-accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.header h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-accent);
+  flex: 1;
+}
+
+.header span {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.tagLimit {
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.tagOptional {
+  color: var(--text-accent);
+  background: var(--bg-accent);
+}
+
+.body {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.body textarea,
+.body input {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: "SF Mono", "Courier New", monospace;
+  color: var(--text-body);
+  background: var(--surface-1);
+}
+
+.body textarea:focus,
+.body input:focus {
+  outline: none;
+  border-color: var(--text-accent);
+  background: var(--surface-2);
+}
+
+.body textarea {
+  resize: vertical;
+  min-height: 210px;
+  line-height: 1.6;
+  flex: 1;
+}

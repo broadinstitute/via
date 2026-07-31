@@ -1,0 +1,68 @@
+plugins {
+  id 'java'
+  id 'org.springframework.boot' version '3.5.3'
+  id 'io.spring.dependency-management' version '1.1.7'
+  id 'org.openapi.generator' version '7.14.0'
+}
+
+group = 'org.broadinstitute'
+version = '0.1.0-SNAPSHOT'
+description = 'Backend for the variant interpretation application'
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  implementation 'org.springframework.boot:spring-boot-starter-validation'
+  implementation 'io.swagger.core.v3:swagger-annotations:2.2.25'
+  implementation 'org.openapitools:jackson-databind-nullable:0.2.11'
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+def openApiSpec = "$projectDir/src/main/resources/openapi/api.yaml"
+def generatedSourcesDir = layout.buildDirectory.dir('generated/sources/openapi').get().asFile
+
+// The OpenAPI spec (src/main/resources/openapi/api.yaml) is the source of
+// truth for the API: this generates the server interfaces and models that
+// controllers implement, instead of hand-writing them.
+openApiGenerate {
+  generatorName = 'spring'
+  inputSpec = openApiSpec
+  outputDir = generatedSourcesDir.toString()
+  apiPackage = 'org.broadinstitute.variantinterpretation.api'
+  modelPackage = 'org.broadinstitute.variantinterpretation.model'
+  invokerPackage = 'org.broadinstitute.variantinterpretation.invoker'
+  configOptions = [
+    interfaceOnly       : 'true',
+    skipDefaultInterface: 'true',
+    useTags             : 'true',
+    useSpringBoot3      : 'true',
+    dateLibrary         : 'java8'
+  ]
+  generateApiTests = false
+  generateModelTests = false
+  generateApiDocumentation = false
+  generateModelDocumentation = false
+}
+
+sourceSets {
+  main {
+    java {
+      srcDir "${generatedSourcesDir}/src/main/java"
+    }
+  }
+}
+
+compileJava.dependsOn tasks.openApiGenerate
+
+tasks.named('test') {
+  useJUnitPlatform()
+}
