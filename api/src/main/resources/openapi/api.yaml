@@ -19,6 +19,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserProfile"
+  /api/google-userinfo:
+    get:
+      operationId: googleUserInfo
+      summary: >-
+        Calls Google's userinfo endpoint using the current researcher's ADC
+        access token and returns the raw response, to verify Application
+        Default Credentials are reachable and reflect the logged-in
+        researcher.
+      tags:
+        - googleUserInfo
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleUserInfo"
   /api/search-results:
     get:
       operationId: searchResults
@@ -47,6 +64,13 @@ components:
           description: >-
             Email address of the Workbench user
           example: "researcher@example.org"
+    GoogleUserInfo:
+      type: object
+      description: >-
+        Raw JSON returned by Google's userinfo endpoint for the current ADC
+        access token; fields vary by token scope, so this is intentionally
+        not modeled field by field.
+      additionalProperties: true
     SearchResultsResponse:
       type: object
       required:
