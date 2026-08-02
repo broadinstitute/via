@@ -7,7 +7,7 @@ backend (`api/` at the repo root), built into a single container.
 The `Dockerfile` here builds in two stages: it compiles the frontend with
 Node, copies the built assets into the backend's static resources, then
 builds the Spring Boot jar with Gradle. The resulting image runs the jar
-directly, so the API (`/api/hello`) and the frontend are both served from
+directly, so the API and the frontend are both served from
 port 8080 — no reverse proxy or CORS configuration needed.
 
 This folder is a trimmed-down copy of the packaging conventions from
@@ -28,7 +28,7 @@ Note: `startupscript/` lives at the repository root, not here — see
 
 ## Access
 
-Once deployed in Workbench, access the app at the app URL (port 8080).
+Once deployed in Workbench, access the app at the app URL.
 
 For local testing:
 1. Create Docker network: `docker network create app-network`
@@ -46,6 +46,5 @@ For local testing:
 
 ## Usage
 
-1. Fork the repository
-2. In Workbench UI, create a custom app pointing to your forked repository,
-   branch `main`, and folder `deploy`
+In Workbench UI, create a custom app pointing to this repository,
+branch `main`, and folder `deploy`
