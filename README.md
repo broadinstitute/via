@@ -34,11 +34,10 @@ cd api && ./gradlew bootRun
 cd ui && npm install && npm run dev
 ```
 
-Open the URL Vite prints (default `http://localhost:5173`) - you should see
-"Hello world, it's `<timestamp>`".
+Open the URL Vite prints (default `http://localhost:5173`).
 
-To see a real value from `GET /api/profile` locally, export `OWNER_EMAIL`
-before starting the backend, e.g. `OWNER_EMAIL=you@example.org ./gradlew
+To see a real value from `GET /api/profile` locally, export `WORKBENCH_USER_EMAIL`
+before starting the backend, e.g. `WORKBENCH_USER_EMAIL=you@example.org ./gradlew
 bootRun`.
 
 ### Running as it will run in Workbench
