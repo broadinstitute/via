@@ -45,8 +45,7 @@ components:
         userEmail:
           type: string
           description: >-
-            Email address of the Workbench user, from the OWNER_EMAIL
-            environment variable.
+            Email address of the Workbench user
           example: "researcher@example.org"
     SearchResultsResponse:
       type: object

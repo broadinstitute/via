@@ -17,6 +17,10 @@ services:
       # /root/.workbench-env, which is only ever created by Workbench's
       # postCreateCommand and never appears on a plain local `docker compose up`.
       - SKIP_WORKBENCH_WAIT=${SKIP_WORKBENCH_WAIT:-false}
+      # Local dev stand-in for the value Workbench normally injects via
+      # /root/.workbench-env; set this when using SKIP_WORKBENCH_WAIT so the
+      # profile endpoint has something to return.
+      - WORKBENCH_USER_EMAIL=${WORKBENCH_USER_EMAIL:-}
     volumes:
       - .:/workspace:cached
     # The port specified here will be forwarded and accessible from the

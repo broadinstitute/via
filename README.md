@@ -49,7 +49,7 @@ no CORS or reverse proxy to configure). To build and run that image locally:
 
 ```bash
 docker network create app-network  # first time only
-OWNER_EMAIL=you@example.org SKIP_WORKBENCH_WAIT=true docker compose -f deploy/docker-compose.yaml up --build
+WORKBENCH_USER_EMAIL=you@example.org SKIP_WORKBENCH_WAIT=true docker compose -f deploy/docker-compose.yaml up --build
 ```
 
 Then open `http://localhost:8080`.
