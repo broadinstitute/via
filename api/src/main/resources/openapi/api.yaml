@@ -6,19 +6,6 @@ info:
 servers:
   - url: /
 paths:
-  /api/hello:
-    get:
-      operationId: hello
-      summary: Returns a greeting along with the current server time.
-      tags:
-        - hello
-      responses:
-        "200":
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HelloResponse"
   /api/profile:
     get:
       operationId: profile
@@ -50,15 +37,6 @@ paths:
                 $ref: "#/components/schemas/SearchResultsResponse"
 components:
   schemas:
-    HelloResponse:
-      type: object
-      required:
-        - timestamp
-      properties:
-        timestamp:
-          type: string
-          description: Current server time (ISO-8601 instant).
-          example: "2026-07-28T19:20:05.415Z"
     UserProfile:
       type: object
       required:
