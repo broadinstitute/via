@@ -9,8 +9,7 @@ This repo contains the app's frontend (ui/, TypeScript + React) and backend (api
 
 ## Structure
 
-- `ui/` - React + TypeScript app (Vite). Currently a "Hello world" page that
-  fetches the current time from the backend.
+- `ui/` - React + TypeScript app (Vite).
 - `api/` - Java + Spring Boot app, built with Gradle. The API is
   defined API-first in `api/src/main/resources/openapi/api.yaml`
   (server interfaces and models are generated from it at build time).
