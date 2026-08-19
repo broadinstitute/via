@@ -1,5 +1,7 @@
 export type SubpopCode = "EUR" | "AFR" | "AMR" | "EAS" | "SAS" | "MID" | "OTH";
 
+export type GnomadSubpopCode = "AFR" | "AMR" | "EAS" | "FIN" | "NFE" | "ASJ" | "OTH" | "SAS";
+
 export type ClinVarSignificance = "Pathogenic" | "VUS" | "Benign";
 
 interface CohortVariantBase {
@@ -15,7 +17,7 @@ export interface AnnotatedCohortVariant extends CohortVariantBase {
   aouAf: number;
   aouAc: number;
   aouAn: number;
-  gnomadSubpopulation: SubpopCode;
+  gnomadSubpopulation: GnomadSubpopCode;
   gnomadAf: number;
   gnomadAc: number;
   gnomadAn: number;

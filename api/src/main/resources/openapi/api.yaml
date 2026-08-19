@@ -169,7 +169,7 @@ components:
         gnomadSubpopulation:
           type: string
           nullable: true
-          enum: [EUR, AFR, AMR, EAS, SAS, MID, OTH]
+          enum: [AFR, AMR, EAS, FIN, NFE, ASJ, OTH, SAS]
         gnomadAf:
           type: number
           nullable: true

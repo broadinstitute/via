@@ -3,6 +3,7 @@ import type {
   ClinVarSignificance,
   CohortVariantRow,
   FilteredVariantRow,
+  GnomadSubpopCode,
   PhenotypeCrosswalk,
   SearchSummary,
   SubpopCode,
@@ -18,7 +19,7 @@ interface RawCohortVariant {
   aouAf: number | null;
   aouAc: number | null;
   aouAn: number | null;
-  gnomadSubpopulation: SubpopCode | null;
+  gnomadSubpopulation: GnomadSubpopCode | null;
   gnomadAf: number | null;
   gnomadAc: number | null;
   gnomadAn: number | null;
