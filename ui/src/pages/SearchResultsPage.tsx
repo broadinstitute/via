@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchProfile } from "../api/profile";
 import { fetchSearchResults, type SearchResults } from "../api/searchResults";
 import CohortVariantsPanel from "../components/results/CohortVariantsPanel";
+import DataSourceVersionsFooter from "../components/results/DataSourceVersionsFooter";
 import ParticipantMatchedVariantsPanel from "../components/results/ParticipantMatchedVariantsPanel";
 import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
 import SearchDrawer from "../components/results/SearchDrawer";
@@ -140,6 +141,8 @@ export default function SearchResultsPage() {
             minHeight={346}
           />
         )}
+
+        <DataSourceVersionsFooter />
       </main>
     </>
   );

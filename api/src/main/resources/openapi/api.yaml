@@ -35,6 +35,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SearchResultsResponse"
+  /api/data-source-versions:
+    get:
+      operationId: dataSourceVersions
+      summary: >-
+        Returns the version of each external dataset used to annotate and
+        filter variants, for display in the data-provenance widget.
+      tags:
+        - dataSourceVersions
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataSourceVersion"
 components:
   schemas:
     UserProfile:
@@ -47,6 +64,21 @@ components:
           description: >-
             Email address of the Workbench user
           example: "researcher@example.org"
+    DataSourceVersion:
+      type: object
+      required:
+        - name
+        - version
+      properties:
+        name:
+          type: string
+          example: "gnomAD"
+        version:
+          type: string
+          example: "v3.1.2"
+        url:
+          type: string
+          nullable: true
     SearchResultsResponse:
       type: object
       required:

@@ -1,0 +1,73 @@
+.footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.label {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+}
+
+.appVersion {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 11px;
+  font-family: "SF Mono", "Courier New", monospace;
+}
+
+.source {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.name {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.versionRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.version {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 12px;
+  font-family: "SF Mono", "Courier New", monospace;
+}
+
+.link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 11px;
+}
+
+.link:hover {
+  color: var(--text-accent);
+}
