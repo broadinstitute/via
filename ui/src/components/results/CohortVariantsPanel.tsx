@@ -31,6 +31,10 @@ function NotAvailable() {
   return <span className={styles.cellNa}>n/a</span>;
 }
 
+function isMissingFromGnomad(row: CohortVariantRow): boolean {
+  return row.annotated && row.gnomadUrl === null;
+}
+
 const AOU_GROUP_COLUMN_IDS = new Set(["aouSubpop", "aouAf", "aouAcAn"]);
 const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn", "gnomadLink"]);
 const GROUP_START_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
@@ -311,28 +315,47 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <Fragment key={row.id}>
-                <tr>
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={tintClassName(cell.column.id)}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-                {expandedVariants.has(row.original.variant) && (
-                  <tr className={styles.detailRow}>
-                    <td colSpan={row.getVisibleCells().length}>
-                      <div className={styles.detailPanel}>
-                        <div className={styles.detailPlaceholder}>
-                          Not mocked yet, coming soon :) Will show stats on each subpopulation
-                        </div>
-                      </div>
-                    </td>
+            {table.getRowModel().rows.map((row) => {
+              const missingGnomad = isMissingFromGnomad(row.original);
+              return (
+                <Fragment key={row.id}>
+                  <tr>
+                    {row.getVisibleCells().map((cell) => {
+                      if (missingGnomad && cell.column.id === "gnomadSubpop") {
+                        return (
+                          <td
+                            key={cell.id}
+                            colSpan={GNOMAD_GROUP_COLUMN_IDS.size}
+                            className={`${tintClassName(cell.column.id)} ${styles.gnomadMissing}`}
+                          >
+                            <span className={styles.cellNa}>Not observed in gnomAD</span>
+                          </td>
+                        );
+                      }
+                      if (missingGnomad && GNOMAD_GROUP_COLUMN_IDS.has(cell.column.id)) {
+                        return null;
+                      }
+                      return (
+                        <td key={cell.id} className={tintClassName(cell.column.id)}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      );
+                    })}
                   </tr>
-                )}
-              </Fragment>
-            ))}
+                  {expandedVariants.has(row.original.variant) && (
+                    <tr className={styles.detailRow}>
+                      <td colSpan={row.getVisibleCells().length}>
+                        <div className={styles.detailPanel}>
+                          <div className={styles.detailPlaceholder}>
+                            Not mocked yet, coming soon :) Will show stats on each subpopulation
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

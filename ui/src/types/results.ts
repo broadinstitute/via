@@ -17,11 +17,12 @@ export interface AnnotatedCohortVariant extends CohortVariantBase {
   aouAf: number;
   aouAc: number;
   aouAn: number;
-  gnomadSubpopulation: GnomadSubpopCode;
-  gnomadAf: number;
-  gnomadAc: number;
-  gnomadAn: number;
-  gnomadUrl: string;
+  /** null for all gnomAD fields below = this variant was not observed in gnomAD. */
+  gnomadSubpopulation: GnomadSubpopCode | null;
+  gnomadAf: number | null;
+  gnomadAc: number | null;
+  gnomadAn: number | null;
+  gnomadUrl: string | null;
   clinvarSignificance: ClinVarSignificance;
   clinvarUrl: string;
   spliceAi: number;

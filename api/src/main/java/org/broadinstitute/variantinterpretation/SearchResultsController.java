@@ -128,8 +128,8 @@ public class SearchResultsController implements SearchResultsApi {
             CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.01, null),
         annotatedVariant(
             "8-11708645-CGGGG-C", "Frameshift", "p.Gly136fs", CohortVariant.AouSubpopulationEnum.OTH, 0.005, 486,
-            96422, CohortVariant.GnomadSubpopulationEnum.ASJ, 0.0001, 9, 152312,
-            CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.08, CohortVariant.PlofEnum.HC),
+            96422, null, null, null, null, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.08,
+            CohortVariant.PlofEnum.HC),
         annotatedVariant(
             "8-11708653-A-G", "Nonsense", "p.Trp139Ter", CohortVariant.AouSubpopulationEnum.EUR, 0.0033, 1707,
             517466, CohortVariant.GnomadSubpopulationEnum.NFE, 0.0369, 5620, 152312,
@@ -189,12 +189,13 @@ public class SearchResultsController implements SearchResultsApi {
       int aouAc,
       int aouAn,
       CohortVariant.GnomadSubpopulationEnum gnomadSubpopulation,
-      double gnomadAf,
-      int gnomadAc,
-      int gnomadAn,
+      Double gnomadAf,
+      Integer gnomadAc,
+      Integer gnomadAn,
       CohortVariant.ClinvarSignificanceEnum clinvarSignificance,
       double spliceAi,
       CohortVariant.PlofEnum plof) {
+    boolean inGnomad = gnomadAf != null;
     return new CohortVariant()
         .variant(variant)
         .gene("GATA4")
@@ -206,10 +207,10 @@ public class SearchResultsController implements SearchResultsApi {
         .aouAc(aouAc)
         .aouAn(aouAn)
         .gnomadSubpopulation(gnomadSubpopulation)
-        .gnomadAf(BigDecimal.valueOf(gnomadAf))
+        .gnomadAf(inGnomad ? BigDecimal.valueOf(gnomadAf) : null)
         .gnomadAc(gnomadAc)
         .gnomadAn(gnomadAn)
-        .gnomadUrl("https://gnomad.broadinstitute.org/variant/" + variant)
+        .gnomadUrl(inGnomad ? "https://gnomad.broadinstitute.org/variant/" + variant : null)
         .clinvarSignificance(clinvarSignificance)
         .clinvarUrl("https://www.ncbi.nlm.nih.gov/clinvar/?term=" + variant)
         .spliceAi(BigDecimal.valueOf(spliceAi))
