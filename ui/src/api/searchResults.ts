@@ -13,6 +13,7 @@ interface RawCohortVariant {
   gene: string;
   annotated: boolean;
   classification: string | null;
+  proteinChange: string | null;
   subpopulation: SubpopCode | null;
   aouAf: number | null;
   aouAc: number | null;
@@ -68,6 +69,7 @@ function toCohortVariantRow(raw: RawCohortVariant): CohortVariantRow {
     variant: raw.variant,
     gene: raw.gene,
     classification: raw.classification!,
+    proteinChange: raw.proteinChange!,
     subpopulation: raw.subpopulation!,
     aouAf: raw.aouAf!,
     aouAc: raw.aouAc!,

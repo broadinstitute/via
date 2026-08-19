@@ -97,6 +97,17 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             cell: (info) => <span className={styles.mono}>{info.getValue()}</span>,
           }),
           columnHelper.accessor("gene", { header: "Gene" }),
+          columnHelper.accessor((row) => (row.annotated ? row.proteinChange : undefined), {
+            id: "proteinChange",
+            header: "Protein Change",
+            cell: ({ row }) =>
+              row.original.annotated ? (
+                <span className={styles.mono}>{row.original.proteinChange}</span>
+              ) : (
+                <NotAvailable />
+              ),
+            sortUndefined: "last",
+          }),
           columnHelper.accessor((row) => (row.annotated ? row.classification : undefined), {
             id: "classification",
             header: "Classification",
@@ -122,7 +133,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         columns: [
           columnHelper.accessor((row) => (row.annotated ? row.subpopulation : undefined), {
             id: "subpopulation",
-            header: "Subpopulation",
+            header: "",
             cell: ({ row }) =>
               row.original.annotated ? <SubpopBadge subpopulation={row.original.subpopulation} /> : <NotAvailable />,
             sortUndefined: "last",

@@ -149,6 +149,10 @@ components:
           type: string
           nullable: true
           example: "Missense"
+        proteinChange:
+          type: string
+          nullable: true
+          example: "p.Arg115Cys"
         subpopulation:
           type: string
           nullable: true

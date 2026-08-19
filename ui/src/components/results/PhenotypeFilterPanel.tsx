@@ -21,6 +21,13 @@ export default function PhenotypeFilterPanel({
 }: PhenotypeFilterPanelProps) {
   const [activeTab, setActiveTab] = useState<BreakdownTab>("ancestry");
 
+  const centerLabel = (
+    <>
+      <div className={styles.donutCount}>{crosswalk.participantCount.toLocaleString()}</div>
+      <div>matched</div>
+    </>
+  );
+
   return (
     <ResultsPanel title="Phenotype filter">
       <div className={styles.body}>
@@ -71,12 +78,12 @@ export default function PhenotypeFilterPanel({
           {/* Keyed by tab so switching remounts the donut/legend, replaying their entrance animation. */}
           {activeTab === "ancestry" ? (
             <div key="ancestry">
-              <Donut segments={ancestryBreakdown} centerLabel={<>% of<br />participants</>} />
+              <Donut segments={ancestryBreakdown} centerLabel={centerLabel} />
               <BreakdownLegend segments={ancestryBreakdown} />
             </div>
           ) : (
             <div key="age">
-              <Donut segments={ageBreakdown} centerLabel={<>% of<br />participants</>} />
+              <Donut segments={ageBreakdown} centerLabel={centerLabel} />
               <BreakdownLegend segments={ageBreakdown} />
             </div>
           )}

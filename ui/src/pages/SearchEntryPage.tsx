@@ -60,6 +60,7 @@ export default function SearchEntryPage() {
               placeholder="e.g. HP:0001636"
             />
             <FieldHint>Enter an HPO term (e.g. HP:0001636).</FieldHint>
+            <p className={styles.comingSoon}>Free text phenotype search coming soon</p>
             <ValueCallout>
               <b>Unlock the full power of All of Us by providing a phenotype.</b> See how often each variant shows
               up specifically among All of Us participants who share this phenotype.

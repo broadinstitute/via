@@ -95,73 +95,74 @@ public class SearchResultsController implements SearchResultsApi {
   private static List<CohortVariant> cohortVariants() {
     return List.of(
         annotatedVariant(
-            "8-11708582-C-T", "Missense", CohortVariant.SubpopulationEnum.EUR, 0.0034, 1735, 517466, 0.004, 612,
-            152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.09, null),
+            "8-11708582-C-T", "Missense", "p.Arg115Cys", CohortVariant.SubpopulationEnum.EUR, 0.0034, 1735, 517466,
+            0.004, 612, 152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.09, null),
         annotatedVariant(
-            "8-11708590-G-GAA", "Frameshift", CohortVariant.SubpopulationEnum.AFR, 0.0018, 388, 211058, 0.0006, 89,
-            152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.07, CohortVariant.PlofEnum.HC),
+            "8-11708590-G-GAA", "Frameshift", "p.Gly118fs", CohortVariant.SubpopulationEnum.AFR, 0.0018, 388, 211058,
+            0.0006, 89, 152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.07, CohortVariant.PlofEnum.HC),
         annotatedVariant(
-            "8-11708598-T-C", "Synonymous", CohortVariant.SubpopulationEnum.EUR, 0.05, 25895, 517466, 0.0489, 7452,
-            152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.02, null),
+            "8-11708598-T-C", "Synonymous", "p.Leu121=", CohortVariant.SubpopulationEnum.EUR, 0.05, 25895, 517466,
+            0.0489, 7452, 152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.02, null),
         annotatedVariant(
-            "8-11708605-A-G", "Missense", CohortVariant.SubpopulationEnum.AMR, 0.0062, 1190, 190702, 0.0013, 203,
-            152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.04, null),
+            "8-11708605-A-G", "Missense", "p.Asp124Gly", CohortVariant.SubpopulationEnum.AMR, 0.0062, 1190, 190702,
+            0.0013, 203, 152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.04, null),
         annotatedVariant(
-            "8-11708613-C-T", "Nonsense", CohortVariant.SubpopulationEnum.EUR, 0.0002, 127, 517466, 0.0001, 22,
-            152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.02, CohortVariant.PlofEnum.HC),
+            "8-11708613-C-T", "Nonsense", "p.Arg127Ter", CohortVariant.SubpopulationEnum.EUR, 0.0002, 127, 517466,
+            0.0001, 22, 152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.02, CohortVariant.PlofEnum.HC),
         annotatedVariant(
-            "8-11708621-G-T", "Splice site", CohortVariant.SubpopulationEnum.EAS, 0.004, 128, 32140, 0.0004, 58,
-            152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.77, CohortVariant.PlofEnum.HC),
+            "8-11708621-G-T", "Splice site", "p.?", CohortVariant.SubpopulationEnum.EAS, 0.004, 128, 32140, 0.0004,
+            58, 152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.77, CohortVariant.PlofEnum.HC),
         annotatedVariant(
-            "8-11708629-T-A", "Missense", CohortVariant.SubpopulationEnum.SAS, 0.005, 107, 21428, 0.0002, 31, 152312,
-            CohortVariant.ClinvarSignificanceEnum.VUS, 0.08, null),
+            "8-11708629-T-A", "Missense", "p.Ser130Arg", CohortVariant.SubpopulationEnum.SAS, 0.005, 107, 21428,
+            0.0002, 31, 152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.08, null),
         annotatedVariant(
-            "8-11708637-A-C", "Missense", CohortVariant.SubpopulationEnum.EUR, 0.0733, 37954, 517466, 0.0669, 10190,
-            152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.01, null),
+            "8-11708637-A-C", "Missense", "p.Lys133Thr", CohortVariant.SubpopulationEnum.EUR, 0.0733, 37954, 517466,
+            0.0669, 10190, 152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.01, null),
         annotatedVariant(
-            "8-11708645-CGGGG-C", "Frameshift", CohortVariant.SubpopulationEnum.OTH, 0.005, 486, 96422, 0.0001, 9,
-            152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.08, CohortVariant.PlofEnum.HC),
+            "8-11708645-CGGGG-C", "Frameshift", "p.Gly136fs", CohortVariant.SubpopulationEnum.OTH, 0.005, 486, 96422,
+            0.0001, 9, 152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.08, CohortVariant.PlofEnum.HC),
         annotatedVariant(
-            "8-11708653-A-G", "Nonsense", CohortVariant.SubpopulationEnum.EUR, 0.0033, 1707, 517466, 0.0369, 5620,
-            152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.02, null),
+            "8-11708653-A-G", "Nonsense", "p.Trp139Ter", CohortVariant.SubpopulationEnum.EUR, 0.0033, 1707, 517466,
+            0.0369, 5620, 152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.02, null),
         annotatedVariant(
-            "8-11708661-C-T", "Missense", CohortVariant.SubpopulationEnum.AMR, 0.0045, 858, 190702, 0.0031, 472,
-            152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.05, null),
+            "8-11708661-C-T", "Missense", "p.Pro142Leu", CohortVariant.SubpopulationEnum.AMR, 0.0045, 858, 190702,
+            0.0031, 472, 152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.05, null),
         annotatedVariant(
-            "8-11708669-G-A", "Nonsense", CohortVariant.SubpopulationEnum.EUR, 0.0008, 414, 517466, 0.0003, 46,
-            152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.03, CohortVariant.PlofEnum.HC),
+            "8-11708669-G-A", "Nonsense", "p.Glu145Ter", CohortVariant.SubpopulationEnum.EUR, 0.0008, 414, 517466,
+            0.0003, 46, 152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.03, CohortVariant.PlofEnum.HC),
         annotatedVariant(
-            "8-11708677-T-C", "Synonymous", CohortVariant.SubpopulationEnum.EUR, 0.0612, 31669, 517466, 0.0578, 8804,
-            152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.01, null),
+            "8-11708677-T-C", "Synonymous", "p.Ala148=", CohortVariant.SubpopulationEnum.EUR, 0.0612, 31669, 517466,
+            0.0578, 8804, 152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.01, null),
         annotatedVariant(
-            "8-11708685-A-T", "Missense", CohortVariant.SubpopulationEnum.SAS, 0.0071, 152, 21428, 0.0019, 289,
-            152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.11, null),
+            "8-11708685-A-T", "Missense", "p.Asn151Tyr", CohortVariant.SubpopulationEnum.SAS, 0.0071, 152, 21428,
+            0.0019, 289, 152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.11, null),
         annotatedVariant(
-            "8-11708693-C-G", "Frameshift", CohortVariant.SubpopulationEnum.AFR, 0.0024, 507, 211058, 0.0002, 30,
-            152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.09, CohortVariant.PlofEnum.HC),
+            "8-11708693-C-G", "Frameshift", "p.Val154fs", CohortVariant.SubpopulationEnum.AFR, 0.0024, 507, 211058,
+            0.0002, 30, 152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.09, CohortVariant.PlofEnum.HC),
         annotatedVariant(
-            "8-11708701-G-T", "Splice site", CohortVariant.SubpopulationEnum.EAS, 0.0028, 90, 32140, 0.0003, 46,
-            152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.62, CohortVariant.PlofEnum.HC),
+            "8-11708701-G-T", "Splice site", "p.?", CohortVariant.SubpopulationEnum.EAS, 0.0028, 90, 32140, 0.0003,
+            46, 152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.62, CohortVariant.PlofEnum.HC),
         annotatedVariant(
-            "8-11708709-A-C", "Missense", CohortVariant.SubpopulationEnum.EUR, 0.0389, 20130, 517466, 0.0356, 5422,
-            152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.02, null),
+            "8-11708709-A-C", "Missense", "p.His157Pro", CohortVariant.SubpopulationEnum.EUR, 0.0389, 20130, 517466,
+            0.0356, 5422, 152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.02, null),
         annotatedVariant(
-            "8-11708717-T-G", "Nonsense", CohortVariant.SubpopulationEnum.OTH, 0.0016, 154, 96422, 0.0001, 15,
-            152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.04, CohortVariant.PlofEnum.HC),
+            "8-11708717-T-G", "Nonsense", "p.Tyr160Ter", CohortVariant.SubpopulationEnum.OTH, 0.0016, 154, 96422,
+            0.0001, 15, 152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.04, CohortVariant.PlofEnum.HC),
         annotatedVariant(
-            "8-11708725-C-A", "Synonymous", CohortVariant.SubpopulationEnum.AMR, 0.0524, 9993, 190702, 0.0498, 7585,
-            152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.01, null),
+            "8-11708725-C-A", "Synonymous", "p.Gly163=", CohortVariant.SubpopulationEnum.AMR, 0.0524, 9993, 190702,
+            0.0498, 7585, 152312, CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.01, null),
         annotatedVariant(
-            "8-11708733-G-C", "Missense", CohortVariant.SubpopulationEnum.MID, 0.0067, 39, 5768, 0.0011, 168,
-            152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.13, null),
+            "8-11708733-G-C", "Missense", "p.Phe166Leu", CohortVariant.SubpopulationEnum.MID, 0.0067, 39, 5768,
+            0.0011, 168, 152312, CohortVariant.ClinvarSignificanceEnum.VUS, 0.13, null),
         annotatedVariant(
-            "8-11708741-A-G", "Frameshift", CohortVariant.SubpopulationEnum.EUR, 0.0004, 207, 517466, 0.0002, 30,
-            152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.06, CohortVariant.PlofEnum.HC));
+            "8-11708741-A-G", "Frameshift", "p.Ile169fs", CohortVariant.SubpopulationEnum.EUR, 0.0004, 207, 517466,
+            0.0002, 30, 152312, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.06, CohortVariant.PlofEnum.HC));
   }
 
   private static CohortVariant annotatedVariant(
       String variant,
       String classification,
+      String proteinChange,
       CohortVariant.SubpopulationEnum subpopulation,
       double aouAf,
       int aouAc,
@@ -177,6 +178,7 @@ public class SearchResultsController implements SearchResultsApi {
         .gene("GATA4")
         .annotated(true)
         .classification(classification)
+        .proteinChange(proteinChange)
         .subpopulation(subpopulation)
         .aouAf(BigDecimal.valueOf(aouAf))
         .aouAc(aouAc)

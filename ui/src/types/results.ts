@@ -10,6 +10,7 @@ interface CohortVariantBase {
 export interface AnnotatedCohortVariant extends CohortVariantBase {
   annotated: true;
   classification: string;
+  proteinChange: string;
   subpopulation: SubpopCode;
   aouAf: number;
   aouAc: number;
