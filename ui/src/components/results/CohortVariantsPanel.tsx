@@ -31,9 +31,9 @@ function NotAvailable() {
   return <span className={styles.cellNa}>n/a</span>;
 }
 
-const AOU_GROUP_COLUMN_IDS = new Set(["subpopulation", "aouAf", "aouAcAn"]);
-const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadAf", "gnomadAcAn", "gnomadLink"]);
-const GROUP_START_COLUMN_IDS = new Set(["subpopulation", "gnomadAf"]);
+const AOU_GROUP_COLUMN_IDS = new Set(["aouSubpop", "aouAf", "aouAcAn"]);
+const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn", "gnomadLink"]);
+const GROUP_START_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
 
 function tintClassName(columnId: string): string {
   const classNames: string[] = [];
@@ -131,11 +131,15 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         ),
         enableSorting: false,
         columns: [
-          columnHelper.accessor((row) => (row.annotated ? row.subpopulation : undefined), {
-            id: "subpopulation",
+          columnHelper.accessor((row) => (row.annotated ? row.aouSubpopulation : undefined), {
+            id: "aouSubpop",
             header: "",
             cell: ({ row }) =>
-              row.original.annotated ? <SubpopBadge subpopulation={row.original.subpopulation} /> : <NotAvailable />,
+              row.original.annotated ? (
+                <SubpopBadge subpopulation={row.original.aouSubpopulation} />
+              ) : (
+                <NotAvailable />
+              ),
             sortUndefined: "last",
           }),
           columnHelper.accessor((row) => (row.annotated ? row.aouAf : undefined), {
@@ -157,14 +161,28 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         id: "gnomad",
         header: () => (
           <>
-            gnomAD{" "}
-            <span className={styles.tooltipIcon} title="Data shown is from gnomAD v3.1.2 and may differ from the current release.">
+            gnomAD <span className={styles.groupQualifier}>— max subpopulation</span>{" "}
+            <span
+              className={styles.tooltipIcon}
+              title="Values below reflect the gnomAD subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire gnomAD population. Data shown is from gnomAD v3.1.2 and may differ from the current release."
+            >
               i
             </span>
           </>
         ),
         enableSorting: false,
         columns: [
+          columnHelper.accessor((row) => (row.annotated ? row.gnomadSubpopulation : undefined), {
+            id: "gnomadSubpop",
+            header: "",
+            cell: ({ row }) =>
+              row.original.annotated ? (
+                <SubpopBadge subpopulation={row.original.gnomadSubpopulation} />
+              ) : (
+                <NotAvailable />
+              ),
+            sortUndefined: "last",
+          }),
           columnHelper.accessor((row) => (row.annotated ? row.gnomadAf : undefined), {
             id: "gnomadAf",
             header: "AF",

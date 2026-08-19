@@ -153,7 +153,7 @@ components:
           type: string
           nullable: true
           example: "p.Arg115Cys"
-        subpopulation:
+        aouSubpopulation:
           type: string
           nullable: true
           enum: [EUR, AFR, AMR, EAS, SAS, MID, OTH]
@@ -166,6 +166,10 @@ components:
         aouAn:
           type: integer
           nullable: true
+        gnomadSubpopulation:
+          type: string
+          nullable: true
+          enum: [EUR, AFR, AMR, EAS, SAS, MID, OTH]
         gnomadAf:
           type: number
           nullable: true

@@ -14,10 +14,11 @@ interface RawCohortVariant {
   annotated: boolean;
   classification: string | null;
   proteinChange: string | null;
-  subpopulation: SubpopCode | null;
+  aouSubpopulation: SubpopCode | null;
   aouAf: number | null;
   aouAc: number | null;
   aouAn: number | null;
+  gnomadSubpopulation: SubpopCode | null;
   gnomadAf: number | null;
   gnomadAc: number | null;
   gnomadAn: number | null;
@@ -70,10 +71,11 @@ function toCohortVariantRow(raw: RawCohortVariant): CohortVariantRow {
     gene: raw.gene,
     classification: raw.classification!,
     proteinChange: raw.proteinChange!,
-    subpopulation: raw.subpopulation!,
+    aouSubpopulation: raw.aouSubpopulation!,
     aouAf: raw.aouAf!,
     aouAc: raw.aouAc!,
     aouAn: raw.aouAn!,
+    gnomadSubpopulation: raw.gnomadSubpopulation!,
     gnomadAf: raw.gnomadAf!,
     gnomadAc: raw.gnomadAc!,
     gnomadAn: raw.gnomadAn!,

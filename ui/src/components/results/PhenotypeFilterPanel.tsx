@@ -24,7 +24,7 @@ export default function PhenotypeFilterPanel({
   const centerLabel = (
     <>
       <div className={styles.donutCount}>{crosswalk.participantCount.toLocaleString()}</div>
-      <div>matched</div>
+      <div>participants</div>
     </>
   );
 
@@ -48,10 +48,10 @@ export default function PhenotypeFilterPanel({
               <span className={styles.desc}>{crosswalk.description}</span>
             </div>
           </div>
-          <div className={styles.countBadge}>
-            <div className={styles.num}>{crosswalk.participantCount}</div>
-            <div className={styles.lbl}>participants matched</div>
-          </div>
+          {/*<div className={styles.countBadge}>*/}
+          {/*  <div className={styles.num}>{crosswalk.participantCount}</div>*/}
+          {/*  <div className={styles.lbl}>participants matched</div>*/}
+          {/*</div>*/}
         </div>
 
         <div>

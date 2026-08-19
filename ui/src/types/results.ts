@@ -11,10 +11,11 @@ export interface AnnotatedCohortVariant extends CohortVariantBase {
   annotated: true;
   classification: string;
   proteinChange: string;
-  subpopulation: SubpopCode;
+  aouSubpopulation: SubpopCode;
   aouAf: number;
   aouAc: number;
   aouAn: number;
+  gnomadSubpopulation: SubpopCode;
   gnomadAf: number;
   gnomadAc: number;
   gnomadAn: number;
