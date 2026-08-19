@@ -13,9 +13,9 @@ public class DataSourceVersionsController implements DataSourceVersionsApi {
   public ResponseEntity<List<DataSourceVersion>> dataSourceVersions() {
     return ResponseEntity.ok(
         List.of(
-            source("All of Us", "Controlled Tier CDR v8", "https://www.researchallofus.org/"),
+            source("All of Us", "CDRv8", "https://www.researchallofus.org/"),
             source("gnomAD", "v3.1.2", "https://gnomad.broadinstitute.org/"),
-            source("ClinVar", "2026-06-01 release", "https://www.ncbi.nlm.nih.gov/clinvar/"),
+            source("ClinVar", "2025-06-01", "https://www.ncbi.nlm.nih.gov/clinvar/"),
             source("SpliceAI", "v1.3", "https://github.com/Illumina/SpliceAI"),
             source("LOFTEE", "v1.0.3", "https://github.com/konradjk/loftee")));
   }
