@@ -1,5 +1,7 @@
 export type SubpopCode = "EUR" | "AFR" | "AMR" | "EAS" | "SAS" | "MID" | "OTH";
 
+export type GnomadSubpopCode = "AFR" | "AMR" | "EAS" | "FIN" | "NFE" | "ASJ" | "OTH" | "SAS";
+
 export type ClinVarSignificance = "Pathogenic" | "VUS" | "Benign";
 
 interface CohortVariantBase {
@@ -10,14 +12,17 @@ interface CohortVariantBase {
 export interface AnnotatedCohortVariant extends CohortVariantBase {
   annotated: true;
   classification: string;
-  subpopulation: SubpopCode;
+  proteinChange: string;
+  aouSubpopulation: SubpopCode;
   aouAf: number;
   aouAc: number;
   aouAn: number;
-  gnomadAf: number;
-  gnomadAc: number;
-  gnomadAn: number;
-  gnomadUrl: string;
+  /** null for all gnomAD fields below = this variant was not observed in gnomAD. */
+  gnomadSubpopulation: GnomadSubpopCode | null;
+  gnomadAf: number | null;
+  gnomadAc: number | null;
+  gnomadAn: number | null;
+  gnomadUrl: string | null;
   clinvarSignificance: ClinVarSignificance;
   clinvarUrl: string;
   spliceAi: number;
@@ -57,6 +62,7 @@ export type FilteredVariantRow = FilteredVariantWithStats | FilteredVariantWitho
 
 export interface BreakdownSegment {
   label: string;
+  count: number;
   percent: number;
   color: string;
 }

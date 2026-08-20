@@ -3,10 +3,21 @@
   color: var(--text-muted);
 }
 
-.tableScroll {
+/* The scroller is absolutely positioned so the (much taller) table doesn't
+   contribute to intrinsic height. That lets the panel stretch to whatever
+   height the phenotype panel beside it sets, and the table fills it exactly,
+   instead of stopping at a hardcoded cap and leaving dead space below.
+   min-height is the floor for when this panel stands alone (stacked layout). */
+.tableWrap {
+  position: relative;
   flex: 1;
+  min-height: 425px;
+}
+
+.tableScroll {
+  position: absolute;
+  inset: 0;
   overflow: auto;
-  max-height: 425px;
   scrollbar-width: thin;
 }
 
@@ -122,6 +133,10 @@
 .cellNa {
   color: var(--text-muted);
   font-style: italic;
+}
+
+.gnomadMissing {
+  text-align: center;
 }
 
 .clinvarCell {

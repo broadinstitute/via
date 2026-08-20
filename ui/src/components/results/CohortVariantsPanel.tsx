@@ -31,9 +31,13 @@ function NotAvailable() {
   return <span className={styles.cellNa}>n/a</span>;
 }
 
-const AOU_GROUP_COLUMN_IDS = new Set(["subpopulation", "aouAf", "aouAcAn"]);
-const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadAf", "gnomadAcAn", "gnomadLink"]);
-const GROUP_START_COLUMN_IDS = new Set(["subpopulation", "gnomadAf"]);
+function isMissingFromGnomad(row: CohortVariantRow): boolean {
+  return row.annotated && row.gnomadUrl === null;
+}
+
+const AOU_GROUP_COLUMN_IDS = new Set(["aouSubpop", "aouAf", "aouAcAn"]);
+const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn", "gnomadLink"]);
+const GROUP_START_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
 
 function tintClassName(columnId: string): string {
   const classNames: string[] = [];
@@ -97,6 +101,17 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             cell: (info) => <span className={styles.mono}>{info.getValue()}</span>,
           }),
           columnHelper.accessor("gene", { header: "Gene" }),
+          columnHelper.accessor((row) => (row.annotated ? row.proteinChange : undefined), {
+            id: "proteinChange",
+            header: "Protein Change",
+            cell: ({ row }) =>
+              row.original.annotated ? (
+                <span className={styles.mono}>{row.original.proteinChange}</span>
+              ) : (
+                <NotAvailable />
+              ),
+            sortUndefined: "last",
+          }),
           columnHelper.accessor((row) => (row.annotated ? row.classification : undefined), {
             id: "classification",
             header: "Classification",
@@ -120,11 +135,15 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         ),
         enableSorting: false,
         columns: [
-          columnHelper.accessor((row) => (row.annotated ? row.subpopulation : undefined), {
-            id: "subpopulation",
-            header: "Subpopulation",
+          columnHelper.accessor((row) => (row.annotated ? row.aouSubpopulation : undefined), {
+            id: "aouSubpop",
+            header: "",
             cell: ({ row }) =>
-              row.original.annotated ? <SubpopBadge subpopulation={row.original.subpopulation} /> : <NotAvailable />,
+              row.original.annotated ? (
+                <SubpopBadge subpopulation={row.original.aouSubpopulation} />
+              ) : (
+                <NotAvailable />
+              ),
             sortUndefined: "last",
           }),
           columnHelper.accessor((row) => (row.annotated ? row.aouAf : undefined), {
@@ -146,14 +165,28 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         id: "gnomad",
         header: () => (
           <>
-            gnomAD{" "}
-            <span className={styles.tooltipIcon} title="Data shown is from gnomAD v3.1.2 and may differ from the current release.">
+            gnomAD <span className={styles.groupQualifier}>— max subpopulation</span>{" "}
+            <span
+              className={styles.tooltipIcon}
+              title="Values below reflect the gnomAD subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire gnomAD population. Data shown is from gnomAD v3.1.2 and may differ from the current release."
+            >
               i
             </span>
           </>
         ),
         enableSorting: false,
         columns: [
+          columnHelper.accessor((row) => (row.annotated ? row.gnomadSubpopulation : undefined), {
+            id: "gnomadSubpop",
+            header: "",
+            cell: ({ row }) =>
+              row.original.annotated ? (
+                <SubpopBadge subpopulation={row.original.gnomadSubpopulation} />
+              ) : (
+                <NotAvailable />
+              ),
+            sortUndefined: "last",
+          }),
           columnHelper.accessor((row) => (row.annotated ? row.gnomadAf : undefined), {
             id: "gnomadAf",
             header: "AF",
@@ -247,65 +280,86 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
 
   return (
     <ResultsPanel title="Candidate variants — all participants" headerRight={<span className={styles.sub}>Showing {rows.length} results</span>}>
-      <div className={styles.tableScroll}>
-        <table className={styles.table}>
-          <thead>
-            {table.getHeaderGroups().map((headerGroup, depth) => (
-              <tr key={headerGroup.id} className={depth === 0 ? styles.groupRow : styles.columnRow}>
-                {headerGroup.headers.map((header) => {
-                  const sortable = header.column.getCanSort();
-                  const sortDirection = header.column.getIsSorted();
-                  const className = sortable
-                    ? `${tintClassName(header.column.id)} ${styles.sortable}`.trim()
-                    : tintClassName(header.column.id);
-                  return (
-                    <th
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      className={className}
-                      onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
-                    >
-                      {header.isPlaceholder ? null : (
-                        <>
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {sortable && (
-                            <span className={styles.sortIndicator}>
-                              {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <Fragment key={row.id}>
-                <tr>
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={tintClassName(cell.column.id)}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
+      <div className={styles.tableWrap}>
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
+            <thead>
+              {table.getHeaderGroups().map((headerGroup, depth) => (
+                <tr key={headerGroup.id} className={depth === 0 ? styles.groupRow : styles.columnRow}>
+                  {headerGroup.headers.map((header) => {
+                    const sortable = header.column.getCanSort();
+                    const sortDirection = header.column.getIsSorted();
+                    const className = sortable
+                      ? `${tintClassName(header.column.id)} ${styles.sortable}`.trim()
+                      : tintClassName(header.column.id);
+                    return (
+                      <th
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        className={className}
+                        onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
+                      >
+                        {header.isPlaceholder ? null : (
+                          <>
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {sortable && (
+                              <span className={styles.sortIndicator}>
+                                {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </th>
+                    );
+                  })}
                 </tr>
-                {expandedVariants.has(row.original.variant) && (
-                  <tr className={styles.detailRow}>
-                    <td colSpan={row.getVisibleCells().length}>
-                      <div className={styles.detailPanel}>
-                        <div className={styles.detailPlaceholder}>
-                          Not mocked yet, coming soon :) Will show stats on each subpopulation
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => {
+                const missingGnomad = isMissingFromGnomad(row.original);
+                return (
+                  <Fragment key={row.id}>
+                    <tr>
+                      {row.getVisibleCells().map((cell) => {
+                        if (missingGnomad && cell.column.id === "gnomadSubpop") {
+                          return (
+                            <td
+                              key={cell.id}
+                              colSpan={GNOMAD_GROUP_COLUMN_IDS.size}
+                              className={`${tintClassName(cell.column.id)} ${styles.gnomadMissing}`}
+                            >
+                              <span className={styles.cellNa}>Not observed in gnomAD</span>
+                            </td>
+                          );
+                        }
+                        if (missingGnomad && GNOMAD_GROUP_COLUMN_IDS.has(cell.column.id)) {
+                          return null;
+                        }
+                        return (
+                          <td key={cell.id} className={tintClassName(cell.column.id)}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {expandedVariants.has(row.original.variant) && (
+                      <tr className={styles.detailRow}>
+                        <td colSpan={row.getVisibleCells().length}>
+                          <div className={styles.detailPanel}>
+                            <div className={styles.detailPlaceholder}>
+                              Not mocked yet, coming soon :) Will show stats on each subpopulation
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </ResultsPanel>
   );

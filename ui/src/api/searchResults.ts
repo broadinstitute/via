@@ -3,6 +3,7 @@ import type {
   ClinVarSignificance,
   CohortVariantRow,
   FilteredVariantRow,
+  GnomadSubpopCode,
   PhenotypeCrosswalk,
   SearchSummary,
   SubpopCode,
@@ -13,10 +14,12 @@ interface RawCohortVariant {
   gene: string;
   annotated: boolean;
   classification: string | null;
-  subpopulation: SubpopCode | null;
+  proteinChange: string | null;
+  aouSubpopulation: SubpopCode | null;
   aouAf: number | null;
   aouAc: number | null;
   aouAn: number | null;
+  gnomadSubpopulation: GnomadSubpopCode | null;
   gnomadAf: number | null;
   gnomadAc: number | null;
   gnomadAn: number | null;
@@ -68,14 +71,16 @@ function toCohortVariantRow(raw: RawCohortVariant): CohortVariantRow {
     variant: raw.variant,
     gene: raw.gene,
     classification: raw.classification!,
-    subpopulation: raw.subpopulation!,
+    proteinChange: raw.proteinChange!,
+    aouSubpopulation: raw.aouSubpopulation!,
     aouAf: raw.aouAf!,
     aouAc: raw.aouAc!,
     aouAn: raw.aouAn!,
-    gnomadAf: raw.gnomadAf!,
-    gnomadAc: raw.gnomadAc!,
-    gnomadAn: raw.gnomadAn!,
-    gnomadUrl: raw.gnomadUrl!,
+    gnomadSubpopulation: raw.gnomadSubpopulation,
+    gnomadAf: raw.gnomadAf,
+    gnomadAc: raw.gnomadAc,
+    gnomadAn: raw.gnomadAn,
+    gnomadUrl: raw.gnomadUrl,
     clinvarSignificance: raw.clinvarSignificance!,
     clinvarUrl: raw.clinvarUrl!,
     spliceAi: raw.spliceAi!,

@@ -7,16 +7,18 @@ interface BreakdownLegendProps {
 
 export default function BreakdownLegend({ segments }: BreakdownLegendProps) {
   return (
-    <div className={styles.strip}>
+    <div className={styles.list}>
       {segments.map((segment, index) => (
-        <span
+        <div
           key={segment.label}
-          className={styles.chip}
+          className={styles.row}
           style={{ animationDelay: `${0.5 + index * 0.04}s` }}
         >
           <span className={styles.dot} style={{ background: segment.color }} />
-          {segment.label} {segment.percent}%
-        </span>
+          <span className={styles.name}>{segment.label}</span>
+          <span className={styles.count}>{segment.count}</span>
+          <span className={styles.percent}>{segment.percent}%</span>
+        </div>
       ))}
     </div>
   );

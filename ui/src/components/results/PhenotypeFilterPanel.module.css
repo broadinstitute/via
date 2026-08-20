@@ -68,6 +68,13 @@
   width: 64px;
 }
 
+.donutCount {
+  font-size: 20px;
+  text-transform: none;
+  letter-spacing: normal;
+  margin-bottom: 2px;
+}
+
 .breakdownHeader {
   display: flex;
   align-items: center;
