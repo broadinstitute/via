@@ -62,6 +62,7 @@ export type FilteredVariantRow = FilteredVariantWithStats | FilteredVariantWitho
 
 export interface BreakdownSegment {
   label: string;
+  count: number;
   percent: number;
   color: string;
 }

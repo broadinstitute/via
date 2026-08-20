@@ -280,84 +280,86 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
 
   return (
     <ResultsPanel title="Candidate variants — all participants" headerRight={<span className={styles.sub}>Showing {rows.length} results</span>}>
-      <div className={styles.tableScroll}>
-        <table className={styles.table}>
-          <thead>
-            {table.getHeaderGroups().map((headerGroup, depth) => (
-              <tr key={headerGroup.id} className={depth === 0 ? styles.groupRow : styles.columnRow}>
-                {headerGroup.headers.map((header) => {
-                  const sortable = header.column.getCanSort();
-                  const sortDirection = header.column.getIsSorted();
-                  const className = sortable
-                    ? `${tintClassName(header.column.id)} ${styles.sortable}`.trim()
-                    : tintClassName(header.column.id);
-                  return (
-                    <th
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      className={className}
-                      onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
-                    >
-                      {header.isPlaceholder ? null : (
-                        <>
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {sortable && (
-                            <span className={styles.sortIndicator}>
-                              {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.map((row) => {
-              const missingGnomad = isMissingFromGnomad(row.original);
-              return (
-                <Fragment key={row.id}>
-                  <tr>
-                    {row.getVisibleCells().map((cell) => {
-                      if (missingGnomad && cell.column.id === "gnomadSubpop") {
+      <div className={styles.tableWrap}>
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
+            <thead>
+              {table.getHeaderGroups().map((headerGroup, depth) => (
+                <tr key={headerGroup.id} className={depth === 0 ? styles.groupRow : styles.columnRow}>
+                  {headerGroup.headers.map((header) => {
+                    const sortable = header.column.getCanSort();
+                    const sortDirection = header.column.getIsSorted();
+                    const className = sortable
+                      ? `${tintClassName(header.column.id)} ${styles.sortable}`.trim()
+                      : tintClassName(header.column.id);
+                    return (
+                      <th
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        className={className}
+                        onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
+                      >
+                        {header.isPlaceholder ? null : (
+                          <>
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {sortable && (
+                              <span className={styles.sortIndicator}>
+                                {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </th>
+                    );
+                  })}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => {
+                const missingGnomad = isMissingFromGnomad(row.original);
+                return (
+                  <Fragment key={row.id}>
+                    <tr>
+                      {row.getVisibleCells().map((cell) => {
+                        if (missingGnomad && cell.column.id === "gnomadSubpop") {
+                          return (
+                            <td
+                              key={cell.id}
+                              colSpan={GNOMAD_GROUP_COLUMN_IDS.size}
+                              className={`${tintClassName(cell.column.id)} ${styles.gnomadMissing}`}
+                            >
+                              <span className={styles.cellNa}>Not observed in gnomAD</span>
+                            </td>
+                          );
+                        }
+                        if (missingGnomad && GNOMAD_GROUP_COLUMN_IDS.has(cell.column.id)) {
+                          return null;
+                        }
                         return (
-                          <td
-                            key={cell.id}
-                            colSpan={GNOMAD_GROUP_COLUMN_IDS.size}
-                            className={`${tintClassName(cell.column.id)} ${styles.gnomadMissing}`}
-                          >
-                            <span className={styles.cellNa}>Not observed in gnomAD</span>
+                          <td key={cell.id} className={tintClassName(cell.column.id)}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         );
-                      }
-                      if (missingGnomad && GNOMAD_GROUP_COLUMN_IDS.has(cell.column.id)) {
-                        return null;
-                      }
-                      return (
-                        <td key={cell.id} className={tintClassName(cell.column.id)}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                  {expandedVariants.has(row.original.variant) && (
-                    <tr className={styles.detailRow}>
-                      <td colSpan={row.getVisibleCells().length}>
-                        <div className={styles.detailPanel}>
-                          <div className={styles.detailPlaceholder}>
-                            Not mocked yet, coming soon :) Will show stats on each subpopulation
-                          </div>
-                        </div>
-                      </td>
+                      })}
                     </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+                    {expandedVariants.has(row.original.variant) && (
+                      <tr className={styles.detailRow}>
+                        <td colSpan={row.getVisibleCells().length}>
+                          <div className={styles.detailPanel}>
+                            <div className={styles.detailPlaceholder}>
+                              Not mocked yet, coming soon :) Will show stats on each subpopulation
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </ResultsPanel>
   );

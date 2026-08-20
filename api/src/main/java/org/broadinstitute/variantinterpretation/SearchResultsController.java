@@ -67,29 +67,31 @@ public class SearchResultsController implements SearchResultsApi {
         .participantCount(214);
   }
 
+  // Counts sum to phenotypeCrosswalk().participantCount (214); percent is each count's
+  // share of that total, rounded to 1 decimal, so the two stay consistent with each other.
   private static List<BreakdownSegment> ancestryBreakdown() {
     return List.of(
-        segment("EUR", 48.3, "#F9C854"),
-        segment("AFR", 19.7, "#2078B4"),
-        segment("AMR", 17.8, "#6DACE4"),
-        segment("OTH", 9, "#B3AEAD"),
-        segment("EAS", 3, "#A27BD7"),
-        segment("SAS", 2, "#8CCA90"),
-        segment("MID", 0.2, "#CB2D4C"));
+        segment("EUR", 103, 48.1, "#F9C854"),
+        segment("AFR", 42, 19.6, "#2078B4"),
+        segment("AMR", 38, 17.8, "#6DACE4"),
+        segment("OTH", 19, 8.9, "#B3AEAD"),
+        segment("EAS", 7, 3.3, "#A27BD7"),
+        segment("SAS", 4, 1.9, "#8CCA90"),
+        segment("MID", 1, 0.5, "#CB2D4C"));
   }
 
   private static List<BreakdownSegment> ageBreakdown() {
     return List.of(
-        segment("18–29", 7.9, "#B8DCEF"),
-        segment("30–39", 14.0, "#8DC6E5"),
-        segment("40–49", 21.5, "#5FAEDA"),
-        segment("50–59", 26.2, "#3B8FC4"),
-        segment("60–69", 21.9, "#2569A0"),
-        segment("70+", 8.5, "#17456F"));
+        segment("18–29", 17, 7.9, "#B8DCEF"),
+        segment("30–39", 30, 14.0, "#8DC6E5"),
+        segment("40–49", 46, 21.5, "#5FAEDA"),
+        segment("50–59", 56, 26.2, "#3B8FC4"),
+        segment("60–69", 47, 22.0, "#2569A0"),
+        segment("70+", 18, 8.4, "#17456F"));
   }
 
-  private static BreakdownSegment segment(String label, double percent, String color) {
-    return new BreakdownSegment().label(label).percent(BigDecimal.valueOf(percent)).color(color);
+  private static BreakdownSegment segment(String label, int count, double percent, String color) {
+    return new BreakdownSegment().label(label).count(count).percent(BigDecimal.valueOf(percent)).color(color);
   }
 
   // gnomAD AN per row is that subpopulation's approximate real v3.1.2 genome sample size

@@ -149,11 +149,15 @@ components:
       type: object
       required:
         - label
+        - count
         - percent
         - color
       properties:
         label:
           type: string
+        count:
+          type: integer
+          description: Number of phenotype-matched participants in this segment.
         percent:
           type: number
         color:
