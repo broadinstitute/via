@@ -13,8 +13,9 @@ import CopyButton from "./CopyButton";
 import ResultsPanel from "./ResultsPanel";
 import styles from "./ParticipantMatchedVariantsPanel.module.css";
 
+/** No value for this cell — the variant isn't present in the source behind it. */
 function NotAvailable() {
-  return <span className={styles.cellNa}>n/a</span>;
+  return <span className={styles.dash}>—</span>;
 }
 
 // AF ratios near 1x are expected background noise; a ratio this much higher than the
@@ -25,7 +26,7 @@ function rowToTsvValues(row: FilteredVariantRow): string[] {
   if (row.hasStats) {
     return [
       row.variant,
-      row.gene,
+      row.gene ?? "n/a",
       row.classification ?? "n/a",
       String(row.cohortAc),
       String(row.cohortAn),
@@ -36,7 +37,18 @@ function rowToTsvValues(row: FilteredVariantRow): string[] {
       `${row.afRatio.toFixed(1)}x`,
     ];
   }
-  return [row.variant, row.gene, row.classification ?? "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a"];
+  return [
+    row.variant,
+    row.gene ?? "n/a",
+    row.classification ?? "n/a",
+    "n/a",
+    "n/a",
+    "n/a",
+    "n/a",
+    "n/a",
+    "n/a",
+    "n/a",
+  ];
 }
 
 function downloadTsv(filename: string, contents: string) {
@@ -88,7 +100,12 @@ export default function ParticipantMatchedVariantsPanel({
         header: "Variant",
         cell: (info) => <span className={styles.mono}>{info.getValue()}</span>,
       }),
-      columnHelper.accessor("gene", { header: "Gene" }),
+      columnHelper.accessor((row) => row.gene ?? undefined, {
+        id: "gene",
+        header: "Gene",
+        cell: ({ row }) => row.original.gene ?? <NotAvailable />,
+        sortUndefined: "last",
+      }),
       columnHelper.accessor((row) => row.classification ?? undefined, {
         id: "classification",
         header: "Classification",

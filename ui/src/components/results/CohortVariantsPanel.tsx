@@ -27,17 +27,36 @@ const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
   Benign: 2,
 };
 
+/** No value for this cell — the variant isn't present in the source behind it. */
 function NotAvailable() {
-  return <span className={styles.cellNa}>n/a</span>;
+  return <span className={styles.dash}>—</span>;
+}
+
+// A variant missing from every source (annotated === false) is missing from each
+// individual source too, so both cases get the same "not observed" callout.
+function isMissingFromAou(row: CohortVariantRow): boolean {
+  return !row.annotated || row.aouSubpopulation === null;
 }
 
 function isMissingFromGnomad(row: CohortVariantRow): boolean {
-  return row.annotated && row.gnomadUrl === null;
+  return !row.annotated || row.gnomadSubpopulation === null;
 }
 
 const AOU_GROUP_COLUMN_IDS = new Set(["aouSubpop", "aouAf", "aouAcAn"]);
 const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn", "gnomadLink"]);
 const GROUP_START_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
+
+const AOU_MISSING_GROUP = {
+  columnIds: AOU_GROUP_COLUMN_IDS,
+  mergedIntoColumnId: "aouSubpop",
+  message: "Not observed in All of Us",
+};
+
+const GNOMAD_MISSING_GROUP = {
+  columnIds: GNOMAD_GROUP_COLUMN_IDS,
+  mergedIntoColumnId: "gnomadSubpop",
+  message: "Not observed in gnomAD",
+};
 
 function tintClassName(columnId: string): string {
   const classNames: string[] = [];
@@ -100,7 +119,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             header: "Variant",
             cell: (info) => <span className={styles.mono}>{info.getValue()}</span>,
           }),
-          columnHelper.accessor("gene", { header: "Gene" }),
+          columnHelper.accessor((row) => (row.annotated ? row.gene : undefined), {
+            id: "gene",
+            header: "Gene",
+            cell: ({ row }) => (row.original.annotated ? row.original.gene : <NotAvailable />),
+            sortUndefined: "last",
+          }),
           columnHelper.accessor((row) => (row.annotated ? row.proteinChange : undefined), {
             id: "proteinChange",
             header: "Protein Change",
@@ -135,28 +159,37 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         ),
         enableSorting: false,
         columns: [
-          columnHelper.accessor((row) => (row.annotated ? row.aouSubpopulation : undefined), {
+          columnHelper.accessor((row) => (row.annotated ? row.aouSubpopulation ?? undefined : undefined), {
             id: "aouSubpop",
             header: "",
             cell: ({ row }) =>
-              row.original.annotated ? (
+              row.original.annotated && row.original.aouSubpopulation ? (
                 <SubpopBadge subpopulation={row.original.aouSubpopulation} />
               ) : (
                 <NotAvailable />
               ),
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => (row.annotated ? row.aouAf : undefined), {
+          columnHelper.accessor((row) => (row.annotated ? row.aouAf ?? undefined : undefined), {
             id: "aouAf",
             header: "AF",
-            cell: ({ row }) => (row.original.annotated ? formatAf(row.original.aouAf) : <NotAvailable />),
+            cell: ({ row }) =>
+              row.original.annotated && row.original.aouAf !== null ? (
+                formatAf(row.original.aouAf)
+              ) : (
+                <NotAvailable />
+              ),
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => (row.annotated ? row.aouAc : undefined), {
+          columnHelper.accessor((row) => (row.annotated ? row.aouAc ?? undefined : undefined), {
             id: "aouAcAn",
             header: "AC / AN",
             cell: ({ row }) =>
-              row.original.annotated ? formatAcAn(row.original.aouAc, row.original.aouAn) : <NotAvailable />,
+              row.original.annotated && row.original.aouAc !== null && row.original.aouAn !== null ? (
+                formatAcAn(row.original.aouAc, row.original.aouAn)
+              ) : (
+                <NotAvailable />
+              ),
             sortUndefined: "last",
           }),
         ],
@@ -176,28 +209,37 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         ),
         enableSorting: false,
         columns: [
-          columnHelper.accessor((row) => (row.annotated ? row.gnomadSubpopulation : undefined), {
+          columnHelper.accessor((row) => (row.annotated ? row.gnomadSubpopulation ?? undefined : undefined), {
             id: "gnomadSubpop",
             header: "",
             cell: ({ row }) =>
-              row.original.annotated ? (
+              row.original.annotated && row.original.gnomadSubpopulation ? (
                 <SubpopBadge subpopulation={row.original.gnomadSubpopulation} />
               ) : (
                 <NotAvailable />
               ),
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => (row.annotated ? row.gnomadAf : undefined), {
+          columnHelper.accessor((row) => (row.annotated ? row.gnomadAf ?? undefined : undefined), {
             id: "gnomadAf",
             header: "AF",
-            cell: ({ row }) => (row.original.annotated ? formatAf(row.original.gnomadAf) : <NotAvailable />),
+            cell: ({ row }) =>
+              row.original.annotated && row.original.gnomadAf !== null ? (
+                formatAf(row.original.gnomadAf)
+              ) : (
+                <NotAvailable />
+              ),
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => (row.annotated ? row.gnomadAc : undefined), {
+          columnHelper.accessor((row) => (row.annotated ? row.gnomadAc ?? undefined : undefined), {
             id: "gnomadAcAn",
             header: "AC / AN",
             cell: ({ row }) =>
-              row.original.annotated ? formatAcAn(row.original.gnomadAc, row.original.gnomadAn) : <NotAvailable />,
+              row.original.annotated && row.original.gnomadAc !== null && row.original.gnomadAn !== null ? (
+                formatAcAn(row.original.gnomadAc, row.original.gnomadAn)
+              ) : (
+                <NotAvailable />
+              ),
             sortUndefined: "last",
           }),
           columnHelper.display({
@@ -205,7 +247,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             header: "",
             enableSorting: false,
             cell: ({ row }) =>
-              row.original.annotated ? (
+              row.original.annotated && row.original.gnomadUrl ? (
                 <a
                   className={styles.iconLinkBtn}
                   href={row.original.gnomadUrl}
@@ -224,23 +266,32 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         header: "",
         enableSorting: false,
         columns: [
-          columnHelper.accessor((row) => (row.annotated ? CLINVAR_SEVERITY_RANK[row.clinvarSignificance] : undefined), {
-            id: "clinvar",
-            header: "ClinVar",
-            cell: ({ row }) => {
-              if (!row.original.annotated) return <NotAvailable />;
-              const { clinvarSignificance, clinvarUrl } = row.original;
-              return (
-                <span className={styles.clinvarCell}>
-                  <Tag variant={CLINVAR_TAG_VARIANT[clinvarSignificance]}>{clinvarSignificance}</Tag>
-                  <a className={styles.iconLinkBtn} target={"_blank"} href={clinvarUrl} title="View in ClinVar">
-                    ↗
-                  </a>
-                </span>
-              );
+          columnHelper.accessor(
+            (row) =>
+              row.annotated && row.clinvarSignificance
+                ? CLINVAR_SEVERITY_RANK[row.clinvarSignificance]
+                : undefined,
+            {
+              id: "clinvar",
+              header: "ClinVar",
+              cell: ({ row }) => {
+                const variant = row.original;
+                if (!variant.annotated || !variant.clinvarSignificance || !variant.clinvarUrl) {
+                  return <span className={styles.cellNa}>Not in ClinVar</span>;
+                }
+                const { clinvarSignificance, clinvarUrl } = variant;
+                return (
+                  <span className={styles.clinvarCell}>
+                    <Tag variant={CLINVAR_TAG_VARIANT[clinvarSignificance]}>{clinvarSignificance}</Tag>
+                    <a className={styles.iconLinkBtn} target={"_blank"} href={clinvarUrl} title="View in ClinVar">
+                      ↗
+                    </a>
+                  </span>
+                );
+              },
+              sortUndefined: "last",
             },
-            sortUndefined: "last",
-          }),
+          ),
           columnHelper.accessor((row) => (row.annotated ? row.spliceAi : undefined), {
             id: "spliceAi",
             header: "SpliceAI",
@@ -317,24 +368,30 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => {
-                const missingGnomad = isMissingFromGnomad(row.original);
+                // A source with no data for this variant collapses its whole column
+                // group into one "not observed" cell, rather than a row of bare n/a's.
+                const missingGroups = [
+                  isMissingFromAou(row.original) ? AOU_MISSING_GROUP : null,
+                  isMissingFromGnomad(row.original) ? GNOMAD_MISSING_GROUP : null,
+                ].filter((group) => group !== null);
                 return (
                   <Fragment key={row.id}>
                     <tr>
                       {row.getVisibleCells().map((cell) => {
-                        if (missingGnomad && cell.column.id === "gnomadSubpop") {
+                        const group = missingGroups.find((candidate) =>
+                          candidate.columnIds.has(cell.column.id),
+                        );
+                        if (group) {
+                          if (cell.column.id !== group.mergedIntoColumnId) return null;
                           return (
                             <td
                               key={cell.id}
-                              colSpan={GNOMAD_GROUP_COLUMN_IDS.size}
-                              className={`${tintClassName(cell.column.id)} ${styles.gnomadMissing}`}
+                              colSpan={group.columnIds.size}
+                              className={`${tintClassName(cell.column.id)} ${styles.sourceMissing}`}
                             >
-                              <span className={styles.cellNa}>Not observed in gnomAD</span>
+                              <span className={styles.cellNa}>{group.message}</span>
                             </td>
                           );
-                        }
-                        if (missingGnomad && GNOMAD_GROUP_COLUMN_IDS.has(cell.column.id)) {
-                          return null;
                         }
                         return (
                           <td key={cell.id} className={tintClassName(cell.column.id)}>

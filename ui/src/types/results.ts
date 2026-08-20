@@ -6,30 +6,33 @@ export type ClinVarSignificance = "Pathogenic" | "VUS" | "Benign";
 
 interface CohortVariantBase {
   variant: string;
-  gene: string;
 }
 
 export interface AnnotatedCohortVariant extends CohortVariantBase {
   annotated: true;
+  gene: string;
   classification: string;
   proteinChange: string;
-  aouSubpopulation: SubpopCode;
-  aouAf: number;
-  aouAc: number;
-  aouAn: number;
+  /** null for all AoU fields below = this variant was not observed in All of Us. */
+  aouSubpopulation: SubpopCode | null;
+  aouAf: number | null;
+  aouAc: number | null;
+  aouAn: number | null;
   /** null for all gnomAD fields below = this variant was not observed in gnomAD. */
   gnomadSubpopulation: GnomadSubpopCode | null;
   gnomadAf: number | null;
   gnomadAc: number | null;
   gnomadAn: number | null;
   gnomadUrl: string | null;
-  clinvarSignificance: ClinVarSignificance;
-  clinvarUrl: string;
+  /** null = this variant has no ClinVar record. */
+  clinvarSignificance: ClinVarSignificance | null;
+  clinvarUrl: string | null;
   spliceAi: number;
   /** null = LOFTEE does not score this consequence type. */
   plof: "HC" | null;
 }
 
+/** Nothing is known about this variant — it is in no annotation or frequency source. */
 export interface UnannotatedCohortVariant extends CohortVariantBase {
   annotated: false;
 }
@@ -38,7 +41,8 @@ export type CohortVariantRow = AnnotatedCohortVariant | UnannotatedCohortVariant
 
 interface FilteredVariantBase {
   variant: string;
-  gene: string;
+  /** null = nothing is known about this variant; it is in no annotation source. */
+  gene: string | null;
   /** Some variants have consequence annotation even when cohort-filtered stats don't exist yet. */
   classification: string | null;
 }

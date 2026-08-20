@@ -135,7 +135,12 @@
   font-style: italic;
 }
 
-.gnomadMissing {
+/* Matches .plofNa — an em dash in muted ink for "no value here". */
+.dash {
+  color: var(--text-muted);
+}
+
+.sourceMissing {
   text-align: center;
 }
 

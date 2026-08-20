@@ -124,10 +124,9 @@ public class SearchResultsController implements SearchResultsApi {
             "8-11708621-G-T", "Splice site", "p.?", CohortVariant.AouSubpopulationEnum.EAS, 0.004, 128, 32140,
             CohortVariant.GnomadSubpopulationEnum.EAS, 0.004, 40, 10002, CohortVariant.ClinvarSignificanceEnum.VUS,
             0.77, CohortVariant.PlofEnum.HC),
-        annotatedVariant(
-            "8-11708629-T-A", "Missense", "p.Ser130Arg", CohortVariant.AouSubpopulationEnum.SAS, 0.005, 107, 21428,
-            CohortVariant.GnomadSubpopulationEnum.SAS, 0.005, 24, 4838, CohortVariant.ClinvarSignificanceEnum.VUS,
-            0.08, null),
+        // Not found in any source — no AoU or gnomAD frequencies, no ClinVar record, and
+        // no consequence annotation.
+        unannotatedVariant("8-11708629-T-A"),
         annotatedVariant(
             "8-11708637-A-C", "Missense", "p.Lys133Thr", CohortVariant.AouSubpopulationEnum.EUR, 0.0733, 37954,
             517466, CohortVariant.GnomadSubpopulationEnum.NFE, 0.0733, 4989, 68058,
@@ -186,14 +185,18 @@ public class SearchResultsController implements SearchResultsApi {
             CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.06, CohortVariant.PlofEnum.HC));
   }
 
+  private static CohortVariant unannotatedVariant(String variant) {
+    return new CohortVariant().variant(variant).annotated(false);
+  }
+
   private static CohortVariant annotatedVariant(
       String variant,
       String classification,
       String proteinChange,
       CohortVariant.AouSubpopulationEnum aouSubpopulation,
-      double aouAf,
-      int aouAc,
-      int aouAn,
+      Double aouAf,
+      Integer aouAc,
+      Integer aouAn,
       CohortVariant.GnomadSubpopulationEnum gnomadSubpopulation,
       Double gnomadAf,
       Integer gnomadAc,
@@ -201,7 +204,11 @@ public class SearchResultsController implements SearchResultsApi {
       CohortVariant.ClinvarSignificanceEnum clinvarSignificance,
       double spliceAi,
       CohortVariant.PlofEnum plof) {
-    boolean inGnomad = gnomadAf != null;
+    // A null subpopulation means the variant was never observed in that source, so its
+    // whole block of fields (including the deep link) stays null.
+    boolean inAou = aouSubpopulation != null;
+    boolean inGnomad = gnomadSubpopulation != null;
+    boolean inClinvar = clinvarSignificance != null;
     return new CohortVariant()
         .variant(variant)
         .gene("GATA4")
@@ -209,7 +216,7 @@ public class SearchResultsController implements SearchResultsApi {
         .classification(classification)
         .proteinChange(proteinChange)
         .aouSubpopulation(aouSubpopulation)
-        .aouAf(BigDecimal.valueOf(aouAf))
+        .aouAf(inAou ? BigDecimal.valueOf(aouAf) : null)
         .aouAc(aouAc)
         .aouAn(aouAn)
         .gnomadSubpopulation(gnomadSubpopulation)
@@ -218,7 +225,7 @@ public class SearchResultsController implements SearchResultsApi {
         .gnomadAn(gnomadAn)
         .gnomadUrl(inGnomad ? "https://gnomad.broadinstitute.org/variant/" + variant : null)
         .clinvarSignificance(clinvarSignificance)
-        .clinvarUrl("https://www.ncbi.nlm.nih.gov/clinvar/?term=" + variant)
+        .clinvarUrl(inClinvar ? "https://www.ncbi.nlm.nih.gov/clinvar/?term=" + variant : null)
         .spliceAi(BigDecimal.valueOf(spliceAi))
         .plof(plof);
   }
@@ -231,7 +238,8 @@ public class SearchResultsController implements SearchResultsApi {
         filteredVariantWithStats("8-11708605-A-G", "Missense", 3, 428, 0.007, 0, 3, 0, 1.1),
         filteredVariantWithStats("8-11708613-C-T", "Nonsense", 0, 428, 0.0, 0, 0, 0, 0.0),
         filteredVariantWithStats("8-11708621-G-T", "Splice site", 2, 428, 0.0047, 0, 2, 0, 1.2),
-        filteredVariantWithStats("8-11708629-T-A", "Missense", 2, 428, 0.0047, 0, 2, 0, 0.9),
+        // Absent from AoU entirely, so there are no phenotype-matched cohort stats either.
+        unfilteredVariant("8-11708629-T-A", null),
         filteredVariantWithStats("8-11708637-A-C", "Missense", 31, 428, 0.0724, 1, 29, 0, 1.0),
         filteredVariantWithStats("8-11708645-CGGGG-C", "Frameshift", 2, 428, 0.0047, 0, 2, 1, 0.9),
         filteredVariantWithStats("8-11708653-A-G", "Nonsense", 0, 428, 0.0, 0, 0, 0, 0.0),
@@ -275,7 +283,7 @@ public class SearchResultsController implements SearchResultsApi {
   private static FilteredVariant unfilteredVariant(String variant, String classification) {
     return new FilteredVariant()
         .variant(variant)
-        .gene("GATA4")
+        .gene(null)
         .classification(classification)
         .hasStats(false)
         .cohortAc(null)
