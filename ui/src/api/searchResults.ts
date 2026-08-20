@@ -11,7 +11,7 @@ import type {
 
 interface RawCohortVariant {
   variant: string;
-  gene: string;
+  gene: string | null;
   annotated: boolean;
   classification: string | null;
   proteinChange: string | null;
@@ -32,7 +32,7 @@ interface RawCohortVariant {
 
 interface RawFilteredVariant {
   variant: string;
-  gene: string;
+  gene: string | null;
   classification: string | null;
   hasStats: boolean;
   cohortAc: number | null;
@@ -64,25 +64,25 @@ export interface SearchResults {
 
 function toCohortVariantRow(raw: RawCohortVariant): CohortVariantRow {
   if (!raw.annotated) {
-    return { annotated: false, variant: raw.variant, gene: raw.gene };
+    return { annotated: false, variant: raw.variant };
   }
   return {
     annotated: true,
     variant: raw.variant,
-    gene: raw.gene,
+    gene: raw.gene!,
     classification: raw.classification!,
     proteinChange: raw.proteinChange!,
-    aouSubpopulation: raw.aouSubpopulation!,
-    aouAf: raw.aouAf!,
-    aouAc: raw.aouAc!,
-    aouAn: raw.aouAn!,
+    aouSubpopulation: raw.aouSubpopulation,
+    aouAf: raw.aouAf,
+    aouAc: raw.aouAc,
+    aouAn: raw.aouAn,
     gnomadSubpopulation: raw.gnomadSubpopulation,
     gnomadAf: raw.gnomadAf,
     gnomadAc: raw.gnomadAc,
     gnomadAn: raw.gnomadAn,
     gnomadUrl: raw.gnomadUrl,
-    clinvarSignificance: raw.clinvarSignificance!,
-    clinvarUrl: raw.clinvarUrl!,
+    clinvarSignificance: raw.clinvarSignificance,
+    clinvarUrl: raw.clinvarUrl,
     spliceAi: raw.spliceAi!,
     plof: raw.plof,
   };

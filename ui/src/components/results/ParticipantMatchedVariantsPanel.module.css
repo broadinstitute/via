@@ -87,9 +87,9 @@
   font-size: 11.5px;
 }
 
-.cellNa {
+/* An em dash in muted ink for "no value here", matching the cohort-wide table. */
+.dash {
   color: var(--text-muted);
-  font-style: italic;
 }
 
 .deltaUp {

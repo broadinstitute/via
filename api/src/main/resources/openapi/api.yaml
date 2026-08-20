@@ -168,7 +168,6 @@ components:
       type: object
       required:
         - variant
-        - gene
         - annotated
       properties:
         variant:
@@ -176,11 +175,12 @@ components:
           example: "8-11708582-C-T"
         gene:
           type: string
+          nullable: true
         annotated:
           type: boolean
           description: >-
-            False when this variant has no consequence annotation at all;
-            every other field below is only meaningful when true.
+            False when this variant is in no annotation or frequency source at
+            all; every other field below is only meaningful when true.
         classification:
           type: string
           nullable: true
@@ -239,7 +239,6 @@ components:
       type: object
       required:
         - variant
-        - gene
         - hasStats
       properties:
         variant:
@@ -247,6 +246,7 @@ components:
           example: "8-11708582-C-T"
         gene:
           type: string
+          nullable: true
         classification:
           type: string
           nullable: true
