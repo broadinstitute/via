@@ -277,7 +277,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               cell: ({ row }) => {
                 const variant = row.original;
                 if (!variant.annotated || !variant.clinvarSignificance || !variant.clinvarUrl) {
-                  return <span className={styles.cellNa}>Not in ClinVar</span>;
+                  return <NotAvailable />;
                 }
                 const { clinvarSignificance, clinvarUrl } = variant;
                 return (
