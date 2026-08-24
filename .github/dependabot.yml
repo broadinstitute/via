@@ -1,0 +1,41 @@
+version: 2
+updates:
+  # API (Gradle) dependencies
+  - package-ecosystem: "gradle"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "[SAW-24]"
+    groups:
+      api-major-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+      api-other-updates:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # UI (npm) dependencies
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "[SAW-24]"
+    groups:
+      ui-major-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+      ui-other-updates:
+        update-types:
+          - "minor"
+          - "patch"
