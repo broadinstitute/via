@@ -1,0 +1,64 @@
+name: Build and push Docker image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - "ui/**"
+      - "deploy/**"
+      - ".github/workflows/docker-build-push.yml"
+  pull_request:
+    paths:
+      - "api/**"
+      - "ui/**"
+      - "deploy/**"
+      - ".github/workflows/docker-build-push.yml"
+
+env:
+  REGISTRY: us-central1-docker.pkg.dev
+  PROJECT_ID: dsp-artifact-registry
+  REPOSITORY: via
+  IMAGE: via
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Pushes require credentials, which aren't available on pull_request
+      # runs triggered from forks -- those runs build-only, to validate the
+      # Dockerfile still builds, without publishing anything.
+      - name: Authenticate to Google Cloud
+        if: github.event_name == 'push'
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: "projects/1038484894585/locations/global/workloadIdentityPools/github-wi-pool/providers/github-wi-provider"
+          service_account: "dsp-artifact-registry-push@dsp-artifact-registry.iam.gserviceaccount.com"
+
+      - name: Set up Cloud SDK
+        if: github.event_name == 'push'
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Configure Docker for Artifact Registry
+        if: github.event_name == 'push'
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          # Build context is the repo root -- see the comment atop deploy/Dockerfile.
+          context: .
+          file: deploy/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
