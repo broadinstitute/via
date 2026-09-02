@@ -21,7 +21,9 @@ Note: `startupscript/` lives at the repository root, not here — see
 
 ## Configuration
 
-- **Build**: multi-stage `Dockerfile`, build context is the repository root
+- **Image**: pulled from `us-central1-docker.pkg.dev/dsp-artifact-registry/via/via:latest`,
+  built by the [docker-build-push](../.github/workflows/docker-build-push.yml) workflow on
+  merge to `main`
 - **Port**: 8080
 - **User**: root
 - **Home Directory**: /root
@@ -32,7 +34,7 @@ Once deployed in Workbench, access the app at the app URL.
 
 For local testing:
 1. Create Docker network: `docker network create app-network`
-2. From the repo root, build and run: `docker compose -f deploy/docker-compose.yaml up --build`
+2. From the repo root, pull and run: `docker compose -f deploy/docker-compose.yaml up`
 3. Access at: `http://localhost:8080`
 
 ## Files
