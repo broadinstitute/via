@@ -32,11 +32,11 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      # PR runs only validate that the image builds -- they never authenticate
-      # to GCP or push, so a PR can't publish an image before it's merged.
+      # via has no outside forks, so pull_request runs get the same secrets/OIDC
+      # access as push runs -- PR builds push too (tagged pr-<number>, never
+      # :latest), so you can pull and test an image without merging to main.
       - name: Authenticate to Google Cloud
         id: auth
-        if: github.event_name == 'push'
         uses: google-github-actions/auth@v3
         with:
           token_format: "access_token"
@@ -50,7 +50,6 @@ jobs:
       # writes a literal auth string to ~/.docker/config.json, which buildkit
       # can read with no external helper to exec.
       - name: Log in to Artifact Registry
-        if: github.event_name == 'push'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -59,14 +58,18 @@ jobs:
 
       - name: Determine image tags
         id: meta
-        if: github.event_name == 'push'
         env:
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}
         run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            EXTRA_TAG="pr-${{ github.event.pull_request.number }}"
+          else
+            EXTRA_TAG="latest"
+          fi
           {
             echo "tags<<EOF"
             echo "${IMAGE_REF}:${{ github.sha }}"
-            echo "${IMAGE_REF}:latest"
+            echo "${IMAGE_REF}:${EXTRA_TAG}"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -76,7 +79,7 @@ jobs:
           # Build context is the repo root -- see the comment atop deploy/Dockerfile.
           context: .
           file: deploy/Dockerfile
-          push: ${{ github.event_name == 'push' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
