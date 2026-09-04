@@ -39,6 +39,13 @@ To see a real value from `GET /api/profile` locally, export `WORKBENCH_USER_EMAI
 before starting the backend, e.g. `WORKBENCH_USER_EMAIL=you@example.org ./gradlew
 bootRun`.
 
+### Browsing the API
+
+With the backend running, Swagger UI is at `http://localhost:8080/swagger-ui`, and
+the raw spec it reads is at `http://localhost:8080/openapi/api.yaml`. It renders
+`api.yaml` itself rather than a spec reconstructed from annotations, so what you see
+is exactly what the server interfaces were generated from.
+
 ### Running as it will run in Workbench
 
 In Workbench, the frontend and backend are packaged into a single container on

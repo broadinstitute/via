@@ -27,6 +27,11 @@ dependencies {
   implementation 'io.swagger.core.v3:swagger-annotations:2.2.54'
   implementation 'org.openapitools:jackson-databind-nullable:0.2.11'
   implementation 'com.google.cloud:google-cloud-bigquery'
+  // Swagger UI assets, served by SwaggerUiConfig against the api.yaml spec itself.
+  // webjars-locator-lite lets /webjars/swagger-ui/* resolve without the version in
+  // the URL, so bumping the webjar below is the only edit a version bump needs.
+  implementation 'org.webjars:swagger-ui:5.25.3'
+  implementation 'org.webjars:webjars-locator-lite'
   testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
