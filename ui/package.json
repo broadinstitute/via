@@ -10,19 +10,19 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@tanstack/react-table": "^8.21.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "@tanstack/react-table": "^9.2.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.1.0",
-    "jsdom": "~25.0.1",
-    "typescript": "^5.6.3",
+    "jsdom": "~30.0.1",
+    "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
   },
