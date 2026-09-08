@@ -42,9 +42,7 @@ bootRun`.
 ### Browsing the API
 
 With the backend running, Swagger UI is at `http://localhost:8080/swagger-ui`, and
-the raw spec it reads is at `http://localhost:8080/openapi/api.yaml`. It renders
-`api.yaml` itself rather than a spec reconstructed from annotations, so what you see
-is exactly what the server interfaces were generated from.
+the raw spec it reads is at `http://localhost:8080/openapi/api.yaml`.
 
 ### Running as it will run in Workbench
 
