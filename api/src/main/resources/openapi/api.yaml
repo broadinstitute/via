@@ -52,8 +52,43 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DataSourceVersion"
+  /api/bigquery-status:
+    get:
+      operationId: bigQueryStatus
+      summary: >-
+        Reports whether the backend can reach the configured BigQuery dataset
+        with its Application Default Credentials. A smoke test for deployment,
+        not a health check for the service itself.
+      tags:
+        - bigQueryStatus
+      responses:
+        "200":
+          description: >-
+            The check ran. Note that a failed check is still a 200; see the
+            `accessible` field.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BigQueryStatus"
 components:
   schemas:
+    BigQueryStatus:
+      type: object
+      required:
+        - accessible
+        - dataset
+      properties:
+        accessible:
+          type: boolean
+          description: True when the dataset's metadata could be read.
+        dataset:
+          type: string
+          description: The dataset that was checked, as "project:dataset".
+          example: "placeholder-project:placeholder_dataset"
+        detail:
+          type: string
+          nullable: true
+          description: Why the check failed. Null when accessible is true.
     UserProfile:
       type: object
       required:
