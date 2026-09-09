@@ -21,7 +21,6 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v4
         with:
-          # Matches the gradle:8.14.1-jdk21-noble build stage in deploy/Dockerfile.
           distribution: "temurin"
           java-version: "21"
           cache: "gradle"
