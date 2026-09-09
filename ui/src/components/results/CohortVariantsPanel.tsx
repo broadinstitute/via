@@ -11,20 +11,24 @@ import type { ClinVarSignificance, CohortVariantRow } from "../../types/results"
 import { formatAcAn, formatAf } from "../../utils/format";
 import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "./SubpopBadge";
-import Tag from "./Tag";
+import Tag, { type TagVariant } from "./Tag";
 import styles from "./CohortVariantsPanel.module.css";
 
-const CLINVAR_TAG_VARIANT = {
+const CLINVAR_TAG_VARIANT: Record<ClinVarSignificance, TagVariant> = {
   Pathogenic: "path",
+  "Likely pathogenic": "likely-path",
   VUS: "vus",
+  "Likely benign": "likely-benign",
   Benign: "benign",
-} as const;
+};
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
 const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
   Pathogenic: 0,
-  VUS: 1,
-  Benign: 2,
+  "Likely pathogenic": 1,
+  VUS: 2,
+  "Likely benign": 3,
+  Benign: 4,
 };
 
 /** No value for this cell — the variant isn't present in the source behind it. */

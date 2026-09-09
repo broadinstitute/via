@@ -11,9 +11,19 @@
   color: var(--text-danger);
 }
 
+.likely-path {
+  background: var(--bg-danger);
+  color: var(--text-danger);
+}
+
 .vus {
   background: var(--bg-warning);
   color: var(--text-warning);
+}
+
+.likely-benign {
+  background: var(--bg-success);
+  color: var(--text-success);
 }
 
 .benign {
