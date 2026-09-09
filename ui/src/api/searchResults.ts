@@ -109,8 +109,7 @@ function toFilteredVariantRow(raw: RawFilteredVariant): FilteredVariantRow {
   };
 }
 
-// Real fetch is fast enough that the loading state would never be visible;
-// this floors it at 1s so the spinner/loading UI actually has time to show.
+// TODO remove this now that we're using a real data source
 const MIN_LOAD_TIME_MS = 1000;
 
 export interface SearchResultsQuery {
