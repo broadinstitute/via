@@ -136,7 +136,7 @@ export async function fetchSearchResults(query?: SearchResultsQuery): Promise<Se
     params.set("hpoTerm", query.hpoTerm);
   }
   const queryString = params.toString();
-  const url = queryString ? `/api/search-results?${queryString}` : "/api/search-results";
+  const url = queryString ? `/api/search?${queryString}` : "/api/search";
 
   const cached = cache.get(url);
   if (cached) {

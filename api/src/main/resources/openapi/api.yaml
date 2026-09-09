@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Variant Interpretation Backend API
-  description: API for the variant interpretation application.
+  description: API for the All of Us Variant Interpretation Application.
   version: 0.1.0
 servers:
   - url: /
@@ -9,7 +9,7 @@ paths:
   /api/profile:
     get:
       operationId: profile
-      summary: Returns details about the current Workbench user.
+      summary: Returns details about the current user
       tags:
         - profile
       responses:
@@ -19,13 +19,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserProfile"
-  /api/search-results:
+  /api/search:
     get:
       operationId: searchResults
-      summary: >-
-        Returns the candidate variant search results.
+      summary: Returns the candidate variant search results
       tags:
-        - searchResults
+        - search
       parameters:
         - name: variants
           in: query
@@ -44,11 +43,8 @@ paths:
           schema:
             type: string
           description: >-
-            HPO phenotype term. Currently only echoed back in the response
-            for display -- there's no real phenotype/participant data source
-            behind it yet, so phenotypeCrosswalk, ancestryBreakdown,
-            ageBreakdown, and filteredVariants are always empty/null
-            regardless of this value.
+            HPO phenotype term to filter candidate variants by.
+            If not provided, no phenotype filtering is applied.
       responses:
         "200":
           description: Successful response
@@ -56,14 +52,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SearchResultsResponse"
-  /api/data-source-versions:
+  /api/sources:
     get:
       operationId: dataSourceVersions
       summary: >-
         Returns the version of each external dataset used to annotate and
         filter variants
       tags:
-        - dataSourceVersions
+        - system
       responses:
         "200":
           description: Successful response
@@ -73,14 +69,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DataSourceVersion"
-  /api/bigquery-status:
+  /api/status:
     get:
       operationId: bigQueryStatus
       summary: >-
         Reports whether the backend can reach the configured BigQuery dataset
-        with its Application Default Credentials.
+        with its Application Default Credentials
       tags:
-        - bigQueryStatus
+        - system
       responses:
         "200":
           description: >-
