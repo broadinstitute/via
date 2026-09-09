@@ -44,8 +44,11 @@ paths:
           schema:
             type: string
           description: >-
-            HPO phenotype term. Currently echoed back in the response for
-            display only -- it doesn't yet filter anything.
+            HPO phenotype term. Currently only echoed back in the response
+            for display -- there's no real phenotype/participant data source
+            behind it yet, so phenotypeCrosswalk, ancestryBreakdown,
+            ageBreakdown, and filteredVariants are always empty/null
+            regardless of this value.
       responses:
         "200":
           description: Successful response
@@ -144,7 +147,13 @@ components:
         searchSummary:
           $ref: "#/components/schemas/SearchSummary"
         phenotypeCrosswalk:
-          $ref: "#/components/schemas/PhenotypeCrosswalk"
+          nullable: true
+          description: >-
+            Always null for now -- there's no real phenotype/participant
+            data source behind it yet. ancestryBreakdown, ageBreakdown, and
+            filteredVariants are always empty for the same reason.
+          allOf:
+            - $ref: "#/components/schemas/PhenotypeCrosswalk"
         ancestryBreakdown:
           type: array
           items:

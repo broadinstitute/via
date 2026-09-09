@@ -10,7 +10,9 @@ import {
 } from "@tanstack/react-table";
 import type { FilteredVariantRow } from "../../types/results";
 import CopyButton from "./CopyButton";
+import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
 import ResultsPanel from "./ResultsPanel";
+import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import styles from "./ParticipantMatchedVariantsPanel.module.css";
 
 /** No value for this cell — the variant isn't present in the source behind it. */
@@ -64,11 +66,17 @@ function downloadTsv(filename: string, contents: string) {
 interface ParticipantMatchedVariantsPanelProps {
   rows: FilteredVariantRow[];
   participantCount: number;
+  hasPhenotypeFilter: boolean;
+  hpoTerm: string;
+  onAddPhenotypeFilter: () => void;
 }
 
 export default function ParticipantMatchedVariantsPanel({
   rows,
   participantCount,
+  hasPhenotypeFilter,
+  hpoTerm,
+  onAddPhenotypeFilter,
 }: ParticipantMatchedVariantsPanelProps) {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>(() =>
     Object.fromEntries(rows.map((row) => [row.variant, true])),
@@ -230,6 +238,15 @@ export default function ParticipantMatchedVariantsPanel({
       return [...rowToTsvValues(row), included].join("\t");
     });
     downloadTsv("variant_filtering_results.tsv", [header, ...lines].join("\n") + "\n");
+  }
+
+  if (!hasPhenotypeFilter) {
+    const { message, buttonLabel } = phenotypeUnavailableCopy(hpoTerm, "phenotype-matched participant data");
+    return (
+      <ResultsPanel title="Candidate variants — phenotype-matched participants only">
+        <PhenotypeFilterRequired message={message} buttonLabel={buttonLabel} onAddPhenotypeFilter={onAddPhenotypeFilter} />
+      </ResultsPanel>
+    );
   }
 
   return (

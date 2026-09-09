@@ -46,7 +46,9 @@ interface RawFilteredVariant {
 
 interface RawSearchResultsResponse {
   searchSummary: SearchSummary;
-  phenotypeCrosswalk: PhenotypeCrosswalk;
+  // Null when no HPO term was given -- ancestryBreakdown, ageBreakdown, and filteredVariants
+  // are all empty in that case too.
+  phenotypeCrosswalk: PhenotypeCrosswalk | null;
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
   cohortVariants: RawCohortVariant[];
@@ -55,7 +57,7 @@ interface RawSearchResultsResponse {
 
 export interface SearchResults {
   searchSummary: SearchSummary;
-  phenotypeCrosswalk: PhenotypeCrosswalk;
+  phenotypeCrosswalk: PhenotypeCrosswalk | null;
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
   cohortVariants: CohortVariantRow[];

@@ -137,6 +137,8 @@ export default function SearchResultsPage() {
               crosswalk={results.phenotypeCrosswalk}
               ancestryBreakdown={results.ancestryBreakdown}
               ageBreakdown={results.ageBreakdown}
+              hpoTerm={results.searchSummary.hpoTerm}
+              onAddPhenotypeFilter={() => setDrawerOpen(true)}
             />
           ) : (
             <SectionLoadingPanel title="Phenotype filter" message="Loading phenotype data…" />
@@ -146,7 +148,10 @@ export default function SearchResultsPage() {
         {results && revealed.filtered ? (
           <ParticipantMatchedVariantsPanel
             rows={results.filteredVariants}
-            participantCount={results.phenotypeCrosswalk.participantCount}
+            participantCount={results.phenotypeCrosswalk?.participantCount ?? 0}
+            hasPhenotypeFilter={results.phenotypeCrosswalk !== null}
+            hpoTerm={results.searchSummary.hpoTerm}
+            onAddPhenotypeFilter={() => setDrawerOpen(true)}
           />
         ) : (
           <SectionLoadingPanel
