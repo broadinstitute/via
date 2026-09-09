@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.broadinstitute.variantinterpretation.api.SearchResultsApi;
+import org.broadinstitute.variantinterpretation.api.SearchApi;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
 import org.broadinstitute.variantinterpretation.model.SearchResultsResponse;
 import org.broadinstitute.variantinterpretation.model.SearchSummary;
@@ -22,7 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class SearchResultsController implements SearchResultsApi {
+public class SearchResultsController implements SearchApi {
 
   private static final Logger log = LoggerFactory.getLogger(SearchResultsController.class);
 
