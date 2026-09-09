@@ -49,7 +49,7 @@ public class SearchResultsController implements SearchApi {
   private static final String SEARCH_COHORT_VARIANTS_SQL = SELECT_COLUMNS + "WHERE vid IN UNNEST(@vids)";
 
   // VAT consequence terms (VEP) that map onto the simplified labels used elsewhere in this
-  // table; anything else is left as an unclassified (null) row rather than guessed at.
+  // table; anything else is left as an unclassified (null) row.
   private static final Map<String, String> CONSEQUENCE_TO_CLASSIFICATION =
       Map.of(
           "missense_variant", "Missense",
@@ -59,12 +59,14 @@ public class SearchResultsController implements SearchApi {
           "splice_donor_variant", "Splice site",
           "splice_acceptor_variant", "Splice site");
 
-  // Only classifications with an unambiguous match in ClinvarSignificanceEnum; "Likely
-  // pathogenic", "Conflicting interpretations", etc. have no equivalent and are left null.
+  // Only classifications with an unambiguous match in ClinvarSignificanceEnum;
+  // "Conflicting interpretations", etc. have no equivalent and are left null.
   private static final Map<String, CohortVariant.ClinvarSignificanceEnum> CLINVAR_SIGNIFICANCE =
       Map.of(
           "Pathogenic", CohortVariant.ClinvarSignificanceEnum.PATHOGENIC,
+          "Likely pathogenic", CohortVariant.ClinvarSignificanceEnum.LIKELY_PATHOGENIC,
           "Benign", CohortVariant.ClinvarSignificanceEnum.BENIGN,
+          "Likely benign", CohortVariant.ClinvarSignificanceEnum.LIKELY_BENIGN,
           "Uncertain significance", CohortVariant.ClinvarSignificanceEnum.VUS);
 
   private final BigQuery bigQuery;
@@ -96,8 +98,7 @@ public class SearchResultsController implements SearchApi {
             .filteredVariants(List.of()));
   }
 
-  // Trims, drops blanks, and caps at VARIANTS_LIMIT -- a request isn't bound by whatever the UI
-  // happens to enforce client-side.
+  // Trims, drops blanks, and caps num entries at VARIANTS_LIMIT.
   private static List<String> normalizeVariants(List<String> variants) {
     if (variants == null) {
       return List.of();
