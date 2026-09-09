@@ -26,17 +26,14 @@ public class SearchResultsController implements SearchResultsApi {
 
   private static final Logger log = LoggerFactory.getLogger(SearchResultsController.class);
 
-  // The configured table is ~1,000 synthetic rows (a few MB) -- this caps what BigQuery is
-  // allowed to bill for the query so that pointing this at a much larger table by mistake fails
-  // loudly instead of quietly running up cost.
+  // Right now this is a small limit to keep development costs low and prevent accidental
+  // full-table scan. When using the real VAT we'll need to use a more realistic value. See VIA-50
   private static final long MAXIMUM_BYTES_BILLED = 100L * 1024 * 1024;
 
-  // Matches the "limit 50" the UI already advertises for how many variants can be entered;
-  // enforced again here since a request isn't bound by what the UI happens to allow client-side.
+  // In early discussions we agreed on a limit of 50 candidate variants, but that could change in the future.
   private static final int VARIANTS_LIMIT = 50;
 
-  // Only the columns the CohortVariant mapping below actually reads -- selecting the rest of the
-  // VAT's ~114 columns would cost nothing extra on a table this small, but there's no reason to.
+  // Limits the selected columns to what we display to the user in the "rule it out" table.
   private static final String SELECT_COLUMNS =
       """
       SELECT vid, gene_symbol, aa_change, consequence,

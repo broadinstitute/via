@@ -282,7 +282,7 @@ components:
         clinvarSignificance:
           type: string
           nullable: true
-          enum: [Pathogenic, VUS, Benign]
+          enum: [Pathogenic, Likely pathogenic, VUS, Likely benign, Benign]
         clinvarUrl:
           type: string
           nullable: true
