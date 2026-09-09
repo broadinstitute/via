@@ -1,0 +1,28 @@
+name: API tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-tests.yml"
+  pull_request:
+    paths:
+      - "api/**"
+      - ".github/workflows/api-tests.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v4
+        with:
+          # Matches the gradle:8.14.1-jdk21-noble build stage in deploy/Dockerfile.
+          distribution: "temurin"
+          java-version: "21"
+          cache: "gradle"
+      - run: ./gradlew --no-daemon test
