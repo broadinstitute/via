@@ -118,6 +118,13 @@ export interface SearchResultsQuery {
   hpoTerm: string;
 }
 
+// Keyed by request URL (which fully encodes variants + hpoTerm). Caching the in-flight promise
+// -- not just the resolved result -- means two calls for the same query made back-to-back (e.g.
+// React StrictMode's double-invoked mount effect in dev) share one network request instead of
+// firing the BigQuery query twice. Successful results stay cached for the rest of the session;
+// failures are evicted so a retry actually retries.
+const cache = new Map<string, Promise<SearchResults>>();
+
 // With no variants (or an empty list), the backend returns an empty cohortVariants -- there's
 // no default browse listing.
 export async function fetchSearchResults(query?: SearchResultsQuery): Promise<SearchResults> {
@@ -131,6 +138,18 @@ export async function fetchSearchResults(query?: SearchResultsQuery): Promise<Se
   const queryString = params.toString();
   const url = queryString ? `/api/search-results?${queryString}` : "/api/search-results";
 
+  const cached = cache.get(url);
+  if (cached) {
+    return cached;
+  }
+
+  const request = fetchAndParse(url);
+  request.catch(() => cache.delete(url));
+  cache.set(url, request);
+  return request;
+}
+
+async function fetchAndParse(url: string): Promise<SearchResults> {
   const [response] = await Promise.all([
     fetch(url),
     new Promise((resolve) => setTimeout(resolve, MIN_LOAD_TIME_MS)),
