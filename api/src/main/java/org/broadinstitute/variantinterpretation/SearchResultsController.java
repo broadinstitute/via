@@ -34,9 +34,6 @@ public class SearchResultsController implements SearchResultsApi {
   // loudly instead of quietly running up cost.
   private static final long MAXIMUM_BYTES_BILLED = 100L * 1024 * 1024;
 
-  // Arbitrary, just to keep the browse listing (no variants submitted) a reasonable size.
-  private static final int BROWSE_LIMIT = 20;
-
   // Matches the "limit 50" the UI already advertises for how many variants can be entered;
   // enforced again here since a request isn't bound by what the UI happens to allow client-side.
   private static final int VARIANTS_LIMIT = 50;
@@ -59,8 +56,6 @@ public class SearchResultsController implements SearchResultsApi {
              LoF
       FROM %s
       """;
-
-  private static final String BROWSE_COHORT_VARIANTS_SQL = SELECT_COLUMNS + "ORDER BY vid LIMIT %d";
 
   private static final String SEARCH_COHORT_VARIANTS_SQL = SELECT_COLUMNS + "WHERE vid IN UNNEST(@vids)";
 
@@ -95,16 +90,12 @@ public class SearchResultsController implements SearchResultsApi {
   public ResponseEntity<SearchResultsResponse> searchResults(List<String> variants, String hpoTerm) {
     List<String> requested = normalizeVariants(variants);
     List<CohortVariant> cohortVariants =
-        requested.isEmpty() ? fetchBrowseCohortVariants() : fetchSearchedCohortVariants(requested);
-    // In browse mode, echo back whatever ended up on screen rather than what was requested (i.e.
-    // nothing), so the drawer reopens showing the listing that's actually displayed.
-    List<String> variantsRaw =
-        requested.isEmpty() ? cohortVariants.stream().map(CohortVariant::getVariant).toList() : requested;
+        requested.isEmpty() ? List.of() : fetchSearchedCohortVariants(requested);
     String effectiveHpoTerm = hpoTerm == null || hpoTerm.isBlank() ? DEFAULT_HPO_TERM : hpoTerm.trim();
 
     return ResponseEntity.ok(
         new SearchResultsResponse()
-            .searchSummary(searchSummary(variantsRaw, effectiveHpoTerm))
+            .searchSummary(searchSummary(requested, effectiveHpoTerm))
             .phenotypeCrosswalk(phenotypeCrosswalk())
             .ancestryBreakdown(ancestryBreakdown())
             .ageBreakdown(ageBreakdown())
@@ -162,23 +153,6 @@ public class SearchResultsController implements SearchResultsApi {
 
   private static BreakdownSegment segment(String label, int count, double percent, String color) {
     return new BreakdownSegment().label(label).count(count).percent(BigDecimal.valueOf(percent)).color(color);
-  }
-
-  /**
-   * No variants were requested -- queries the configured VAT table for its first BROWSE_LIMIT
-   * rows (by vid) and maps each onto CohortVariant. Just a default listing, not a search result.
-   */
-  private List<CohortVariant> fetchBrowseCohortVariants() {
-    var configuration =
-        QueryJobConfiguration.newBuilder(
-                BROWSE_COHORT_VARIANTS_SQL.formatted(properties.tableRef(), BROWSE_LIMIT))
-            .setMaximumBytesBilled(MAXIMUM_BYTES_BILLED)
-            .build();
-    List<CohortVariant> variants = new ArrayList<>();
-    for (FieldValueList row : runQuery(configuration)) {
-      variants.add(vatRowToCohortVariant(row));
-    }
-    return variants;
   }
 
   /**

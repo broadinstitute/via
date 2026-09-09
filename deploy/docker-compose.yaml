@@ -2,7 +2,7 @@ services:
   app:
     # The container name must be "application-server"
     container_name: "application-server"
-    image: us-central1-docker.pkg.dev/dsp-artifact-registry/via/via:latest
+    image: us-central1-docker.pkg.dev/dsp-artifact-registry/via/via:pr-19
     pull_policy: always
     restart: always
     # Workbench values (OWNER_EMAIL, GOOGLE_PROJECT, etc.) aren't available

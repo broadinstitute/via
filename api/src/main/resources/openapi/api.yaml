@@ -23,13 +23,7 @@ paths:
     get:
       operationId: searchResults
       summary: >-
-        Returns the candidate variant search results. When `variants` is
-        given, each one is looked up in the configured VAT table by `vid`
-        (in the order given); anything not found there comes back as an
-        `annotated: false` row rather than being dropped. Without `variants`,
-        returns a default browse listing instead. The phenotype-derived
-        sections (crosswalk, breakdowns, phenotype-matched table) are still
-        illustrative and not affected by either parameter.
+        Returns the candidate variant search results.
       tags:
         - searchResults
       parameters:
@@ -64,7 +58,7 @@ paths:
       operationId: dataSourceVersions
       summary: >-
         Returns the version of each external dataset used to annotate and
-        filter variants, for display in the data-provenance widget.
+        filter variants
       tags:
         - dataSourceVersions
       responses:
@@ -81,8 +75,7 @@ paths:
       operationId: bigQueryStatus
       summary: >-
         Reports whether the backend can reach the configured BigQuery dataset
-        with its Application Default Credentials. A smoke test for deployment,
-        not a health check for the service itself.
+        with its Application Default Credentials.
       tags:
         - bigQueryStatus
       responses:

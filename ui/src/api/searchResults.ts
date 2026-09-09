@@ -116,8 +116,8 @@ export interface SearchResultsQuery {
   hpoTerm: string;
 }
 
-// With no query (or an empty one), the backend returns a default browse listing rather than
-// running a real search.
+// With no variants (or an empty list), the backend returns an empty cohortVariants -- there's
+// no default browse listing.
 export async function fetchSearchResults(query?: SearchResultsQuery): Promise<SearchResults> {
   const params = new URLSearchParams();
   for (const variant of query?.variants ?? []) {
