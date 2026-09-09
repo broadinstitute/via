@@ -7,6 +7,7 @@ import RecentSearches from "../components/RecentSearches";
 import StepPanel from "../components/StepPanel";
 import ValueCallout from "../components/ValueCallout";
 import TopBar from "../components/results/TopBar";
+import { parseVariantsText } from "../utils/variants";
 import styles from "./SearchEntryPage.module.css";
 
 export default function SearchEntryPage() {
@@ -23,15 +24,21 @@ export default function SearchEntryPage() {
   }, []);
 
   function handleSearch() {
-    const trimmedVariants = variants.trim();
-    if (!trimmedVariants) {
+    const parsedVariants = parseVariantsText(variants);
+    if (parsedVariants.length === 0) {
       setError("Please enter at least one candidate variant.");
       return;
     }
     setError(null);
-    // The results page still shows illustrative mock data until a real search
-    // endpoint exists to run this query against.
-    navigate("/results");
+    const params = new URLSearchParams();
+    for (const variant of parsedVariants) {
+      params.append("variants", variant);
+    }
+    const trimmedHpo = hpoTerm.trim();
+    if (trimmedHpo) {
+      params.set("hpoTerm", trimmedHpo);
+    }
+    navigate(`/results?${params.toString()}`);
   }
 
   return (

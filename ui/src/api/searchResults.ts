@@ -46,7 +46,9 @@ interface RawFilteredVariant {
 
 interface RawSearchResultsResponse {
   searchSummary: SearchSummary;
-  phenotypeCrosswalk: PhenotypeCrosswalk;
+  // Null when no HPO term was given -- ancestryBreakdown, ageBreakdown, and filteredVariants
+  // are all empty in that case too.
+  phenotypeCrosswalk: PhenotypeCrosswalk | null;
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
   cohortVariants: RawCohortVariant[];
@@ -55,7 +57,7 @@ interface RawSearchResultsResponse {
 
 export interface SearchResults {
   searchSummary: SearchSummary;
-  phenotypeCrosswalk: PhenotypeCrosswalk;
+  phenotypeCrosswalk: PhenotypeCrosswalk | null;
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
   cohortVariants: CohortVariantRow[];
@@ -107,13 +109,48 @@ function toFilteredVariantRow(raw: RawFilteredVariant): FilteredVariantRow {
   };
 }
 
-// Real fetch is fast enough that the loading state would never be visible;
-// this floors it at 1s so the spinner/loading UI actually has time to show.
+// TODO remove this now that we're using a real data source
 const MIN_LOAD_TIME_MS = 1000;
 
-export async function fetchSearchResults(): Promise<SearchResults> {
+export interface SearchResultsQuery {
+  variants: string[];
+  hpoTerm: string;
+}
+
+// Keyed by request URL (which fully encodes variants + hpoTerm). Caching the in-flight promise
+// -- not just the resolved result -- means two calls for the same query made back-to-back (e.g.
+// React StrictMode's double-invoked mount effect in dev) share one network request instead of
+// firing the BigQuery query twice. Successful results stay cached for the rest of the session;
+// failures are evicted so a retry actually retries.
+const cache = new Map<string, Promise<SearchResults>>();
+
+// With no variants (or an empty list), the backend returns an empty cohortVariants -- there's
+// no default browse listing.
+export async function fetchSearchResults(query?: SearchResultsQuery): Promise<SearchResults> {
+  const params = new URLSearchParams();
+  for (const variant of query?.variants ?? []) {
+    params.append("variants", variant);
+  }
+  if (query?.hpoTerm) {
+    params.set("hpoTerm", query.hpoTerm);
+  }
+  const queryString = params.toString();
+  const url = queryString ? `/api/search?${queryString}` : "/api/search";
+
+  const cached = cache.get(url);
+  if (cached) {
+    return cached;
+  }
+
+  const request = fetchAndParse(url);
+  request.catch(() => cache.delete(url));
+  cache.set(url, request);
+  return request;
+}
+
+async function fetchAndParse(url: string): Promise<SearchResults> {
   const [response] = await Promise.all([
-    fetch("/api/search-results"),
+    fetch(url),
     new Promise((resolve) => setTimeout(resolve, MIN_LOAD_TIME_MS)),
   ]);
   if (!response.ok) {

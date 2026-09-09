@@ -2,7 +2,7 @@ export type SubpopCode = "EUR" | "AFR" | "AMR" | "EAS" | "SAS" | "MID" | "OTH";
 
 export type GnomadSubpopCode = "AFR" | "AMR" | "EAS" | "FIN" | "NFE" | "ASJ" | "OTH" | "SAS";
 
-export type ClinVarSignificance = "Pathogenic" | "VUS" | "Benign";
+export type ClinVarSignificance = "Pathogenic" | "Likely pathogenic" | "VUS" | "Likely benign" | "Benign";
 
 interface CohortVariantBase {
   variant: string;

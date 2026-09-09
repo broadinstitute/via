@@ -3,23 +3,38 @@ import type { BreakdownSegment, PhenotypeCrosswalk } from "../../types/results";
 import BreakdownLegend from "./BreakdownLegend";
 import CopyButton from "./CopyButton";
 import Donut from "./Donut";
+import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
 import ResultsPanel from "./ResultsPanel";
+import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import styles from "./PhenotypeFilterPanel.module.css";
 
 type BreakdownTab = "ancestry" | "age";
 
 interface PhenotypeFilterPanelProps {
-  crosswalk: PhenotypeCrosswalk;
+  crosswalk: PhenotypeCrosswalk | null;
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
+  hpoTerm: string;
+  onAddPhenotypeFilter: () => void;
 }
 
 export default function PhenotypeFilterPanel({
   crosswalk,
   ancestryBreakdown,
   ageBreakdown,
+  hpoTerm,
+  onAddPhenotypeFilter,
 }: PhenotypeFilterPanelProps) {
   const [activeTab, setActiveTab] = useState<BreakdownTab>("ancestry");
+
+  if (!crosswalk) {
+    const { message, buttonLabel } = phenotypeUnavailableCopy(hpoTerm, "participant breakdowns");
+    return (
+      <ResultsPanel title="Phenotype filter">
+        <PhenotypeFilterRequired message={message} buttonLabel={buttonLabel} onAddPhenotypeFilter={onAddPhenotypeFilter} />
+      </ResultsPanel>
+    );
+  }
 
   const centerLabel = (
     <>
