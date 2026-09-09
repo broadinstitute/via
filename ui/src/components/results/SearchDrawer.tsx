@@ -1,3 +1,4 @@
+import { parseVariantsText } from "../../utils/variants";
 import styles from "./SearchDrawer.module.css";
 
 interface SearchDrawerProps {
@@ -21,10 +22,7 @@ export default function SearchDrawer({
   onCancel,
   onSearch,
 }: SearchDrawerProps) {
-  const enteredCount = variantsText
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean).length;
+  const enteredCount = parseVariantsText(variantsText).length;
 
   return (
     <div className={open ? `${styles.drawer} ${styles.open}` : styles.drawer}>

@@ -1,7 +1,17 @@
 package org.broadinstitute.variantinterpretation;
 
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.FieldValue;
+import com.google.cloud.bigquery.FieldValueList;
+import com.google.cloud.bigquery.QueryJobConfiguration;
+import com.google.cloud.bigquery.QueryParameterValue;
+import com.google.cloud.bigquery.StandardSQLTypeName;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import org.broadinstitute.variantinterpretation.api.SearchResultsApi;
 import org.broadinstitute.variantinterpretation.model.BreakdownSegment;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
@@ -9,54 +19,114 @@ import org.broadinstitute.variantinterpretation.model.FilteredVariant;
 import org.broadinstitute.variantinterpretation.model.PhenotypeCrosswalk;
 import org.broadinstitute.variantinterpretation.model.SearchResultsResponse;
 import org.broadinstitute.variantinterpretation.model.SearchSummary;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class SearchResultsController implements SearchResultsApi {
 
+  private static final Logger log = LoggerFactory.getLogger(SearchResultsController.class);
+
+  // The configured table is ~1,000 synthetic rows (a few MB) -- this caps what BigQuery is
+  // allowed to bill for the query so that pointing this at a much larger table by mistake fails
+  // loudly instead of quietly running up cost.
+  private static final long MAXIMUM_BYTES_BILLED = 100L * 1024 * 1024;
+
+  // Arbitrary, just to keep the browse listing (no variants submitted) a reasonable size.
+  private static final int BROWSE_LIMIT = 20;
+
+  // Matches the "limit 50" the UI already advertises for how many variants can be entered;
+  // enforced again here since a request isn't bound by what the UI happens to allow client-side.
+  private static final int VARIANTS_LIMIT = 50;
+
+  // Default HPO term shown until a real phenotype search is wired up -- keeps the landing
+  // experience (and phenotypeCrosswalk(), which is hardcoded to this same term) consistent
+  // when the caller hasn't entered one yet.
+  private static final String DEFAULT_HPO_TERM = "HP:0001636";
+
+  // Only the columns the CohortVariant mapping below actually reads -- selecting the rest of the
+  // VAT's ~114 columns would cost nothing extra on a table this small, but there's no reason to.
+  private static final String SELECT_COLUMNS =
+      """
+      SELECT vid, gene_symbol, aa_change, consequence,
+             gvs_max_subpop, gvs_max_af, gvs_max_ac, gvs_max_an,
+             gnomad_max_subpop, gnomad_max_af, gnomad_max_ac, gnomad_max_an,
+             clinvar_classification,
+             splice_ai_acceptor_gain_score, splice_ai_acceptor_loss_score,
+             splice_ai_donor_gain_score, splice_ai_donor_loss_score,
+             LoF
+      FROM %s
+      """;
+
+  private static final String BROWSE_COHORT_VARIANTS_SQL = SELECT_COLUMNS + "ORDER BY vid LIMIT %d";
+
+  private static final String SEARCH_COHORT_VARIANTS_SQL = SELECT_COLUMNS + "WHERE vid IN UNNEST(@vids)";
+
+  // VAT consequence terms (VEP) that map onto the simplified labels used elsewhere in this
+  // table; anything else is left as an unclassified (null) row rather than guessed at.
+  private static final Map<String, String> CONSEQUENCE_TO_CLASSIFICATION =
+      Map.of(
+          "missense_variant", "Missense",
+          "synonymous_variant", "Synonymous",
+          "stop_gained", "Nonsense",
+          "frameshift_variant", "Frameshift",
+          "splice_donor_variant", "Splice site",
+          "splice_acceptor_variant", "Splice site");
+
+  // Only classifications with an unambiguous match in ClinvarSignificanceEnum; "Likely
+  // pathogenic", "Conflicting interpretations", etc. have no equivalent and are left null.
+  private static final Map<String, CohortVariant.ClinvarSignificanceEnum> CLINVAR_SIGNIFICANCE =
+      Map.of(
+          "Pathogenic", CohortVariant.ClinvarSignificanceEnum.PATHOGENIC,
+          "Benign", CohortVariant.ClinvarSignificanceEnum.BENIGN,
+          "Uncertain significance", CohortVariant.ClinvarSignificanceEnum.VUS);
+
+  private final BigQuery bigQuery;
+  private final BigQueryProperties properties;
+
+  public SearchResultsController(BigQuery bigQuery, BigQueryProperties properties) {
+    this.bigQuery = bigQuery;
+    this.properties = properties;
+  }
+
   @Override
-  public ResponseEntity<SearchResultsResponse> searchResults() {
+  public ResponseEntity<SearchResultsResponse> searchResults(List<String> variants, String hpoTerm) {
+    List<String> requested = normalizeVariants(variants);
+    List<CohortVariant> cohortVariants =
+        requested.isEmpty() ? fetchBrowseCohortVariants() : fetchSearchedCohortVariants(requested);
+    // In browse mode, echo back whatever ended up on screen rather than what was requested (i.e.
+    // nothing), so the drawer reopens showing the listing that's actually displayed.
+    List<String> variantsRaw =
+        requested.isEmpty() ? cohortVariants.stream().map(CohortVariant::getVariant).toList() : requested;
+    String effectiveHpoTerm = hpoTerm == null || hpoTerm.isBlank() ? DEFAULT_HPO_TERM : hpoTerm.trim();
+
     return ResponseEntity.ok(
         new SearchResultsResponse()
-            .searchSummary(searchSummary())
+            .searchSummary(searchSummary(variantsRaw, effectiveHpoTerm))
             .phenotypeCrosswalk(phenotypeCrosswalk())
             .ancestryBreakdown(ancestryBreakdown())
             .ageBreakdown(ageBreakdown())
-            .cohortVariants(cohortVariants())
+            .cohortVariants(cohortVariants)
             .filteredVariants(filteredVariants()));
   }
 
-  private static SearchSummary searchSummary() {
+  // Trims, drops blanks, and caps at VARIANTS_LIMIT -- a request isn't bound by whatever the UI
+  // happens to enforce client-side.
+  private static List<String> normalizeVariants(List<String> variants) {
+    if (variants == null) {
+      return List.of();
+    }
+    return variants.stream().map(String::trim).filter(v -> !v.isEmpty()).limit(VARIANTS_LIMIT).toList();
+  }
+
+  private static SearchSummary searchSummary(List<String> variantsRaw, String hpoTerm) {
     return new SearchSummary()
-        .variantsRaw(
-            """
-            8-11708582-C-T
-            8-11708590-G-GAA
-            8-11708598-T-C
-            8-11708605-A-G
-            8-11708613-C-T
-            8-11708621-G-T
-            8-11708629-T-A
-            8-11708637-A-C
-            8-11708645-CGGGG-C
-            8-11708653-A-G
-            8-11708661-C-T
-            8-11708669-G-A
-            8-11708677-T-C
-            8-11708685-A-T
-            8-11708693-C-G
-            8-11708701-G-T
-            8-11708709-A-C
-            8-11708717-T-G
-            8-11708725-C-A
-            8-11708733-G-C
-            8-11708741-A-G"""
-                .stripIndent()
-                .stripTrailing())
-        .variantsEnteredCount(21)
-        .variantsLimit(50)
-        .hpoTerm("HP:0001636");
+        .variantsRaw(String.join("\n", variantsRaw))
+        .variantsEnteredCount(variantsRaw.size())
+        .variantsLimit(VARIANTS_LIMIT)
+        .hpoTerm(hpoTerm);
   }
 
   private static PhenotypeCrosswalk phenotypeCrosswalk() {
@@ -94,140 +164,143 @@ public class SearchResultsController implements SearchResultsApi {
     return new BreakdownSegment().label(label).count(count).percent(BigDecimal.valueOf(percent)).color(color);
   }
 
-  // gnomAD AN per row is that subpopulation's approximate real v3.1.2 genome sample size
-  // (2x for diploid AN) — much smaller than AoU's, since gnomAD is a smaller reference
-  // database. AC is AoU's AF applied to that smaller AN, so gnomAD's rate tracks AoU's
-  // rather than being sized as if gnomAD had as many samples as AoU.
-  private static List<CohortVariant> cohortVariants() {
-    return List.of(
-        annotatedVariant(
-            "8-11708582-C-T", "Missense", "p.Arg115Cys", CohortVariant.AouSubpopulationEnum.EUR, 0.0034, 1735,
-            517466, CohortVariant.GnomadSubpopulationEnum.NFE, 0.0034, 231, 68058,
-            CohortVariant.ClinvarSignificanceEnum.VUS, 0.09, null),
-        annotatedVariant(
-            "8-11708590-G-GAA", "Frameshift", "p.Gly118fs", CohortVariant.AouSubpopulationEnum.AFR, 0.0018, 388,
-            211058, CohortVariant.GnomadSubpopulationEnum.AFR, 0.0018, 75, 41488,
-            CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.07, CohortVariant.PlofEnum.HC),
-        annotatedVariant(
-            "8-11708598-T-C", "Synonymous", "p.Leu121=", CohortVariant.AouSubpopulationEnum.EUR, 0.05, 25895, 517466,
-            CohortVariant.GnomadSubpopulationEnum.NFE, 0.05, 3403, 68058,
-            CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.02, null),
-        annotatedVariant(
-            "8-11708605-A-G", "Missense", "p.Asp124Gly", CohortVariant.AouSubpopulationEnum.AMR, 0.0062, 1190,
-            190702, CohortVariant.GnomadSubpopulationEnum.AMR, 0.0062, 95, 15294,
-            CohortVariant.ClinvarSignificanceEnum.VUS, 0.04, null),
-        annotatedVariant(
-            "8-11708613-C-T", "Nonsense", "p.Arg127Ter", CohortVariant.AouSubpopulationEnum.EUR, 0.0002, 127, 517466,
-            CohortVariant.GnomadSubpopulationEnum.FIN, 0.0002, 2, 10488,
-            CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.02, CohortVariant.PlofEnum.HC),
-        annotatedVariant(
-            "8-11708621-G-T", "Splice site", "p.?", CohortVariant.AouSubpopulationEnum.EAS, 0.004, 128, 32140,
-            CohortVariant.GnomadSubpopulationEnum.EAS, 0.004, 40, 10002, CohortVariant.ClinvarSignificanceEnum.VUS,
-            0.77, CohortVariant.PlofEnum.HC),
-        // Not found in any source — no AoU or gnomAD frequencies, no ClinVar record, and
-        // no consequence annotation.
-        unannotatedVariant("8-11708629-T-A"),
-        annotatedVariant(
-            "8-11708637-A-C", "Missense", "p.Lys133Thr", CohortVariant.AouSubpopulationEnum.EUR, 0.0733, 37954,
-            517466, CohortVariant.GnomadSubpopulationEnum.NFE, 0.0733, 4989, 68058,
-            CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.01, null),
-        annotatedVariant(
-            "8-11708645-CGGGG-C", "Frameshift", "p.Gly136fs", CohortVariant.AouSubpopulationEnum.OTH, 0.005, 486,
-            96422, null, null, null, null, CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.08,
-            CohortVariant.PlofEnum.HC),
-        annotatedVariant(
-            "8-11708653-A-G", "Nonsense", "p.Trp139Ter", CohortVariant.AouSubpopulationEnum.EUR, 0.0033, 1707,
-            517466, CohortVariant.GnomadSubpopulationEnum.NFE, 0.0033, 225, 68058,
-            CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.02, null),
-        annotatedVariant(
-            "8-11708661-C-T", "Missense", "p.Pro142Leu", CohortVariant.AouSubpopulationEnum.AMR, 0.0045, 858,
-            190702, CohortVariant.GnomadSubpopulationEnum.AMR, 0.0045, 69, 15294,
-            CohortVariant.ClinvarSignificanceEnum.VUS, 0.05, null),
-        annotatedVariant(
-            "8-11708669-G-A", "Nonsense", "p.Glu145Ter", CohortVariant.AouSubpopulationEnum.EUR, 0.0008, 414,
-            517466, CohortVariant.GnomadSubpopulationEnum.FIN, 0.0008, 8, 10488,
-            CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.03, CohortVariant.PlofEnum.HC),
-        annotatedVariant(
-            "8-11708677-T-C", "Synonymous", "p.Ala148=", CohortVariant.AouSubpopulationEnum.EUR, 0.0612, 31669,
-            517466, CohortVariant.GnomadSubpopulationEnum.NFE, 0.0612, 4165, 68058,
-            CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.01, null),
-        annotatedVariant(
-            "8-11708685-A-T", "Missense", "p.Asn151Tyr", CohortVariant.AouSubpopulationEnum.SAS, 0.0071, 152, 21428,
-            CohortVariant.GnomadSubpopulationEnum.SAS, 0.007, 34, 4838, CohortVariant.ClinvarSignificanceEnum.VUS,
-            0.11, null),
-        annotatedVariant(
-            "8-11708693-C-G", "Frameshift", "p.Val154fs", CohortVariant.AouSubpopulationEnum.AFR, 0.0024, 507,
-            211058, CohortVariant.GnomadSubpopulationEnum.AFR, 0.0024, 100, 41488,
-            CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.09, CohortVariant.PlofEnum.HC),
-        annotatedVariant(
-            "8-11708701-G-T", "Splice site", "p.?", CohortVariant.AouSubpopulationEnum.EAS, 0.0028, 90, 32140,
-            CohortVariant.GnomadSubpopulationEnum.EAS, 0.0028, 28, 10002, CohortVariant.ClinvarSignificanceEnum.VUS,
-            0.62, CohortVariant.PlofEnum.HC),
-        annotatedVariant(
-            "8-11708709-A-C", "Missense", "p.His157Pro", CohortVariant.AouSubpopulationEnum.EUR, 0.0389, 20130,
-            517466, CohortVariant.GnomadSubpopulationEnum.NFE, 0.0389, 2647, 68058,
-            CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.02, null),
-        annotatedVariant(
-            "8-11708717-T-G", "Nonsense", "p.Tyr160Ter", CohortVariant.AouSubpopulationEnum.OTH, 0.0016, 154, 96422,
-            CohortVariant.GnomadSubpopulationEnum.OTH, 0.0014, 3, 2094,
-            CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.04, CohortVariant.PlofEnum.HC),
-        annotatedVariant(
-            "8-11708725-C-A", "Synonymous", "p.Gly163=", CohortVariant.AouSubpopulationEnum.AMR, 0.0524, 9993,
-            190702, CohortVariant.GnomadSubpopulationEnum.AMR, 0.0524, 801, 15294,
-            CohortVariant.ClinvarSignificanceEnum.BENIGN, 0.01, null),
-        annotatedVariant(
-            "8-11708733-G-C", "Missense", "p.Phe166Leu", CohortVariant.AouSubpopulationEnum.MID, 0.0067, 39, 5768,
-            CohortVariant.GnomadSubpopulationEnum.ASJ, 0.0066, 22, 3324, CohortVariant.ClinvarSignificanceEnum.VUS,
-            0.13, null),
-        annotatedVariant(
-            "8-11708741-A-G", "Frameshift", "p.Ile169fs", CohortVariant.AouSubpopulationEnum.EUR, 0.0004, 207,
-            517466, CohortVariant.GnomadSubpopulationEnum.NFE, 0.0004, 27, 68058,
-            CohortVariant.ClinvarSignificanceEnum.PATHOGENIC, 0.06, CohortVariant.PlofEnum.HC));
+  /**
+   * No variants were requested -- queries the configured VAT table for its first BROWSE_LIMIT
+   * rows (by vid) and maps each onto CohortVariant. Just a default listing, not a search result.
+   */
+  private List<CohortVariant> fetchBrowseCohortVariants() {
+    var configuration =
+        QueryJobConfiguration.newBuilder(
+                BROWSE_COHORT_VARIANTS_SQL.formatted(properties.tableRef(), BROWSE_LIMIT))
+            .setMaximumBytesBilled(MAXIMUM_BYTES_BILLED)
+            .build();
+    List<CohortVariant> variants = new ArrayList<>();
+    for (FieldValueList row : runQuery(configuration)) {
+      variants.add(vatRowToCohortVariant(row));
+    }
+    return variants;
+  }
+
+  /**
+   * Looks up each requested vid in the configured VAT table and maps what's found onto
+   * CohortVariant, in the order requested; any vid with no matching row comes back as an
+   * `annotated: false` placeholder instead of being silently dropped.
+   */
+  private List<CohortVariant> fetchSearchedCohortVariants(List<String> vids) {
+    var configuration =
+        QueryJobConfiguration.newBuilder(SEARCH_COHORT_VARIANTS_SQL.formatted(properties.tableRef()))
+            .addNamedParameter(
+                "vids", QueryParameterValue.array(vids.toArray(new String[0]), StandardSQLTypeName.STRING))
+            .setMaximumBytesBilled(MAXIMUM_BYTES_BILLED)
+            .build();
+    Map<String, CohortVariant> byVid = new LinkedHashMap<>();
+    for (FieldValueList row : runQuery(configuration)) {
+      CohortVariant variant = vatRowToCohortVariant(row);
+      byVid.put(variant.getVariant(), variant);
+    }
+    List<CohortVariant> variants = new ArrayList<>();
+    for (String vid : vids) {
+      variants.add(byVid.getOrDefault(vid, unannotatedVariant(vid)));
+    }
+    return variants;
   }
 
   private static CohortVariant unannotatedVariant(String variant) {
     return new CohortVariant().variant(variant).annotated(false);
   }
 
-  private static CohortVariant annotatedVariant(
-      String variant,
-      String classification,
-      String proteinChange,
-      CohortVariant.AouSubpopulationEnum aouSubpopulation,
-      Double aouAf,
-      Integer aouAc,
-      Integer aouAn,
-      CohortVariant.GnomadSubpopulationEnum gnomadSubpopulation,
-      Double gnomadAf,
-      Integer gnomadAc,
-      Integer gnomadAn,
-      CohortVariant.ClinvarSignificanceEnum clinvarSignificance,
-      double spliceAi,
-      CohortVariant.PlofEnum plof) {
-    // A null subpopulation means the variant was never observed in that source, so its
-    // whole block of fields (including the deep link) stays null.
-    boolean inAou = aouSubpopulation != null;
-    boolean inGnomad = gnomadSubpopulation != null;
+  private Iterable<FieldValueList> runQuery(QueryJobConfiguration configuration) {
+    log.info("Running BigQuery query: {}", configuration.getQuery());
+    try {
+      return bigQuery.query(configuration).iterateAll();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Interrupted while querying BigQuery", e);
+    }
+  }
+
+  private static CohortVariant vatRowToCohortVariant(FieldValueList row) {
+    List<String> consequences = stringList(row, "consequence");
+    String classification =
+        consequences.stream()
+            .map(CONSEQUENCE_TO_CLASSIFICATION::get)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(null);
+
+    String aouSubpop = string(row, "gvs_max_subpop");
+    String gnomadSubpop = string(row, "gnomad_max_subpop");
+
+    CohortVariant.ClinvarSignificanceEnum clinvarSignificance =
+        stringList(row, "clinvar_classification").stream()
+            .map(CLINVAR_SIGNIFICANCE::get)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(null);
+
+    // SpliceAI's headline delta score is the max of its four gain/loss scores.
+    Double spliceAi =
+        List.of(
+                "splice_ai_acceptor_gain_score",
+                "splice_ai_acceptor_loss_score",
+                "splice_ai_donor_gain_score",
+                "splice_ai_donor_loss_score")
+            .stream()
+            .map(column -> doubleValue(row, column))
+            .filter(Objects::nonNull)
+            .max(Double::compareTo)
+            .orElse(null);
+
+    boolean inGnomad = gnomadSubpop != null;
     boolean inClinvar = clinvarSignificance != null;
+    String variant = string(row, "vid");
     return new CohortVariant()
         .variant(variant)
-        .gene("GATA4")
+        .gene(string(row, "gene_symbol"))
         .annotated(true)
         .classification(classification)
-        .proteinChange(proteinChange)
-        .aouSubpopulation(aouSubpopulation)
-        .aouAf(inAou ? BigDecimal.valueOf(aouAf) : null)
-        .aouAc(aouAc)
-        .aouAn(aouAn)
-        .gnomadSubpopulation(gnomadSubpopulation)
-        .gnomadAf(inGnomad ? BigDecimal.valueOf(gnomadAf) : null)
-        .gnomadAc(gnomadAc)
-        .gnomadAn(gnomadAn)
+        .proteinChange(string(row, "aa_change"))
+        .aouSubpopulation(
+            aouSubpop == null ? null : CohortVariant.AouSubpopulationEnum.fromValue(aouSubpop.toUpperCase()))
+        .aouAf(bigDecimal(doubleValue(row, "gvs_max_af")))
+        .aouAc(intValue(row, "gvs_max_ac"))
+        .aouAn(intValue(row, "gvs_max_an"))
+        .gnomadSubpopulation(
+            gnomadSubpop == null ? null : CohortVariant.GnomadSubpopulationEnum.fromValue(gnomadSubpop.toUpperCase()))
+        .gnomadAf(bigDecimal(doubleValue(row, "gnomad_max_af")))
+        .gnomadAc(intValue(row, "gnomad_max_ac"))
+        .gnomadAn(intValue(row, "gnomad_max_an"))
         .gnomadUrl(inGnomad ? "https://gnomad.broadinstitute.org/variant/" + variant : null)
         .clinvarSignificance(clinvarSignificance)
         .clinvarUrl(inClinvar ? "https://www.ncbi.nlm.nih.gov/clinvar/?term=" + variant : null)
-        .spliceAi(BigDecimal.valueOf(spliceAi))
-        .plof(plof);
+        .spliceAi(bigDecimal(spliceAi))
+        .plof("HC".equals(string(row, "LoF")) ? CohortVariant.PlofEnum.HC : null);
+  }
+
+  private static String string(FieldValueList row, String column) {
+    FieldValue value = row.get(column);
+    return value.isNull() ? null : value.getStringValue();
+  }
+
+  private static Double doubleValue(FieldValueList row, String column) {
+    FieldValue value = row.get(column);
+    return value.isNull() ? null : value.getDoubleValue();
+  }
+
+  private static Integer intValue(FieldValueList row, String column) {
+    FieldValue value = row.get(column);
+    return value.isNull() ? null : (int) value.getLongValue();
+  }
+
+  private static List<String> stringList(FieldValueList row, String column) {
+    FieldValue value = row.get(column);
+    return value.isNull()
+        ? List.of()
+        : value.getRepeatedValue().stream().map(FieldValue::getStringValue).toList();
+  }
+
+  private static BigDecimal bigDecimal(Double value) {
+    return value == null ? null : BigDecimal.valueOf(value);
   }
 
   private static List<FilteredVariant> filteredVariants() {

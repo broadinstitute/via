@@ -111,9 +111,26 @@ function toFilteredVariantRow(raw: RawFilteredVariant): FilteredVariantRow {
 // this floors it at 1s so the spinner/loading UI actually has time to show.
 const MIN_LOAD_TIME_MS = 1000;
 
-export async function fetchSearchResults(): Promise<SearchResults> {
+export interface SearchResultsQuery {
+  variants: string[];
+  hpoTerm: string;
+}
+
+// With no query (or an empty one), the backend returns a default browse listing rather than
+// running a real search.
+export async function fetchSearchResults(query?: SearchResultsQuery): Promise<SearchResults> {
+  const params = new URLSearchParams();
+  for (const variant of query?.variants ?? []) {
+    params.append("variants", variant);
+  }
+  if (query?.hpoTerm) {
+    params.set("hpoTerm", query.hpoTerm);
+  }
+  const queryString = params.toString();
+  const url = queryString ? `/api/search-results?${queryString}` : "/api/search-results";
+
   const [response] = await Promise.all([
-    fetch("/api/search-results"),
+    fetch(url),
     new Promise((resolve) => setTimeout(resolve, MIN_LOAD_TIME_MS)),
   ]);
   if (!response.ok) {

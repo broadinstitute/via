@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { fetchProfile } from "../api/profile";
 import { fetchSearchResults, type SearchResults } from "../api/searchResults";
 import CohortVariantsPanel from "../components/results/CohortVariantsPanel";
@@ -8,6 +9,7 @@ import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
 import SearchDrawer from "../components/results/SearchDrawer";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
+import { parseVariantsText } from "../utils/variants";
 import styles from "./SearchResultsPage.module.css";
 
 interface RevealedSections {
@@ -26,6 +28,7 @@ export default function SearchResultsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariants, setDrawerVariants] = useState("");
   const [drawerHpo, setDrawerHpo] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     fetchProfile()
@@ -33,15 +36,24 @@ export default function SearchResultsPage() {
       .catch((err: Error) => console.error("Failed to load profile", err));
   }, []);
 
+  // Re-runs whenever the URL's search criteria change -- both the initial load (e.g. arriving
+  // from SearchEntryPage with ?variants=...) and a drawer re-search (which updates the URL rather
+  // than fetching directly) go through this one path.
   useEffect(() => {
-    fetchSearchResults()
+    setResults(null);
+    setError(null);
+    fetchSearchResults({
+      variants: searchParams.getAll("variants"),
+      hpoTerm: searchParams.get("hpoTerm") ?? "",
+    })
       .then((data) => {
         setResults(data);
         setDrawerVariants(data.searchSummary.variantsRaw);
         setDrawerHpo(data.searchSummary.hpoTerm);
       })
       .catch((err: Error) => setError(err.message));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.toString()]);
 
   // Once data arrives, reveal each section in quick, slightly jittered succession
   // rather than all at once, so the page doesn't feel like it's snapping into place.
@@ -68,14 +80,16 @@ export default function SearchResultsPage() {
   }
 
   function handleRerunSearch() {
-    // TODO: wire up to a real re-query once the backend search endpoint accepts search terms.
-    console.log("Re-run search submitted", {
-      variants: drawerVariants
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean),
-      hpoTerm: drawerHpo.trim(),
-    });
+    const variants = parseVariantsText(drawerVariants);
+    const hpoTerm = drawerHpo.trim();
+    const nextParams = new URLSearchParams();
+    for (const variant of variants) {
+      nextParams.append("variants", variant);
+    }
+    if (hpoTerm) {
+      nextParams.set("hpoTerm", hpoTerm);
+    }
+    setSearchParams(nextParams);
     setDrawerOpen(false);
   }
 

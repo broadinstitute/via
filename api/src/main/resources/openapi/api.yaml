@@ -23,11 +23,35 @@ paths:
     get:
       operationId: searchResults
       summary: >-
-        Returns the candidate variant search results. Currently always
-        returns the same illustrative dataset regardless of search terms,
-        until a real search is wired up.
+        Returns the candidate variant search results. When `variants` is
+        given, each one is looked up in the configured VAT table by `vid`
+        (in the order given); anything not found there comes back as an
+        `annotated: false` row rather than being dropped. Without `variants`,
+        returns a default browse listing instead. The phenotype-derived
+        sections (crosswalk, breakdowns, phenotype-matched table) are still
+        illustrative and not affected by either parameter.
       tags:
         - searchResults
+      parameters:
+        - name: variants
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+          description: >-
+            Candidate variant IDs, VAT `vid` format (e.g. "8-11708582-C-T").
+        - name: hpoTerm
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            HPO phenotype term. Currently echoed back in the response for
+            display only -- it doesn't yet filter anything.
       responses:
         "200":
           description: Successful response
