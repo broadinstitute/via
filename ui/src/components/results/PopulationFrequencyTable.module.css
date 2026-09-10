@@ -7,14 +7,13 @@
 
 .table th,
 .table td {
-  padding: 3px 10px;
+  padding: 1px 10px;
   text-align: left;
 }
 
 .populationHeader {
   font-weight: 600;
   color: var(--text-secondary);
-  vertical-align: bottom;
 }
 
 .tintAou {
