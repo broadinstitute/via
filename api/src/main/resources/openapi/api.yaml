@@ -259,6 +259,20 @@ components:
         aouAn:
           type: integer
           nullable: true
+        aouPopulations:
+          description: One entry per AoU subpopulation, for the expanded row's frequency table.
+          type: array
+          items:
+            $ref: "#/components/schemas/PopulationFrequency"
+        aouAllAf:
+          type: number
+          nullable: true
+        aouAllAc:
+          type: integer
+          nullable: true
+        aouAllAn:
+          type: integer
+          nullable: true
         gnomadSubpopulation:
           type: string
           nullable: true
@@ -275,6 +289,20 @@ components:
         gnomadUrl:
           type: string
           nullable: true
+        gnomadPopulations:
+          description: One entry per gnomAD subpopulation, for the expanded row's frequency table.
+          type: array
+          items:
+            $ref: "#/components/schemas/PopulationFrequency"
+        gnomadAllAf:
+          type: number
+          nullable: true
+        gnomadAllAc:
+          type: integer
+          nullable: true
+        gnomadAllAn:
+          type: integer
+          nullable: true
         clinvarSignificance:
           type: string
           nullable: true
@@ -282,7 +310,50 @@ components:
         clinvarUrl:
           type: string
           nullable: true
+        clinvarStars:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 4
+          description: >-
+            ClinVar review status, as its 0-4 gold-star rating. The max
+            across this variant's RCV records. Null when there's no ClinVar
+            record at all.
+        clinvarHasConflicts:
+          type: boolean
+          description: >-
+            True when this variant's own ClinVar RCV submissions disagree
+            with each other. Meaningless when clinvarSignificance is null.
+        clinvarConditions:
+          type: array
+          items:
+            type: string
+        clinvarLastEvaluated:
+          type: string
+          format: date
+          nullable: true
+        clinvarSubmissions:
+          description: >-
+            One entry per ClinVar RCV record for this variant, for the
+            expanded row's ClinVar detail. There's no submitter identity in
+            the underlying VAT, so each entry is keyed by its RCV accession
+            instead of a lab/submitter name.
+          type: array
+          items:
+            $ref: "#/components/schemas/ClinvarSubmission"
         spliceAi:
+          type: number
+          nullable: true
+        spliceAiAcceptorGain:
+          type: number
+          nullable: true
+        spliceAiAcceptorLoss:
+          type: number
+          nullable: true
+        spliceAiDonorGain:
+          type: number
+          nullable: true
+        spliceAiDonorLoss:
           type: number
           nullable: true
         plof:
@@ -292,6 +363,22 @@ components:
             "HC" (high-confidence LOF) or null. Null means either "not
             scored by LOFTEE" (when annotated) or n/a (when not annotated).
           enum: [HC]
+        plofConfidence:
+          type: string
+          nullable: true
+          description: LOFTEE's raw confidence call, for the expanded row's Predictions block.
+          enum: [HC, LC]
+        lofFlags:
+          type: array
+          items:
+            type: string
+        transcript:
+          type: string
+          nullable: true
+        exonNumber:
+          type: string
+          nullable: true
+          example: "4/19"
     FilteredVariant:
       type: object
       required:
@@ -336,3 +423,38 @@ components:
         afRatio:
           type: number
           nullable: true
+    PopulationFrequency:
+      type: object
+      required:
+        - population
+      properties:
+        population:
+          type: string
+          example: "AFR"
+        af:
+          type: number
+          nullable: true
+        ac:
+          type: integer
+          nullable: true
+        an:
+          type: integer
+          nullable: true
+    ClinvarSubmission:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          description: ClinVar RCV accession.
+          example: "RCV000041652"
+        classification:
+          type: string
+          nullable: true
+          description: This submission's own classification, verbatim from ClinVar.
+        stars:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 4

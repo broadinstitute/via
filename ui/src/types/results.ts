@@ -4,6 +4,21 @@ export type GnomadSubpopCode = "AFR" | "AMR" | "EAS" | "FIN" | "NFE" | "ASJ" | "
 
 export type ClinVarSignificance = "Pathogenic" | "Likely pathogenic" | "VUS" | "Likely benign" | "Benign";
 
+export interface PopulationFrequency {
+  population: string;
+  af: number | null;
+  ac: number | null;
+  an: number | null;
+}
+
+export interface ClinvarSubmission {
+  /** ClinVar RCV accession -- there's no submitter identity in the underlying data. */
+  id: string;
+  /** This submission's own classification, verbatim from ClinVar (not narrowed to ClinVarSignificance). */
+  classification: string | null;
+  stars: number | null;
+}
+
 interface CohortVariantBase {
   variant: string;
 }
@@ -18,18 +33,42 @@ export interface AnnotatedCohortVariant extends CohortVariantBase {
   aouAf: number | null;
   aouAc: number | null;
   aouAn: number | null;
+  aouPopulations: PopulationFrequency[];
+  aouAllAf: number | null;
+  aouAllAc: number | null;
+  aouAllAn: number | null;
   /** null for all gnomAD fields below = this variant was not observed in gnomAD. */
   gnomadSubpopulation: GnomadSubpopCode | null;
   gnomadAf: number | null;
   gnomadAc: number | null;
   gnomadAn: number | null;
   gnomadUrl: string | null;
+  gnomadPopulations: PopulationFrequency[];
+  gnomadAllAf: number | null;
+  gnomadAllAc: number | null;
+  gnomadAllAn: number | null;
   /** null = this variant has no ClinVar record. */
   clinvarSignificance: ClinVarSignificance | null;
   clinvarUrl: string | null;
+  clinvarStars: number | null;
+  clinvarHasConflicts: boolean;
+  clinvarConditions: string[];
+  /** ISO date string (e.g. "2024-02-14"). */
+  clinvarLastEvaluated: string | null;
+  clinvarSubmissions: ClinvarSubmission[];
   spliceAi: number;
+  spliceAiAcceptorGain: number | null;
+  spliceAiAcceptorLoss: number | null;
+  spliceAiDonorGain: number | null;
+  spliceAiDonorLoss: number | null;
   /** null = LOFTEE does not score this consequence type. */
   plof: "HC" | null;
+  /** Raw LOFTEE confidence call, for the expanded row; null whenever plof is null. */
+  plofConfidence: "HC" | "LC" | null;
+  lofFlags: string[];
+  transcript: string | null;
+  /** Raw "N/total" format (e.g. "4/19"). */
+  exonNumber: string | null;
 }
 
 /** Nothing is known about this variant — it is in no annotation or frequency source. */

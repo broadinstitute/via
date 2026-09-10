@@ -7,60 +7,31 @@ import {
   useReactTable,
   type SortingState,
 } from "@tanstack/react-table";
-import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
+import type { CohortVariantRow } from "../../types/results";
+import { clinvarColorTier, clinvarLabel, clinvarReviewShort } from "../../utils/clinvar";
 import { formatAcAn, formatAf } from "../../utils/format";
 import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "./SubpopBadge";
-import Tag, { type TagVariant } from "./Tag";
+import VariantDetailPanel from "./VariantDetailPanel";
 import styles from "./CohortVariantsPanel.module.css";
 
-const CLINVAR_TAG_VARIANT: Record<ClinVarSignificance, TagVariant> = {
-  Pathogenic: "path",
-  "Likely pathogenic": "likely-path",
-  VUS: "vus",
-  "Likely benign": "likely-benign",
-  Benign: "benign",
-};
-
 // Lower rank = sorts first (ascending) = more clinically concerning.
-const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
+const CLINVAR_SEVERITY_RANK = {
   Pathogenic: 0,
   "Likely pathogenic": 1,
   VUS: 2,
   "Likely benign": 3,
   Benign: 4,
-};
+} as const;
 
 /** No value for this cell — the variant isn't present in the source behind it. */
-function NotAvailable() {
-  return <span className={styles.dash}>—</span>;
+function NotAvailable({ title }: { title?: string }) {
+  return (
+    <span className={title ? `${styles.dash} ${styles.dashHelp}` : styles.dash} title={title}>
+      —
+    </span>
+  );
 }
-
-// A variant missing from every source (annotated === false) is missing from each
-// individual source too, so both cases get the same "not observed" callout.
-function isMissingFromAou(row: CohortVariantRow): boolean {
-  return !row.annotated || row.aouSubpopulation === null;
-}
-
-function isMissingFromGnomad(row: CohortVariantRow): boolean {
-  return !row.annotated || row.gnomadSubpopulation === null;
-}
-
-const AOU_GROUP_COLUMN_IDS = new Set(["aouSubpop", "aouAf", "aouAcAn"]);
-const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn", "gnomadLink"]);
-const GROUP_START_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
-
-const AOU_MISSING_GROUP = {
-  columnIds: AOU_GROUP_COLUMN_IDS,
-  mergedIntoColumnId: "aouSubpop",
-  message: "Not observed in All of Us",
-};
-
-const GNOMAD_MISSING_GROUP = {
-  columnIds: GNOMAD_GROUP_COLUMN_IDS,
-  mergedIntoColumnId: "gnomadSubpop",
-  message: "Not observed in gnomAD",
-};
 
 function tintClassName(columnId: string): string {
   const classNames: string[] = [];
@@ -69,6 +40,10 @@ function tintClassName(columnId: string): string {
   if (GROUP_START_COLUMN_IDS.has(columnId)) classNames.push(styles.groupStart);
   return classNames.join(" ");
 }
+
+const AOU_GROUP_COLUMN_IDS = new Set(["aouSubpop", "aouAf", "aouAcAn"]);
+const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn"]);
+const GROUP_START_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
 
 interface CohortVariantsPanelProps {
   rows: CohortVariantRow[];
@@ -109,8 +84,9 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 <button
                   type="button"
                   className={isExpanded ? `${styles.expandBtn} ${styles.expanded}` : styles.expandBtn}
-                  onClick={() => toggleExpanded(row.original.variant)}
                   aria-label="Expand row for more detail"
+                  aria-expanded={isExpanded}
+                  aria-controls={`detail-${row.id}`}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="9 6 15 12 9 18" />
@@ -170,7 +146,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               row.original.annotated && row.original.aouSubpopulation ? (
                 <SubpopBadge subpopulation={row.original.aouSubpopulation} />
               ) : (
-                <NotAvailable />
+                <NotAvailable title="Not observed in All of Us" />
               ),
             sortUndefined: "last",
           }),
@@ -181,7 +157,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               row.original.annotated && row.original.aouAf !== null ? (
                 formatAf(row.original.aouAf)
               ) : (
-                <NotAvailable />
+                <NotAvailable title="Not observed in All of Us" />
               ),
             sortUndefined: "last",
           }),
@@ -192,7 +168,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               row.original.annotated && row.original.aouAc !== null && row.original.aouAn !== null ? (
                 formatAcAn(row.original.aouAc, row.original.aouAn)
               ) : (
-                <NotAvailable />
+                <NotAvailable title="Not observed in All of Us" />
               ),
             sortUndefined: "last",
           }),
@@ -220,7 +196,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               row.original.annotated && row.original.gnomadSubpopulation ? (
                 <SubpopBadge subpopulation={row.original.gnomadSubpopulation} />
               ) : (
-                <NotAvailable />
+                <NotAvailable title="Not observed in gnomAD" />
               ),
             sortUndefined: "last",
           }),
@@ -231,7 +207,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               row.original.annotated && row.original.gnomadAf !== null ? (
                 formatAf(row.original.gnomadAf)
               ) : (
-                <NotAvailable />
+                <NotAvailable title="Not observed in gnomAD" />
               ),
             sortUndefined: "last",
           }),
@@ -242,26 +218,9 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               row.original.annotated && row.original.gnomadAc !== null && row.original.gnomadAn !== null ? (
                 formatAcAn(row.original.gnomadAc, row.original.gnomadAn)
               ) : (
-                <NotAvailable />
+                <NotAvailable title="Not observed in gnomAD" />
               ),
             sortUndefined: "last",
-          }),
-          columnHelper.display({
-            id: "gnomadLink",
-            header: "",
-            enableSorting: false,
-            cell: ({ row }) =>
-              row.original.annotated && row.original.gnomadUrl ? (
-                <a
-                  className={styles.iconLinkBtn}
-                  href={row.original.gnomadUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Open in gnomAD"
-                >
-                  ↗
-                </a>
-              ) : null,
           }),
         ],
       }),
@@ -280,16 +239,21 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               header: "ClinVar",
               cell: ({ row }) => {
                 const variant = row.original;
-                if (!variant.annotated || !variant.clinvarSignificance || !variant.clinvarUrl) {
+                if (!variant.annotated || !variant.clinvarSignificance) {
                   return <NotAvailable />;
                 }
-                const { clinvarSignificance, clinvarUrl } = variant;
+                const { clinvarSignificance, clinvarStars, clinvarHasConflicts } = variant;
                 return (
                   <span className={styles.clinvarCell}>
-                    <Tag variant={CLINVAR_TAG_VARIANT[clinvarSignificance]}>{clinvarSignificance}</Tag>
-                    <a className={styles.iconLinkBtn} target={"_blank"} href={clinvarUrl} title="View in ClinVar">
-                      ↗
-                    </a>
+                    <span className={`${styles.clinvarWord} ${styles[clinvarColorTier(clinvarSignificance)]}`}>
+                      {clinvarLabel(clinvarSignificance)}
+                    </span>
+                    {clinvarStars !== null && (
+                      <span className={styles.clinvarReview}>
+                        {" "}
+                        · {clinvarReviewShort({ stars: clinvarStars, hasConflicts: clinvarHasConflicts })}
+                      </span>
+                    )}
                   </span>
                 );
               },
@@ -372,45 +336,25 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => {
-                // A source with no data for this variant collapses its whole column
-                // group into one "not observed" cell, rather than a row of bare n/a's.
-                const missingGroups = [
-                  isMissingFromAou(row.original) ? AOU_MISSING_GROUP : null,
-                  isMissingFromGnomad(row.original) ? GNOMAD_MISSING_GROUP : null,
-                ].filter((group) => group !== null);
+                const isExpanded = expandedVariants.has(row.original.variant);
                 return (
                   <Fragment key={row.id}>
-                    <tr>
-                      {row.getVisibleCells().map((cell) => {
-                        const group = missingGroups.find((candidate) =>
-                          candidate.columnIds.has(cell.column.id),
-                        );
-                        if (group) {
-                          if (cell.column.id !== group.mergedIntoColumnId) return null;
-                          return (
-                            <td
-                              key={cell.id}
-                              colSpan={group.columnIds.size}
-                              className={`${tintClassName(cell.column.id)} ${styles.sourceMissing}`}
-                            >
-                              <span className={styles.cellNa}>{group.message}</span>
-                            </td>
-                          );
-                        }
-                        return (
-                          <td key={cell.id} className={tintClassName(cell.column.id)}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </td>
-                        );
-                      })}
+                    <tr className={styles.dataRow} onClick={() => toggleExpanded(row.original.variant)}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className={tintClassName(cell.column.id)}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
                     </tr>
-                    {expandedVariants.has(row.original.variant) && (
-                      <tr className={styles.detailRow}>
+                    {isExpanded && (
+                      <tr id={`detail-${row.id}`} className={styles.detailRow}>
                         <td colSpan={row.getVisibleCells().length}>
                           <div className={styles.detailPanel}>
-                            <div className={styles.detailPlaceholder}>
-                              Not mocked yet, coming soon :) Will show stats on each subpopulation
-                            </div>
+                            {row.original.annotated ? (
+                              <VariantDetailPanel variant={row.original} />
+                            ) : (
+                              <p className={styles.detailPlaceholder}>No data available for this variant.</p>
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -1,0 +1,123 @@
+.card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.heading {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.sourceLink {
+  font-size: 12px;
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.sourceLink:hover {
+  text-decoration: underline;
+}
+
+.tableScroll {
+  margin-top: 10px;
+  overflow-x: auto;
+}
+
+.table {
+  table-layout: fixed;
+  width: 100%;
+  max-width: 760px;
+  white-space: nowrap;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.populationHeader {
+  width: 220px;
+  vertical-align: bottom;
+}
+
+.tintAou {
+  background: #eef4fa;
+}
+
+.tintGnomad {
+  background: #f4f5f6;
+}
+
+.table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  font-family: "SF Mono", "Courier New", monospace;
+  position: relative;
+}
+
+.table tbody td.tintAou {
+  background: #f7fafd;
+}
+
+.table tbody td.tintGnomad {
+  background: #fafbfb;
+}
+
+.populationCell {
+  font-family: inherit;
+  padding-left: 10px;
+}
+
+.allPopulationsLabel {
+  font-family: inherit;
+  color: var(--text-muted);
+  padding-left: 10px;
+}
+
+.max {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.table tbody td.tintAou.max,
+.table tbody td.tintGnomad.max {
+  background: #e8f1fa;
+}
+
+.maxMarker {
+  margin-left: 5px;
+  font-family: "Public Sans", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-accent);
+}
+
+.dash {
+  color: var(--text-muted);
+  font-family: "Public Sans", sans-serif;
+}
+
+.caption {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}

@@ -1,0 +1,135 @@
+.card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.heading {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.empty {
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+.aggregateWord {
+  margin-top: 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.aggregateSub {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.definitionList {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.label {
+  flex: 0 0 104px;
+  color: var(--text-muted);
+}
+
+.value {
+  color: var(--text-body);
+}
+
+.divider {
+  margin: 14px 0 10px;
+  border-top: 1px solid var(--border);
+}
+
+.submissionList {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  list-style: none;
+}
+
+.submissionRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.submissionId {
+  font-family: "SF Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text-body);
+}
+
+.submissionClassification {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.showAllBtn {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.showAllBtn:hover {
+  text-decoration: underline;
+}
+
+.openBtn {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 14px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.openBtn:hover {
+  background: var(--bg-accent);
+}
+
+.pathogenic {
+  color: var(--text-danger);
+}
+
+.uncertain {
+  color: var(--text-warning);
+}
+
+.benign {
+  color: var(--text-success);
+}
+
+.neutral {
+  color: var(--text-muted);
+}

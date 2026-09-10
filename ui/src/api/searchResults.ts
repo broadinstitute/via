@@ -1,10 +1,12 @@
 import type {
   BreakdownSegment,
   ClinVarSignificance,
+  ClinvarSubmission,
   CohortVariantRow,
   FilteredVariantRow,
   GnomadSubpopCode,
   PhenotypeCrosswalk,
+  PopulationFrequency,
   SearchSummary,
   SubpopCode,
 } from "../types/results";
@@ -19,15 +21,36 @@ interface RawCohortVariant {
   aouAf: number | null;
   aouAc: number | null;
   aouAn: number | null;
+  aouPopulations: PopulationFrequency[];
+  aouAllAf: number | null;
+  aouAllAc: number | null;
+  aouAllAn: number | null;
   gnomadSubpopulation: GnomadSubpopCode | null;
   gnomadAf: number | null;
   gnomadAc: number | null;
   gnomadAn: number | null;
   gnomadUrl: string | null;
+  gnomadPopulations: PopulationFrequency[];
+  gnomadAllAf: number | null;
+  gnomadAllAc: number | null;
+  gnomadAllAn: number | null;
   clinvarSignificance: ClinVarSignificance | null;
   clinvarUrl: string | null;
+  clinvarStars: number | null;
+  clinvarHasConflicts: boolean;
+  clinvarConditions: string[];
+  clinvarLastEvaluated: string | null;
+  clinvarSubmissions: ClinvarSubmission[];
   spliceAi: number | null;
+  spliceAiAcceptorGain: number | null;
+  spliceAiAcceptorLoss: number | null;
+  spliceAiDonorGain: number | null;
+  spliceAiDonorLoss: number | null;
   plof: "HC" | null;
+  plofConfidence: "HC" | "LC" | null;
+  lofFlags: string[];
+  transcript: string | null;
+  exonNumber: string | null;
 }
 
 interface RawFilteredVariant {
@@ -78,15 +101,36 @@ function toCohortVariantRow(raw: RawCohortVariant): CohortVariantRow {
     aouAf: raw.aouAf,
     aouAc: raw.aouAc,
     aouAn: raw.aouAn,
+    aouPopulations: raw.aouPopulations,
+    aouAllAf: raw.aouAllAf,
+    aouAllAc: raw.aouAllAc,
+    aouAllAn: raw.aouAllAn,
     gnomadSubpopulation: raw.gnomadSubpopulation,
     gnomadAf: raw.gnomadAf,
     gnomadAc: raw.gnomadAc,
     gnomadAn: raw.gnomadAn,
     gnomadUrl: raw.gnomadUrl,
+    gnomadPopulations: raw.gnomadPopulations,
+    gnomadAllAf: raw.gnomadAllAf,
+    gnomadAllAc: raw.gnomadAllAc,
+    gnomadAllAn: raw.gnomadAllAn,
     clinvarSignificance: raw.clinvarSignificance,
     clinvarUrl: raw.clinvarUrl,
+    clinvarStars: raw.clinvarStars,
+    clinvarHasConflicts: raw.clinvarHasConflicts,
+    clinvarConditions: raw.clinvarConditions,
+    clinvarLastEvaluated: raw.clinvarLastEvaluated,
+    clinvarSubmissions: raw.clinvarSubmissions,
     spliceAi: raw.spliceAi!,
+    spliceAiAcceptorGain: raw.spliceAiAcceptorGain,
+    spliceAiAcceptorLoss: raw.spliceAiAcceptorLoss,
+    spliceAiDonorGain: raw.spliceAiDonorGain,
+    spliceAiDonorLoss: raw.spliceAiDonorLoss,
     plof: raw.plof,
+    plofConfidence: raw.plofConfidence,
+    lofFlags: raw.lofFlags,
+    transcript: raw.transcript,
+    exonNumber: raw.exonNumber,
   };
 }
 

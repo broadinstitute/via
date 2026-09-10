@@ -1,0 +1,20 @@
+.grid {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: minmax(300px, 344px) minmax(420px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Below ~760px of available width, stack ClinVar above the rest instead of side by side. */
+@container (max-width: 760px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
