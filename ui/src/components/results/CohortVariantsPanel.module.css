@@ -3,6 +3,36 @@
   color: var(--text-muted);
 }
 
+/* Table on the left, side panel (when a variant is selected) docked on the right. */
+.layout {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* min-width: 0 lets the table shrink (and its own horizontal scroller take over) instead of
+   overflowing the page once the side panel takes its share of the width. When the panel is open
+   (docked layout only), CohortVariantsPanel applies an inline flex-basis here instead -- default
+   just enough to keep the Variant column visible, user-resizable via .resizeHandle. */
+.tableSide {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.resizeHandle {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  background: transparent;
+}
+
+.resizeHandle:hover,
+.resizeHandle:active {
+  background: var(--border-strong);
+}
+
 /* The scroller is absolutely positioned so the (much taller) table doesn't
    contribute to intrinsic height. That lets the panel stretch to whatever
    height the phenotype panel beside it sets, and the table fills it exactly,
@@ -145,51 +175,27 @@
   cursor: pointer;
 }
 
+.dataRow:focus-visible {
+  outline: 2px solid var(--text-accent);
+  outline-offset: -2px;
+}
+
+/* Selection is the stronger of the two states (hover is the plain row-hover background above);
+   the left accent bar plus a touch of padding on the first cell keeps text off the bar. */
+.selectedRow td {
+  background: var(--bg-accent);
+}
+
+/* The accent bar belongs on the row's left edge only -- on every cell it reads as a grid of
+   vertical lines instead of a single bar. */
+.selectedRow td:first-child {
+  padding-left: 8px;
+  box-shadow: inset 3px 0 0 var(--text-accent);
+}
+
 .clinvarCell {
   display: inline-flex;
   align-items: center;
-}
-
-.expandBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  border-radius: 4px;
-}
-
-.expandBtn:hover {
-  background: var(--surface-1);
-  color: var(--text-accent);
-}
-
-.expandBtn svg {
-  transition: transform 0.15s ease;
-}
-
-.expandBtn.expanded svg {
-  transform: rotate(90deg);
-}
-
-.detailRow td {
-  background: var(--surface-1);
-  padding: 0;
-}
-
-.detailPanel {
-  padding: 12px 16px 18px;
-  white-space: normal;
-}
-
-.detailPlaceholder {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-style: italic;
-  padding: 4px 0;
 }
 
 .plofHc {

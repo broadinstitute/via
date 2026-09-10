@@ -1,0 +1,49 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11.5px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.label {
+  flex: 0 0 78px;
+  color: var(--text-muted);
+}
+
+.value {
+  color: var(--text-body);
+}
+
+.mono {
+  font-family: "SF Mono", "Courier New", monospace;
+}
+
+.caption {
+  color: var(--text-muted);
+}
+
+.divider {
+  margin: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.pathogenic {
+  color: var(--text-danger);
+}
+
+.uncertain {
+  color: var(--text-warning);
+}
+
+.benign {
+  color: var(--text-success);
+}
+
+.neutral {
+  color: var(--text-muted);
+}

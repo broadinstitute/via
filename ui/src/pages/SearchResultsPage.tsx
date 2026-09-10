@@ -36,6 +36,12 @@ export default function SearchResultsPage() {
       .catch((err: Error) => console.error("Failed to load profile", err));
   }, []);
 
+  // Only these two params should ever trigger a re-fetch -- CohortVariantsPanel also keeps
+  // `selected`/`tab` (which row's side panel is open) in the same URL search params, and
+  // selecting a row must not reload the whole page's results out from under it.
+  const variantsKey = searchParams.getAll("variants").join("\n");
+  const hpoTermKey = searchParams.get("hpoTerm") ?? "";
+
   // Re-runs whenever the URL's search criteria change -- both the initial load (e.g. arriving
   // from SearchEntryPage with ?variants=...) and a drawer re-search (which updates the URL rather
   // than fetching directly) go through this one path.
@@ -43,8 +49,8 @@ export default function SearchResultsPage() {
     setResults(null);
     setError(null);
     fetchSearchResults({
-      variants: searchParams.getAll("variants"),
-      hpoTerm: searchParams.get("hpoTerm") ?? "",
+      variants: variantsKey ? variantsKey.split("\n") : [],
+      hpoTerm: hpoTermKey,
     })
       .then((data) => {
         setResults(data);
@@ -53,7 +59,7 @@ export default function SearchResultsPage() {
       })
       .catch((err: Error) => setError(err.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.toString()]);
+  }, [variantsKey, hpoTermKey]);
 
   // Once data arrives, reveal each section in quick, slightly jittered succession
   // rather than all at once, so the page doesn't feel like it's snapping into place.

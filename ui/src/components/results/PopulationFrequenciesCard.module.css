@@ -35,13 +35,15 @@
   overflow-x: auto;
 }
 
+/* Same base font/size as the main candidate-variants table -- this table shouldn't look like a
+   different UI just because it lives in the side panel. */
 .table {
   table-layout: fixed;
   width: 100%;
   max-width: 760px;
   white-space: nowrap;
   border-collapse: collapse;
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
 .table th {
@@ -69,7 +71,6 @@
 .table td {
   padding: 6px 8px;
   border-bottom: 1px solid var(--border);
-  font-family: "SF Mono", "Courier New", monospace;
   position: relative;
 }
 
@@ -82,12 +83,10 @@
 }
 
 .populationCell {
-  font-family: inherit;
   padding-left: 10px;
 }
 
 .allPopulationsLabel {
-  font-family: inherit;
   color: var(--text-muted);
   padding-left: 10px;
 }
@@ -104,7 +103,6 @@
 
 .maxMarker {
   margin-left: 5px;
-  font-family: "Public Sans", sans-serif;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -113,7 +111,6 @@
 
 .dash {
   color: var(--text-muted);
-  font-family: "Public Sans", sans-serif;
 }
 
 .caption {

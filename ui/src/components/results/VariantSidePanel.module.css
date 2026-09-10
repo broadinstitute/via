@@ -1,0 +1,174 @@
+/* Fills whatever's left of the table's own row after CohortVariantsPanel gives the table side a
+   fixed (user-resizable) width -- so by default the panel reaches all the way from just past the
+   Variant column to the row's right edge, wide enough that the Populations tab's frequency table
+   (up to 760px, see PopulationFrequenciesCard) fits without its own horizontal scroll. */
+.panel {
+  flex: 1;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border-left: 1px solid var(--border);
+  /* No align-self/sticky here on purpose: the panel is a flex row sibling of the table side, so
+     the default stretch makes it exactly as tall as the table -- not its own (possibly taller)
+     content height. .body below scrolls internally instead. min-height: 0 overrides the flex
+     default of min-height: auto, which otherwise lets a flex item grow past its stretched size
+     to fit tall content -- exactly what was overflowing the table here.  */
+  min-height: 0;
+  overflow: hidden;
+}
+
+.header {
+  flex: 0 0 auto;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.gene {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.proteinChange {
+  margin-top: 2px;
+  font-family: "SF Mono", "Courier New", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.closeBtn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+
+.coordinate {
+  margin-top: 4px;
+  font-family: "SF Mono", "Courier New", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.tabs {
+  margin-top: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text-accent);
+}
+
+.tabActive {
+  background: var(--bg-accent);
+  color: var(--text-accent);
+}
+
+/* Same trick as the table's own .tableWrap/.tableScroll: .body is positioned absolutely so its
+   content contributes zero intrinsic height to .bodyWrap (and everything above it, up to the
+   grid row the table and this panel both live in). Without this, a tall tab's content grows
+   .bodyWrap's natural size, which grows the panel, which grows the grid row's auto height --
+   stretching the table along with it. min-height: 0 alone (flexbox's usual overflow/scroll fix)
+   doesn't help here because the grid row itself has no fixed height to clamp against. */
+.bodyWrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.body {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+
+.empty {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.footer {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.keyboardHint {
+  font-family: "SF Mono", "Courier New", monospace;
+  color: var(--text-muted);
+}
+
+.backdrop {
+  display: none;
+}
+
+/* Below ~1400px the panel becomes an overlay sheet instead of a docked column -- raised from the
+   original ~1100px breakpoint now that the panel itself is much wider, so the table doesn't get
+   squeezed into an unusably thin sliver before the panel switches to an overlay. */
+@media (max-width: 1400px) {
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(16, 24, 40, 0.3);
+    z-index: 9;
+  }
+
+  .panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(780px, 100vw);
+    max-width: none;
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.14);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel {
+    transition:
+      transform 140ms ease,
+      width 140ms ease;
+  }
+}
