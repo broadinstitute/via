@@ -7,13 +7,21 @@ import {
   useReactTable,
   type SortingState,
 } from "@tanstack/react-table";
-import type { CohortVariantRow } from "../../types/results";
-import { clinvarColorTier, clinvarLabel, clinvarReviewShort } from "../../utils/clinvar";
+import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
 import { formatAcAn, formatAf } from "../../utils/format";
 import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "./SubpopBadge";
+import Tag, { type TagVariant } from "./Tag";
 import VariantDetailPanel from "./VariantDetailPanel";
 import styles from "./CohortVariantsPanel.module.css";
+
+const CLINVAR_TAG_VARIANT: Record<ClinVarSignificance, TagVariant> = {
+  Pathogenic: "path",
+  "Likely pathogenic": "likely-path",
+  VUS: "vus",
+  "Likely benign": "likely-benign",
+  Benign: "benign",
+};
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
 const CLINVAR_SEVERITY_RANK = {
@@ -242,18 +250,11 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 if (!variant.annotated || !variant.clinvarSignificance) {
                   return <NotAvailable />;
                 }
-                const { clinvarSignificance, clinvarStars, clinvarHasConflicts } = variant;
                 return (
                   <span className={styles.clinvarCell}>
-                    <span className={`${styles.clinvarWord} ${styles[clinvarColorTier(clinvarSignificance)]}`}>
-                      {clinvarLabel(clinvarSignificance)}
-                    </span>
-                    {clinvarStars !== null && (
-                      <span className={styles.clinvarReview}>
-                        {" "}
-                        · {clinvarReviewShort({ stars: clinvarStars, hasConflicts: clinvarHasConflicts })}
-                      </span>
-                    )}
+                    <Tag variant={CLINVAR_TAG_VARIANT[variant.clinvarSignificance]}>
+                      {variant.clinvarSignificance}
+                    </Tag>
                   </span>
                 );
               },

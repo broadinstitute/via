@@ -146,32 +146,8 @@
 }
 
 .clinvarCell {
-  font-size: 13px;
-}
-
-.clinvarWord {
-  font-weight: 500;
-}
-
-.clinvarReview {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.pathogenic {
-  color: var(--text-danger);
-}
-
-.uncertain {
-  color: var(--text-warning);
-}
-
-.benign {
-  color: var(--text-success);
-}
-
-.neutral {
-  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
 }
 
 .expandBtn {
