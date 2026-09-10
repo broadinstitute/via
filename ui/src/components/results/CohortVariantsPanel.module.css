@@ -21,14 +21,25 @@
   scrollbar-width: thin;
 }
 
+/* separate (not collapse): under collapse, a sticky <th>'s border is painted via the table's
+   shared-grid-line model rather than as part of the cell's own box, and that desyncs from the
+   cell during scroll -- e.g. the groupStart divider fading/going faint once scrolled, even though
+   its CSS never changes. border-spacing: 0 keeps cells touching like collapse did. */
 .table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
   font-size: 12px;
   white-space: nowrap;
 }
 
-.table thead th {
+/* ">" child combinators, not descendant ones -- a plain ".table thead th" also matches the
+   *nested* PopulationFrequencyTable's own header cells, since that table's <thead>/<th> are
+   still descendants of this element once you go deep enough (tbody > tr > td > ... > table >
+   thead > th). That gave the nested header position: sticky + a z-index too, and because it's
+   later in DOM order than this table's own header, it was winning the paint order and visually
+   overriding this sticky header once scrolled -- the exact bug this scoping fixes. */
+.table > thead > tr > th {
   position: sticky;
   background: var(--surface-1);
   text-align: left;
@@ -38,9 +49,9 @@
   z-index: 1;
 }
 
-/* Extra .table qualifier bumps specificity above ".table thead th", whose
+/* Extra .table qualifier bumps specificity above ".table > thead > tr > th", whose
    text-align: left would otherwise win over this rule's centering. */
-.table .groupRow th {
+.table > thead > .groupRow > th {
   /* Fixed height (rather than one implied by padding/font-size) so it exactly
      matches .columnRow's sticky top offset below, with no sub-pixel gap. */
   height: 28px;
@@ -86,6 +97,19 @@
   background: #f1f0ec;
 }
 
+/* ".table > thead > tr > th" (below) sets its own background at higher specificity than a bare
+   ".tintAou"/".tintGnomad" class, so without these, every header cell in the AoU/gnomAD groups
+   silently rendered with the plain header background instead of its tint -- the group's dividing
+   border (.groupStart) then sits between two *visually identical* header cells, which is what
+   made it look faint/inconsistent rather than the flat-out DOM bug the previous header issue was. */
+.table > thead > tr > th.tintAou {
+  background: #ebf3fa;
+}
+
+.table > thead > tr > th.tintGnomad {
+  background: #f1f0ec;
+}
+
 .groupRow th.tintAou {
   color: var(--text-accent);
 }
@@ -98,7 +122,7 @@
   border-left: 2px solid var(--border-strong);
 }
 
-.table thead th.tintAou.groupStart {
+.table > thead > tr > th.tintAou.groupStart {
   border-left-color: var(--border-strong);
 }
 
