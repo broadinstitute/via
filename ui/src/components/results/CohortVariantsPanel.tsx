@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   createColumnHelper,
   flexRender,
@@ -8,19 +9,14 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
+import { CLINVAR_TAG_VARIANT } from "../../utils/clinvar";
 import { formatAcAn, formatAf } from "../../utils/format";
+import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
+import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "./SubpopBadge";
-import Tag, { type TagVariant } from "./Tag";
+import Tag from "./Tag";
 import styles from "./CohortVariantsPanel.module.css";
-
-const CLINVAR_TAG_VARIANT: Record<ClinVarSignificance, TagVariant> = {
-  Pathogenic: "path",
-  "Likely pathogenic": "likely-path",
-  VUS: "vus",
-  "Likely benign": "likely-benign",
-  Benign: "benign",
-};
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
 const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
@@ -47,7 +43,7 @@ function isMissingFromGnomad(row: CohortVariantRow): boolean {
 }
 
 const AOU_GROUP_COLUMN_IDS = new Set(["aouSubpop", "aouAf", "aouAcAn"]);
-const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn", "gnomadLink"]);
+const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn"]);
 const GROUP_START_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
 
 const AOU_MISSING_GROUP = {
@@ -75,7 +71,12 @@ interface CohortVariantsPanelProps {
 }
 
 export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) {
-  const [expandedVariants, setExpandedVariants] = useState<Set<string>>(new Set());
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Mirrored to the "expanded" query param (one-directional: state is the source of truth,
+  // seeded from the URL on mount) so a shared link can pre-open rows.
+  const [expandedVariants, setExpandedVariants] = useState<Set<string>>(
+    () => new Set(searchParams.getAll("expanded")),
+  );
   const [sorting, setSorting] = useState<SortingState>([]);
 
   function toggleExpanded(variant: string) {
@@ -86,6 +87,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
       } else {
         next.add(variant);
       }
+      setSearchParams((prev) => {
+        const params = new URLSearchParams(prev);
+        params.delete("expanded");
+        for (const expanded of next) params.append("expanded", expanded);
+        return params;
+      });
       return next;
     });
   }
@@ -109,7 +116,14 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 <button
                   type="button"
                   className={isExpanded ? `${styles.expandBtn} ${styles.expanded}` : styles.expandBtn}
-                  onClick={() => toggleExpanded(row.original.variant)}
+                  onClick={(event) => {
+                    // The row itself also toggles on click; without this the bubbled event
+                    // would immediately undo the toggle this button just performed.
+                    event.stopPropagation();
+                    toggleExpanded(row.original.variant);
+                  }}
+                  aria-expanded={isExpanded}
+                  aria-controls={`variant-detail-${row.original.variant}`}
                   aria-label="Expand row for more detail"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -131,7 +145,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
           }),
           columnHelper.accessor((row) => (row.annotated ? row.proteinChange : undefined), {
             id: "proteinChange",
-            header: "Protein Change",
+            header: "Protein ∆",
             cell: ({ row }) =>
               row.original.annotated ? (
                 <span className={styles.mono}>{row.original.proteinChange}</span>
@@ -246,23 +260,6 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               ),
             sortUndefined: "last",
           }),
-          columnHelper.display({
-            id: "gnomadLink",
-            header: "",
-            enableSorting: false,
-            cell: ({ row }) =>
-              row.original.annotated && row.original.gnomadUrl ? (
-                <a
-                  className={styles.iconLinkBtn}
-                  href={row.original.gnomadUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Open in gnomAD"
-                >
-                  ↗
-                </a>
-              ) : null,
-          }),
         ],
       }),
       columnHelper.group({
@@ -280,17 +277,13 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               header: "ClinVar",
               cell: ({ row }) => {
                 const variant = row.original;
-                if (!variant.annotated || !variant.clinvarSignificance || !variant.clinvarUrl) {
+                if (!variant.annotated || !variant.clinvarSignificance) {
                   return <NotAvailable />;
                 }
-                const { clinvarSignificance, clinvarUrl } = variant;
                 return (
-                  <span className={styles.clinvarCell}>
-                    <Tag variant={CLINVAR_TAG_VARIANT[clinvarSignificance]}>{clinvarSignificance}</Tag>
-                    <a className={styles.iconLinkBtn} target={"_blank"} href={clinvarUrl} title="View in ClinVar">
-                      ↗
-                    </a>
-                  </span>
+                  <Tag variant={CLINVAR_TAG_VARIANT[variant.clinvarSignificance]}>
+                    {variant.clinvarSignificance}
+                  </Tag>
                 );
               },
               sortUndefined: "last",
@@ -380,7 +373,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 ].filter((group) => group !== null);
                 return (
                   <Fragment key={row.id}>
-                    <tr>
+                    <tr className={styles.dataRow} onClick={() => toggleExpanded(row.original.variant)}>
                       {row.getVisibleCells().map((cell) => {
                         const group = missingGroups.find((candidate) =>
                           candidate.columnIds.has(cell.column.id),
@@ -393,7 +386,9 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                               colSpan={group.columnIds.size}
                               className={`${tintClassName(cell.column.id)} ${styles.sourceMissing}`}
                             >
-                              <span className={styles.cellNa}>{group.message}</span>
+                              <span className={styles.dash} title={group.message}>
+                                —
+                              </span>
                             </td>
                           );
                         }
@@ -405,13 +400,22 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                       })}
                     </tr>
                     {expandedVariants.has(row.original.variant) && (
-                      <tr className={styles.detailRow}>
+                      <tr className={styles.detailRow} id={`variant-detail-${row.original.variant}`}>
                         <td colSpan={row.getVisibleCells().length}>
-                          <div className={styles.detailPanel}>
-                            <div className={styles.detailPlaceholder}>
-                              Not mocked yet, coming soon :) Will show stats on each subpopulation
+                          {row.original.annotated ? (
+                            <div className={styles.detailPanel}>
+                              <div className={styles.detailClinvar}>
+                                <ClinvarExpanderDetail variant={row.original} />
+                              </div>
+                              <div className={styles.detailPopulations}>
+                                <PopulationFrequencyTable variant={row.original} />
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div className={`${styles.detailPanel} ${styles.detailPanelNoClinvar}`}>
+                              <div className={styles.detailPlaceholder}>No data available for this variant.</div>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}
