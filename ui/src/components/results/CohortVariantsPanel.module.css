@@ -131,7 +131,11 @@
   font-weight: 500;
 }
 
-.table tbody td {
+/* ">" child combinators here too -- same reason as the thead rules above: unscoped "tbody td"
+   also matches the nested PopulationFrequencyTable's own body cells (still a descendant, however
+   many tables deep), which was silently overriding its own 1px-padding rule with this one's 7px,
+   making its rows much taller than its (correctly, tightly-padded) header. */
+.table > tbody > tr > td {
   padding: 7px 10px;
   border-bottom: 1px solid var(--border);
   color: var(--text-body);
@@ -141,15 +145,15 @@
   cursor: pointer;
 }
 
-.table tbody tr:hover td {
+.table > tbody > tr:hover > td {
   background: var(--surface-1);
 }
 
-.table tbody tr:hover td.tintAou {
+.table > tbody > tr:hover > td.tintAou {
   background: #e3edf6;
 }
 
-.table tbody tr:hover td.tintGnomad {
+.table > tbody > tr:hover > td.tintGnomad {
   background: #e9e8e3;
 }
 
@@ -198,7 +202,11 @@
   transform: rotate(90deg);
 }
 
-.detailRow td {
+/* ">" (direct child), not a descendant selector -- same leak as the .table rules above: this
+   <tr> contains, many levels down, PopulationFrequencyTable's own <td> cells, which "td" alone
+   would also match and (at equal specificity) can win the cascade tie against that table's own
+   padding rule depending on stylesheet load order. */
+.detailRow > td {
   background: var(--surface-1);
   padding: 0 16px 14px;
   white-space: normal;
