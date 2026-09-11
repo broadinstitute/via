@@ -4,6 +4,21 @@ export type GnomadSubpopCode = "AFR" | "AMR" | "EAS" | "FIN" | "NFE" | "ASJ" | "
 
 export type ClinVarSignificance = "Pathogenic" | "Likely pathogenic" | "VUS" | "Likely benign" | "Benign";
 
+export interface PopulationFrequency {
+  population: SubpopCode | GnomadSubpopCode;
+  af: number | null;
+  ac: number | null;
+  an: number | null;
+}
+
+/** One ClinVar RCV record. There's no submitter identity in the VAT, so `id` (the RCV
+ * accession) is what distinguishes one submission from another. */
+export interface ClinvarSubmission {
+  id: string;
+  classification: string | null;
+  stars: number | null;
+}
+
 interface CohortVariantBase {
   variant: string;
 }
@@ -18,15 +33,28 @@ export interface AnnotatedCohortVariant extends CohortVariantBase {
   aouAf: number | null;
   aouAc: number | null;
   aouAn: number | null;
+  aouPopulations: PopulationFrequency[];
+  aouAllAf: number | null;
+  aouAllAc: number | null;
+  aouAllAn: number | null;
   /** null for all gnomAD fields below = this variant was not observed in gnomAD. */
   gnomadSubpopulation: GnomadSubpopCode | null;
   gnomadAf: number | null;
   gnomadAc: number | null;
   gnomadAn: number | null;
   gnomadUrl: string | null;
+  gnomadPopulations: PopulationFrequency[];
+  gnomadAllAf: number | null;
+  gnomadAllAc: number | null;
+  gnomadAllAn: number | null;
   /** null = this variant has no ClinVar record. */
   clinvarSignificance: ClinVarSignificance | null;
   clinvarUrl: string | null;
+  clinvarStars: number | null;
+  clinvarHasConflicts: boolean;
+  clinvarConditions: string[];
+  clinvarLastEvaluated: string | null;
+  clinvarSubmissions: ClinvarSubmission[];
   spliceAi: number;
   /** null = LOFTEE does not score this consequence type. */
   plof: "HC" | null;
