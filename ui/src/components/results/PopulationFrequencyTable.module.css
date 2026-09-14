@@ -11,6 +11,18 @@
   text-align: left;
 }
 
+.table tbody tr:hover td {
+  background: var(--surface-1);
+}
+
+.table tbody tr:hover td.tintAou {
+  background: #e3edf6;
+}
+
+.table tbody tr:hover td.tintGnomad {
+  background: #e9e8e3;
+}
+
 .populationHeader {
   font-weight: 600;
   color: var(--text-secondary);

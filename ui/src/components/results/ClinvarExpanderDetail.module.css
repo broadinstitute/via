@@ -1,7 +1,7 @@
 .detail {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .header {
@@ -19,11 +19,18 @@
   margin: 0;
 }
 
+/* Badge + review status + facts all live on this one wrapping line now (previously the facts
+   had their own row below). Relying on gap + each fact's own muted label to separate segments,
+   rather than a literal "·" glyph, which would end up orphaned at the start of a wrapped line
+   whenever this 318px-wide column can't fit everything on one line. */
 .callLine {
   display: flex;
   align-items: center;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-body);
 }
 
 .noConsensus {
@@ -33,21 +40,19 @@
 }
 
 .reviewStatus {
-  font-size: 11.5px;
   color: var(--text-secondary);
 }
 
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  font-size: 11.5px;
-  line-height: 1.45;
-  color: var(--text-body);
-}
-
+/* Small-caps, same treatment as the "ClinVar" section header -- gives each fact's label a
+   consistent, slightly more designed feel instead of just being the same weight/color as its
+   value (which read as a flat wall of same-toned text). */
 .factLabel {
-  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-right: 2px;
 }
 
 .submitters {
@@ -63,12 +68,20 @@
 
 .link {
   align-self: flex-start;
-  font-size: 11.5px;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-accent);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 10px;
   text-decoration: none;
 }
 
 .link:hover {
-  text-decoration: underline;
+  border-color: var(--text-accent);
+  background: var(--surface-2);
 }

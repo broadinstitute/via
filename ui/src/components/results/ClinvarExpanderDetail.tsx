@@ -54,8 +54,6 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
             {clinvarReviewWords(clinvarStars, clinvarHasConflicts, clinvarSubmissions.length)}
           </span>
         )}
-      </div>
-      <div className={styles.facts}>
         {firstCondition && (
           <span title={remainingConditions.length > 0 ? clinvarConditions.join("; ") : undefined}>
             <span className={styles.factLabel}>Condition</span> {firstCondition}
