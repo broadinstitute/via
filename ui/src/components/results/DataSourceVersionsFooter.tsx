@@ -17,7 +17,7 @@ export default function DataSourceVersionsFooter() {
 
   return (
     <div className={styles.footer}>
-      <span className={styles.label}>Data Sources</span>
+      <span className={styles.label}>Sources</span>
       <div className={styles.sources}>
         {versions.map((source) => (
           <div key={source.name} className={styles.source}>
@@ -42,6 +42,7 @@ export default function DataSourceVersionsFooter() {
       <span className={styles.appVersion} title="VIA application version">
         VIA v{APP_VERSION}
       </span>
+      <img className={styles.logo} src="/broad-logo.svg" alt="Broad Institute" />
     </div>
   );
 }

@@ -32,6 +32,12 @@
   font-family: "SF Mono", "Courier New", monospace;
 }
 
+.logo {
+  flex-shrink: 0;
+  height: 40px;
+  width: auto;
+}
+
 .source {
   display: flex;
   flex-direction: column;
