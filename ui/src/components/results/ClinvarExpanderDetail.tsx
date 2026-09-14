@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { AnnotatedCohortVariant } from "../../types/results";
 import {
   CLINVAR_TAG_VARIANT,
@@ -9,7 +10,7 @@ import { formatDate } from "../../utils/format";
 import Tag from "./Tag";
 import styles from "./ClinvarExpanderDetail.module.css";
 
-// Cap the inline submitter list at 4; the rest collapse into a "+N more" whose title carries them.
+// Cap the inline submitter list at 4; the rest collapse behind a "+N more" button.
 const MAX_VISIBLE_SUBMISSIONS = 4;
 
 interface ClinvarExpanderDetailProps {
@@ -17,6 +18,12 @@ interface ClinvarExpanderDetailProps {
 }
 
 export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetailProps) {
+  // A title-tooltip "+N more" isn't reachable by keyboard or touch, so the rest of the list is
+  // hidden from those users entirely -- these track whether it's been disclosed into the DOM
+  // instead (via a real, focusable button below).
+  const [showAllConditions, setShowAllConditions] = useState(false);
+  const [showAllSubmissions, setShowAllSubmissions] = useState(false);
+
   const {
     clinvarSignificance,
     clinvarSubmissions,
@@ -37,8 +44,8 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
   }
 
   const [firstCondition, ...remainingConditions] = clinvarConditions;
-  const visibleSubmissions = clinvarSubmissions.slice(0, MAX_VISIBLE_SUBMISSIONS);
-  const hiddenSubmissions = clinvarSubmissions.slice(MAX_VISIBLE_SUBMISSIONS);
+  const visibleSubmissions = showAllSubmissions ? clinvarSubmissions : clinvarSubmissions.slice(0, MAX_VISIBLE_SUBMISSIONS);
+  const hiddenSubmissionCount = clinvarSubmissions.length - visibleSubmissions.length;
 
   return (
     <div className={styles.detail}>
@@ -55,9 +62,23 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
           </span>
         )}
         {firstCondition && (
-          <span title={remainingConditions.length > 0 ? clinvarConditions.join("; ") : undefined}>
+          <span>
             <span className={styles.factLabel}>Condition</span> {firstCondition}
-            {remainingConditions.length > 0 && ` +${remainingConditions.length} more`}
+            {remainingConditions.length > 0 &&
+              (showAllConditions ? (
+                `, ${remainingConditions.join(", ")}`
+              ) : (
+                <button
+                  type="button"
+                  className={styles.disclosureBtn}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setShowAllConditions(true);
+                  }}
+                >
+                  +{remainingConditions.length} more
+                </button>
+              ))}
           </span>
         )}
         {clinvarLastEvaluated && (
@@ -77,16 +98,18 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
             </span>
           </span>
         ))}
-        {hiddenSubmissions.length > 0 && (
-          <span
-            className={styles.moreSubmissions}
-            title={hiddenSubmissions
-              .map((s) => `${s.id} ${clinvarSubmissionShortCode(s.classification)}`)
-              .join(", ")}
+        {hiddenSubmissionCount > 0 && (
+          <button
+            type="button"
+            className={styles.disclosureBtn}
+            onClick={(event) => {
+              event.stopPropagation();
+              setShowAllSubmissions(true);
+            }}
           >
             {" "}
-            +{hiddenSubmissions.length} more
-          </span>
+            +{hiddenSubmissionCount} more
+          </button>
         )}
       </div>
       {clinvarUrl && (

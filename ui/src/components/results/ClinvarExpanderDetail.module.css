@@ -61,9 +61,22 @@
   color: var(--text-body);
 }
 
-.moreSubmissions {
-  color: var(--text-secondary);
-  cursor: help;
+/* Reset so this reads as inline text, not a default browser button -- but it's still a real
+   <button>, so keyboard/touch users can actually reach the conditions/submitters it reveals
+   (a title-tooltip on a span, the previous approach, isn't reachable by either). */
+.disclosureBtn {
+  font: inherit;
+  color: var(--text-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+}
+
+.disclosureBtn:hover {
+  text-decoration-color: var(--text-accent);
 }
 
 .link {
