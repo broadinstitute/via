@@ -11,6 +11,34 @@ export const CLINVAR_TAG_VARIANT: Record<ClinVarSignificance, TagVariant> = {
   Benign: "benign",
 };
 
+// The aggregate badge's short label -- distinct from CLINVAR_SUBMISSION_SHORT_CODE below, which
+// is keyed by an individual submission's raw (unmapped) classification string.
+export const CLINVAR_SHORT_LABEL: Record<ClinVarSignificance, string> = {
+  Pathogenic: "P",
+  "Likely pathogenic": "LP",
+  VUS: "VUS",
+  "Likely benign": "LB",
+  Benign: "B",
+};
+
+/** e.g. "3★". */
+export function clinvarStarRating(stars: number): string {
+  return `${stars}★`;
+}
+
+// Which color family the collapsed row's combined classification+stars badge uses -- shared
+// between Pathogenic/Likely pathogenic (danger), Likely benign/Benign (success), and VUS
+// (warning) alone.
+export type ClinvarBadgeTone = "danger" | "warning" | "success";
+
+export const CLINVAR_BADGE_TONE: Record<ClinVarSignificance, ClinvarBadgeTone> = {
+  Pathogenic: "danger",
+  "Likely pathogenic": "danger",
+  VUS: "warning",
+  "Likely benign": "success",
+  Benign: "success",
+};
+
 // Short codes and colors for individual ClinVar RCV submissions. Broader than
 // ClinVarSignificance -- an individual submission's raw classification can also be
 // "Conflicting interpretations" or "not provided", which have no equivalent there.

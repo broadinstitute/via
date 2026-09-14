@@ -6,9 +6,14 @@
   font-weight: 600;
 }
 
+/* Pathogenic and Benign additionally get a border in their own text color, to set them apart
+   from their "Likely" counterparts as the more definitive calls. Padding drops by the border's
+   1px on each side so the overall badge size still matches the unbordered variants. */
 .path {
   background: var(--bg-danger);
   color: var(--text-danger);
+  border: 1px solid var(--text-danger);
+  padding: 1px 6px;
 }
 
 .likely-path {
@@ -29,4 +34,6 @@
 .benign {
   background: var(--bg-success);
   color: var(--text-success);
+  border: 1px solid var(--text-success);
+  padding: 1px 6px;
 }

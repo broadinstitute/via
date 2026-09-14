@@ -8,13 +8,12 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
-import { CLINVAR_TAG_VARIANT } from "../../utils/clinvar";
+import { CLINVAR_BADGE_TONE, CLINVAR_SHORT_LABEL, clinvarStarRating, type ClinvarBadgeTone } from "../../utils/clinvar";
 import { formatAcAn, formatAf } from "../../utils/format";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "./SubpopBadge";
-import Tag from "./Tag";
 import styles from "./CohortVariantsPanel.module.css";
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
@@ -24,6 +23,12 @@ const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
   VUS: 2,
   "Likely benign": 3,
   Benign: 4,
+};
+
+const CLINVAR_TONE_CLASS: Record<ClinvarBadgeTone, string> = {
+  danger: styles.clinvarDanger,
+  warning: styles.clinvarWarning,
+  success: styles.clinvarSuccess,
 };
 
 /** No value for this cell — the variant isn't present in the source behind it. */
@@ -268,10 +273,25 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 if (!variant.annotated || !variant.clinvarSignificance) {
                   return <NotAvailable />;
                 }
+                // "Likely" calls get a dashed border instead of solid -- less definitive than
+                // the solid P/B.
+                const isLikely =
+                  variant.clinvarSignificance === "Likely pathogenic" ||
+                  variant.clinvarSignificance === "Likely benign";
+                const toneClass = CLINVAR_TONE_CLASS[CLINVAR_BADGE_TONE[variant.clinvarSignificance]];
                 return (
-                  <Tag variant={CLINVAR_TAG_VARIANT[variant.clinvarSignificance]}>
-                    {variant.clinvarSignificance}
-                  </Tag>
+                  <span
+                    className={
+                      isLikely
+                        ? `${styles.clinvarBadge} ${toneClass} ${styles.clinvarBadgeDashed}`
+                        : `${styles.clinvarBadge} ${toneClass}`
+                    }
+                  >
+                    <span className={styles.clinvarBadgeClass}>{CLINVAR_SHORT_LABEL[variant.clinvarSignificance]}</span>
+                    {variant.clinvarStars !== null && (
+                      <span className={styles.clinvarBadgeStars}>{clinvarStarRating(variant.clinvarStars)}</span>
+                    )}
+                  </span>
                 );
               },
               sortUndefined: "last",

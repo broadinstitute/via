@@ -131,6 +131,60 @@
   font-weight: 500;
 }
 
+/* One pill, split in half by a divider: classification (colored fill) on the left, star rating
+   (neutral) on the right. Fixed width overall so every row's badge lines up regardless of
+   whether the classification is "P" or "VUS". overflow: hidden is what lets the flat halves
+   still read as one rounded shape -- the border-radius clips them instead of each half needing
+   its own partial radius. */
+.clinvarBadge {
+  display: inline-flex;
+  width: 62px;
+  border-radius: 4px;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--clinvar-tone-color, var(--border-strong));
+}
+
+.clinvarBadgeClass {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--clinvar-tone-bg);
+  color: var(--clinvar-tone-color);
+}
+
+/* "Likely" calls get a dashed border instead of solid -- less definitive than the solid P/B. */
+.clinvarBadgeDashed {
+  border-style: dashed;
+}
+
+.clinvarBadgeStars {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--clinvar-tone-color, var(--border-strong));
+  color: var(--text-secondary);
+}
+
+.clinvarDanger {
+  --clinvar-tone-color: var(--text-danger);
+  --clinvar-tone-bg: var(--bg-danger);
+}
+
+.clinvarWarning {
+  --clinvar-tone-color: var(--text-warning);
+  --clinvar-tone-bg: var(--bg-warning);
+}
+
+.clinvarSuccess {
+  --clinvar-tone-color: var(--text-success);
+  --clinvar-tone-bg: var(--bg-success);
+}
+
+
 /* ">" child combinators here too -- same reason as the thead rules above: unscoped "tbody td"
    also matches the nested PopulationFrequencyTable's own body cells (still a descendant, however
    many tables deep), which was silently overriding its own 1px-padding rule with this one's 7px,
