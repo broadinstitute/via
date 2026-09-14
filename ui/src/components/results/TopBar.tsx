@@ -13,7 +13,12 @@ export default function TopBar({ loading, variantsEnteredCount, hpoTerm, userEma
     <div className={styles.topbar}>
       {onModifySearch && (
         <div className={styles.caseInfo}>
-          <span className={styles.searchLead}>Search terms</span>
+          <span className={styles.searchLead} role="img" aria-label="Search terms" title="Search terms">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          </span>
           <span className={styles.searchField}>
             Candidate variants{" "}
             {loading ? (

@@ -10,7 +10,6 @@ import SearchDrawer from "../components/results/SearchDrawer";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
 import { parseVariantsText } from "../utils/variants";
-import styles from "./SearchResultsPage.module.css";
 
 interface RevealedSections {
   cohort: boolean;
@@ -19,6 +18,11 @@ interface RevealedSections {
 }
 
 const NOT_REVEALED: RevealedSections = { cohort: false, phenotype: false, filtered: false };
+
+// The .topRow grid used to collapse to a single column via a "@media (max-width: 900px)" rule in
+// CSS; inline styles can't express media queries directly, so this mirrors it in JS the same way
+// CohortVariantsPanel already does for its own docked/overlay breakpoint.
+const NARROW_LAYOUT_QUERY = "(max-width: 900px)";
 
 export default function SearchResultsPage() {
   const [userEmail, setUserEmail] = useState("");
@@ -29,6 +33,16 @@ export default function SearchResultsPage() {
   const [drawerVariants, setDrawerVariants] = useState("");
   const [drawerHpo, setDrawerHpo] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isNarrow, setIsNarrow] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(NARROW_LAYOUT_QUERY).matches,
+  );
+
+  useEffect(() => {
+    const query = window.matchMedia(NARROW_LAYOUT_QUERY);
+    const handleChange = () => setIsNarrow(query.matches);
+    query.addEventListener("change", handleChange);
+    return () => query.removeEventListener("change", handleChange);
+  }, []);
 
   useEffect(() => {
     fetchProfile()
@@ -101,7 +115,11 @@ export default function SearchResultsPage() {
   }
 
   if (error) {
-    return <p className={styles.status}>Failed to load search results: {error}</p>;
+    return (
+      <p style={{ padding: "32px 20px", textAlign: "center", color: "var(--text-secondary)", fontSize: 13 }}>
+        Failed to load search results: {error}
+      </p>
+    );
   }
 
   return (
@@ -127,8 +145,15 @@ export default function SearchResultsPage() {
         />
       )}
 
-      <main className={styles.main}>
-        <div className={styles.topRow}>
+      <main style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isNarrow ? "1fr" : "1fr 300px",
+            gap: 16,
+            alignItems: "stretch",
+          }}
+        >
           {results && revealed.cohort ? (
             <CohortVariantsPanel rows={results.cohortVariants} />
           ) : (
