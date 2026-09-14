@@ -123,7 +123,7 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
                     border: "none",
                     padding: 0,
                     cursor: "pointer",
-                    textDecoration: "underline",
+                    textDecorationLine: "underline",
                   }}
                   onClick={(event) => {
                     event.stopPropagation();
