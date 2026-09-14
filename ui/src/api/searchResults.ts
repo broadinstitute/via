@@ -39,7 +39,7 @@ interface RawCohortVariant {
   clinvarStars: number | null;
   clinvarHasConflicts: boolean;
   clinvarConditions: string[];
-  clinvarLastEvaluated: string | null;
+  clinvarLastUpdated: string | null;
   clinvarSubmissions: ClinvarSubmission[];
   spliceAi: number | null;
   plof: "HC" | null;
@@ -111,7 +111,7 @@ function toCohortVariantRow(raw: RawCohortVariant): CohortVariantRow {
     clinvarStars: raw.clinvarStars,
     clinvarHasConflicts: raw.clinvarHasConflicts,
     clinvarConditions: raw.clinvarConditions,
-    clinvarLastEvaluated: raw.clinvarLastEvaluated,
+    clinvarLastUpdated: raw.clinvarLastUpdated,
     clinvarSubmissions: raw.clinvarSubmissions,
     spliceAi: raw.spliceAi!,
     plof: raw.plof,

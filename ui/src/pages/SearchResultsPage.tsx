@@ -36,11 +36,10 @@ export default function SearchResultsPage() {
       .catch((err: Error) => console.error("Failed to load profile", err));
   }, []);
 
-  // Keyed on just the search criteria, not the whole URL -- CohortVariantsPanel also writes an
-  // "expanded" param (to make expanded rows shareable/bookmarkable) that has nothing to do with
-  // what to fetch. Depending on searchParams.toString() would re-run this on every row toggle,
-  // wiping results and flashing every section's loading state for a fetch that's a cache hit
-  // anyway.
+  // Keyed on just the search criteria, not the whole URL -- other params unrelated to what to
+  // fetch could otherwise end up in the URL (e.g. UI state some other component tracks there).
+  // Depending on searchParams.toString() would re-run this on every such change, wiping results
+  // and flashing every section's loading state for a fetch that's a cache hit anyway.
   const variantsKey = searchParams.getAll("variants").join("\n");
   const hpoTermKey = searchParams.get("hpoTerm") ?? "";
 

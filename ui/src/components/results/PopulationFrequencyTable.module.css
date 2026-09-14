@@ -28,13 +28,24 @@
   color: var(--text-secondary);
 }
 
+/* Body cells: tint only, no bold -- the header variants below add font-weight back for th's. */
 .tintAou {
+  background: #f7fafd;
+  color: var(--text-accent);
+}
+
+.tintGnomad {
+  background: #fafbfb;
+  color: var(--text-secondary);
+}
+
+.headerTintAou {
   background: #f7fafd;
   font-weight: 600;
   color: var(--text-accent);
 }
 
-.tintGnomad {
+.headerTintGnomad {
   background: #fafbfb;
   font-weight: 600;
   color: var(--text-secondary);
@@ -76,7 +87,6 @@
 
 .popmax {
   background: #e8f1fa;
-  font-weight: 600;
   color: var(--text-primary);
 }
 

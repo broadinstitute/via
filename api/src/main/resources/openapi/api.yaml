@@ -328,10 +328,13 @@ components:
           type: array
           items:
             type: string
-        clinvarLastEvaluated:
+        clinvarLastUpdated:
           type: string
           format: date
           nullable: true
+          description: >-
+            When this variant's ClinVar record was last updated -- not necessarily the date its
+            clinical significance was last evaluated, which the VAT doesn't separately provide.
         clinvarSubmissions:
           description: >-
             One entry per ClinVar RCV record for this variant, for the

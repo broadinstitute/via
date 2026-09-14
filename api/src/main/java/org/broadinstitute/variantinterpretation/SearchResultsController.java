@@ -268,7 +268,7 @@ public class SearchResultsController implements SearchApi {
         .clinvarStars(clinvarStars)
         .clinvarHasConflicts(clinvarHasConflicts)
         .clinvarConditions(stringList(row, "clinvar_phenotype"))
-        .clinvarLastEvaluated(clinvarLastUpdated == null ? null : LocalDate.parse(clinvarLastUpdated))
+        .clinvarLastUpdated(clinvarLastUpdated == null ? null : LocalDate.parse(clinvarLastUpdated))
         .clinvarSubmissions(clinvarSubmissions(clinvarRcvIds, clinvarRcvClassifications, clinvarRcvStars))
         .spliceAi(bigDecimal(spliceAi))
         .plof("HC".equals(string(row, "LoF")) ? CohortVariant.PlofEnum.HC : null);

@@ -53,7 +53,8 @@ export interface AnnotatedCohortVariant extends CohortVariantBase {
   clinvarStars: number | null;
   clinvarHasConflicts: boolean;
   clinvarConditions: string[];
-  clinvarLastEvaluated: string | null;
+  /** When the ClinVar record was last updated -- not necessarily when it was last evaluated. */
+  clinvarLastUpdated: string | null;
   clinvarSubmissions: ClinvarSubmission[];
   spliceAi: number;
   /** null = LOFTEE does not score this consequence type. */

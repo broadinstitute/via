@@ -75,9 +75,9 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
       <thead>
         <tr>
           <th className={styles.populationHeader}>Population</th>
-          <th className={styles.tintAou}>AoU AF</th>
-          <th className={styles.tintAou}>AoU AC/AN</th>
-          <th className={styles.tintGnomad}>
+          <th className={styles.headerTintAou}>AoU AF</th>
+          <th className={styles.headerTintAou}>AoU AC/AN</th>
+          <th className={styles.headerTintGnomad}>
             gnomAD AF{" "}
             {variant.gnomadUrl && (
               <a
@@ -93,7 +93,7 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
               </a>
             )}
           </th>
-          <th className={styles.tintGnomad}>gnomAD AC/AN</th>
+          <th className={styles.headerTintGnomad}>gnomAD AC/AN</th>
         </tr>
       </thead>
       <tbody>

@@ -30,7 +30,7 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
     clinvarStars,
     clinvarHasConflicts,
     clinvarConditions,
-    clinvarLastEvaluated,
+    clinvarLastUpdated,
     clinvarUrl,
   } = variant;
 
@@ -63,7 +63,8 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
         )}
         {firstCondition && (
           <span>
-            <span className={styles.factLabel}>Condition</span> {firstCondition}
+            <span className={styles.factLabel}>Condition</span>
+            {firstCondition}
             {remainingConditions.length > 0 &&
               (showAllConditions ? (
                 `, ${remainingConditions.join(", ")}`
@@ -81,9 +82,10 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
               ))}
           </span>
         )}
-        {clinvarLastEvaluated && (
+        {clinvarLastUpdated && (
           <span>
-            <span className={styles.factLabel}>Evaluated</span> {formatDate(clinvarLastEvaluated)}
+            <span className={styles.factLabel}>Updated</span>
+            {formatDate(clinvarLastUpdated)}
           </span>
         )}
       </div>

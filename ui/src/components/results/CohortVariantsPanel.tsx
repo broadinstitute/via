@@ -1,5 +1,4 @@
 import { Fragment, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import {
   createColumnHelper,
   flexRender,
@@ -71,12 +70,7 @@ interface CohortVariantsPanelProps {
 }
 
 export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  // Mirrored to the "expanded" query param (one-directional: state is the source of truth,
-  // seeded from the URL on mount) so a shared link can pre-open rows.
-  const [expandedVariants, setExpandedVariants] = useState<Set<string>>(
-    () => new Set(searchParams.getAll("expanded")),
-  );
+  const [expandedVariants, setExpandedVariants] = useState<Set<string>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
 
   function toggleExpanded(variant: string) {
@@ -87,12 +81,6 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
       } else {
         next.add(variant);
       }
-      setSearchParams((prev) => {
-        const params = new URLSearchParams(prev);
-        params.delete("expanded");
-        for (const expanded of next) params.append("expanded", expanded);
-        return params;
-      });
       return next;
     });
   }
