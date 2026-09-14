@@ -201,8 +201,9 @@ public class SearchResultsController implements SearchApi {
     String aouSubpop = string(row, "gvs_max_subpop");
     String gnomadSubpop = string(row, "gnomad_max_subpop");
 
+    List<String> clinvarClassifications = stringList(row, "clinvar_classification");
     CohortVariant.ClinvarSignificanceEnum clinvarSignificance =
-        stringList(row, "clinvar_classification").stream()
+        clinvarClassifications.stream()
             .map(CLINVAR_SIGNIFICANCE::get)
             .filter(Objects::nonNull)
             .findFirst()
@@ -214,9 +215,12 @@ public class SearchResultsController implements SearchApi {
     // ClinVar's gold-star review status is per RCV record, not per overall classification; a
     // variant can have several (possibly conflicting) RCV submissions, so this takes the highest.
     Integer clinvarStars = clinvarRcvStars.stream().filter(Objects::nonNull).max(Integer::compareTo).orElse(null);
-    // "Conflicting" means this variant's own RCV submissions disagree with each other, not that
-    // its classification differs from some other source.
-    boolean clinvarHasConflicts = clinvarRcvClassifications.stream().distinct().count() > 1;
+    // Each RCV is a variant+condition pair, not just variant -- two RCVs legitimately differing
+    // (e.g. pathogenic for one condition, benign for another) is not a conflict, so this can't be
+    // derived from a distinct-count over clinvarRcvClassifications. clinvar_classification is
+    // ClinVar's own aggregate call across all of this variant's RCVs, and carries "Conflicting
+    // interpretations" itself when submitters actually disagree.
+    boolean clinvarHasConflicts = clinvarClassifications.contains("Conflicting interpretations");
     String clinvarLastUpdated = string(row, "clinvar_last_updated");
 
     // SpliceAI's headline delta score (shown in the collapsed row) is the max of the four.

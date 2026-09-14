@@ -112,7 +112,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                   }}
                   aria-expanded={isExpanded}
                   aria-controls={`variant-detail-${row.original.variant}`}
-                  aria-label="Expand row for more detail"
+                  aria-label={isExpanded ? "Collapse row for more detail" : "Expand row for more detail"}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="9 6 15 12 9 18" />
