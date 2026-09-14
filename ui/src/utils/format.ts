@@ -13,7 +13,7 @@ export function formatAf(af: number): string {
 /** e.g. "2024-02-14" -> "14 Feb 2024". */
 export function formatDate(isoDate: string): string {
   const [year, month, day] = isoDate.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-US", {
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",

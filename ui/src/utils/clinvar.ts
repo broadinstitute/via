@@ -41,12 +41,13 @@ export function clinvarSubmissionColor(classification: string | null): string {
 }
 
 /** e.g. "2★ multiple submitters, no conflicts". */
-export function clinvarReviewWords(stars: number, hasConflicts: boolean, submissionCount: number): string {
-  const description =
-    submissionCount <= 1
-      ? "single submitter"
-      : hasConflicts
-        ? "multiple submitters, conflicting classifications"
-        : "multiple submitters, no conflicts";
-  return `${stars}★ ${description}`;
+export function clinvarReviewWords(stars: number, hasConflicts: boolean, _submissionCount: number): string {
+  const descriptions: Record<number, string> = {
+    0: "no assertion criteria provided",
+    1: hasConflicts ? "criteria provided, conflicting classifications" : "criteria provided, single submitter",
+    2: "criteria provided, multiple submitters, no conflicts",
+    3: "reviewed by expert panel",
+    4: "practice guideline",
+  };
+  return `${stars}★ ${descriptions[stars] ?? "unknown review status"}`;
 }

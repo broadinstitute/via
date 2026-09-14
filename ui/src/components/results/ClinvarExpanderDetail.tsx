@@ -88,7 +88,7 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
         )}
       </div>
       <div className={styles.submitters}>
-        <span className={styles.factLabel}>Submitters</span>{" "}
+        <span className={styles.factLabel}>ClinVar records</span>{" "}
         {visibleSubmissions.map((submission, index) => (
           <span key={submission.id}>
             {index > 0 && " · "}
