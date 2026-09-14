@@ -14,5 +14,18 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/setupTests.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json-summary", "html"],
+      // Only one real test file exists today (App.test.tsx), so these floors are set just under
+      // the current baseline -- enough to catch a regression, not a claim that this is good
+      // coverage. Raise them as real unit tests get added.
+      thresholds: {
+        statements: 25,
+        branches: 10,
+        functions: 12,
+        lines: 25,
+      },
+    },
   },
 });

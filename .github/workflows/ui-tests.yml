@@ -26,4 +26,14 @@ jobs:
           cache: "npm"
           cache-dependency-path: ui/package-lock.json
       - run: npm ci
-      - run: npm run test
+      # Runs the same test suite as `npm run test`, plus enforces the coverage floors configured
+      # in vite.config.ts (test.coverage.thresholds) -- fails the job if coverage regresses below
+      # them, so this replaces the plain test run rather than running the suite twice.
+      - run: npm run coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-coverage-report
+          path: ui/coverage/
+          retention-days: 14

@@ -8,6 +8,7 @@ api/src/main/resources/static/
 ui/node_modules/
 ui/dist/
 ui/*.tsbuildinfo
+ui/coverage/
 
 # IDE
 .idea/
