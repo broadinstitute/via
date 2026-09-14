@@ -1,13 +1,17 @@
+/* min-height matches .tableScroll's max-height in ParticipantMatchedVariantsPanel, so this
+   empty-state prompt takes up roughly the same footprint as the populated table would. */
 .body {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 14px;
+  min-height: 346px;
   padding: 56px 20px;
   color: var(--text-secondary);
   font-size: 12.5px;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .addBtn {

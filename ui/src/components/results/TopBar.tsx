@@ -27,7 +27,7 @@ export default function TopBar({ loading, variantsEnteredCount, hpoTerm, userEma
             {loading ? (
               <span className={styles.skeletonBadge} />
             ) : (
-              <span className={`${styles.valueBadge} ${styles.monoVal}`}>{hpoTerm}</span>
+              <span className={`${styles.valueBadge}`}>{hpoTerm || 'None entered'}</span>
             )}
           </span>
           <button type="button" className={styles.editBtn} onClick={onModifySearch} disabled={loading}>

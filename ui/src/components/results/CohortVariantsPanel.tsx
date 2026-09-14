@@ -8,19 +8,13 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
+import { CLINVAR_BADGE_TONE, CLINVAR_SHORT_LABEL, clinvarStarRating, type ClinvarBadgeTone } from "../../utils/clinvar";
 import { formatAcAn, formatAf } from "../../utils/format";
+import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
+import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "./SubpopBadge";
-import Tag, { type TagVariant } from "./Tag";
 import styles from "./CohortVariantsPanel.module.css";
-
-const CLINVAR_TAG_VARIANT: Record<ClinVarSignificance, TagVariant> = {
-  Pathogenic: "path",
-  "Likely pathogenic": "likely-path",
-  VUS: "vus",
-  "Likely benign": "likely-benign",
-  Benign: "benign",
-};
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
 const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
@@ -29,6 +23,12 @@ const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
   VUS: 2,
   "Likely benign": 3,
   Benign: 4,
+};
+
+const CLINVAR_TONE_CLASS: Record<ClinvarBadgeTone, string> = {
+  danger: styles.clinvarDanger,
+  warning: styles.clinvarWarning,
+  success: styles.clinvarSuccess,
 };
 
 /** No value for this cell — the variant isn't present in the source behind it. */
@@ -47,7 +47,7 @@ function isMissingFromGnomad(row: CohortVariantRow): boolean {
 }
 
 const AOU_GROUP_COLUMN_IDS = new Set(["aouSubpop", "aouAf", "aouAcAn"]);
-const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn", "gnomadLink"]);
+const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn"]);
 const GROUP_START_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
 
 const AOU_MISSING_GROUP = {
@@ -109,8 +109,15 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 <button
                   type="button"
                   className={isExpanded ? `${styles.expandBtn} ${styles.expanded}` : styles.expandBtn}
-                  onClick={() => toggleExpanded(row.original.variant)}
-                  aria-label="Expand row for more detail"
+                  onClick={(event) => {
+                    // The row itself also toggles on click; without this the bubbled event
+                    // would immediately undo the toggle this button just performed.
+                    event.stopPropagation();
+                    toggleExpanded(row.original.variant);
+                  }}
+                  aria-expanded={isExpanded}
+                  aria-controls={`variant-detail-${row.original.variant}`}
+                  aria-label={isExpanded ? "Collapse row for more detail" : "Expand row for more detail"}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="9 6 15 12 9 18" />
@@ -131,7 +138,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
           }),
           columnHelper.accessor((row) => (row.annotated ? row.proteinChange : undefined), {
             id: "proteinChange",
-            header: "Protein Change",
+            header: "Protein ∆",
             cell: ({ row }) =>
               row.original.annotated ? (
                 <span className={styles.mono}>{row.original.proteinChange}</span>
@@ -246,23 +253,6 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               ),
             sortUndefined: "last",
           }),
-          columnHelper.display({
-            id: "gnomadLink",
-            header: "",
-            enableSorting: false,
-            cell: ({ row }) =>
-              row.original.annotated && row.original.gnomadUrl ? (
-                <a
-                  className={styles.iconLinkBtn}
-                  href={row.original.gnomadUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Open in gnomAD"
-                >
-                  ↗
-                </a>
-              ) : null,
-          }),
         ],
       }),
       columnHelper.group({
@@ -280,16 +270,27 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               header: "ClinVar",
               cell: ({ row }) => {
                 const variant = row.original;
-                if (!variant.annotated || !variant.clinvarSignificance || !variant.clinvarUrl) {
+                if (!variant.annotated || !variant.clinvarSignificance) {
                   return <NotAvailable />;
                 }
-                const { clinvarSignificance, clinvarUrl } = variant;
+                // "Likely" calls get a dashed border instead of solid -- less definitive than
+                // the solid P/B.
+                const isLikely =
+                  variant.clinvarSignificance === "Likely pathogenic" ||
+                  variant.clinvarSignificance === "Likely benign";
+                const toneClass = CLINVAR_TONE_CLASS[CLINVAR_BADGE_TONE[variant.clinvarSignificance]];
                 return (
-                  <span className={styles.clinvarCell}>
-                    <Tag variant={CLINVAR_TAG_VARIANT[clinvarSignificance]}>{clinvarSignificance}</Tag>
-                    <a className={styles.iconLinkBtn} target={"_blank"} href={clinvarUrl} title="View in ClinVar">
-                      ↗
-                    </a>
+                  <span
+                    className={
+                      isLikely
+                        ? `${styles.clinvarBadge} ${toneClass} ${styles.clinvarBadgeDashed}`
+                        : `${styles.clinvarBadge} ${toneClass}`
+                    }
+                  >
+                    <span className={styles.clinvarBadgeClass}>{CLINVAR_SHORT_LABEL[variant.clinvarSignificance]}</span>
+                    {variant.clinvarStars !== null && (
+                      <span className={styles.clinvarBadgeStars}>{clinvarStarRating(variant.clinvarStars)}</span>
+                    )}
                   </span>
                 );
               },
@@ -380,7 +381,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 ].filter((group) => group !== null);
                 return (
                   <Fragment key={row.id}>
-                    <tr>
+                    <tr className={styles.dataRow} onClick={() => toggleExpanded(row.original.variant)}>
                       {row.getVisibleCells().map((cell) => {
                         const group = missingGroups.find((candidate) =>
                           candidate.columnIds.has(cell.column.id),
@@ -405,13 +406,22 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                       })}
                     </tr>
                     {expandedVariants.has(row.original.variant) && (
-                      <tr className={styles.detailRow}>
+                      <tr className={styles.detailRow} id={`variant-detail-${row.original.variant}`}>
                         <td colSpan={row.getVisibleCells().length}>
-                          <div className={styles.detailPanel}>
-                            <div className={styles.detailPlaceholder}>
-                              Not mocked yet, coming soon :) Will show stats on each subpopulation
+                          {row.original.annotated ? (
+                            <div className={styles.detailPanel}>
+                              <div className={styles.detailClinvar}>
+                                <ClinvarExpanderDetail variant={row.original} />
+                              </div>
+                              <div className={styles.detailPopulations}>
+                                <PopulationFrequencyTable variant={row.original} />
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div className={`${styles.detailPanel} ${styles.detailPanelNoClinvar}`}>
+                              <div className={styles.detailPlaceholder}>No data available for this variant.</div>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}

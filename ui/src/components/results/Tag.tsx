@@ -6,6 +6,7 @@ export type TagVariant = "path" | "likely-path" | "vus" | "likely-benign" | "ben
 interface TagProps {
   variant: TagVariant;
   children: ReactNode;
+  className?: string;
 }
 
 const VARIANT_CLASS: Record<TagProps["variant"], string> = {
@@ -16,6 +17,7 @@ const VARIANT_CLASS: Record<TagProps["variant"], string> = {
   benign: styles.benign,
 };
 
-export default function Tag({ variant, children }: TagProps) {
-  return <span className={`${styles.tag} ${VARIANT_CLASS[variant]}`}>{children}</span>;
+export default function Tag({ variant, children, className }: TagProps) {
+  const classes = [styles.tag, VARIANT_CLASS[variant], className].filter(Boolean).join(" ");
+  return <span className={classes}>{children}</span>;
 }

@@ -40,10 +40,6 @@
   font-weight: 600;
 }
 
-.monoVal {
-  font-family: "SF Mono", "Courier New", monospace;
-}
-
 @keyframes skeletonPulse {
   0%,
   100% {
