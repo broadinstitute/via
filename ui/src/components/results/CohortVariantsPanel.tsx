@@ -386,9 +386,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                               colSpan={group.columnIds.size}
                               className={`${tintClassName(cell.column.id)} ${styles.sourceMissing}`}
                             >
-                              <span className={styles.dash} title={group.message}>
-                                —
-                              </span>
+                              <span className={styles.cellNa}>{group.message}</span>
                             </td>
                           );
                         }

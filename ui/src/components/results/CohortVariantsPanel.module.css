@@ -167,6 +167,11 @@
   color: var(--text-muted);
 }
 
+.cellNa {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .sourceMissing {
   text-align: center;
 }
