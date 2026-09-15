@@ -23,8 +23,8 @@
 
 /* separate (not collapse): under collapse, a sticky <th>'s border is painted via the table's
    shared-grid-line model rather than as part of the cell's own box, and that desyncs from the
-   cell during scroll -- e.g. the groupStart divider fading/going faint once scrolled, even though
-   its CSS never changes. border-spacing: 0 keeps cells touching like collapse did. */
+   cell during scroll -- e.g. a divider border fading/going faint once scrolled, even though its
+   CSS never changes. border-spacing: 0 keeps cells touching like collapse did. */
 .table {
   border-collapse: separate;
   border-spacing: 0;
@@ -99,9 +99,7 @@
 
 /* ".table > thead > tr > th" (below) sets its own background at higher specificity than a bare
    ".tintAou"/".tintGnomad" class, so without these, every header cell in the AoU/gnomAD groups
-   silently rendered with the plain header background instead of its tint -- the group's dividing
-   border (.groupStart) then sits between two *visually identical* header cells, which is what
-   made it look faint/inconsistent rather than the flat-out DOM bug the previous header issue was. */
+   silently rendered with the plain header background instead of its tint. */
 .table > thead > tr > th.tintAou {
   background: #ebf3fa;
 }
@@ -116,14 +114,6 @@
 
 .groupRow th.tintGnomad {
   color: var(--text-secondary);
-}
-
-.groupStart {
-  border-left: 2px solid var(--border-strong);
-}
-
-.table > thead > tr > th.tintAou.groupStart {
-  border-left-color: var(--border-strong);
 }
 
 .groupQualifier {

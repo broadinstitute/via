@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { ArrowRightIcon } from "./icons";
 import styles from "./RecentSearches.module.css";
 
 interface RecentSearch {
@@ -65,10 +66,7 @@ export default function RecentSearches() {
             </div>
             <button type="button" className={styles.viewBtn} onClick={() => navigate("/results")}>
               View results
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14" />
-                <path d="m12 5 7 7-7 7" />
-              </svg>
+              <ArrowRightIcon size={13} strokeWidth={2.5} />
             </button>
           </li>
         ))}
