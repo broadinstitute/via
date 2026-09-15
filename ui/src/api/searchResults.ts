@@ -62,7 +62,8 @@ interface RawFilteredVariant {
 interface RawSearchResultsResponse {
   searchSummary: SearchSummary;
   // Null when no HPO term was given -- ancestryBreakdown, ageBreakdown, and filteredVariants
-  // are all empty in that case too.
+  // are all empty in that case too. When a term was given, all four are mock data: there's no
+  // participant-level source behind them yet, so every term matches the same synthetic cohort.
   phenotypeCrosswalk: PhenotypeCrosswalk | null;
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
