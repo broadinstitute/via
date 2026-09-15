@@ -12,6 +12,10 @@ export const CLINVAR_TAG_VARIANT: Record<ClinVarSignificance, TagVariant> = {
   Benign: "benign",
 };
 
+export function clinvarTagVariant(significance: ClinVarSignificance): TagVariant {
+  return CLINVAR_TAG_VARIANT[significance];
+}
+
 // The aggregate badge's short label -- distinct from CLINVAR_SUBMISSION_SHORT_CODE below, which
 // is keyed by an individual submission's raw (unmapped) classification string.
 export const CLINVAR_SHORT_LABEL: Record<ClinVarSignificance, string> = {
@@ -32,12 +36,12 @@ export function clinvarStarRating(stars: number): string {
 // (warning) alone.
 export type ClinvarBadgeTone = "danger" | "warning" | "success";
 
-export const CLINVAR_BADGE_TONE: Record<ClinVarSignificance, ClinvarBadgeTone> = {
-  Pathogenic: "danger",
-  "Likely pathogenic": "danger",
-  VUS: "warning",
-  "Likely benign": "success",
-  Benign: "success",
+export const CLINVAR_BADGE_TONE_COLORS: Record<ClinVarSignificance, { ink: string; fill: string }> = {
+  Pathogenic: { ink: colors.textDanger, fill: colors.bgDanger },
+  "Likely pathogenic": { ink: colors.textDanger, fill: colors.bgDanger },
+  VUS: { ink: colors.textWarning, fill: colors.bgWarning },
+  "Likely benign": { ink: colors.textSuccess, fill: colors.bgSuccess },
+  Benign: { ink: colors.textSuccess, fill: colors.bgSuccess },
 };
 
 // Short codes and colors for individual ClinVar RCV submissions. Broader than

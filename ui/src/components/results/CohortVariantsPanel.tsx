@@ -12,10 +12,10 @@ import colors, { sourceTints } from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
-import { CLINVAR_BADGE_TONE, CLINVAR_SHORT_LABEL, clinvarStarRating, type ClinvarBadgeTone } from "../../utils/clinvar";
 import { formatAcAn, formatAf } from "../../utils/format";
 import Clickable from "../Clickable";
 import { ChevronRightIcon } from "../icons";
+import ClinvarBadge from "./ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
@@ -28,12 +28,6 @@ const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
   VUS: 2,
   "Likely benign": 3,
   Benign: 4,
-};
-
-const CLINVAR_TONE_COLORS: Record<ClinvarBadgeTone, { ink: string; fill: string }> = {
-  danger: { ink: colors.textDanger, fill: colors.bgDanger },
-  warning: { ink: colors.textWarning, fill: colors.bgWarning },
-  success: { ink: colors.textSuccess, fill: colors.bgSuccess },
 };
 
 type Source = "aou" | "gnomad";
@@ -103,25 +97,6 @@ const styles = {
   cellNa: {
     color: colors.textMuted,
     fontStyle: "italic",
-  },
-  // One pill, split in half by a divider: classification (colored fill) on the left, star rating
-  // (neutral) on the right. Fixed width overall so every row's badge lines up regardless of
-  // whether the classification is "P" or "VUS". overflow: hidden is what lets the flat halves
-  // still read as one rounded shape -- the border radius clips them instead of each half needing
-  // its own partial radius.
-  clinvarBadge: {
-    display: "inline-flex",
-    width: 62,
-    borderRadius: 4,
-    overflow: "hidden",
-    fontSize: 11,
-    fontWeight: 600,
-  },
-  clinvarBadgeHalf: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
   },
   plofHc: {
     color: colors.textPrimary,
@@ -414,35 +389,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 if (!variant.annotated || !variant.clinvarSignificance) {
                   return <NotAvailable />;
                 }
-                // "Likely" calls get a dashed border instead of solid -- less definitive than
-                // the solid P/B.
-                const isLikely =
-                  variant.clinvarSignificance === "Likely pathogenic" ||
-                  variant.clinvarSignificance === "Likely benign";
-                const tone = CLINVAR_TONE_COLORS[CLINVAR_BADGE_TONE[variant.clinvarSignificance]];
-                return (
-                  <span
-                    style={{
-                      ...styles.clinvarBadge,
-                      border: `1px ${isLikely ? "dashed" : "solid"} ${tone.ink}`,
-                    }}
-                  >
-                    <span style={{ ...styles.clinvarBadgeHalf, background: tone.fill, color: tone.ink }}>
-                      {CLINVAR_SHORT_LABEL[variant.clinvarSignificance]}
-                    </span>
-                    {variant.clinvarStars !== null && (
-                      <span
-                        style={{
-                          ...styles.clinvarBadgeHalf,
-                          borderLeft: `1px solid ${tone.ink}`,
-                          color: colors.textSecondary,
-                        }}
-                      >
-                        {clinvarStarRating(variant.clinvarStars)}
-                      </span>
-                    )}
-                  </span>
-                );
+                return <ClinvarBadge significance={variant.clinvarSignificance} stars={variant.clinvarStars} />;
               },
               sortUndefined: "last",
             },
