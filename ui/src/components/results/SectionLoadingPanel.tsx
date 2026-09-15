@@ -5,7 +5,6 @@ import ResultsPanel from "./ResultsPanel";
 
 const styles = {
   body: {
-    flex: 1,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -30,11 +29,11 @@ export default function SectionLoadingPanel({
   minHeight,
 }: SectionLoadingPanelProps) {
   return (
-    <ResultsPanel title={title} style={{ minHeight }}>
+    <ResultsPanel title={title}>
       <div
         // minHeight comes from the caller so this placeholder occupies roughly the same
         // footprint as the panel it stands in for.
-        style={styles.body}
+        style={{ ...styles.body, minHeight }}
       >
         {/* Both strands inherit `color` through the component's currentColor default. */}
         <DnaSpinner colors={[colors.textSecondary, colors.textAccent]} size={72} rungs={false} duration={2000}/>
