@@ -1,7 +1,64 @@
-import type { ReactNode } from "react";
-import styles from "./StepPanel.module.css";
+import type { CSSProperties, ReactNode } from "react";
+import colors from "../libs/colors";
+import * as Style from "../libs/style";
 
 export type StepTagVariant = "limit" | "optional";
+
+const styles = {
+  panel: {
+    ...Style.elements.panel,
+    display: "flex",
+    flexDirection: "column",
+    boxShadow: Style.shadows.raised,
+  },
+  header: {
+    ...Style.elements.panelHeader,
+    gap: 8,
+  },
+  number: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    width: 20,
+    height: 20,
+    borderRadius: "50%",
+    background: colors.textAccent,
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: 700,
+  },
+  title: {
+    ...Style.elements.panelTitle,
+    flex: 1,
+  },
+  tag: {
+    padding: "2px 8px",
+    borderRadius: 999,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.2,
+    textTransform: "uppercase",
+  },
+  body: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    padding: 16,
+  },
+} as const satisfies Record<string, CSSProperties>;
+
+const TAG_VARIANT_STYLE: Record<StepTagVariant, CSSProperties> = {
+  limit: {
+    background: colors.surface2,
+    border: `1px solid ${colors.border}`,
+    color: colors.textMuted,
+  },
+  optional: {
+    background: colors.bgAccent,
+    color: colors.textAccent,
+  },
+};
 
 interface StepPanelProps {
   stepNumber: number;
@@ -12,15 +69,13 @@ interface StepPanelProps {
 
 export default function StepPanel({ stepNumber, title, tag, children }: StepPanelProps) {
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
-        <div className={styles.number}>{stepNumber}</div>
-        <h2>{title}</h2>
-        {tag && (
-          <span className={tag.variant === "limit" ? styles.tagLimit : styles.tagOptional}>{tag.label}</span>
-        )}
+    <div style={styles.panel}>
+      <div style={styles.header}>
+        <div style={styles.number}>{stepNumber}</div>
+        <h2 style={styles.title}>{title}</h2>
+        {tag && <span style={{ ...styles.tag, ...TAG_VARIANT_STYLE[tag.variant] }}>{tag.label}</span>}
       </div>
-      <div className={styles.body}>{children}</div>
+      <div style={styles.body}>{children}</div>
     </div>
   );
 }

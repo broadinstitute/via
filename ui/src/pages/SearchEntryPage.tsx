@@ -1,19 +1,63 @@
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchProfile } from "../api/profile";
+import colors from "../libs/colors";
+import { useFocus, useMediaQuery } from "../libs/hooks";
+import * as Style from "../libs/style";
+import Clickable from "../components/Clickable";
 import FieldHint from "../components/FieldHint";
-import { SearchIcon } from "../components/icons";
 import Hero from "../components/Hero";
 import RecentSearches from "../components/RecentSearches";
 import StepPanel from "../components/StepPanel";
 import ValueCallout from "../components/ValueCallout";
+import { SearchIcon } from "../components/icons";
 import TopBar from "../components/results/TopBar";
 import { parseVariantsText } from "../utils/variants";
 
-// .stepsRow used to collapse to one column via "@media (max-width: 720px)" in CSS; inline
-// styles can't express media queries, so this mirrors it in JS the same way SearchResultsPage's
-// .topRow breakpoint does.
+// Below this the two step panels no longer fit side by side, so they stack.
 const NARROW_LAYOUT_QUERY = "(max-width: 720px)";
+
+const styles = {
+  // Pulled up over the hero's bottom padding so the step panels overlap the photo.
+  main: {
+    position: "relative",
+    zIndex: 3,
+    maxWidth: 900,
+    margin: "-54px auto 0",
+    padding: "0 20px 48px",
+  },
+  variantsInput: {
+    ...Style.inputs.mono,
+    flex: 1,
+    minHeight: 210,
+    lineHeight: 1.6,
+    resize: "vertical",
+  },
+  comingSoon: {
+    marginTop: 4,
+    color: colors.textMuted,
+    fontSize: 11.5,
+    fontStyle: "italic",
+  },
+  error: {
+    marginTop: 12,
+    color: colors.textDanger,
+    fontSize: 12.5,
+    fontWeight: 600,
+  },
+  searchButton: {
+    ...Style.buttons.primary,
+    // Block-level, unlike the shared inline-flex default: it spans the page on its own line.
+    display: "flex",
+    width: "100%",
+    marginTop: 20,
+    padding: 13,
+    fontSize: 14,
+    fontWeight: 700,
+    gap: 8,
+  },
+} as const satisfies Record<string, CSSProperties>;
 
 export default function SearchEntryPage() {
   const navigate = useNavigate();
@@ -21,19 +65,9 @@ export default function SearchEntryPage() {
   const [hpoTerm, setHpoTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState("");
-  const [isNarrow, setIsNarrow] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(NARROW_LAYOUT_QUERY).matches,
-  );
-  // Inline styles can't express ":hover" either, so the search button's hover color is tracked
-  // as state instead.
-  const [searchBtnHovered, setSearchBtnHovered] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia(NARROW_LAYOUT_QUERY);
-    const handleChange = () => setIsNarrow(query.matches);
-    query.addEventListener("change", handleChange);
-    return () => query.removeEventListener("change", handleChange);
-  }, []);
+  const isNarrow = useMediaQuery(NARROW_LAYOUT_QUERY);
+  const { focused: variantsFocused, focusProps: variantsFocusProps } = useFocus();
+  const { focused: hpoFocused, focusProps: hpoFocusProps } = useFocus();
 
   useEffect(() => {
     fetchProfile()
@@ -66,7 +100,7 @@ export default function SearchEntryPage() {
         title="Variant Interpretation"
         subtitle="Rule candidate variants in or out by comparing them against All of Us's full participant cohort — no coding required."
       />
-      <main style={{ maxWidth: 900, margin: "-54px auto 0", padding: "0 20px 48px", position: "relative", zIndex: 3 }}>
+      <main style={styles.main}>
         <div
           style={{
             display: "grid",
@@ -80,6 +114,8 @@ export default function SearchEntryPage() {
               value={variants}
               onChange={(event) => setVariants(event.target.value)}
               placeholder={"8-11708582-C-T\n8-11708590-G-GAA\n8-11708598-T-C"}
+              style={{ ...styles.variantsInput, ...(variantsFocused ? Style.inputs.focused : undefined) }}
+              {...variantsFocusProps}
             />
             <FieldHint>One variant per line, entered as chr-pos-ref-alt (e.g. 8-11708582-C-T).</FieldHint>
           </StepPanel>
@@ -90,48 +126,35 @@ export default function SearchEntryPage() {
               value={hpoTerm}
               onChange={(event) => setHpoTerm(event.target.value)}
               placeholder="e.g. HP:0001636"
+              style={{ ...Style.inputs.mono, ...(hpoFocused ? Style.inputs.focused : undefined) }}
+              {...hpoFocusProps}
             />
             <FieldHint>Enter an HPO term (e.g. HP:0001636).</FieldHint>
-            <p style={{ marginTop: 4, fontSize: 11.5, fontStyle: "italic", color: "var(--text-muted)" }}>
-              Free text phenotype search coming soon
-            </p>
+            <p style={styles.comingSoon}>Free text phenotype search coming soon</p>
             <ValueCallout>
-              <b>Unlock the full power of All of Us by providing a phenotype.</b> See how often each variant shows
-              up specifically among All of Us participants who share this phenotype.
+              <b style={{ color: colors.textPrimary }}>
+                Unlock the full power of All of Us by providing a phenotype.
+              </b>{" "}
+              See how often each variant shows up specifically among All of Us participants who share this
+              phenotype.
             </ValueCallout>
           </StepPanel>
         </div>
 
         {error && (
-          <p style={{ marginTop: 12, fontSize: 12.5, color: "var(--text-danger)", fontWeight: 600 }} role="alert">
+          <p style={styles.error} role="alert">
             {error}
           </p>
         )}
 
-        <button
+        <Clickable
+          style={styles.searchButton}
+          hoverStyle={Style.buttons.primaryHover}
           onClick={handleSearch}
-          onMouseEnter={() => setSearchBtnHovered(true)}
-          onMouseLeave={() => setSearchBtnHovered(false)}
-          style={{
-            width: "100%",
-            background: searchBtnHovered ? "var(--accent-orange-hover)" : "var(--accent-orange)",
-            color: "white",
-            border: "none",
-            borderRadius: "var(--radius)",
-            padding: 13,
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: "pointer",
-            marginTop: 20,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-          }}
         >
           <SearchIcon size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
           Search
-        </button>
+        </Clickable>
 
         <RecentSearches />
       </main>

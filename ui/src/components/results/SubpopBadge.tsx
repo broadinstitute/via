@@ -1,5 +1,6 @@
+import colors from "../../libs/colors";
+import * as Style from "../../libs/style";
 import type { GnomadSubpopCode, SubpopCode } from "../../types/results";
-import styles from "./SubpopBadge.module.css";
 
 // AFR, AMR, EAS, SAS, and OTH are shared between AoU and gnomAD, so they share
 // a color; FIN, NFE, and ASJ only exist in gnomAD's subpopulation scheme.
@@ -35,8 +36,25 @@ interface SubpopBadgeProps {
 
 export default function SubpopBadge({ subpopulation }: SubpopBadgeProps) {
   return (
-    <span className={styles.badge}>
-      <span className={styles.dot} style={{ background: SUBPOP_COLOR[subpopulation] }} />
+    <span
+      // Fixed width (not padding-driven) so every code -- "MID", "SAS", "ASJ", etc. -- renders the
+      // same size regardless of how wide its own glyphs happen to be at this font.
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 5,
+        width: 52,
+        padding: "2px 0",
+        background: colors.surface1,
+        border: `1px solid ${colors.border}`,
+        borderRadius: 10,
+        color: colors.textSecondary,
+        fontSize: 11,
+        fontWeight: 600,
+      }}
+    >
+      <span style={Style.colorDot(SUBPOP_COLOR[subpopulation])} />
       {subpopulation}
     </span>
   );

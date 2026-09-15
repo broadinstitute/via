@@ -1,6 +1,8 @@
 import { useState } from "react";
+import colors from "../../libs/colors";
+import * as Style from "../../libs/style";
+import Clickable from "../Clickable";
 import { CheckIcon, CopyIcon } from "../icons";
-import styles from "./CopyButton.module.css";
 
 interface CopyButtonProps {
   getText: () => string;
@@ -21,14 +23,18 @@ export default function CopyButton({ getText, label }: CopyButtonProps) {
   }
 
   return (
-    <button
-      type="button"
-      className={`${styles.button} ${copied ? styles.copied : ""}`}
+    <Clickable
+      style={{
+        ...Style.buttons.icon,
+        borderRadius: 3,
+        ...(copied ? { color: colors.textSuccess } : undefined),
+      }}
+      hoverStyle={Style.buttons.iconHover}
       onClick={handleClick}
       title={label}
       aria-label={label}
     >
       {copied ? <CheckIcon size={12} strokeWidth={2.5} /> : <CopyIcon size={12} />}
-    </button>
+    </Clickable>
   );
 }

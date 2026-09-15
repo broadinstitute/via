@@ -1,4 +1,5 @@
 import type { TagVariant } from "../components/results/Tag";
+import colors from "../libs/colors";
 import type { ClinVarSignificance } from "../types/results";
 
 // Shared with the collapsed row's ClinVar column, so the expanded row's classification badge
@@ -50,12 +51,12 @@ const CLINVAR_SUBMISSION_SHORT_CODE: Record<string, string> = {
   Benign: "B",
 };
 
-const CLINVAR_SUBMISSION_COLOR_VAR: Record<string, string> = {
-  Pathogenic: "var(--text-danger)",
-  "Likely pathogenic": "var(--text-danger)",
-  "Uncertain significance": "var(--text-warning)",
-  "Likely benign": "var(--text-success)",
-  Benign: "var(--text-success)",
+const CLINVAR_SUBMISSION_COLOR: Record<string, string> = {
+  Pathogenic: colors.textDanger,
+  "Likely pathogenic": colors.textDanger,
+  "Uncertain significance": colors.textWarning,
+  "Likely benign": colors.textSuccess,
+  Benign: colors.textSuccess,
 };
 
 export function clinvarSubmissionShortCode(classification: string | null): string {
@@ -64,8 +65,8 @@ export function clinvarSubmissionShortCode(classification: string | null): strin
 }
 
 export function clinvarSubmissionColor(classification: string | null): string {
-  if (classification === null) return "var(--text-muted)";
-  return CLINVAR_SUBMISSION_COLOR_VAR[classification] ?? "var(--text-muted)";
+  if (classification === null) return colors.textMuted;
+  return CLINVAR_SUBMISSION_COLOR[classification] ?? colors.textMuted;
 }
 
 /** e.g. "2★ multiple submitters, no conflicts". */

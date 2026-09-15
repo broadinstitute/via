@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import styles from "./FieldHint.module.css";
+import * as Style from "../libs/style";
 
 interface FieldHintProps {
   children: ReactNode;
 }
 
 export default function FieldHint({ children }: FieldHintProps) {
-  return <p className={styles.hint}>{children}</p>;
+  return <p style={Style.elements.fieldHint}>{children}</p>;
 }
