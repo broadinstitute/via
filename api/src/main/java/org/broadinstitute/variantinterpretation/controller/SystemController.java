@@ -1,8 +1,10 @@
-package org.broadinstitute.variantinterpretation;
+package org.broadinstitute.variantinterpretation.controller;
 
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.Dataset;
 import java.util.List;
+
+import org.broadinstitute.variantinterpretation.datasource.BigQueryProperties;
 import org.broadinstitute.variantinterpretation.api.SystemApi;
 import org.broadinstitute.variantinterpretation.model.BigQueryStatus;
 import org.broadinstitute.variantinterpretation.model.DataSourceVersion;

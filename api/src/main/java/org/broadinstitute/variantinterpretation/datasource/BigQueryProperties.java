@@ -1,4 +1,4 @@
-package org.broadinstitute.variantinterpretation;
+package org.broadinstitute.variantinterpretation.datasource;
 
 import com.google.cloud.bigquery.DatasetId;
 import org.springframework.boot.context.properties.ConfigurationProperties;

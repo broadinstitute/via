@@ -6,6 +6,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.Dataset;
+import org.broadinstitute.variantinterpretation.controller.SystemController;
+import org.broadinstitute.variantinterpretation.datasource.BigQueryProperties;
 import org.broadinstitute.variantinterpretation.model.BigQueryStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
