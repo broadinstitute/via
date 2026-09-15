@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   createColumnHelper,
   flexRender,
@@ -8,16 +9,56 @@ import {
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
+import colors from "../../libs/colors";
+import { useHoveredKey } from "../../libs/hooks";
+import * as Style from "../../libs/style";
 import type { FilteredVariantRow } from "../../types/results";
+import { phenotypeUnavailableCopy } from "../../utils/phenotype";
+import Clickable from "../Clickable";
 import CopyButton from "./CopyButton";
 import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
 import ResultsPanel from "./ResultsPanel";
-import { phenotypeUnavailableCopy } from "../../utils/phenotype";
-import styles from "./ParticipantMatchedVariantsPanel.module.css";
+
+const styles = {
+  nCount: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: 500,
+  },
+  actions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  selectedCount: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  tableScroll: {
+    ...Style.table.scroller,
+    maxHeight: 346,
+  },
+  table: {
+    ...Style.table.base,
+    borderCollapse: "collapse",
+  },
+  headerCell: {
+    ...Style.table.headerCell,
+    top: 0,
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  deltaUp: {
+    color: colors.textDanger,
+    fontWeight: 600,
+  },
+  deltaFlat: {
+    color: colors.textSecondary,
+  },
+} as const satisfies Record<string, CSSProperties>;
 
 /** No value for this cell — the variant isn't present in the source behind it. */
 function NotAvailable() {
-  return <span className={styles.dash}>—</span>;
+  return <span style={Style.elements.notAvailable}>—</span>;
 }
 
 // AF ratios near 1x are expected background noise; a ratio this much higher than the
@@ -82,6 +123,8 @@ export default function ParticipantMatchedVariantsPanel({
     Object.fromEntries(rows.map((row) => [row.variant, true])),
   );
   const [sorting, setSorting] = useState<SortingState>([]);
+  const { hoveredKey: hoveredRow, hoverProps: rowHoverProps } = useHoveredKey<string>();
+  const { hoveredKey: hoveredHeader, hoverProps: headerHoverProps } = useHoveredKey<string>();
 
   const columnHelper = useMemo(() => createColumnHelper<FilteredVariantRow>(), []);
 
@@ -97,16 +140,22 @@ export default function ParticipantMatchedVariantsPanel({
               if (el) el.indeterminate = table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected();
             }}
             onChange={table.getToggleAllRowsSelectedHandler()}
+            style={Style.table.checkbox}
           />
         ),
         cell: ({ row }) => (
-          <input type="checkbox" checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} />
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={row.getToggleSelectedHandler()}
+            style={Style.table.checkbox}
+          />
         ),
         enableSorting: false,
       }),
       columnHelper.accessor("variant", {
         header: "Variant",
-        cell: (info) => <span className={styles.mono}>{info.getValue()}</span>,
+        cell: (info) => <span style={Style.elements.mono}>{info.getValue()}</span>,
       }),
       columnHelper.accessor((row) => row.gene ?? undefined, {
         id: "gene",
@@ -124,7 +173,10 @@ export default function ParticipantMatchedVariantsPanel({
         id: "cohortAc",
         header: () => (
           <>
-            Cohort AC <span className={styles.tooltipIcon} title="Allele count among phenotype-matched participants.">i</span>
+            Cohort AC{" "}
+            <span style={Style.elements.tooltipIcon} title="Allele count among phenotype-matched participants.">
+              i
+            </span>
           </>
         ),
         cell: ({ row }) => (row.original.hasStats ? row.original.cohortAc : <NotAvailable />),
@@ -134,7 +186,10 @@ export default function ParticipantMatchedVariantsPanel({
         id: "cohortAn",
         header: () => (
           <>
-            Cohort AN <span className={styles.tooltipIcon} title="Allele number among phenotype-matched participants.">i</span>
+            Cohort AN{" "}
+            <span style={Style.elements.tooltipIcon} title="Allele number among phenotype-matched participants.">
+              i
+            </span>
           </>
         ),
         cell: ({ row }) => (row.original.hasStats ? row.original.cohortAn : <NotAvailable />),
@@ -144,7 +199,10 @@ export default function ParticipantMatchedVariantsPanel({
         id: "cohortAf",
         header: () => (
           <>
-            Cohort AF <span className={styles.tooltipIcon} title="Allele frequency among phenotype-matched participants.">i</span>
+            Cohort AF{" "}
+            <span style={Style.elements.tooltipIcon} title="Allele frequency among phenotype-matched participants.">
+              i
+            </span>
           </>
         ),
         cell: ({ row }) => (row.original.hasStats ? row.original.cohortAf.toFixed(4) : <NotAvailable />),
@@ -167,7 +225,10 @@ export default function ParticipantMatchedVariantsPanel({
         header: () => (
           <>
             ClinVar P/LP in trans{" "}
-            <span className={styles.tooltipIcon} title="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans.">
+            <span
+              style={Style.elements.tooltipIcon}
+              title="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans."
+            >
               i
             </span>
           </>
@@ -180,7 +241,10 @@ export default function ParticipantMatchedVariantsPanel({
         header: () => (
           <>
             AF Ratio{" "}
-            <span className={styles.tooltipIcon} title="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF.">
+            <span
+              style={Style.elements.tooltipIcon}
+              title="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF."
+            >
               i
             </span>
           </>
@@ -189,7 +253,7 @@ export default function ParticipantMatchedVariantsPanel({
           if (!row.original.hasStats) return <NotAvailable />;
           const { afRatio } = row.original;
           const elevated = afRatio >= ELEVATED_AF_RATIO_THRESHOLD;
-          return <span className={elevated ? styles.deltaUp : styles.deltaFlat}>{afRatio.toFixed(1)}x</span>;
+          return <span style={elevated ? styles.deltaUp : styles.deltaFlat}>{afRatio.toFixed(1)}x</span>;
         },
         sortUndefined: "last",
       }),
@@ -254,22 +318,22 @@ export default function ParticipantMatchedVariantsPanel({
       title={
         <>
           Candidate variants — phenotype-matched participants only{" "}
-          <span className={styles.nCount}>(n = {participantCount})</span>
+          <span style={styles.nCount}>(n = {participantCount})</span>
         </>
       }
       headerRight={
-        <div className={styles.actions}>
-          <span className={styles.selectedCount}>
+        <div style={styles.actions}>
+          <span style={styles.selectedCount}>
             {selectedCount} of {rows.length} included
           </span>
-          <button type="button" className={styles.exportBtn} onClick={handleExport}>
+          <Clickable style={Style.buttons.primary} hoverStyle={Style.buttons.primaryHover} onClick={handleExport}>
             Export TSV
-          </button>
+          </Clickable>
         </div>
       }
     >
-      <div className={styles.tableScroll}>
-        <table className={styles.table}>
+      <div style={styles.tableScroll}>
+        <table style={styles.table}>
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -279,14 +343,19 @@ export default function ParticipantMatchedVariantsPanel({
                   return (
                     <th
                       key={header.id}
-                      className={sortable ? styles.sortable : undefined}
+                      style={{
+                        ...styles.headerCell,
+                        ...(sortable ? Style.table.sortable : undefined),
+                        ...(sortable && hoveredHeader === header.id ? Style.table.sortableHover : undefined),
+                      }}
                       onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
+                      {...(sortable ? headerHoverProps(header.id) : undefined)}
                     >
                       {header.isPlaceholder ? null : (
                         <>
                           {flexRender(header.column.columnDef.header, header.getContext())}
                           {sortable && (
-                            <span className={styles.sortIndicator}>
+                            <span style={Style.table.sortIndicator}>
                               {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
                             </span>
                           )}
@@ -300,9 +369,17 @@ export default function ParticipantMatchedVariantsPanel({
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id}>
+              <tr key={row.id} {...rowHoverProps(row.id)}>
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                  <td
+                    key={cell.id}
+                    style={{
+                      ...Style.table.bodyCell,
+                      ...(hoveredRow === row.id ? { background: colors.surface1 } : undefined),
+                    }}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
                 ))}
               </tr>
             ))}

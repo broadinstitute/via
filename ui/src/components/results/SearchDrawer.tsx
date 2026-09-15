@@ -1,5 +1,38 @@
+import type { CSSProperties } from "react";
+import colors from "../../libs/colors";
+import * as Style from "../../libs/style";
 import { parseVariantsText } from "../../utils/variants";
-import styles from "./SearchDrawer.module.css";
+import Clickable from "../Clickable";
+
+const styles = {
+  drawer: {
+    padding: "16px 20px",
+    background: colors.surface1,
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "2fr 1fr",
+    gap: 16,
+    alignItems: "start",
+  },
+  variantsInput: {
+    ...Style.inputs.text,
+    minHeight: 60,
+    resize: "vertical",
+  },
+  hint: {
+    marginTop: 3,
+    fontSize: 10,
+    color: colors.textMuted,
+  },
+  actions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 14,
+  },
+} as const satisfies Record<string, CSSProperties>;
 
 interface SearchDrawerProps {
   open: boolean;
@@ -25,32 +58,43 @@ export default function SearchDrawer({
   const enteredCount = parseVariantsText(variantsText).length;
 
   return (
-    <div className={open ? `${styles.drawer} ${styles.open}` : styles.drawer}>
-      <div className={styles.grid}>
-        <div className={styles.field}>
-          <label htmlFor="drawerVariants">Candidate genes or variants (limit {variantsLimit})</label>
+    <div style={{ ...styles.drawer, display: open ? "block" : "none" }}>
+      <div style={styles.grid}>
+        <div>
+          <label htmlFor="drawerVariants" style={Style.inputs.label}>
+            Candidate genes or variants (limit {variantsLimit})
+          </label>
           <textarea
             id="drawerVariants"
             rows={10}
             value={variantsText}
             onChange={(event) => onVariantsChange(event.target.value)}
+            style={styles.variantsInput}
           />
-          <div className={styles.hint}>
+          <div style={styles.hint}>
             {enteredCount} of {variantsLimit} candidate variants entered
           </div>
         </div>
-        <div className={styles.field}>
-          <label htmlFor="drawerHpo">Phenotype (HPO term — limit 1)</label>
-          <input id="drawerHpo" type="text" value={hpoText} onChange={(event) => onHpoChange(event.target.value)} />
+        <div>
+          <label htmlFor="drawerHpo" style={Style.inputs.label}>
+            Phenotype (HPO term — limit 1)
+          </label>
+          <input
+            id="drawerHpo"
+            type="text"
+            value={hpoText}
+            onChange={(event) => onHpoChange(event.target.value)}
+            style={Style.inputs.text}
+          />
         </div>
       </div>
-      <div className={styles.actions}>
-        <button type="button" className={styles.secondary} onClick={onCancel}>
+      <div style={styles.actions}>
+        <Clickable style={Style.buttons.secondary} hoverStyle={Style.buttons.secondaryHover} onClick={onCancel}>
           Cancel
-        </button>
-        <button type="button" className={styles.primary} onClick={onSearch}>
+        </Clickable>
+        <Clickable style={Style.buttons.primary} hoverStyle={Style.buttons.primaryHover} onClick={onSearch}>
           Search
-        </button>
+        </Clickable>
       </div>
     </div>
   );

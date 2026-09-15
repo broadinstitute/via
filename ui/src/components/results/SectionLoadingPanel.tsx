@@ -1,6 +1,6 @@
+import colors from "../../libs/colors";
+import DnaSpinner from "../DnaSpinner";
 import ResultsPanel from "./ResultsPanel";
-import Spinner from "./Spinner";
-import styles from "./SectionLoadingPanel.module.css";
 
 interface SectionLoadingPanelProps {
   title: string;
@@ -15,8 +15,23 @@ export default function SectionLoadingPanel({
 }: SectionLoadingPanelProps) {
   return (
     <ResultsPanel title={title}>
-      <div className={styles.body} style={minHeight ? { minHeight } : undefined}>
-        <Spinner />
+      <div
+        // minHeight comes from the caller so this placeholder occupies roughly the same
+        // footprint as the panel it stands in for.
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+          padding: "56px 20px",
+          color: colors.textSecondary,
+          fontSize: 12.5,
+          minHeight,
+        }}
+      >
+        {/* Both strands inherit `color` through the component's currentColor default. */}
+        <DnaSpinner colors={[colors.textSecondary, colors.textAccent]} size={72} rungs={false} duration={2000}/>
         <span>{message}</span>
       </div>
     </ResultsPanel>

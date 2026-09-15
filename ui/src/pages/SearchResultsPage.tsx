@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetchProfile } from "../api/profile";
 import { fetchSearchResults, type SearchResults } from "../api/searchResults";
+import colors from "../libs/colors";
+import { useMediaQuery } from "../libs/hooks";
 import CohortVariantsPanel from "../components/results/CohortVariantsPanel";
 import DataSourceVersionsFooter from "../components/results/DataSourceVersionsFooter";
 import ParticipantMatchedVariantsPanel from "../components/results/ParticipantMatchedVariantsPanel";
@@ -19,9 +21,7 @@ interface RevealedSections {
 
 const NOT_REVEALED: RevealedSections = { cohort: false, phenotype: false, filtered: false };
 
-// The .topRow grid used to collapse to a single column via a "@media (max-width: 900px)" rule in
-// CSS; inline styles can't express media queries directly, so this mirrors it in JS the same way
-// CohortVariantsPanel already does for its own docked/overlay breakpoint.
+// Below this the variants table and the phenotype panel no longer fit side by side, so they stack.
 const NARROW_LAYOUT_QUERY = "(max-width: 900px)";
 
 export default function SearchResultsPage() {
@@ -33,16 +33,7 @@ export default function SearchResultsPage() {
   const [drawerVariants, setDrawerVariants] = useState("");
   const [drawerHpo, setDrawerHpo] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isNarrow, setIsNarrow] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(NARROW_LAYOUT_QUERY).matches,
-  );
-
-  useEffect(() => {
-    const query = window.matchMedia(NARROW_LAYOUT_QUERY);
-    const handleChange = () => setIsNarrow(query.matches);
-    query.addEventListener("change", handleChange);
-    return () => query.removeEventListener("change", handleChange);
-  }, []);
+  const isNarrow = useMediaQuery(NARROW_LAYOUT_QUERY);
 
   useEffect(() => {
     fetchProfile()
@@ -116,7 +107,7 @@ export default function SearchResultsPage() {
 
   if (error) {
     return (
-      <p style={{ padding: "32px 20px", textAlign: "center", color: "var(--text-secondary)", fontSize: 13 }}>
+      <p style={{ padding: "32px 20px", textAlign: "center", color: colors.textSecondary, fontSize: 13 }}>
         Failed to load search results: {error}
       </p>
     );

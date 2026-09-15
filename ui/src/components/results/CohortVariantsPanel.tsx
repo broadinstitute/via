@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   createColumnHelper,
   flexRender,
@@ -7,15 +8,18 @@ import {
   useReactTable,
   type SortingState,
 } from "@tanstack/react-table";
+import colors, { sourceTints } from "../../libs/colors";
+import { useHoveredKey } from "../../libs/hooks";
+import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
 import { CLINVAR_BADGE_TONE, CLINVAR_SHORT_LABEL, clinvarStarRating, type ClinvarBadgeTone } from "../../utils/clinvar";
 import { formatAcAn, formatAf } from "../../utils/format";
+import Clickable from "../Clickable";
 import { ChevronRightIcon } from "../icons";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "./SubpopBadge";
-import styles from "./CohortVariantsPanel.module.css";
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
 const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
@@ -26,15 +30,170 @@ const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
   Benign: 4,
 };
 
-const CLINVAR_TONE_CLASS: Record<ClinvarBadgeTone, string> = {
-  danger: styles.clinvarDanger,
-  warning: styles.clinvarWarning,
-  success: styles.clinvarSuccess,
+const CLINVAR_TONE_COLORS: Record<ClinvarBadgeTone, { ink: string; fill: string }> = {
+  danger: { ink: colors.textDanger, fill: colors.bgDanger },
+  warning: { ink: colors.textWarning, fill: colors.bgWarning },
+  success: { ink: colors.textSuccess, fill: colors.bgSuccess },
+};
+
+type Source = "aou" | "gnomad";
+
+// Height of the sticky group-header row, which the column-header row below has to sit exactly
+// under. Fixed (rather than implied by padding/font-size) so there's no sub-pixel gap between them.
+const GROUP_HEADER_HEIGHT = 28;
+
+const styles = {
+  sub: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  // The scroller is absolutely positioned so the (much taller) table doesn't contribute to
+  // intrinsic height. That lets the panel stretch to whatever height the phenotype panel beside
+  // it sets, and the table fills it exactly, instead of stopping at a hardcoded cap and leaving
+  // dead space below. minHeight is the floor for when this panel stands alone (stacked layout).
+  tableWrap: {
+    position: "relative",
+    flex: 1,
+    minHeight: 425,
+  },
+  tableScroll: {
+    ...Style.table.scroller,
+    position: "absolute",
+    inset: 0,
+  },
+  // separate (not collapse): under collapse, a sticky <th>'s border is painted via the table's
+  // shared-grid-line model rather than as part of the cell's own box, and that desyncs from the
+  // cell during scroll -- e.g. a divider border fading/going faint once scrolled, even though its
+  // style never changes. borderSpacing: 0 keeps cells touching like collapse did.
+  table: {
+    ...Style.table.base,
+    borderCollapse: "separate",
+    borderSpacing: 0,
+  },
+  headerCell: {
+    ...Style.table.headerCell,
+    // boxShadow instead of borderBottom: with two stacked sticky header rows, a plain border can
+    // render as a gap at the boundary between them.
+    boxShadow: `inset 0 -1px 0 0 ${colors.border}`,
+  },
+  groupHeaderCell: {
+    height: GROUP_HEADER_HEIGHT,
+    top: 0,
+    // Above the column-header row, which scrolls up underneath it.
+    zIndex: 2,
+    padding: "0 10px",
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.2,
+    textAlign: "center",
+  },
+  columnHeaderCell: {
+    top: GROUP_HEADER_HEIGHT,
+  },
+  groupQualifier: {
+    color: colors.textSecondary,
+    fontWeight: 500,
+  },
+  dataRow: {
+    cursor: "pointer",
+  },
+  sourceMissing: {
+    textAlign: "center",
+  },
+  cellNa: {
+    color: colors.textMuted,
+    fontStyle: "italic",
+  },
+  // One pill, split in half by a divider: classification (colored fill) on the left, star rating
+  // (neutral) on the right. Fixed width overall so every row's badge lines up regardless of
+  // whether the classification is "P" or "VUS". overflow: hidden is what lets the flat halves
+  // still read as one rounded shape -- the border radius clips them instead of each half needing
+  // its own partial radius.
+  clinvarBadge: {
+    display: "inline-flex",
+    width: 62,
+    borderRadius: 4,
+    overflow: "hidden",
+    fontSize: 11,
+    fontWeight: 600,
+  },
+  clinvarBadgeHalf: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  plofHc: {
+    color: colors.textPrimary,
+    fontWeight: 700,
+  },
+  plofNa: {
+    color: colors.textMuted,
+    cursor: "help",
+  },
+  detailRow: {
+    background: colors.surface1,
+    // Wrapping is re-enabled here: the expanded panel holds prose, not table values.
+    whiteSpace: "normal",
+  },
+  // One bordered container, not a set of cards -- flat is the point (see the compact-expander
+  // handoff). Collapses to a single column when there's no ClinVar record, so the population
+  // table takes the full width instead of leaving a dead gap where ClinVar would have been.
+  detailPanel: {
+    display: "grid",
+    gridTemplateColumns: "318px 1fr",
+    background: colors.surface2,
+    border: `1px solid ${colors.border}`,
+    borderRadius: Style.radius,
+    overflow: "hidden",
+  },
+  detailClinvar: {
+    padding: "12px 14px",
+    borderRight: `1px solid ${colors.border}`,
+  },
+  detailPopulations: {
+    overflowX: "auto",
+  },
+  detailPlaceholder: {
+    padding: "12px 14px",
+    color: colors.textMuted,
+    fontSize: 12,
+    fontStyle: "italic",
+  },
+} as const satisfies Record<string, CSSProperties>;
+
+const SOURCE_COLUMN_IDS: Record<Source, Set<string>> = {
+  aou: new Set(["aouSubpop", "aouAf", "aouAcAn"]),
+  gnomad: new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn"]),
+};
+
+/**
+ * Which source's column group a column belongs to, and therefore which tint it gets.
+ *
+ * Only leaf columns have these ids -- a group-row header cell carries its group's id ("aou"),
+ * so the tint band starts at the column-header row below it, as it always has.
+ */
+function sourceOf(columnId: string): Source | null {
+  if (SOURCE_COLUMN_IDS.aou.has(columnId)) return "aou";
+  if (SOURCE_COLUMN_IDS.gnomad.has(columnId)) return "gnomad";
+  return null;
+}
+
+const AOU_MISSING_GROUP = {
+  columnIds: SOURCE_COLUMN_IDS.aou,
+  mergedIntoColumnId: "aouSubpop",
+  message: "Not observed in All of Us",
+};
+
+const GNOMAD_MISSING_GROUP = {
+  columnIds: SOURCE_COLUMN_IDS.gnomad,
+  mergedIntoColumnId: "gnomadSubpop",
+  message: "Not observed in gnomAD",
 };
 
 /** No value for this cell — the variant isn't present in the source behind it. */
 function NotAvailable() {
-  return <span className={styles.dash}>—</span>;
+  return <span style={Style.elements.notAvailable}>—</span>;
 }
 
 // A variant missing from every source (annotated === false) is missing from each
@@ -47,28 +206,6 @@ function isMissingFromGnomad(row: CohortVariantRow): boolean {
   return !row.annotated || row.gnomadSubpopulation === null;
 }
 
-const AOU_GROUP_COLUMN_IDS = new Set(["aouSubpop", "aouAf", "aouAcAn"]);
-const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn"]);
-
-const AOU_MISSING_GROUP = {
-  columnIds: AOU_GROUP_COLUMN_IDS,
-  mergedIntoColumnId: "aouSubpop",
-  message: "Not observed in All of Us",
-};
-
-const GNOMAD_MISSING_GROUP = {
-  columnIds: GNOMAD_GROUP_COLUMN_IDS,
-  mergedIntoColumnId: "gnomadSubpop",
-  message: "Not observed in gnomAD",
-};
-
-function tintClassName(columnId: string): string {
-  const classNames: string[] = [];
-  if (AOU_GROUP_COLUMN_IDS.has(columnId)) classNames.push(styles.tintAou);
-  if (GNOMAD_GROUP_COLUMN_IDS.has(columnId)) classNames.push(styles.tintGnomad);
-  return classNames.join(" ");
-}
-
 interface CohortVariantsPanelProps {
   rows: CohortVariantRow[];
 }
@@ -76,6 +213,8 @@ interface CohortVariantsPanelProps {
 export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) {
   const [expandedVariants, setExpandedVariants] = useState<Set<string>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
+  const { hoveredKey: hoveredRow, hoverProps: rowHoverProps } = useHoveredKey<string>();
+  const { hoveredKey: hoveredHeader, hoverProps: headerHoverProps } = useHoveredKey<string>();
 
   function toggleExpanded(variant: string) {
     setExpandedVariants((current) => {
@@ -105,9 +244,9 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             cell: ({ row }) => {
               const isExpanded = expandedVariants.has(row.original.variant);
               return (
-                <button
-                  type="button"
-                  className={isExpanded ? `${styles.expandBtn} ${styles.expanded}` : styles.expandBtn}
+                <Clickable
+                  style={Style.buttons.icon}
+                  hoverStyle={Style.buttons.iconHover}
                   onClick={(event) => {
                     // The row itself also toggles on click; without this the bubbled event
                     // would immediately undo the toggle this button just performed.
@@ -118,14 +257,19 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                   aria-controls={`variant-detail-${row.original.variant}`}
                   aria-label={isExpanded ? "Collapse row for more detail" : "Expand row for more detail"}
                 >
-                  <ChevronRightIcon size={12} strokeWidth={2.5} />
-                </button>
+                  <ChevronRightIcon
+                    size={12}
+                    strokeWidth={2.5}
+                    className="transition-transform"
+                    style={isExpanded ? { transform: "rotate(90deg)" } : undefined}
+                  />
+                </Clickable>
               );
             },
           }),
           columnHelper.accessor("variant", {
             header: "Variant",
-            cell: (info) => <span className={styles.mono}>{info.getValue()}</span>,
+            cell: (info) => <span style={Style.elements.mono}>{info.getValue()}</span>,
           }),
           columnHelper.accessor((row) => (row.annotated ? row.gene : undefined), {
             id: "gene",
@@ -138,7 +282,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             header: "Protein ∆",
             cell: ({ row }) =>
               row.original.annotated ? (
-                <span className={styles.mono}>{row.original.proteinChange}</span>
+                <span style={Style.elements.mono}>{row.original.proteinChange}</span>
               ) : (
                 <NotAvailable />
               ),
@@ -156,9 +300,9 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         id: "aou",
         header: () => (
           <>
-            All of Us <span className={styles.groupQualifier}>— max subpopulation</span>{" "}
+            All of Us <span style={styles.groupQualifier}>— max subpopulation</span>{" "}
             <span
-              className={styles.tooltipIcon}
+              style={Style.elements.tooltipIcon}
               title="Values below reflect the AoU subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire cohort."
             >
               i
@@ -206,9 +350,9 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         id: "gnomad",
         header: () => (
           <>
-            gnomAD <span className={styles.groupQualifier}>— max subpopulation</span>{" "}
+            gnomAD <span style={styles.groupQualifier}>— max subpopulation</span>{" "}
             <span
-              className={styles.tooltipIcon}
+              style={Style.elements.tooltipIcon}
               title="Values below reflect the gnomAD subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire gnomAD population. Data shown is from gnomAD v3.1.2 and may differ from the current release."
             >
               i
@@ -275,18 +419,27 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 const isLikely =
                   variant.clinvarSignificance === "Likely pathogenic" ||
                   variant.clinvarSignificance === "Likely benign";
-                const toneClass = CLINVAR_TONE_CLASS[CLINVAR_BADGE_TONE[variant.clinvarSignificance]];
+                const tone = CLINVAR_TONE_COLORS[CLINVAR_BADGE_TONE[variant.clinvarSignificance]];
                 return (
                   <span
-                    className={
-                      isLikely
-                        ? `${styles.clinvarBadge} ${toneClass} ${styles.clinvarBadgeDashed}`
-                        : `${styles.clinvarBadge} ${toneClass}`
-                    }
+                    style={{
+                      ...styles.clinvarBadge,
+                      border: `1px ${isLikely ? "dashed" : "solid"} ${tone.ink}`,
+                    }}
                   >
-                    <span className={styles.clinvarBadgeClass}>{CLINVAR_SHORT_LABEL[variant.clinvarSignificance]}</span>
+                    <span style={{ ...styles.clinvarBadgeHalf, background: tone.fill, color: tone.ink }}>
+                      {CLINVAR_SHORT_LABEL[variant.clinvarSignificance]}
+                    </span>
                     {variant.clinvarStars !== null && (
-                      <span className={styles.clinvarBadgeStars}>{clinvarStarRating(variant.clinvarStars)}</span>
+                      <span
+                        style={{
+                          ...styles.clinvarBadgeHalf,
+                          borderLeft: `1px solid ${tone.ink}`,
+                          color: colors.textSecondary,
+                        }}
+                      >
+                        {clinvarStarRating(variant.clinvarStars)}
+                      </span>
                     )}
                   </span>
                 );
@@ -305,9 +458,9 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             header: "pLOF",
             cell: ({ row }) => {
               if (!row.original.annotated) return <NotAvailable />;
-              if (row.original.plof === "HC") return <span className={styles.plofHc}>HC</span>;
+              if (row.original.plof === "HC") return <span style={styles.plofHc}>HC</span>;
               return (
-                <span className={styles.plofNa} title="LOFTEE does not score this consequence type">
+                <span style={styles.plofNa} title="LOFTEE does not score this consequence type">
                   —
                 </span>
               );
@@ -331,42 +484,59 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
     getRowId: (row) => row.variant,
   });
 
+  /** The tint a cell carries, which deepens into a band across whichever row is hovered. */
+  function cellBackground(source: Source | null, hovered: boolean): string | undefined {
+    if (source) return hovered ? sourceTints[source].hover : sourceTints[source].strong;
+    return hovered ? colors.surface1 : undefined;
+  }
+
   return (
-    <ResultsPanel title="Candidate variants — all participants" headerRight={<span className={styles.sub}>Showing {rows.length} results</span>}>
-      <div className={styles.tableWrap}>
-        <div className={styles.tableScroll}>
-          <table className={styles.table}>
+    <ResultsPanel
+      title="Candidate variants — all participants"
+      headerRight={<span style={styles.sub}>Showing {rows.length} results</span>}
+    >
+      <div style={styles.tableWrap}>
+        <div style={styles.tableScroll}>
+          <table style={styles.table}>
             <thead>
-              {table.getHeaderGroups().map((headerGroup, depth) => (
-                <tr key={headerGroup.id} className={depth === 0 ? styles.groupRow : styles.columnRow}>
-                  {headerGroup.headers.map((header) => {
-                    const sortable = header.column.getCanSort();
-                    const sortDirection = header.column.getIsSorted();
-                    const className = sortable
-                      ? `${tintClassName(header.column.id)} ${styles.sortable}`.trim()
-                      : tintClassName(header.column.id);
-                    return (
-                      <th
-                        key={header.id}
-                        colSpan={header.colSpan}
-                        className={className}
-                        onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
-                      >
-                        {header.isPlaceholder ? null : (
-                          <>
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {sortable && (
-                              <span className={styles.sortIndicator}>
-                                {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
-                              </span>
-                            )}
-                          </>
-                        )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              ))}
+              {table.getHeaderGroups().map((headerGroup, depth) => {
+                const isGroupRow = depth === 0;
+                return (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const source = sourceOf(header.column.id);
+                      const sortable = header.column.getCanSort();
+                      const sortDirection = header.column.getIsSorted();
+                      return (
+                        <th
+                          key={header.id}
+                          colSpan={header.colSpan}
+                          style={{
+                            ...styles.headerCell,
+                            ...(isGroupRow ? styles.groupHeaderCell : styles.columnHeaderCell),
+                            background: cellBackground(source, false) ?? styles.headerCell.background,
+                            ...(sortable ? Style.table.sortable : undefined),
+                            ...(sortable && hoveredHeader === header.id ? Style.table.sortableHover : undefined),
+                          }}
+                          onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
+                          {...(sortable ? headerHoverProps(header.id) : undefined)}
+                        >
+                          {header.isPlaceholder ? null : (
+                            <>
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {sortable && (
+                                <span style={Style.table.sortIndicator}>
+                                  {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => {
@@ -376,47 +546,60 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                   isMissingFromAou(row.original) ? AOU_MISSING_GROUP : null,
                   isMissingFromGnomad(row.original) ? GNOMAD_MISSING_GROUP : null,
                 ].filter((group) => group !== null);
+                const hovered = hoveredRow === row.id;
                 return (
                   <Fragment key={row.id}>
-                    <tr className={styles.dataRow} onClick={() => toggleExpanded(row.original.variant)}>
+                    <tr
+                      style={styles.dataRow}
+                      onClick={() => toggleExpanded(row.original.variant)}
+                      {...rowHoverProps(row.id)}
+                    >
                       {row.getVisibleCells().map((cell) => {
+                        const source = sourceOf(cell.column.id);
+                        const cellStyle: CSSProperties = {
+                          ...Style.table.bodyCell,
+                          background: cellBackground(source, hovered),
+                        };
                         const group = missingGroups.find((candidate) =>
                           candidate.columnIds.has(cell.column.id),
                         );
                         if (group) {
                           if (cell.column.id !== group.mergedIntoColumnId) return null;
                           return (
-                            <td
-                              key={cell.id}
-                              colSpan={group.columnIds.size}
-                              className={`${tintClassName(cell.column.id)} ${styles.sourceMissing}`}
-                            >
-                              <span className={styles.cellNa}>{group.message}</span>
+                            <td key={cell.id} colSpan={group.columnIds.size} style={{ ...cellStyle, ...styles.sourceMissing }}>
+                              <span style={styles.cellNa}>{group.message}</span>
                             </td>
                           );
                         }
                         return (
-                          <td key={cell.id} className={tintClassName(cell.column.id)}>
+                          <td key={cell.id} style={cellStyle}>
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         );
                       })}
                     </tr>
                     {expandedVariants.has(row.original.variant) && (
-                      <tr className={styles.detailRow} id={`variant-detail-${row.original.variant}`}>
-                        <td colSpan={row.getVisibleCells().length}>
+                      <tr id={`variant-detail-${row.original.variant}`}>
+                        {/* Padding is the standard body-cell padding rather than the roomier
+                            "0 16px 14px" the old stylesheet asked for: that rule lost the cascade
+                            to a higher-specificity one, so the compact spacing here is what has
+                            always rendered. */}
+                        <td
+                          colSpan={row.getVisibleCells().length}
+                          style={{ ...Style.table.bodyCell, ...styles.detailRow }}
+                        >
                           {row.original.annotated ? (
-                            <div className={styles.detailPanel}>
-                              <div className={styles.detailClinvar}>
+                            <div style={styles.detailPanel}>
+                              <div style={styles.detailClinvar}>
                                 <ClinvarExpanderDetail variant={row.original} />
                               </div>
-                              <div className={styles.detailPopulations}>
+                              <div style={styles.detailPopulations}>
                                 <PopulationFrequencyTable variant={row.original} />
                               </div>
                             </div>
                           ) : (
-                            <div className={`${styles.detailPanel} ${styles.detailPanelNoClinvar}`}>
-                              <div className={styles.detailPlaceholder}>No data available for this variant.</div>
+                            <div style={{ ...styles.detailPanel, gridTemplateColumns: "1fr" }}>
+                              <div style={styles.detailPlaceholder}>No data available for this variant.</div>
                             </div>
                           )}
                         </td>
