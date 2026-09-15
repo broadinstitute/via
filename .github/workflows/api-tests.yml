@@ -27,4 +27,44 @@ jobs:
           distribution: "temurin"
           java-version: "21"
           cache: "gradle"
-      - run: ./gradlew --no-daemon test
+      # `check` runs `test`, then (via finalizedBy/dependsOn in build.gradle) jacocoTestReport
+      # and jacocoTestCoverageVerification -- the latter fails the build if coverage regresses
+      # below the floor configured there, so this replaces the plain test run rather than
+      # running the suite twice.
+      - run: ./gradlew --no-daemon check
+      # Job summaries show up on the workflow run page (and in the PR checks tab) without
+      # needing to open an artifact. `if: always()` so this still renders -- with whichever
+      # numbers actually failed -- even when the coverage step above fails its thresholds.
+      - name: Add coverage summary
+        if: always()
+        working-directory: api
+        run: |
+          python3 -c '
+          import xml.etree.ElementTree as ET
+          root = ET.parse("build/reports/jacoco/test/jacocoTestReport.xml").getroot()
+          counters = {c.get("type"): c for c in root.findall("counter")}
+          def row(label, key):
+              c = counters.get(key)
+              if c is None:
+                  return f"| {label} | n/a | n/a |"
+              covered, missed = int(c.get("covered")), int(c.get("missed"))
+              total = covered + missed
+              pct = round(100 * covered / total, 2) if total else 0
+              return f"| {label} | {pct}% | {covered}/{total} |"
+          print("### API test coverage\n")
+          print("| Metric | Coverage | Covered/Total |")
+          print("|---|---|---|")
+          print(row("Lines", "LINE"))
+          print(row("Branches", "BRANCH"))
+          print(row("Methods", "METHOD"))
+          print(row("Classes", "CLASS"))
+          print()
+          print("_Excludes OpenAPI-generated interfaces/models._")
+          ' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage-report
+          path: api/build/reports/jacoco/test/html/
+          retention-days: 14
