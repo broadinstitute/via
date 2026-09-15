@@ -44,7 +44,9 @@ paths:
             type: string
           description: >-
             HPO phenotype term to filter candidate variants by.
-            If not provided, no phenotype filtering is applied.
+            If not provided, no phenotype filtering is applied. There's no
+            participant-level data source behind this yet, so any term given
+            matches the same mock cohort -- see phenotypeCrosswalk.
       responses:
         "200":
           description: Successful response
@@ -145,16 +147,22 @@ components:
         phenotypeCrosswalk:
           nullable: true
           description: >-
-            Always null for now -- there's no real phenotype/participant
-            data source behind it yet. ancestryBreakdown, ageBreakdown, and
-            filteredVariants are always empty for the same reason.
+            Null when no hpoTerm was given; ancestryBreakdown, ageBreakdown,
+            and filteredVariants are empty in that same case. When a term was
+            given this is mock data -- there's no real phenotype/participant
+            data source behind it yet, so every term matches the same
+            synthetic cohort, as do the two breakdowns and filteredVariants.
           allOf:
             - $ref: "#/components/schemas/PhenotypeCrosswalk"
         ancestryBreakdown:
+          description: >-
+            Mock data (see phenotypeCrosswalk). Counts sum to the crosswalk's
+            participantCount, and percent is each count's share of it.
           type: array
           items:
             $ref: "#/components/schemas/BreakdownSegment"
         ageBreakdown:
+          description: Mock data, on the same participants as ancestryBreakdown.
           type: array
           items:
             $ref: "#/components/schemas/BreakdownSegment"
@@ -163,6 +171,9 @@ components:
           items:
             $ref: "#/components/schemas/CohortVariant"
         filteredVariants:
+          description: >-
+            Mock data (see phenotypeCrosswalk), one entry per cohortVariants
+            entry and in the same order.
           type: array
           items:
             $ref: "#/components/schemas/FilteredVariant"
@@ -375,8 +386,10 @@ components:
         hasStats:
           type: boolean
           description: >-
-            False when phenotype-filtered cohort stats aren't available;
-            the numeric fields below are only meaningful when true.
+            False when phenotype-filtered cohort stats aren't available --
+            currently, when the variant has no cohort-wide All of Us
+            frequency to derive them from. The numeric fields below are only
+            meaningful when true.
         cohortAc:
           type: integer
           nullable: true

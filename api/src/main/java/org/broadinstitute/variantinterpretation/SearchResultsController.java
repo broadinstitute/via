@@ -108,25 +108,29 @@ public class SearchResultsController implements SearchApi {
     this.properties = properties;
   }
 
-  // The VAT table backing this endpoint has no phenotype, participant, ancestry, or age data --
-  // only variant-level annotation. So phenotypeCrosswalk, the breakdowns, and filteredVariants
-  // have no real data source to power them and stay empty/null unconditionally, regardless of
-  // whether an HPO term was given, until a real phenotype/participant data source exists.
+  // cohortVariants is the only half of this response backed by a real query: the VAT table has no
+  // phenotype, participant, ancestry, or age data in it, only variant-level annotation. So
+  // phenotypeCrosswalk, the breakdowns, and filteredVariants are served from MockPhenotypeData
+  // until a genotype-level data source exists -- which means any HPO term matches, and no term
+  // leaves those panels empty (the UI's "add a phenotype filter" state) rather than inventing a
+  // phenotype the caller never asked about.
   @Override
   public ResponseEntity<SearchResultsResponse> searchResults(List<String> variants, String hpoTerm) {
     List<String> requested = normalizeVariants(variants);
     List<CohortVariant> cohortVariants =
         requested.isEmpty() ? List.of() : fetchSearchedCohortVariants(requested);
     String effectiveHpoTerm = hpoTerm == null ? "" : hpoTerm.trim();
+    boolean phenotypeFiltered = !effectiveHpoTerm.isEmpty();
 
     return ResponseEntity.ok(
         new SearchResultsResponse()
             .searchSummary(searchSummary(requested, effectiveHpoTerm))
-            .phenotypeCrosswalk(null)
-            .ancestryBreakdown(List.of())
-            .ageBreakdown(List.of())
+            .phenotypeCrosswalk(phenotypeFiltered ? MockPhenotypeData.crosswalk(effectiveHpoTerm) : null)
+            .ancestryBreakdown(phenotypeFiltered ? MockPhenotypeData.ancestryBreakdown() : List.of())
+            .ageBreakdown(phenotypeFiltered ? MockPhenotypeData.ageBreakdown() : List.of())
             .cohortVariants(cohortVariants)
-            .filteredVariants(List.of()));
+            .filteredVariants(
+                phenotypeFiltered ? MockPhenotypeData.filteredVariants(cohortVariants) : List.of()));
   }
 
   // Trims, drops blanks, dedupes (keeping the first occurrence's position), and caps num

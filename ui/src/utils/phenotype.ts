@@ -1,7 +1,8 @@
 /**
- * There's no real phenotype/participant data source wired up yet, so phenotype-derived panels
- * are always empty -- this just makes the empty-state copy honest about whether an HPO term was
- * actually entered, rather than always claiming none was.
+ * Empty-state copy for the phenotype-derived panels. Any HPO term now comes back matched (against
+ * mock participant data, until a real source exists), so in practice these panels are only empty
+ * when no term was entered -- the second branch is a safety net for a term the backend couldn't
+ * match rather than the case it was originally written for.
  */
 export function phenotypeUnavailableCopy(hpoTerm: string, subject: string) {
   if (!hpoTerm) {
