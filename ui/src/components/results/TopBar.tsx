@@ -27,7 +27,6 @@ const styles = {
     alignItems: "center",
     padding: "0 16px 0 0",
     border: "none",
-    // Doubles as the divider between the back arrow and the search summary beside it.
     borderRight: `1px solid ${colors.border}`,
     background: "none",
     color: colors.textSecondary,
@@ -52,7 +51,6 @@ const styles = {
     fontSize: 12,
     fontWeight: 600,
   },
-  // Same footprint as valueBadge, so the bar doesn't reflow when the real values arrive.
   skeletonBadge: {
     display: "inline-block",
     width: 72,
