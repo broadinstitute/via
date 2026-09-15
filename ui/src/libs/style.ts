@@ -1,7 +1,7 @@
 // Style objects shared by two or more components -- the closest thing VIA has to a design system.
 //
-// Components style themselves with inline `style` objects rather than stylesheets (see
-// docs/ui_styling.md). Anything used in more than one place lands here, imported as:
+// Components style themselves with inline `style` objects rather than stylesheets. Anything used
+// in more than one place lands here, imported as:
 //
 //   import * as Style from "../libs/style";
 //   <div style={{ ...Style.elements.panel, width: 500 }}>

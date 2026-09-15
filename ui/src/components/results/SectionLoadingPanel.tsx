@@ -1,6 +1,6 @@
 import colors from "../../libs/colors";
+import DnaSpinner from "../DnaSpinner";
 import ResultsPanel from "./ResultsPanel";
-import Spinner from "./Spinner";
 
 interface SectionLoadingPanelProps {
   title: string;
@@ -30,7 +30,8 @@ export default function SectionLoadingPanel({
           minHeight,
         }}
       >
-        <Spinner />
+        {/* Both strands inherit `color` through the component's currentColor default. */}
+        <DnaSpinner style={{ color: colors.textSecondary }} size={72}/>
         <span>{message}</span>
       </div>
     </ResultsPanel>

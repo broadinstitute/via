@@ -1,6 +1,6 @@
 /* The only global CSS in the app.
  *
- * Components style themselves with inline style objects (see docs/ui_styling.md), so this file is
+ * Components style themselves with inline style objects, so this file is
  * limited to what an inline style can't express: the reset, page-level typography, and keyframe
  * animations. Shared style objects live in src/libs/style.ts, colors in src/libs/colors.ts. */
 
@@ -34,16 +34,6 @@ body {
  * carries motion only -- the animated element's colors and dimensions still come from its own
  * inline styles. Anything that varies per element stays inline too (e.g. BreakdownLegend sets its
  * own animationDelay to stagger rows). */
-
-@keyframes via-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: via-spin 0.7s linear infinite;
-}
 
 /* Covers the whole donut ring, then "shrinks" to reveal it clockwise from the top, like a clock
    hand sweeping around. The dasharray has to be here rather than inline so the reduced-motion
@@ -110,11 +100,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* The spinner keeps turning -- it's a progress indicator, not decoration -- just slower. */
-  .animate-spin {
-    animation-duration: 1.6s;
-  }
-
   .animate-donut-reveal {
     animation: none;
     stroke-dasharray: 0 100;
