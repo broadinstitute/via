@@ -1,4 +1,4 @@
-package org.broadinstitute.variantinterpretation;
+package org.broadinstitute.variantinterpretation.datasource;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -25,7 +25,7 @@ import org.broadinstitute.variantinterpretation.model.PhenotypeCrosswalk;
  * and seeded off its vid, so a given variant always comes back with the same numbers and its AF
  * ratio stays consistent with the frequency shown for it in the all-participants table.
  */
-final class MockPhenotypeData {
+public final class MockPhenotypeData {
 
   /** How many participants any supplied phenotype matches. There's no cohort behind the number. */
   static final int PARTICIPANT_COUNT = 978;
@@ -65,7 +65,7 @@ final class MockPhenotypeData {
    * get a crosswalk -- the point is that every phenotype matches -- with a description that says
    * so and an OMOP code derived from the term.
    */
-  static PhenotypeCrosswalk crosswalk(String hpoTerm) {
+  public static PhenotypeCrosswalk crosswalk(String hpoTerm) {
     KnownPhenotype known = KNOWN_PHENOTYPES.get(hpoTerm.toUpperCase());
     return new PhenotypeCrosswalk()
         .hpoCode(hpoTerm)
@@ -84,7 +84,7 @@ final class MockPhenotypeData {
    * Ancestry makeup of the matched participants. Proportions are the ones from the design
    * mock-ups, rescaled to {@link #PARTICIPANT_COUNT}.
    */
-  static List<BreakdownSegment> ancestryBreakdown() {
+  public static List<BreakdownSegment> ancestryBreakdown() {
     return List.of(
         segment("EUR", 469, "#F9C854"),
         segment("AFR", 192, "#2078B4"),
@@ -96,7 +96,7 @@ final class MockPhenotypeData {
   }
 
   /** Age makeup of the same matched participants, so it totals {@link #PARTICIPANT_COUNT} too. */
-  static List<BreakdownSegment> ageBreakdown() {
+  public static List<BreakdownSegment> ageBreakdown() {
     return List.of(
         segment("18–29", 78, "#B8DCEF"),
         segment("30–39", 137, "#8DC6E5"),
@@ -122,7 +122,7 @@ final class MockPhenotypeData {
    * back as {@code hasStats: false}: having no participants at all in the full cohort is the one
    * case where inventing a phenotype-matched count would contradict what the other table shows.
    */
-  static List<FilteredVariant> filteredVariants(List<CohortVariant> cohortVariants) {
+  public static List<FilteredVariant> filteredVariants(List<CohortVariant> cohortVariants) {
     List<FilteredVariant> filtered = new ArrayList<>();
     for (CohortVariant cohortVariant : cohortVariants) {
       filtered.add(filteredVariant(cohortVariant));

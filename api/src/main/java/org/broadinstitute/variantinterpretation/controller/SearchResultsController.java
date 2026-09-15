@@ -1,4 +1,4 @@
-package org.broadinstitute.variantinterpretation;
+package org.broadinstitute.variantinterpretation.controller;
 
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.FieldValue;
@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.broadinstitute.variantinterpretation.datasource.BigQueryProperties;
+import org.broadinstitute.variantinterpretation.datasource.MockPhenotypeData;
 import org.broadinstitute.variantinterpretation.api.SearchApi;
 import org.broadinstitute.variantinterpretation.model.ClinvarSubmission;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
@@ -71,9 +74,6 @@ public class SearchResultsController implements SearchApi {
 
   private static final String SEARCH_COHORT_VARIANTS_SQL = SELECT_COLUMNS + "WHERE vid IN UNNEST(@vids)";
 
-  // Alphabetical, not by frequency -- a stable order is what lets users compare rows in the
-  // expanded view's population table. Matches the codes the gvs_<pop>_* / gnomad_<pop>_* columns
-  // are named after.
   private static final List<String> AOU_POPULATIONS =
       List.of("afr", "amr", "eas", "eur", "mid", "oth", "sas");
   private static final List<String> GNOMAD_POPULATIONS =
@@ -90,8 +90,6 @@ public class SearchResultsController implements SearchApi {
           "splice_donor_variant", "Splice site",
           "splice_acceptor_variant", "Splice site");
 
-  // Only classifications with an unambiguous match in ClinvarSignificanceEnum;
-  // "Conflicting interpretations", etc. have no equivalent and are left null.
   private static final Map<String, CohortVariant.ClinvarSignificanceEnum> CLINVAR_SIGNIFICANCE =
       Map.of(
           "Pathogenic", CohortVariant.ClinvarSignificanceEnum.PATHOGENIC,
@@ -108,12 +106,10 @@ public class SearchResultsController implements SearchApi {
     this.properties = properties;
   }
 
-  // cohortVariants is the only half of this response backed by a real query: the VAT table has no
+  // cohortVariants is the only half of this response backed by a real query: the VAT has no
   // phenotype, participant, ancestry, or age data in it, only variant-level annotation. So
   // phenotypeCrosswalk, the breakdowns, and filteredVariants are served from MockPhenotypeData
-  // until a genotype-level data source exists -- which means any HPO term matches, and no term
-  // leaves those panels empty (the UI's "add a phenotype filter" state) rather than inventing a
-  // phenotype the caller never asked about.
+  // until a genotype-level data source exists
   @Override
   public ResponseEntity<SearchResultsResponse> searchResults(List<String> variants, String hpoTerm) {
     List<String> requested = normalizeVariants(variants);
@@ -156,7 +152,7 @@ public class SearchResultsController implements SearchApi {
   }
 
   /**
-   * Looks up each requested vid in the configured VAT table and maps what's found onto
+   * Looks up each requested vid in the configured VAT and maps what's found onto
    * CohortVariant, in the order requested; any vid with no matching row comes back as an
    * `annotated: false` placeholder instead of being silently dropped.
    */
@@ -183,6 +179,7 @@ public class SearchResultsController implements SearchApi {
     return new CohortVariant().variant(variant).annotated(false);
   }
 
+  // TODO: break some of this stuff out into a BigQueryService or something
   private Iterable<FieldValueList> runQuery(QueryJobConfiguration configuration) {
     log.info("Running BigQuery query: {}", configuration.getQuery());
     try {
@@ -219,7 +216,7 @@ public class SearchResultsController implements SearchApi {
     // ClinVar's gold-star review status is per RCV record, not per overall classification; a
     // variant can have several (possibly conflicting) RCV submissions, so this takes the highest.
     Integer clinvarStars = clinvarRcvStars.stream().filter(Objects::nonNull).max(Integer::compareTo).orElse(null);
-    // Each RCV is a variant+condition pair, not just variant -- two RCVs legitimately differing
+    // Each RCV is a variant+condition pair, not just variant. two RCVs legitimately differing
     // (e.g. pathogenic for one condition, benign for another) is not a conflict, so this can't be
     // derived from a distinct-count over clinvarRcvClassifications. clinvar_classification is
     // ClinVar's own aggregate call across all of this variant's RCVs, and carries "Conflicting

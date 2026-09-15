@@ -1,4 +1,4 @@
-package org.broadinstitute.variantinterpretation;
+package org.broadinstitute.variantinterpretation.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;

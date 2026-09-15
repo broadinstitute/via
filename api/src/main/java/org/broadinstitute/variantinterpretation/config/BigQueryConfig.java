@@ -1,7 +1,8 @@
-package org.broadinstitute.variantinterpretation;
+package org.broadinstitute.variantinterpretation.config;
 
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryOptions;
+import org.broadinstitute.variantinterpretation.datasource.BigQueryProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,4 +1,4 @@
-package org.broadinstitute.variantinterpretation;
+package org.broadinstitute.variantinterpretation.controller;
 
 import org.broadinstitute.variantinterpretation.api.ProfileApi;
 import org.broadinstitute.variantinterpretation.model.UserProfile;
