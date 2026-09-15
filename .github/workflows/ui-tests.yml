@@ -27,12 +27,8 @@ jobs:
           cache-dependency-path: ui/package-lock.json
       - run: npm ci
       # Runs the same test suite as `npm run test`, plus enforces the coverage floors configured
-      # in vite.config.ts (test.coverage.thresholds) and fails the job if coverage regresses below
-      # them, so this replaces the plain test run rather than running the suite twice.
+      # in vite.config.ts (test.coverage.thresholds) and fails the job if coverage regresses below them
       - run: npm run coverage
-      # Job summaries show up on the workflow run page (and in the PR checks tab) without
-      # needing to open an artifact. `if: always()` so this still renders -- with whichever
-      # lines actually failed -- even when the coverage step above fails its thresholds.
       - name: Add coverage summary
         if: always()
         working-directory: ui

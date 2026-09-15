@@ -28,13 +28,9 @@ jobs:
           java-version: "21"
           cache: "gradle"
       # `check` runs `test`, then (via finalizedBy/dependsOn in build.gradle) jacocoTestReport
-      # and jacocoTestCoverageVerification -- the latter fails the build if coverage regresses
-      # below the floor configured there, so this replaces the plain test run rather than
-      # running the suite twice.
+      # and jacocoTestCoverageVerification. the latter fails the build if coverage regresses
+      # below the floor configured there
       - run: ./gradlew --no-daemon check
-      # Job summaries show up on the workflow run page (and in the PR checks tab) without
-      # needing to open an artifact. `if: always()` so this still renders -- with whichever
-      # numbers actually failed -- even when the coverage step above fails its thresholds.
       - name: Add coverage summary
         if: always()
         working-directory: api

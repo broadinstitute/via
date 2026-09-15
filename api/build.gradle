@@ -77,10 +77,7 @@ tasks.named('test') {
   finalizedBy tasks.named('jacocoTestReport')
 }
 
-// OpenAPI-generated interfaces/models (org.broadinstitute.variantinterpretation.api/.model/
-// .invoker) are excluded from coverage below -- they're generated code nobody writes tests
-// against directly, and including their (mostly-uncovered) getters/setters/equals/hashCode
-// would drown the real coverage number for the hand-written controllers/config.
+// OpenAPI-generated interfaces/models are excluded from coverage below
 def coverageExcludes = ['**/api/**', '**/model/**', '**/invoker/**']
 
 tasks.named('jacocoTestReport') {
@@ -92,9 +89,6 @@ tasks.named('jacocoTestReport') {
   classDirectories.setFrom(files(classDirectories.files.collect { fileTree(dir: it, excludes: coverageExcludes) }))
 }
 
-// Only one test file exists today (SystemControllerTest), so this floor is set just under the
-// current baseline -- enough to catch a regression, not a claim that this is good coverage.
-// Raise it as real unit tests get added.
 tasks.named('jacocoTestCoverageVerification') {
   dependsOn tasks.named('jacocoTestReport')
   classDirectories.setFrom(files(classDirectories.files.collect { fileTree(dir: it, excludes: coverageExcludes) }))
