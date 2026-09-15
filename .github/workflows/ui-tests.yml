@@ -26,4 +26,28 @@ jobs:
           cache: "npm"
           cache-dependency-path: ui/package-lock.json
       - run: npm ci
-      - run: npm run test
+      # Runs the same test suite as `npm run test`, plus enforces the coverage floors configured
+      # in vite.config.ts (test.coverage.thresholds) and fails the job if coverage regresses below them
+      - run: npm run coverage
+      - name: Add coverage summary
+        if: always()
+        working-directory: ui
+        run: |
+          node -e '
+            const s = require("./coverage/coverage-summary.json").total;
+            const row = (label, m) => `| ${label} | ${m.pct}% | ${m.covered}/${m.total} |`;
+            console.log("### UI test coverage\n");
+            console.log("| Metric | Coverage | Covered/Total |");
+            console.log("|---|---|---|");
+            console.log(row("Statements", s.statements));
+            console.log(row("Branches", s.branches));
+            console.log(row("Functions", s.functions));
+            console.log(row("Lines", s.lines));
+          ' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-coverage-report
+          path: ui/coverage/
+          retention-days: 14
