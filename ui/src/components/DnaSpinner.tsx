@@ -28,16 +28,16 @@ const VIEW_W = X_START * 2 + X_STEP * (COLUMNS - 1); // 116
 const VIEW_H = CENTER_Y * 2; // 48
 
 const STYLES = `
-.aou-dna-node,
-.aou-dna-rung {
-  animation-duration: var(--aou-dna-duration, 1500ms);
+.dna-node,
+.dna-rung {
+  animation-duration: var(--dna-duration, 1500ms);
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
-.aou-dna-node { animation-name: aou-dna-node; }
-.aou-dna-rung { animation-name: aou-dna-rung; }
+.dna-node { animation-name: dna-node; }
+.dna-rung { animation-name: dna-rung; }
 
-@keyframes aou-dna-node {
+@keyframes dna-node {
   0%     { transform: translateY(0px)       scale(1.34); opacity: 1;     }
   12.5%  { transform: translateY(10.61px)   scale(1.24); opacity: 0.919; }
   25%    { transform: translateY(15px)      scale(1);    opacity: 0.725; }
@@ -49,7 +49,7 @@ const STYLES = `
   100%   { transform: translateY(0px)       scale(1.34); opacity: 1;     }
 }
 
-@keyframes aou-dna-rung {
+@keyframes dna-rung {
   0%    { transform: scaleY(0);     opacity: 0;   }
   12.5% { transform: scaleY(0.707); opacity: 0.6; }
   25%   { transform: scaleY(1);     opacity: 1;   }
@@ -61,7 +61,7 @@ const STYLES = `
   100%  { transform: scaleY(0);     opacity: 0;   }
 }
 
-@keyframes aou-dna-breathe {
+@keyframes dna-breathe {
   0%, 100% { opacity: 1;    }
   50%      { opacity: 0.45; }
 }
@@ -69,9 +69,9 @@ const STYLES = `
 @media (prefers-reduced-motion: reduce) {
   /* Pausing holds each element at its negative-delay offset, so the helix
      freezes into a static shape instead of collapsing to a flat line. */
-  .aou-dna-node,
-  .aou-dna-rung { animation-play-state: paused; }
-  .aou-dna-group { animation: aou-dna-breathe 2.8s ease-in-out infinite; }
+  .dna-node,
+  .dna-rung { animation-play-state: paused; }
+  .dna-group { animation: dna-breathe 2.8s ease-in-out infinite; }
 }
 `;
 
@@ -93,7 +93,7 @@ export interface DnaSpinnerProps
 const phaseAt = (index: number) => index / (COLUMNS - 1);
 
 const delay = (fraction: number) =>
-  `calc(var(--aou-dna-duration, 1500ms) * ${-Number(fraction.toFixed(4))})`;
+  `calc(var(--dna-duration, 1500ms) * ${-Number(fraction.toFixed(4))})`;
 
 export const DnaSpinner = React.forwardRef<SVGSVGElement, DnaSpinnerProps>(
   function DnaSpinner(
@@ -126,16 +126,16 @@ export const DnaSpinner = React.forwardRef<SVGSVGElement, DnaSpinnerProps>(
         width={size}
         height={(size * VIEW_H) / VIEW_W}
         xmlns="http://www.w3.org/2000/svg"
-        style={{ '--aou-dna-duration': `${duration}ms`, ...style } as React.CSSProperties}
+        style={{ '--dna-duration': `${duration}ms`, ...style } as React.CSSProperties}
         {...rest}
       >
         <style>{STYLES}</style>
-        <g className="aou-dna-group">
+        <g className="dna-group">
           {rungs &&
             columns.map(({ x, phase }) => (
               <g key={`rung-${x}`} transform={`translate(${x} ${CENTER_Y})`}>
                 <line
-                  className="aou-dna-rung"
+                  className="dna-rung"
                   x1={0}
                   y1={-AMPLITUDE}
                   x2={0}
@@ -152,13 +152,13 @@ export const DnaSpinner = React.forwardRef<SVGSVGElement, DnaSpinnerProps>(
           {columns.map(({ x, phase }) => (
             <g key={`node-${x}`} transform={`translate(${x} ${CENTER_Y})`}>
               <circle
-                className="aou-dna-node"
+                className="dna-node"
                 r={NODE_RADIUS}
                 fill={colors[0]}
                 style={{ animationDelay: delay(phase) }}
               />
               <circle
-                className="aou-dna-node"
+                className="dna-node"
                 r={NODE_RADIUS}
                 fill={colors[1]}
                 style={{ animationDelay: delay(phase + 0.5) }}
