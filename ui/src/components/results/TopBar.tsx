@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+import { ArrowLeftIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
 import styles from "./TopBar.module.css";
 
 interface TopBarProps {
@@ -9,15 +11,23 @@ interface TopBarProps {
 }
 
 export default function TopBar({ loading, variantsEnteredCount, hpoTerm, userEmail, onModifySearch }: TopBarProps) {
+  const navigate = useNavigate();
+
   return (
     <div className={styles.topbar}>
       {onModifySearch && (
         <div className={styles.caseInfo}>
+          <button
+            type="button"
+            className={styles.backBtn}
+            onClick={() => navigate("/")}
+            aria-label="Back to search"
+            title="Back to search"
+          >
+            <ArrowLeftIcon size={14} strokeWidth={2.5} />
+          </button>
           <span className={styles.searchLead} role="img" aria-label="Search terms" title="Search terms">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
+            <SearchIcon size={14} strokeWidth={2.5} />
           </span>
           <span className={styles.searchField}>
             Candidate variants{" "}
@@ -36,19 +46,13 @@ export default function TopBar({ loading, variantsEnteredCount, hpoTerm, userEma
             )}
           </span>
           <button type="button" className={styles.editBtn} onClick={onModifySearch} disabled={loading}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-            </svg>
+            <PencilIcon size={11} strokeWidth={2.5} />
             Modify search
           </button>
         </div>
       )}
       <div className={styles.user}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
-        </svg>
+        <UserIcon size={16} />
         {userEmail}
       </div>
     </div>

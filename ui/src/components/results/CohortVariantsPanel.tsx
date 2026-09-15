@@ -10,6 +10,7 @@ import {
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
 import { CLINVAR_BADGE_TONE, CLINVAR_SHORT_LABEL, clinvarStarRating, type ClinvarBadgeTone } from "../../utils/clinvar";
 import { formatAcAn, formatAf } from "../../utils/format";
+import { ChevronRightIcon } from "../icons";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
@@ -48,7 +49,6 @@ function isMissingFromGnomad(row: CohortVariantRow): boolean {
 
 const AOU_GROUP_COLUMN_IDS = new Set(["aouSubpop", "aouAf", "aouAcAn"]);
 const GNOMAD_GROUP_COLUMN_IDS = new Set(["gnomadSubpop", "gnomadAf", "gnomadAcAn"]);
-const GROUP_START_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
 
 const AOU_MISSING_GROUP = {
   columnIds: AOU_GROUP_COLUMN_IDS,
@@ -66,7 +66,6 @@ function tintClassName(columnId: string): string {
   const classNames: string[] = [];
   if (AOU_GROUP_COLUMN_IDS.has(columnId)) classNames.push(styles.tintAou);
   if (GNOMAD_GROUP_COLUMN_IDS.has(columnId)) classNames.push(styles.tintGnomad);
-  if (GROUP_START_COLUMN_IDS.has(columnId)) classNames.push(styles.groupStart);
   return classNames.join(" ");
 }
 
@@ -119,9 +118,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                   aria-controls={`variant-detail-${row.original.variant}`}
                   aria-label={isExpanded ? "Collapse row for more detail" : "Expand row for more detail"}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 6 15 12 9 18" />
-                  </svg>
+                  <ChevronRightIcon size={12} strokeWidth={2.5} />
                 </button>
               );
             },
