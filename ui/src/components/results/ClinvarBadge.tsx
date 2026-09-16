@@ -1,15 +1,15 @@
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import type { ClinVarSignificance } from "../../types/results";
-import {
-  CLINVAR_BADGE_TONE_COLORS,
-  CLINVAR_SHORT_LABEL,
-  clinvarStarRating,
-  clinvarTagVariant,
-} from "../../utils/clinvar";
-import Tag from "./Tag";
+import { CLINVAR_BADGE_CONFIG, clinvarStarRating } from "../../utils/clinvar";
 
 const styles = {
+  tagBadge: {
+    display: "inline-block",
+    borderRadius: 4,
+    fontSize: 11,
+    fontWeight: 600,
+  },
   splitBadge: {
     display: "inline-flex",
     width: 62,
@@ -24,7 +24,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
   },
-} as const satisfies Record<string, CSSProperties>;
+} as Record<string, CSSProperties>;
 
 interface ClinvarBadgeProps {
   significance: ClinVarSignificance;
@@ -33,32 +33,43 @@ interface ClinvarBadgeProps {
 }
 
 export default function ClinvarBadge({ significance, stars = null, mode = "split" }: ClinvarBadgeProps) {
-  if (mode === "tag") {
-    return <Tag variant={clinvarTagVariant(significance)}>{significance}</Tag>;
-  }
+  const config = CLINVAR_BADGE_CONFIG[significance];
 
-  const tone = CLINVAR_BADGE_TONE_COLORS[significance];
-  const isLikely = significance === "Likely pathogenic" || significance === "Likely benign";
+  if (mode === "tag") {
+    return (
+      <span
+        style={{
+          ...styles.tagBadge,
+          background: config.fill,
+          color: config.ink,
+          border: config.borderStyle === "solid" ? `1px solid ${config.ink}` : `1px dashed ${config.ink}`,
+          padding: config.tagPadding,
+        }}
+      >
+        {significance}
+      </span>
+    );
+  }
 
   return (
     <span
       style={{
         ...styles.splitBadge,
-        border: `1px ${isLikely ? "dashed" : "solid"} ${tone.ink}`,
+        border: `1px ${config.borderStyle} ${config.ink}`,
       }}
     >
-      <span style={{ ...styles.splitHalf, background: tone.fill, color: tone.ink }}>
-        {CLINVAR_SHORT_LABEL[significance]}
+      <span style={{ ...styles.splitHalf, background: config.fill, color: config.ink }}>
+        {config.shortLabel}
       </span>
       {stars !== null && (
         <span
           style={{
             ...styles.splitHalf,
-            borderLeft: `1px solid ${tone.ink}`,
+            borderLeft: `1px solid ${config.ink}`,
             color: colors.textSecondary,
           }}
         >
-          {clinvarStarRating(stars)}
+          {`${stars}★`}
         </span>
       )}
     </span>
