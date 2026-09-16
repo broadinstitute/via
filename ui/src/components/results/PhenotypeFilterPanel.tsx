@@ -7,7 +7,7 @@ import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
 import BreakdownLegend from "./BreakdownLegend";
 import CopyButton from "./CopyButton";
-import Donut from "./Donut";
+import PopulationDonutChart from "./PopulationDonutChart";
 import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
 import ResultsPanel from "./ResultsPanel";
 
@@ -201,7 +201,7 @@ export default function PhenotypeFilterPanel({
 
           {/* Keyed by tab so switching remounts the donut/legend, replaying their entrance animation. */}
           <div key={activeTab}>
-            <Donut segments={segments} centerLabel={centerLabel} />
+            <PopulationDonutChart segments={segments} centerLabel={centerLabel} />
             <BreakdownLegend segments={segments} />
           </div>
         </div>
