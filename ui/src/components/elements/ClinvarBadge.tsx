@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import type { ClinVarSignificance } from "../../types/results";
-import { CLINVAR_BADGE_CONFIG, clinvarStarRating } from "../../utils/clinvar";
+import { CLINVAR_BADGE_CONFIG } from "../../utils/clinvar";
 
 const styles = {
   tagBadge: {

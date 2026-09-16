@@ -1,4 +1,8 @@
 import colors from "../libs/colors";
+import type {
+    GnomadSubpopCode,
+    SubpopCode
+} from "../types/results";
 
 // AFR, AMR, EAS, SAS, and OTH are shared between AoU and gnomAD, so they share
 // a color; FIN, NFE, and ASJ only exist in gnomAD's subpopulation scheme.
