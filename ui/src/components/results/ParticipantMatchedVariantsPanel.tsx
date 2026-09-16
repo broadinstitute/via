@@ -14,7 +14,7 @@ import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { FilteredVariantRow } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
-import Clickable from "../Clickable";
+import Clickable from "../common/Clickable";
 import CopyButton from "./CopyButton";
 import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
 import ResultsPanel from "./ResultsPanel";

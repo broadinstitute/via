@@ -61,17 +61,11 @@ const STYLES = `
   100%  { transform: scaleY(0);     opacity: 0;   }
 }
 
-@keyframes dna-breathe {
-  0%, 100% { opacity: 1;    }
-  50%      { opacity: 0.45; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   /* Pausing holds each element at its negative-delay offset, so the helix
      freezes into a static shape instead of collapsing to a flat line. */
   .dna-node,
   .dna-rung { animation-play-state: paused; }
-  .dna-group { animation: dna-breathe 2.8s ease-in-out infinite; }
 }
 `;
 

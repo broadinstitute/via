@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router-dom";
-import ScrollToTop from "./components/ScrollToTop";
+import ScrollToTop from "./components/common/ScrollToTop";
 import SearchEntryPage from "./pages/SearchEntryPage";
 import SearchResultsPage from "./pages/SearchResultsPage";
 

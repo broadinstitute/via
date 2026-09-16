@@ -4,15 +4,10 @@ import colors from "../../libs/colors";
 import { useHover } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { AnnotatedCohortVariant } from "../../types/results";
-import {
-  CLINVAR_TAG_VARIANT,
-  clinvarReviewWords,
-  clinvarSubmissionColor,
-  clinvarSubmissionShortCode,
-} from "../../utils/clinvar";
+import { clinvarReviewWords, clinvarSubmissionColor, clinvarSubmissionShortCode } from "../../utils/clinvar";
 import { formatDate } from "../../utils/format";
-import Clickable from "../Clickable";
-import Tag from "./Tag";
+import Clickable from "../common/Clickable";
+import ClinvarBadge from "../elements/ClinvarBadge";
 
 // Cap the inline submitter list at 4; the rest collapse behind a "+N more" button.
 const MAX_VISIBLE_SUBMISSIONS = 4;
@@ -117,7 +112,7 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
       <div style={styles.sectionTitle}>ClinVar</div>
       <div style={styles.summary}>
         {clinvarSignificance ? (
-          <Tag variant={CLINVAR_TAG_VARIANT[clinvarSignificance]}>{clinvarSignificance}</Tag>
+          <ClinvarBadge significance={clinvarSignificance} mode="tag" />
         ) : (
           <span style={{ fontSize: 11.5, fontWeight: 600, color: colors.textMuted }}>
             No consensus classification

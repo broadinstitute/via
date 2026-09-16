@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import colors from "../libs/colors";
 import { useMediaQuery } from "../libs/hooks";
 import * as Style from "../libs/style";
-import Clickable from "./Clickable";
+import Clickable from "./common/Clickable";
 import { ArrowRightIcon } from "./icons";
 
 // Below this the row's details and its button no longer fit side by side, so the row stacks.
