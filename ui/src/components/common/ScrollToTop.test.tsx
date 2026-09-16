@@ -34,7 +34,7 @@ describe("ScrollToTop", () => {
     if (scrollRestorationDescriptor) {
       Object.defineProperty(window.history, "scrollRestoration", scrollRestorationDescriptor);
     } else {
-      delete (window.history as History & { scrollRestoration?: string }).scrollRestoration;
+      Reflect.deleteProperty(window.history, "scrollRestoration");
     }
   });
 
