@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, CSSProperties } from "react";
-import { useHover } from "../libs/hooks";
+import { useHover } from "../../libs/hooks";
 
 interface ClickableProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "style"> {
   style?: CSSProperties;

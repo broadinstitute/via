@@ -4,7 +4,7 @@ import { useHover, useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { AnnotatedCohortVariant, GnomadSubpopCode, PopulationFrequency, SubpopCode } from "../../types/results";
 import { formatAcAn, formatAf } from "../../utils/format";
-import { SUBPOP_COLOR, SUBPOP_LABEL } from "./SubpopBadge";
+import { SUBPOP_COLOR, SUBPOP_LABEL } from "../../utils/subpopulations";
 
 // The union of both sources' subpopulation vocabularies, alphabetical by code -- a stable order
 // so rows line up across variants. AoU has EUR/MID with no gnomAD equivalent; gnomAD has

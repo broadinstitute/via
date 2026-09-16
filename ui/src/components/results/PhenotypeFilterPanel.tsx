@@ -4,7 +4,7 @@ import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment, PhenotypeCrosswalk } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
-import Clickable from "../Clickable";
+import Clickable from "../common/Clickable";
 import BreakdownLegend from "./BreakdownLegend";
 import CopyButton from "./CopyButton";
 import Donut from "./Donut";

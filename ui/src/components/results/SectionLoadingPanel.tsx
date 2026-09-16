@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
-import DnaSpinner from "../DnaSpinner";
+import DnaSpinner from "../common/DnaSpinner";
 import ResultsPanel from "./ResultsPanel";
 
 const styles = {

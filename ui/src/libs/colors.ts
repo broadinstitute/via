@@ -43,6 +43,17 @@ const colors = {
   black: "#000000",
   /** Darkens the hero photo enough for white text to stay legible over it. */
   heroScrim: "#0f1432",
+
+  subpopEur: "#F9C854",
+  subpopAfr: "#2078B4",
+  subpopAmr: "#6DACE4",
+  subpopEas: "#A27BD7",
+  subpopSas: "#8CCA90",
+  subpopMid: "#CB2D4C",
+  subpopOth: "#B3AEAD",
+  subpopFin: "#6B4226",
+  subpopNfe: "#E67E22",
+  subpopAsj: "#7B2D8E",
 } as const;
 
 export default colors;
