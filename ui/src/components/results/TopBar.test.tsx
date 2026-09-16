@@ -13,7 +13,7 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-function renderTopBar(props: React.ComponentProps<typeof TopBar>) {
+function renderTopBar(props: Parameters<typeof TopBar>[0]) {
   return render(
     <MemoryRouter>
       <TopBar {...props} />
