@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import colors from "../../libs/colors";
 import type { BreakdownSegment } from "../../types/results";
 
-interface DonutProps {
+interface PopulationDonutChartProps {
   segments: BreakdownSegment[];
   centerLabel: ReactNode;
 }
@@ -42,7 +42,7 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
-export default function Donut({ segments, centerLabel }: DonutProps) {
+export default function PopulationDonutChart({ segments, centerLabel }: PopulationDonutChartProps) {
   let cumulative = 0;
   const arcs = segments.map((segment) => {
     const start = cumulative;
