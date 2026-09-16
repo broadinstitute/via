@@ -1,6 +1,6 @@
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
-import Clickable from "../Clickable";
+import Clickable from "../common/Clickable";
 import { PlusIcon } from "../icons";
 
 interface PhenotypeFilterRequiredProps {

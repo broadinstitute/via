@@ -1,7 +1,7 @@
 import { useState } from "react";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
-import Clickable from "../Clickable";
+import Clickable from "../common/Clickable";
 import { CheckIcon, CopyIcon } from "../icons";
 
 interface CopyButtonProps {

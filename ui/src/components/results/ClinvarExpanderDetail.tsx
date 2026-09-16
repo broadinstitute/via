@@ -6,8 +6,8 @@ import * as Style from "../../libs/style";
 import type { AnnotatedCohortVariant } from "../../types/results";
 import { clinvarReviewWords, clinvarSubmissionColor, clinvarSubmissionShortCode } from "../../utils/clinvar";
 import { formatDate } from "../../utils/format";
-import Clickable from "../Clickable";
-import ClinvarBadge from "./ClinvarBadge";
+import Clickable from "../common/Clickable";
+import ClinvarBadge from "../elements/ClinvarBadge";
 
 // Cap the inline submitter list at 4; the rest collapse behind a "+N more" button.
 const MAX_VISIBLE_SUBMISSIONS = 4;

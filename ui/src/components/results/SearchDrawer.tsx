@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import { parseVariantsText } from "../../utils/variants";
-import Clickable from "../Clickable";
+import Clickable from "../common/Clickable";
 
 const styles = {
   drawer: {

@@ -13,13 +13,13 @@ import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
 import { formatAcAn, formatAf } from "../../utils/format";
-import Clickable from "../Clickable";
+import Clickable from "../common/Clickable";
 import { ChevronRightIcon } from "../icons";
-import ClinvarBadge from "./ClinvarBadge";
+import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
-import SubpopBadge from "./SubpopBadge";
+import SubpopBadge from "../elements/SubpopBadge";
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
 const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {

@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
-import Clickable from "../Clickable";
+import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
 
 const styles = {

@@ -5,7 +5,7 @@ import { fetchProfile } from "../api/profile";
 import colors from "../libs/colors";
 import { useFocus, useMediaQuery } from "../libs/hooks";
 import * as Style from "../libs/style";
-import Clickable from "../components/Clickable";
+import Clickable from "../components/common/Clickable";
 import FieldHint from "../components/FieldHint";
 import Hero from "../components/Hero";
 import RecentSearches from "../components/RecentSearches";
