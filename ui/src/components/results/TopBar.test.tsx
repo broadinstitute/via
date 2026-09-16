@@ -3,7 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TopBar from "./TopBar";
 
-const mockNavigate = vi.fn();
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
