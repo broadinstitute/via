@@ -19,13 +19,28 @@ This repo contains the app's frontend (ui/, TypeScript + React) and backend (api
 - `startupscript/` - VM provisioning scripts run via the devcontainer's
   `postCreateCommand`/`postStartCommand`; see [its README](startupscript/README.md)
   for why this lives at the repo root instead of under `deploy/`.
+- `scripts/` - Local development helpers (`dev-setup.sh`).
 
 ## Local development
 
-Run the backend and frontend separately, with Vite proxying `/api` calls to the
-backend (see `ui/vite.config.ts`):
+From a fresh clone:
 
 ```bash
+gcloud auth application-default login   # if you haven't already
+./scripts/dev-setup.sh
+```
+
+`dev-setup.sh` checks your local environment for JDK 21, Node 20+ and gcloud, writes
+`.env.local`, and uses your Application Default Credentials to confirm you can
+actually read the configured BigQuery table. If needed, delete `.env.local` to
+regenerate it from scratch.
+
+Then run the backend and frontend separately, with Vite proxying `/api` calls
+to the backend (see `ui/vite.config.ts`):
+
+```bash
+source .env.local
+
 # terminal 1
 cd api && ./gradlew bootRun
 
@@ -35,9 +50,22 @@ cd ui && npm install && npm run dev
 
 Open the URL Vite prints (default `http://localhost:5173`).
 
-To see a real value from `GET /api/profile` locally, export `WORKBENCH_USER_EMAIL`
-before starting the backend, e.g. `WORKBENCH_USER_EMAIL=you@example.org ./gradlew
-bootRun`.
+### Environment variables
+
+`.env.local` (written locally by `dev-setup.sh`) holds everything local
+development needs. The backend also runs without it, falling back to the
+defaults in `api/src/main/resources/application.properties`.
+
+| Variable | Purpose |
+|---|---|
+| `WORKBENCH_USER_EMAIL` | The email of the user running VIA |
+| `BIGQUERY_PROJECT_ID` | Project owning the BigQuery dataset, and the one query jobs are billed to |
+| `BIGQUERY_DATASET_ID` | Dataset holding the variant data |
+| `BIGQUERY_TABLE_ID` | Table backing variant search |
+
+Credentials are never configured here: the BigQuery client always uses
+Application Default Credentials (gcloud locally, the VM's attached service
+account in Workbench).
 
 ### Browsing the API
 
