@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# dev-setup.sh -- get a fresh checkout ready to run.
-#
-# Checks the toolchain, writes .env.local, confirms your Application Default
-# Credentials can actually read the BigQuery table the app queries, and
-# installs dependencies. Safe to re-run; it won't overwrite an existing
-# .env.local.
-#
-# This is a convenience, not a requirement: the backend reads plain
-# environment variables and falls back to the defaults in
-# api/src/main/resources/application.properties.
 
 set -euo pipefail
 
@@ -65,20 +55,10 @@ if [[ -f "${ENV_FILE}" ]]; then
   . "${ENV_FILE}"
   ok "using your existing .env.local (delete it to regenerate)"
 else
-  # Local stand-in for the email Workbench injects on a real VM.
   WORKBENCH_USER_EMAIL="$(gcloud config get-value account 2>/dev/null || true)"
   {
-    echo "# Local development environment, written by scripts/dev-setup.sh."
-    echo "# Not committed. Sourced by scripts/dev-start.sh, or 'source .env.local'."
-    echo
-    echo "# JDK for Gradle, pinned because shims often point JAVA_HOME elsewhere."
     printf 'export JAVA_HOME=%q\n' "${java_home}"
-    echo
-    echo "# Returned by GET /api/profile; Workbench injects this on a real VM."
     printf 'export WORKBENCH_USER_EMAIL=%q\n' "${WORKBENCH_USER_EMAIL}"
-    echo
-    echo "# BigQuery table backing variant search. Credentials are never set"
-    echo "# here -- they always come from Application Default Credentials."
     printf 'export BIGQUERY_PROJECT_ID=%q\n' "${BIGQUERY_PROJECT_ID}"
     printf 'export BIGQUERY_DATASET_ID=%q\n' "${BIGQUERY_DATASET_ID}"
     printf 'export BIGQUERY_TABLE_ID=%q\n' "${BIGQUERY_TABLE_ID}"
@@ -112,9 +92,8 @@ else
     if [[ "${status}" == "403" ]]; then note "ask for roles/bigquery.dataViewer on the dataset"; fi
   fi
 
-  # A dry run is free and checks the rest in one shot: the table exists, it has
-  # the columns the backend selects, and you can create query jobs in the
-  # billing project.
+  # A dry run is free and checks that the table exists and
+  # you can create query jobs in the billing project.
   status="$(curl -sS -o "${body}" -w '%{http_code}' -X POST \
     -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' \
     -d "{\"configuration\":{\"dryRun\":true,\"query\":{\"useLegacySql\":false,\"query\":
@@ -130,25 +109,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-step "Dependencies"
-
-if [[ -d ui/node_modules ]]; then
-  ok "frontend dependencies present"
-else
-  echo "        running npm ci ..."
-  (cd ui && npm ci --no-fund --no-audit >/dev/null) && ok "frontend dependencies installed"
-fi
-
-# Warms Gradle's caches and generates the OpenAPI sources controllers
-# implement, so the first bootRun (and your IDE) doesn't have to.
-echo "        building the backend (first run downloads Gradle) ..."
-if (cd api && JAVA_HOME="${java_home}" ./gradlew -q --console=plain compileJava); then
-  ok "backend compiles"
-else
-  bad "backend build failed -- run ./gradlew compileJava in api/ to see why"
-fi
-
-# ---------------------------------------------------------------------------
 if [[ "${problems}" -gt 0 ]]; then
   printf '\n%s problem(s) above. Fix them and re-run, or ask the team.\n' "${problems}"
   exit 1
@@ -156,11 +116,7 @@ fi
 
 cat <<'EOF'
 
-Ready. Start both servers with:
-
-    ./scripts/dev-start.sh
-
-or run them yourself:
+Ready. Start the app with:
 
     source .env.local
     cd api && ./gradlew bootRun    # terminal 1
