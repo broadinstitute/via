@@ -62,6 +62,7 @@ defaults in `api/src/main/resources/application.properties`.
 | `BIGQUERY_PROJECT_ID` | Project owning the BigQuery dataset, and the one query jobs are billed to |
 | `BIGQUERY_DATASET_ID` | Dataset holding the variant data |
 | `BIGQUERY_TABLE_ID` | Table backing variant search |
+| `BIGQUERY_COHORT_PARTICIPANTS` | Participants in the cohort that table was built from. Not a VAT column, but the denominator its cohort-wide allele numbers are counted over, so it has to be updated whenever the table is |
 
 Credentials are never configured here: the BigQuery client always uses
 Application Default Credentials (gcloud locally, the VM's attached service

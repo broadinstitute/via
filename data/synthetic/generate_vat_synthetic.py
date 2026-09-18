@@ -72,6 +72,11 @@ LOF_FLAGS = ["SINGLE_EXON", "NAGNAG_SITE", "PHYLOCSF_WEAK",
 GVS_AN_POOL = 490_000      # ~245k diploid samples
 GNOMAD_AN_POOL = 152_000   # ~76k diploid samples
 
+# Share of the diploid allele pool a site on this contig can draw on. An autosomal site has two
+# alleles per participant; chrX has two for female participants and one for male, and chrY has one
+# and only for male participants -- so neither reaches the full pool however well it is called.
+PLOIDY_SHARE = {"chrX": 0.75, "chrY": 0.25}
+
 
 def maybe(value, p=0.85):
     """Return value with probability p, else None (exercises NULL handling)."""
@@ -98,15 +103,18 @@ def make_allele_pair():
     return ref, alt, vtype
 
 
-def allele_freq_block(subpops, an_pool, with_sc):
+def allele_freq_block(subpops, an_pool, with_sc, an_share=1.0):
     """
     Build a consistent AC/AN/AF (and optional sample-count) block.
+
+    `an_share` scales the allele pool for a site that can't reach all of it -- see PLOIDY_SHARE.
 
     Guarantees:
       - per-subpop AF == AC / AN
       - all_ac == sum(subpop ac), all_an == sum(subpop an)
       - max_* fields point at the subpop with the highest AF
       - sc (sample count) <= ac, since a hom-alt sample carries 2 alleles
+      - AN is short of the pool by the site's call rate, so it varies between variants
     """
     # Draw a global frequency; most variants are rare.
     global_af = random.choices(
@@ -114,6 +122,17 @@ def allele_freq_block(subpops, an_pool, with_sc):
          random.uniform(1e-3, 0.01),
          random.uniform(0.01, 0.5)],
         weights=[0.6, 0.25, 0.15],
+    )[0]
+
+    # Share of the cohort with a genotype call here. Most sites are called in nearly everyone, a
+    # quarter or so are noticeably worse, and a few are poorly covered. AN is the only field that
+    # carries this, and consumers lean on it: scaling a cohort-wide AN down to a subcohort is only
+    # worth doing because AN differs between a site called in everyone and one that isn't.
+    call_rate = random.choices(
+        [random.uniform(0.985, 1.0),
+         random.uniform(0.90, 0.985),
+         random.uniform(0.55, 0.90)],
+        weights=[0.7, 0.25, 0.05],
     )[0]
 
     out = {}
@@ -125,7 +144,9 @@ def allele_freq_block(subpops, an_pool, with_sc):
     wsum = sum(weights)
 
     for pop, w in zip(subpops, weights):
-        an = int(an_pool * (w / wsum))
+        # Coverage isn't uniform across subpopulations either, so let each drift a little.
+        pop_call_rate = min(1.0, call_rate * random.uniform(0.98, 1.02))
+        an = int(an_pool * an_share * pop_call_rate * (w / wsum))
         an -= an % 2  # allele number is even for diploid autosomal calls
         # Let each subpop drift around the global frequency.
         pop_af = min(1.0, max(0.0, global_af * random.lognormvariate(0, 0.6)))
@@ -188,7 +209,8 @@ def make_row():
     row["alt_allele"] = alt
 
     # --- GVS (All of Us cohort) frequencies -------------------------------
-    gvs = allele_freq_block(GVS_SUBPOPS, GVS_AN_POOL, with_sc=True)
+    gvs = allele_freq_block(GVS_SUBPOPS, GVS_AN_POOL, with_sc=True,
+                            an_share=PLOIDY_SHARE.get(contig, 1.0))
     for key in ["all_ac", "all_an", "all_af", "all_sc",
                 "max_af", "max_ac", "max_an", "max_sc", "max_subpop"]:
         row[f"gvs_{key}"] = gvs[key]
@@ -234,7 +256,8 @@ def make_row():
     # --- gnomAD frequencies -----------------------------------------------
     has_gnomad = random.random() < 0.8
     if has_gnomad:
-        gn = allele_freq_block(GNOMAD_SUBPOPS, GNOMAD_AN_POOL, with_sc=False)
+        gn = allele_freq_block(GNOMAD_SUBPOPS, GNOMAD_AN_POOL, with_sc=False,
+                               an_share=PLOIDY_SHARE.get(contig, 1.0))
         row["gnomad_all_af"] = gn["all_af"]
         row["gnomad_all_ac"] = gn["all_ac"]
         row["gnomad_all_an"] = gn["all_an"]

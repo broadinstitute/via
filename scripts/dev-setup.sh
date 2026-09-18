@@ -49,6 +49,7 @@ step "Environment (.env.local)"
 BIGQUERY_PROJECT_ID="${BIGQUERY_PROJECT_ID:-$(property_default bigquery.project-id)}"
 BIGQUERY_DATASET_ID="${BIGQUERY_DATASET_ID:-$(property_default bigquery.dataset-id)}"
 BIGQUERY_TABLE_ID="${BIGQUERY_TABLE_ID:-$(property_default bigquery.table-id)}"
+BIGQUERY_COHORT_PARTICIPANTS="${BIGQUERY_COHORT_PARTICIPANTS:-$(property_default bigquery.cohort-participants)}"
 
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
@@ -62,6 +63,7 @@ else
     printf 'export BIGQUERY_PROJECT_ID=%q\n' "${BIGQUERY_PROJECT_ID}"
     printf 'export BIGQUERY_DATASET_ID=%q\n' "${BIGQUERY_DATASET_ID}"
     printf 'export BIGQUERY_TABLE_ID=%q\n' "${BIGQUERY_TABLE_ID}"
+    printf 'export BIGQUERY_COHORT_PARTICIPANTS=%q\n' "${BIGQUERY_COHORT_PARTICIPANTS}"
   } > "${ENV_FILE}"
   ok "wrote ${ENV_FILE}"
 fi

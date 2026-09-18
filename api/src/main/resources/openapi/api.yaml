@@ -387,15 +387,26 @@ components:
           type: boolean
           description: >-
             False when phenotype-filtered cohort stats aren't available --
-            currently, when the variant has no cohort-wide All of Us
-            frequency to derive them from. The numeric fields below are only
-            meaningful when true.
+            currently, when the variant has no cohort-wide All of Us frequency
+            or allele number to derive them from. The numeric fields below are
+            only meaningful when true.
         cohortAc:
           type: integer
           nullable: true
         cohortAn:
           type: integer
           nullable: true
+          description: >-
+            Approximated, not counted: the variant's cohort-wide allele number
+            scaled by the share of the cohort the phenotype-matched
+            participants make up. At most two alleles per matched participant,
+            and less than that for a variant the cohort-wide allele number
+            shows isn't called in everyone. The VAT carries no genotype-level
+            data, so an exact allele number for an arbitrary participant
+            subset can't be computed from it -- but the cohort-wide number
+            does carry this variant's real call rate, which is what makes the
+            approximation better than assuming two clean alleles per
+            participant.
         cohortAf:
           type: number
           nullable: true

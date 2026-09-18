@@ -187,7 +187,10 @@ export default function ParticipantMatchedVariantsPanel({
         header: () => (
           <>
             Cohort AN{" "}
-            <span style={Style.elements.tooltipIcon} title="Allele number among phenotype-matched participants.">
+            <span
+              style={Style.elements.tooltipIcon}
+              title="Approximate allele number among phenotype-matched participants: this variant's cohort-wide allele number, scaled to the share of the cohort these participants make up. At most two alleles each, and fewer for a variant that isn't called in everyone."
+            >
               i
             </span>
           </>

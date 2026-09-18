@@ -43,7 +43,8 @@ every "same collapse" note below rather than being repeated per row.
 | UI field | VAT source | Notes |
 |---|---|---|
 | `variant`, `gene`, `classification` | same as above | Same caveats apply. |
-| `cohortAc`/`cohortAn`/`cohortAf` | **none** | The doc is explicit: *"user defined cohort metrics will not be included in the VAT."* VAT only has whole-biobank (`gvs_all_*`) and ancestry-subpopulation (`gvs_<subpop>_*`) stats — nothing for an arbitrary phenotype-filtered participant subset. That requires querying genotype-level data directly (GVS or similar), since the VAT explicitly drops all sample/genotype info by design. |
+| `cohortAc`/`cohortAf` | **none** | The doc is explicit: *"user defined cohort metrics will not be included in the VAT."* VAT only has whole-biobank (`gvs_all_*`) and ancestry-subpopulation (`gvs_<subpop>_*`) stats — nothing for an arbitrary phenotype-filtered participant subset. That requires querying genotype-level data directly (GVS or similar), since the VAT explicitly drops all sample/genotype info by design. |
+| `cohortAn` | **approximable** (`gvs_all_an × matched participants / cohort participants`) | The exact allele number has the same problem as the row above, but an *approximation* doesn't: scale the variant's real cohort-wide AN by the share of the cohort the matched participants make up. The ceiling is two alleles per matched participant (a variant called in everyone); anything below that is the variant's real cohort-wide call rate carried across. What it assumes is that matched participants are called at the same rate as the cohort at large — only genotype-level data can confirm or correct that. Note `gvs_all_sc` is *not* the denominator: per Appendix H sample count is the number of samples **carrying** the alt allele, not the number called, so for a rare variant it's a handful of people rather than the cohort. The cohort's size isn't in the VAT at all, so it's configured (`bigquery.cohort-participants`) alongside the table. Implemented in `MockPhenotypeData.approximateCohortAn`. |
 | `homozygotes`/`heterozygotes` | **none** | Same root cause. Even for the *whole* cohort, Appendix H describes how to compute `n_het`/`n_homalt` but says plainly *"only sample_count is ever surfaced"* in the current design — this per-sample zygosity detail isn't planned to exist in the VAT at all, let alone for a filtered subgroup. |
 | `clinvarPlpInTrans` | **none, by a wide margin** | Confirmed to be the biggest lift of anything here. It needs per-participant phased genotypes to know if a P/LP variant sits on the *other* allele (trans) — that's compound-het phasing across two variants per sample, which is categorically outside anything a variant-transcript aggregate table like the VAT can hold. This needs its own pipeline against raw per-sample genotype data, independent of the VAT entirely. |
 | `afRatio` | derived (`cohortAf / gvs_all_af`) | The division itself is trivial once `cohortAf` exists — but `cohortAf` is the missing piece above, so this inherits that same gap. |
@@ -62,7 +63,9 @@ this doc, but that's expected given it was added to the VAT after this doc was w
   link/URL fields (need building, not sourcing); `plof`/LOFTEE just needs confirming against the
   current live schema since it postdates this doc.
 - The **phenotype-matched table** (`ParticipantMatchedVariantsPanel`) is the harder one:
-  `cohortAc/An/Af`, `homozygotes`, `heterozygotes`, and especially `clinvarPlpInTrans` all require
+  `cohortAc/Af`, `homozygotes`, `heterozygotes`, and especially `clinvarPlpInTrans` all require
   genotype-level access the VAT explicitly excludes by design ("genotype information is dropped in
   this design"). None of that is a VAT gap to fix — it's a fundamentally different data source
-  (raw/phased genotypes) that the VAT was never meant to provide.
+  (raw/phased genotypes) that the VAT was never meant to provide. `cohortAn` is the one column
+  here the VAT can meaningfully approximate today, and it does (see its row above); the rest of
+  the table's numbers are still synthetic.

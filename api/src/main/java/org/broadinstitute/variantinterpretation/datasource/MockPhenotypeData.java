@@ -14,25 +14,26 @@ import org.broadinstitute.variantinterpretation.model.PhenotypeCrosswalk;
 /**
  * Stand-in phenotype/participant data for the phenotype-matched half of the search results.
  *
- * <p>None of this is real. The VAT is a variant-transcript aggregate table with no participant,
- * phenotype, ancestry, or age data in it at all -- and per the VAT design doc it never will have
- * (see docs/vat_schema_mapping.md), so the phenotype-matched panels need a genotype-level data
- * source that doesn't exist yet. Until it does, this makes those panels demo-able: every supplied
- * phenotype "matches" the same synthetic cohort of {@value #PARTICIPANT_COUNT} participants, and
- * each searched variant gets synthetic cohort stats for it.
+ * <p>Almost none of this is real. The VAT is a variant-transcript aggregate table with no
+ * participant, phenotype, ancestry, or age data in it at all -- and per the VAT design doc it never
+ * will have (see docs/vat_schema_mapping.md), so the phenotype-matched panels need a genotype-level
+ * data source that doesn't exist yet. Until it does, this makes those panels demo-able: every
+ * supplied phenotype "matches" the same synthetic cohort of {@value #PARTICIPANT_COUNT}
+ * participants, and each searched variant gets synthetic cohort stats for it.
  *
  * <p>The stats are derived from the variant's real (well, synthetic-VAT) cohort-wide AoU frequency
  * and seeded off its vid, so a given variant always comes back with the same numbers and its AF
  * ratio stays consistent with the frequency shown for it in the all-participants table.
+ *
+ * <p>The exception -- the one column here not invented -- is the allele number, which {@link
+ * #approximateCohortAn} scales down from the variant's real cohort-wide AN by the share of the
+ * cohort these participants make up. Everything else in the row is computed back from that AN, so
+ * as more real data lands the invented part shrinks.
  */
 public final class MockPhenotypeData {
 
   /** How many participants any supplied phenotype matches. There's no cohort behind the number. */
   static final int PARTICIPANT_COUNT = 978;
-
-  // Two alleles per participant, and mock data has no missing calls, so every variant with stats
-  // reports this same cohort AN.
-  private static final int COHORT_AN = 2 * PARTICIPANT_COUNT;
 
   // An AF ratio at or above this is what the UI flags as an enrichment worth a look, so the
   // generated data deliberately puts some variants over the line and keeps the rest under it.
@@ -118,19 +119,21 @@ public final class MockPhenotypeData {
    * Synthetic phenotype-matched stats for each searched variant, in the order searched -- one
    * FilteredVariant per CohortVariant, so the two tables line up row for row.
    *
-   * <p>A variant that isn't annotated, or that the VAT has no cohort-wide AoU frequency for, comes
-   * back as {@code hasStats: false}: having no participants at all in the full cohort is the one
-   * case where inventing a phenotype-matched count would contradict what the other table shows.
+   * <p>A variant that isn't annotated, that the VAT has no cohort-wide AoU frequency for, or that
+   * has no cohort-wide allele number to scale down, comes back as {@code hasStats: false}: having
+   * no participants at all in the full cohort is the one case where inventing a phenotype-matched
+   * count would contradict what the other table shows.
    */
-  public static List<FilteredVariant> filteredVariants(List<CohortVariant> cohortVariants) {
+  public static List<FilteredVariant> filteredVariants(
+      List<CohortVariant> cohortVariants, int cohortParticipants) {
     List<FilteredVariant> filtered = new ArrayList<>();
     for (CohortVariant cohortVariant : cohortVariants) {
-      filtered.add(filteredVariant(cohortVariant));
+      filtered.add(filteredVariant(cohortVariant, cohortParticipants));
     }
     return filtered;
   }
 
-  private static FilteredVariant filteredVariant(CohortVariant cohortVariant) {
+  private static FilteredVariant filteredVariant(CohortVariant cohortVariant, int cohortParticipants) {
     String variant = cohortVariant.getVariant();
     if (!Boolean.TRUE.equals(cohortVariant.getAnnotated())) {
       return withoutStats(variant, null, null);
@@ -139,23 +142,32 @@ public final class MockPhenotypeData {
     String gene = cohortVariant.getGene().orElse(null);
     String classification = cohortVariant.getClassification().orElse(null);
     BigDecimal aouAllAf = cohortVariant.getAouAllAf().orElse(null);
-    if (aouAllAf == null || aouAllAf.signum() <= 0) {
+    Integer cohortAn = approximateCohortAn(cohortVariant, cohortParticipants);
+    if (aouAllAf == null || aouAllAf.signum() <= 0 || cohortAn == null) {
       return withoutStats(variant, gene, classification);
     }
 
     Random random = seededRandom(variant);
     double enrichment = enrichment(random);
     double cohortAf = Math.min(aouAllAf.doubleValue() * enrichment, MAX_COHORT_AF);
-    int cohortAc = (int) Math.round(cohortAf * COHORT_AN);
+    int cohortAc = (int) Math.round(cohortAf * cohortAn);
     // A variant rare enough that even an enriched frequency rounds to zero carriers would show up
-    // as a 0x ratio, hiding exactly the signal this row is meant to demonstrate.
+    // as a 0x ratio, hiding exactly the signal this row is meant to demonstrate. Bumping it can't
+    // be allowed to push AF past the cap, which for a small AN a handful of alleles would do.
     if (cohortAc == 0 && enrichment >= ELEVATED_AF_RATIO) {
-      cohortAc = 1 + random.nextInt(3);
+      cohortAc = Math.min(1 + random.nextInt(3), (int) (MAX_COHORT_AF * cohortAn));
     }
     // Everything below is computed back from the final integer AC, so AF, the zygosity split, and
     // the ratio all agree with each other and with the AoU frequency they were derived from.
-    cohortAf = (double) cohortAc / COHORT_AN;
-    int homozygotes = Math.min((int) Math.round(PARTICIPANT_COUNT * cohortAf * cohortAf), cohortAc / 2);
+    cohortAf = (double) cohortAc / cohortAn;
+    // HWE expectation over the participants actually called for this variant -- two alleles each
+    // -- rather than over the whole matched cohort, so a variant with a poor call rate can't come
+    // back with more carriers than it has genotypes. The lower bound is what enforces that at the
+    // top of the AF range: past a point the surplus alleles have to pair up as homozygotes,
+    // because there aren't enough called participants left to carry them one apiece.
+    int calledParticipants = (cohortAn + 1) / 2;
+    int hweHomozygotes = (int) Math.round(calledParticipants * cohortAf * cohortAf);
+    int homozygotes = Math.min(Math.max(hweHomozygotes, cohortAc - calledParticipants), cohortAc / 2);
     int heterozygotes = cohortAc - 2 * homozygotes;
 
     return new FilteredVariant()
@@ -164,13 +176,49 @@ public final class MockPhenotypeData {
         .classification(classification)
         .hasStats(true)
         .cohortAc(cohortAc)
-        .cohortAn(COHORT_AN)
+        .cohortAn(cohortAn)
         .cohortAf(BigDecimal.valueOf(cohortAf).setScale(6, RoundingMode.HALF_UP))
         .homozygotes(homozygotes)
         .heterozygotes(heterozygotes)
         .clinvarPlpInTrans(plpInTrans(random, heterozygotes, isPathogenic(cohortVariant)))
         .afRatio(
             BigDecimal.valueOf(cohortAf / aouAllAf.doubleValue()).setScale(2, RoundingMode.HALF_UP));
+  }
+
+  /**
+   * Allele number for the phenotype-matched cohort, approximated from real VAT data rather than
+   * invented: the share of the whole cohort the matched participants make up, applied to the
+   * variant's real cohort-wide allele number.
+   *
+   * <p>The ceiling is two alleles per matched participant, which is what a variant called in every
+   * participant in the cohort gets. Anything less than that is the variant's real cohort-wide call
+   * rate carried across: a site no-called in a tenth of the biobank comes back with about a tenth
+   * fewer alleles here too, and a hemizygous one comes back at roughly one allele per participant.
+   * What it assumes is that matched participants are called at the same rate as the cohort as a
+   * whole -- only genotype-level data could confirm or correct that.
+   *
+   * <p>Note that {@code gvs_all_sc} is no use as the denominator here: per the VAT design doc
+   * (Appendix H) sample count is the number of samples <em>carrying</em> the alt allele, not the
+   * number called, so for a rare variant it's a handful of participants rather than the cohort.
+   * The cohort's size isn't in the VAT at all, which is why it's configured -- see {@link
+   * BigQueryProperties#cohortParticipants()}.
+   *
+   * <p>Null when the VAT has no cohort-wide allele number for the variant, or when the matched
+   * cohort is a small enough slice of the whole that scaling rounds its AN away to nothing.
+   */
+  private static Integer approximateCohortAn(CohortVariant cohortVariant, int cohortParticipants) {
+    Integer cohortWideAn = cohortVariant.getAouAllAn().orElse(null);
+    if (cohortWideAn == null || cohortWideAn <= 0 || cohortParticipants <= 0) {
+      return null;
+    }
+    long cohortAn = Math.round((double) cohortWideAn * PARTICIPANT_COUNT / cohortParticipants);
+    if (cohortAn <= 0) {
+      return null;
+    }
+    // A cohort-wide AN above two per participant means the configured cohort size has drifted out
+    // of step with the table. Clamping keeps that from surfacing as a matched cohort holding more
+    // alleles than it has participants to hold them.
+    return (int) Math.min(cohortAn, 2L * PARTICIPANT_COUNT);
   }
 
   private static FilteredVariant withoutStats(String variant, String gene, String classification) {

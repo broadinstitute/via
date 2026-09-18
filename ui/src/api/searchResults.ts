@@ -64,6 +64,8 @@ interface RawSearchResultsResponse {
   // Null when no HPO term was given -- ancestryBreakdown, ageBreakdown, and filteredVariants
   // are all empty in that case too. When a term was given, all four are mock data: there's no
   // participant-level source behind them yet, so every term matches the same synthetic cohort.
+  // The one exception is each filtered variant's cohortAn, which the backend approximates from
+  // the variant's real cohort-wide allele number (see MockPhenotypeData.approximateCohortAn).
   phenotypeCrosswalk: PhenotypeCrosswalk | null;
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];

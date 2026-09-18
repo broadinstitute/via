@@ -106,10 +106,12 @@ public class SearchResultsController implements SearchApi {
     this.properties = properties;
   }
 
-  // cohortVariants is the only half of this response backed by a real query: the VAT has no
+  // cohortVariants is the half of this response backed entirely by a real query: the VAT has no
   // phenotype, participant, ancestry, or age data in it, only variant-level annotation. So
   // phenotypeCrosswalk, the breakdowns, and filteredVariants are served from MockPhenotypeData
-  // until a genotype-level data source exists
+  // until a genotype-level data source exists. The one exception is each filtered variant's
+  // allele number, which MockPhenotypeData approximates from the variant's real cohort-wide AN
+  // and the configured size of the cohort that AN was counted over.
   @Override
   public ResponseEntity<SearchResultsResponse> searchResults(List<String> variants, String hpoTerm) {
     List<String> requested = normalizeVariants(variants);
@@ -126,7 +128,9 @@ public class SearchResultsController implements SearchApi {
             .ageBreakdown(phenotypeFiltered ? MockPhenotypeData.ageBreakdown() : List.of())
             .cohortVariants(cohortVariants)
             .filteredVariants(
-                phenotypeFiltered ? MockPhenotypeData.filteredVariants(cohortVariants) : List.of()));
+                phenotypeFiltered
+                    ? MockPhenotypeData.filteredVariants(cohortVariants, properties.cohortParticipants())
+                    : List.of()));
   }
 
   // Trims, drops blanks, dedupes (keeping the first occurrence's position), and caps num

@@ -16,7 +16,7 @@ class SystemControllerTest {
 
   @Test
   void bigQueryStatus_returnsAccessibleTrue_whenDatasetIsReachable() {
-    BigQueryProperties properties = new BigQueryProperties("test-project", "test_dataset", "v1");
+    BigQueryProperties properties = new BigQueryProperties("test-project", "test_dataset", "v1", 245_000);
     BigQuery bigQuery = mock(BigQuery.class);
     when(bigQuery.getDataset(properties.dataset())).thenReturn(mock(Dataset.class));
 
