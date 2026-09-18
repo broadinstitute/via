@@ -30,11 +30,10 @@ gcloud auth application-default login   # if you haven't already
 ./scripts/dev-setup.sh
 ```
 
-`dev-setup.sh` checks your toolchain (JDK 21, Node 20+, gcloud), writes
+`dev-setup.sh` checks your local environment for JDK 21, Node 20+ and gcloud, writes
 `.env.local`, and uses your Application Default Credentials to confirm you can
-actually read the configured BigQuery table — worth knowing before you start
-debugging something else. It's safe to re-run; delete `.env.local` to
-regenerate it.
+actually read the configured BigQuery table. If needed, delete `.env.local` to
+regenerate it from scratch.
 
 Then run the backend and frontend separately, with Vite proxying `/api` calls
 to the backend (see `ui/vite.config.ts`):
@@ -53,17 +52,16 @@ Open the URL Vite prints (default `http://localhost:5173`).
 
 ### Environment variables
 
-`.env.local` (written by `dev-setup.sh`, not committed) holds everything local
+`.env.local` (written locally by `dev-setup.sh`) holds everything local
 development needs. The backend also runs without it, falling back to the
 defaults in `api/src/main/resources/application.properties`.
 
 | Variable | Purpose |
 |---|---|
-| `JAVA_HOME` | JDK 21 for Gradle, pinned because shims often point elsewhere |
-| `WORKBENCH_USER_EMAIL` | Local stand-in for the email Workbench injects; returned by `GET /api/profile` |
-| `BIGQUERY_PROJECT_ID` | Project owning the VAT table, and the one query jobs are billed to |
-| `BIGQUERY_DATASET_ID` | Dataset holding the VAT table |
-| `BIGQUERY_TABLE_ID` | VAT table backing variant search |
+| `WORKBENCH_USER_EMAIL` | The email of the user running VIA |
+| `BIGQUERY_PROJECT_ID` | Project owning the BigQuery dataset, and the one query jobs are billed to |
+| `BIGQUERY_DATASET_ID` | Dataset holding the variant data |
+| `BIGQUERY_TABLE_ID` | Table backing variant search |
 
 Credentials are never configured here: the BigQuery client always uses
 Application Default Credentials (gcloud locally, the VM's attached service
