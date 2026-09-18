@@ -10,6 +10,9 @@ ui/dist/
 ui/*.tsbuildinfo
 ui/coverage/
 
+# Local development environment, written by scripts/dev-setup.sh
+.env.local
+
 # IDE
 .idea/
 *.iml
