@@ -33,7 +33,7 @@ import org.broadinstitute.variantinterpretation.model.PhenotypeCrosswalk;
 public final class MockPhenotypeData {
 
   /** How many participants any supplied phenotype matches. There's no cohort behind the number. */
-  static final int PARTICIPANT_COUNT = 978;
+  static final int PARTICIPANT_COUNT = 214;
 
   // An AF ratio at or above this is what the UI flags as an enrichment worth a look, so the
   // generated data deliberately puts some variants over the line and keeps the rest under it.
@@ -87,24 +87,24 @@ public final class MockPhenotypeData {
    */
   public static List<BreakdownSegment> ancestryBreakdown() {
     return List.of(
-        segment("EUR", 469, "#F9C854"),
-        segment("AFR", 192, "#2078B4"),
-        segment("AMR", 174, "#6DACE4"),
-        segment("OTH", 87, "#B3AEAD"),
-        segment("EAS", 32, "#A27BD7"),
-        segment("SAS", 19, "#8CCA90"),
-        segment("MID", 5, "#CB2D4C"));
+        segment("EUR", 103, "#F9C854"),
+        segment("AFR", 42, "#2078B4"),
+        segment("AMR", 38, "#6DACE4"),
+        segment("OTH", 19, "#B3AEAD"),
+        segment("EAS", 7, "#A27BD7"),
+        segment("SAS", 4, "#8CCA90"),
+        segment("MID", 1, "#CB2D4C"));
   }
 
   /** Age makeup of the same matched participants, so it totals {@link #PARTICIPANT_COUNT} too. */
   public static List<BreakdownSegment> ageBreakdown() {
     return List.of(
-        segment("18–29", 78, "#B8DCEF"),
-        segment("30–39", 137, "#8DC6E5"),
-        segment("40–49", 210, "#5FAEDA"),
-        segment("50–59", 256, "#3B8FC4"),
-        segment("60–69", 215, "#2569A0"),
-        segment("70+", 82, "#17456F"));
+        segment("18–29", 17, "#B8DCEF"),
+        segment("30–39", 30, "#8DC6E5"),
+        segment("40–49", 46, "#5FAEDA"),
+        segment("50–59", 56, "#3B8FC4"),
+        segment("60–69", 47, "#2569A0"),
+        segment("70+", 18, "#17456F"));
   }
 
   // Counts are what's authored (they have to sum to PARTICIPANT_COUNT); percent is derived from

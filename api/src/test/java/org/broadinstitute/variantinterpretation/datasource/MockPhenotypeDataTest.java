@@ -95,7 +95,7 @@ class MockPhenotypeDataTest {
 
   @Test
   void hasStats_isFalse_whenTheMatchedCohortIsTooSmallASliceToScaleTo() {
-    // Scaling a handful of called alleles down by 978/245,000 rounds away to nothing, which is a
+    // Scaling a handful of called alleles down by 214/245,000 rounds away to nothing, which is a
     // row with no allele number to report rather than a row of zeroes.
     assertThat(filteredVariant(variant("1-550-A-G", 0.01, 100)).getHasStats()).isFalse();
   }
