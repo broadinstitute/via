@@ -22,8 +22,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           # Matches the node:22-alpine build stage in deploy/Dockerfile.
-          # jsdom 30 (via vitest) requires Node >= 22; it calls
-          # worker_threads.markAsUncloneable, which Node 20 does not export.
           node-version: "22"
           cache: "npm"
           cache-dependency-path: ui/package-lock.json
