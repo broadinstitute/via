@@ -1,13 +1,12 @@
 import { Fragment, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import { flexRender, type SortingState } from "@tanstack/react-table";
 import {
-  createColumnHelper,
-  flexRender,
   getCoreRowModel,
   getSortedRowModel,
-  useReactTable,
-  type SortingState,
-} from "@tanstack/react-table";
+  legacyCreateColumnHelper as createColumnHelper,
+  useLegacyTable as useReactTable,
+} from "@tanstack/react-table/legacy";
 import colors, { sourceTints } from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
@@ -211,7 +210,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         id: "meta",
         header: "",
         enableSorting: false,
-        columns: [
+        columns: columnHelper.columns([
           columnHelper.display({
             id: "expand",
             header: "",
@@ -269,7 +268,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             cell: ({ row }) => (row.original.annotated ? row.original.classification : <NotAvailable />),
             sortUndefined: "last",
           }),
-        ],
+        ]),
       }),
       columnHelper.group({
         id: "aou",
@@ -285,7 +284,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
           </>
         ),
         enableSorting: false,
-        columns: [
+        columns: columnHelper.columns([
           columnHelper.accessor((row) => (row.annotated ? row.aouSubpopulation ?? undefined : undefined), {
             id: "aouSubpop",
             header: "",
@@ -319,7 +318,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               ),
             sortUndefined: "last",
           }),
-        ],
+        ]),
       }),
       columnHelper.group({
         id: "gnomad",
@@ -335,7 +334,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
           </>
         ),
         enableSorting: false,
-        columns: [
+        columns: columnHelper.columns([
           columnHelper.accessor((row) => (row.annotated ? row.gnomadSubpopulation ?? undefined : undefined), {
             id: "gnomadSubpop",
             header: "",
@@ -369,13 +368,13 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               ),
             sortUndefined: "last",
           }),
-        ],
+        ]),
       }),
       columnHelper.group({
         id: "annotations",
         header: "",
         enableSorting: false,
-        columns: [
+        columns: columnHelper.columns([
           columnHelper.accessor(
             (row) =>
               row.annotated && row.clinvarSignificance
@@ -414,7 +413,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             },
             sortUndefined: "last",
           }),
-        ],
+        ]),
       }),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,14 +1,12 @@
 import { useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import { flexRender, type RowSelectionState, type SortingState } from "@tanstack/react-table";
 import {
-  createColumnHelper,
-  flexRender,
   getCoreRowModel,
   getSortedRowModel,
-  useReactTable,
-  type RowSelectionState,
-  type SortingState,
-} from "@tanstack/react-table";
+  legacyCreateColumnHelper as createColumnHelper,
+  useLegacyTable as useReactTable,
+} from "@tanstack/react-table/legacy";
 import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
@@ -129,143 +127,144 @@ export default function ParticipantMatchedVariantsPanel({
   const columnHelper = useMemo(() => createColumnHelper<FilteredVariantRow>(), []);
 
   const columns = useMemo(
-    () => [
-      columnHelper.display({
-        id: "select",
-        header: ({ table }) => (
-          <input
-            type="checkbox"
-            checked={table.getIsAllRowsSelected()}
-            ref={(el) => {
-              if (el) el.indeterminate = table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected();
-            }}
-            onChange={table.getToggleAllRowsSelectedHandler()}
-            style={Style.table.checkbox}
-          />
-        ),
-        cell: ({ row }) => (
-          <input
-            type="checkbox"
-            checked={row.getIsSelected()}
-            onChange={row.getToggleSelectedHandler()}
-            style={Style.table.checkbox}
-          />
-        ),
-        enableSorting: false,
-      }),
-      columnHelper.accessor("variant", {
-        header: "Variant",
-        cell: (info) => <span style={Style.elements.mono}>{info.getValue()}</span>,
-      }),
-      columnHelper.accessor((row) => row.gene ?? undefined, {
-        id: "gene",
-        header: "Gene",
-        cell: ({ row }) => row.original.gene ?? <NotAvailable />,
-        sortUndefined: "last",
-      }),
-      columnHelper.accessor((row) => row.classification ?? undefined, {
-        id: "classification",
-        header: "Classification",
-        cell: ({ row }) => row.original.classification ?? <NotAvailable />,
-        sortUndefined: "last",
-      }),
-      columnHelper.accessor((row) => (row.hasStats ? row.cohortAc : undefined), {
-        id: "cohortAc",
-        header: () => (
-          <>
-            Cohort AC{" "}
-            <span style={Style.elements.tooltipIcon} title="Allele count among phenotype-matched participants.">
-              i
-            </span>
-          </>
-        ),
-        cell: ({ row }) => (row.original.hasStats ? row.original.cohortAc : <NotAvailable />),
-        sortUndefined: "last",
-      }),
-      columnHelper.accessor((row) => (row.hasStats ? row.cohortAn : undefined), {
-        id: "cohortAn",
-        header: () => (
-          <>
-            Cohort AN{" "}
-            <span style={Style.elements.tooltipIcon} title="Allele number among phenotype-matched participants.">
-              i
-            </span>
-          </>
-        ),
-        cell: ({ row }) => (row.original.hasStats ? row.original.cohortAn : <NotAvailable />),
-        sortUndefined: "last",
-      }),
-      columnHelper.accessor((row) => (row.hasStats ? row.cohortAf : undefined), {
-        id: "cohortAf",
-        header: () => (
-          <>
-            Cohort AF{" "}
-            <span style={Style.elements.tooltipIcon} title="Allele frequency among phenotype-matched participants.">
-              i
-            </span>
-          </>
-        ),
-        cell: ({ row }) => (row.original.hasStats ? row.original.cohortAf.toFixed(4) : <NotAvailable />),
-        sortUndefined: "last",
-      }),
-      columnHelper.accessor((row) => (row.hasStats ? row.homozygotes : undefined), {
-        id: "homozygotes",
-        header: "Homozygotes",
-        cell: ({ row }) => (row.original.hasStats ? row.original.homozygotes : <NotAvailable />),
-        sortUndefined: "last",
-      }),
-      columnHelper.accessor((row) => (row.hasStats ? row.heterozygotes : undefined), {
-        id: "heterozygotes",
-        header: "Heterozygotes",
-        cell: ({ row }) => (row.original.hasStats ? row.original.heterozygotes : <NotAvailable />),
-        sortUndefined: "last",
-      }),
-      columnHelper.accessor((row) => (row.hasStats ? row.clinvarPlpInTrans : undefined), {
-        id: "clinvarPlpInTrans",
-        header: () => (
-          <>
-            ClinVar P/LP in trans{" "}
-            <span
-              style={Style.elements.tooltipIcon}
-              title="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans."
-            >
-              i
-            </span>
-          </>
-        ),
-        cell: ({ row }) => (row.original.hasStats ? row.original.clinvarPlpInTrans : <NotAvailable />),
-        sortUndefined: "last",
-      }),
-      columnHelper.accessor((row) => (row.hasStats ? row.afRatio : undefined), {
-        id: "afRatio",
-        header: () => (
-          <>
-            AF Ratio{" "}
-            <span
-              style={Style.elements.tooltipIcon}
-              title="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF."
-            >
-              i
-            </span>
-          </>
-        ),
-        cell: ({ row }) => {
-          if (!row.original.hasStats) return <NotAvailable />;
-          const { afRatio } = row.original;
-          const elevated = afRatio >= ELEVATED_AF_RATIO_THRESHOLD;
-          return <span style={elevated ? styles.deltaUp : styles.deltaFlat}>{afRatio.toFixed(1)}x</span>;
-        },
-        sortUndefined: "last",
-      }),
-      columnHelper.display({
-        id: "copy",
-        header: "",
-        cell: ({ row }) => (
-          <CopyButton getText={() => rowToTsvValues(row.original).join("\t")} label="Copy row" />
-        ),
-        enableSorting: false,
-      }),
-    ],
+    () =>
+      columnHelper.columns([
+        columnHelper.display({
+          id: "select",
+          header: ({ table }) => (
+            <input
+              type="checkbox"
+              checked={table.getIsAllRowsSelected()}
+              ref={(el) => {
+                if (el) el.indeterminate = table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected();
+              }}
+              onChange={table.getToggleAllRowsSelectedHandler()}
+              style={Style.table.checkbox}
+            />
+          ),
+          cell: ({ row }) => (
+            <input
+              type="checkbox"
+              checked={row.getIsSelected()}
+              onChange={row.getToggleSelectedHandler()}
+              style={Style.table.checkbox}
+            />
+          ),
+          enableSorting: false,
+        }),
+        columnHelper.accessor("variant", {
+          header: "Variant",
+          cell: (info) => <span style={Style.elements.mono}>{info.getValue()}</span>,
+        }),
+        columnHelper.accessor((row) => row.gene ?? undefined, {
+          id: "gene",
+          header: "Gene",
+          cell: ({ row }) => row.original.gene ?? <NotAvailable />,
+          sortUndefined: "last",
+        }),
+        columnHelper.accessor((row) => row.classification ?? undefined, {
+          id: "classification",
+          header: "Classification",
+          cell: ({ row }) => row.original.classification ?? <NotAvailable />,
+          sortUndefined: "last",
+        }),
+        columnHelper.accessor((row) => (row.hasStats ? row.cohortAc : undefined), {
+          id: "cohortAc",
+          header: () => (
+            <>
+              Cohort AC{" "}
+              <span style={Style.elements.tooltipIcon} title="Allele count among phenotype-matched participants.">
+                i
+              </span>
+            </>
+          ),
+          cell: ({ row }) => (row.original.hasStats ? row.original.cohortAc : <NotAvailable />),
+          sortUndefined: "last",
+        }),
+        columnHelper.accessor((row) => (row.hasStats ? row.cohortAn : undefined), {
+          id: "cohortAn",
+          header: () => (
+            <>
+              Cohort AN{" "}
+              <span style={Style.elements.tooltipIcon} title="Allele number among phenotype-matched participants.">
+                i
+              </span>
+            </>
+          ),
+          cell: ({ row }) => (row.original.hasStats ? row.original.cohortAn : <NotAvailable />),
+          sortUndefined: "last",
+        }),
+        columnHelper.accessor((row) => (row.hasStats ? row.cohortAf : undefined), {
+          id: "cohortAf",
+          header: () => (
+            <>
+              Cohort AF{" "}
+              <span style={Style.elements.tooltipIcon} title="Allele frequency among phenotype-matched participants.">
+                i
+              </span>
+            </>
+          ),
+          cell: ({ row }) => (row.original.hasStats ? row.original.cohortAf.toFixed(4) : <NotAvailable />),
+          sortUndefined: "last",
+        }),
+        columnHelper.accessor((row) => (row.hasStats ? row.homozygotes : undefined), {
+          id: "homozygotes",
+          header: "Homozygotes",
+          cell: ({ row }) => (row.original.hasStats ? row.original.homozygotes : <NotAvailable />),
+          sortUndefined: "last",
+        }),
+        columnHelper.accessor((row) => (row.hasStats ? row.heterozygotes : undefined), {
+          id: "heterozygotes",
+          header: "Heterozygotes",
+          cell: ({ row }) => (row.original.hasStats ? row.original.heterozygotes : <NotAvailable />),
+          sortUndefined: "last",
+        }),
+        columnHelper.accessor((row) => (row.hasStats ? row.clinvarPlpInTrans : undefined), {
+          id: "clinvarPlpInTrans",
+          header: () => (
+            <>
+              ClinVar P/LP in trans{" "}
+              <span
+                style={Style.elements.tooltipIcon}
+                title="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans."
+              >
+                i
+              </span>
+            </>
+          ),
+          cell: ({ row }) => (row.original.hasStats ? row.original.clinvarPlpInTrans : <NotAvailable />),
+          sortUndefined: "last",
+        }),
+        columnHelper.accessor((row) => (row.hasStats ? row.afRatio : undefined), {
+          id: "afRatio",
+          header: () => (
+            <>
+              AF Ratio{" "}
+              <span
+                style={Style.elements.tooltipIcon}
+                title="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF."
+              >
+                i
+              </span>
+            </>
+          ),
+          cell: ({ row }) => {
+            if (!row.original.hasStats) return <NotAvailable />;
+            const { afRatio } = row.original;
+            const elevated = afRatio >= ELEVATED_AF_RATIO_THRESHOLD;
+            return <span style={elevated ? styles.deltaUp : styles.deltaFlat}>{afRatio.toFixed(1)}x</span>;
+          },
+          sortUndefined: "last",
+        }),
+        columnHelper.display({
+          id: "copy",
+          header: "",
+          cell: ({ row }) => (
+            <CopyButton getText={() => rowToTsvValues(row.original).join("\t")} label="Copy row" />
+          ),
+          enableSorting: false,
+        }),
+      ]),
     [columnHelper],
   );
 
