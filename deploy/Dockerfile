@@ -1,7 +1,7 @@
 # Build context is the repository root (see docker-compose.yaml), so paths
 # below are relative to the top of the repo, not this folder.
 
-FROM node:20-alpine AS ui-build
+FROM node:22-alpine AS ui-build
 WORKDIR /ui
 COPY ui/package*.json ./
 RUN npm ci
