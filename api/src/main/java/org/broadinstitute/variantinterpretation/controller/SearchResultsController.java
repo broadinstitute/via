@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.broadinstitute.variantinterpretation.datasource.BigQueryProperties;
+import org.broadinstitute.variantinterpretation.datasource.ConditionLookupService;
 import org.broadinstitute.variantinterpretation.datasource.MockPhenotypeData;
 import org.broadinstitute.variantinterpretation.api.SearchApi;
 import org.broadinstitute.variantinterpretation.model.ClinvarSubmission;
@@ -100,18 +101,24 @@ public class SearchResultsController implements SearchApi {
 
   private final BigQuery bigQuery;
   private final BigQueryProperties properties;
+  private final ConditionLookupService conditionLookup;
 
-  public SearchResultsController(BigQuery bigQuery, BigQueryProperties properties) {
+  public SearchResultsController(
+      BigQuery bigQuery, BigQueryProperties properties, ConditionLookupService conditionLookup) {
     this.bigQuery = bigQuery;
     this.properties = properties;
+    this.conditionLookup = conditionLookup;
   }
 
-  // cohortVariants is the only half of this response backed by a real query: the VAT has no
-  // phenotype, participant, ancestry, or age data in it, only variant-level annotation. So
-  // phenotypeCrosswalk, the breakdowns, and filteredVariants are served from MockPhenotypeData
-  // until a genotype-level data source exists
+  // cohortVariants and conditionSearch are the parts of this response backed by real queries:
+  // cohortVariants against the VAT, conditionSearch against cb_criteria / concept_ancestor /
+  // condition_occurrence. The VAT holds only variant-level annotation -- no phenotype,
+  // participant, ancestry or age data -- so phenotypeCrosswalk, the breakdowns and
+  // filteredVariants are still served from MockPhenotypeData until a genotype-level data
+  // source exists. hpoTerm and condition are independent: the former is mock, the latter isn't.
   @Override
-  public ResponseEntity<SearchResultsResponse> searchResults(List<String> variants, String hpoTerm) {
+  public ResponseEntity<SearchResultsResponse> searchResults(
+      List<String> variants, String hpoTerm, String condition) {
     List<String> requested = normalizeVariants(variants);
     List<CohortVariant> cohortVariants =
         requested.isEmpty() ? List.of() : fetchSearchedCohortVariants(requested);
@@ -121,6 +128,7 @@ public class SearchResultsController implements SearchApi {
     return ResponseEntity.ok(
         new SearchResultsResponse()
             .searchSummary(searchSummary(requested, effectiveHpoTerm))
+            .conditionSearch(conditionLookup.search(condition))
             .phenotypeCrosswalk(phenotypeFiltered ? MockPhenotypeData.crosswalk(effectiveHpoTerm) : null)
             .ancestryBreakdown(phenotypeFiltered ? MockPhenotypeData.ancestryBreakdown() : List.of())
             .ageBreakdown(phenotypeFiltered ? MockPhenotypeData.ageBreakdown() : List.of())

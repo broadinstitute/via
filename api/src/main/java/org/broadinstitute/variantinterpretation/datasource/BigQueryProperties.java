@@ -12,9 +12,18 @@ public record BigQueryProperties(String projectId, String datasetId, String tabl
     return DatasetId.of(projectId, datasetId);
   }
 
-  /** Fully-qualified, backtick-quotable reference to the configured table, for use in SQL. */
+  /** Fully-qualified, backtick-quotable reference to the configured VAT table, for use in SQL. */
   public String tableRef() {
-    return "`%s.%s.%s`".formatted(projectId, datasetId, tableId);
+    return tableRef(tableId);
+  }
+
+  /**
+   * Same, for another table in the configured dataset. The condition lookup tables aren't
+   * configurable the way the VAT table is: `cb_criteria`, `concept_ancestor` and
+   * `condition_occurrence` are fixed names in every All of Us CDR, so only the dataset varies.
+   */
+  public String tableRef(String table) {
+    return "`%s.%s.%s`".formatted(projectId, datasetId, table);
   }
 
   @Override

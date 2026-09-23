@@ -47,6 +47,16 @@ paths:
             If not provided, no phenotype filtering is applied. There's no
             participant-level data source behind this yet, so any term given
             matches the same mock cohort -- see phenotypeCrosswalk.
+        - name: condition
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            Free-text condition name, e.g. "tetralogy of fallot". Matched
+            against the condition domain of `cb_criteria` and expanded through
+            `concept_ancestor` to count participants; see conditionSearch.
+            Independent of hpoTerm, which is still mock data.
       responses:
         "200":
           description: Successful response
@@ -54,6 +64,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SearchResultsResponse"
+  /api/condition:
+    get:
+      operationId: conditionCandidates
+      summary: >-
+        Returns condition concepts matching a free-text term, for the
+        phenotype search box's dropdown
+      description: >-
+        The candidate half of /api/search's conditionSearch, on its own: this
+        does not expand through concept_ancestor or count participants, so it
+        is one cheap query against cb_criteria rather than two. Use
+        /api/search?condition= when the participant count is wanted.
+      tags:
+        - condition
+      parameters:
+        - name: condition
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            Free-text condition name, e.g. "tetralogy of fallot". A blank or
+            absent term returns no candidates rather than an error, so a
+            type-ahead can call this on every keystroke without special-casing
+            the empty box.
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConditionCandidates"
   /api/sources:
     get:
       operationId: dataSourceVersions
@@ -141,6 +182,7 @@ components:
         - ageBreakdown
         - cohortVariants
         - filteredVariants
+        - conditionSearch
       properties:
         searchSummary:
           $ref: "#/components/schemas/SearchSummary"
@@ -154,6 +196,14 @@ components:
             synthetic cohort, as do the two breakdowns and filteredVariants.
           allOf:
             - $ref: "#/components/schemas/PhenotypeCrosswalk"
+        conditionSearch:
+          nullable: true
+          description: >-
+            Null when no condition term was given. Unlike phenotypeCrosswalk
+            and the breakdowns, this is backed by real queries against
+            cb_criteria, concept_ancestor and condition_occurrence.
+          allOf:
+            - $ref: "#/components/schemas/ConditionSearch"
         ancestryBreakdown:
           description: >-
             Mock data (see phenotypeCrosswalk). Counts sum to the crosswalk's
@@ -194,6 +244,85 @@ components:
           type: integer
         hpoTerm:
           type: string
+    ConditionCandidates:
+      type: object
+      required:
+        - term
+        - candidates
+      properties:
+        term:
+          type: string
+          description: >-
+            The term as entered, trimmed, echoed back so a type-ahead can
+            discard responses that arrive out of order.
+          example: "tetralogy of fallot"
+        candidates:
+          description: >-
+            Ranked as in ConditionSearch.candidates. Empty when nothing
+            matched, or when the term was blank.
+          type: array
+          items:
+            $ref: "#/components/schemas/ConditionConcept"
+    ConditionSearch:
+      type: object
+      required:
+        - term
+        - candidates
+        - selectedConceptIds
+        - participantCount
+      properties:
+        term:
+          type: string
+          description: The condition term as entered, trimmed.
+          example: "tetralogy of fallot"
+        candidates:
+          description: >-
+            Matching condition concepts, best first: exact name match, then
+            estimatedParticipantCount descending, with concepts that have no
+            estimate last. Empty when nothing matched.
+          type: array
+          items:
+            $ref: "#/components/schemas/ConditionConcept"
+        selectedConceptIds:
+          description: >-
+            The concepts participantCount was counted over: currently the
+            top-ranked candidate with at least one estimated participant.
+            Empty when no candidate qualified.
+          type: array
+          items:
+            type: integer
+            format: int64
+        participantCount:
+          type: integer
+          nullable: true
+          description: >-
+            Distinct participants having any *descendant* of selectedConceptIds
+            recorded in condition_occurrence. Null when selectedConceptIds is
+            empty. This is a real count, and will not match the selected
+            concept's estimatedParticipantCount exactly.
+          example: 49
+    ConditionConcept:
+      type: object
+      required:
+        - conceptId
+        - name
+      properties:
+        conceptId:
+          type: integer
+          format: int64
+          example: 9000010
+        name:
+          type: string
+          example: "Tetralogy of Fallot"
+        estimatedParticipantCount:
+          type: integer
+          nullable: true
+          description: >-
+            cb_criteria.est_count. An estimate, not a count -- it is what the
+            ranking is based on, but participantCount is the real number. Null
+            when the column was null or non-numeric; the real table also
+            carries 0 and -1.
+          example: 47
     PhenotypeCrosswalk:
       type: object
       required:
