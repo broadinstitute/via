@@ -281,10 +281,10 @@ def build_condition_occurrence(rng, assignment):
                     "condition_concept_id": concept_id,
                     "condition_start_date": start.isoformat(),
                     "condition_start_datetime":
-                        f"{start.isoformat()} {hour:02d}:{minute:02d}:00 UTC",
+                        f"{start.isoformat()} {hour:02d}:{minute:02d}:00",
                     "condition_end_date": end.isoformat() if end else None,
                     "condition_end_datetime":
-                        f"{end.isoformat()} {hour:02d}:{minute:02d}:00 UTC"
+                        f"{end.isoformat()} {hour:02d}:{minute:02d}:00"
                         if end else None,
                     "condition_type_concept_id": EHR_ENCOUNTER_DIAGNOSIS,
                     "condition_status_concept_id": None,
@@ -316,6 +316,10 @@ def write_ndjson(path, rows, schema_path=None):
             raise SystemExit(f"ERROR: {path}: generated fields not in schema: {sorted(extra)}")
         order = [f["name"] for f in schema]
         rows = [{k: r[k] for k in order} for r in rows]
+
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
 
     with open(path, "w") as fh:
         for r in rows:

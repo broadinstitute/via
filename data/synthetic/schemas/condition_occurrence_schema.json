@@ -22,7 +22,7 @@
   {
     "mode": "NULLABLE",
     "name": "condition_start_datetime",
-    "type": "TIMESTAMP"
+    "type": "DATETIME"
   },
   {
     "mode": "NULLABLE",
@@ -32,7 +32,7 @@
   {
     "mode": "NULLABLE",
     "name": "condition_end_datetime",
-    "type": "TIMESTAMP"
+    "type": "DATETIME"
   },
   {
     "mode": "NULLABLE",

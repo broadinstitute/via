@@ -15,6 +15,7 @@ Defaults assume it's run from the repo root; every path can be overridden.
 
 import argparse
 import json
+import os
 import random
 
 # ---------------------------------------------------------------------------
@@ -393,6 +394,10 @@ def main():
         order = [f["name"] for f in schema]
         rows = [{k: r[k] for k in order} for r in rows]
         print(f"Validated all {len(expected)} schema fields are present.")
+
+    parent = os.path.dirname(args.out)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
 
     with open(args.out, "w") as fh:
         for r in rows:
