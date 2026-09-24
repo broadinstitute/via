@@ -19,6 +19,6 @@ public class BigQueryConfig {
    */
   @Bean
   public BigQuery bigQuery(BigQueryProperties properties) {
-    return BigQueryOptions.newBuilder().setProjectId(properties.projectId()).build().getService();
+    return BigQueryOptions.newBuilder().setProjectId(properties.billingProjectId()).build().getService();
   }
 }

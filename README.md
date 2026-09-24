@@ -59,9 +59,11 @@ defaults in `api/src/main/resources/application.properties`.
 | Variable | Purpose |
 |---|---|
 | `WORKBENCH_USER_EMAIL` | The email of the user running VIA |
-| `BIGQUERY_PROJECT_ID` | Project owning the BigQuery dataset, and the one query jobs are billed to |
+| `BIGQUERY_PROJECT_ID` | Project owning the VAT dataset |
 | `BIGQUERY_DATASET_ID` | Dataset holding the variant data |
 | `BIGQUERY_TABLE_ID` | Table backing variant search |
+| `GOOGLE_PROJECT` | Project query jobs are billed to; defaults to `BIGQUERY_PROJECT_ID` |
+| `WORKSPACE_CDR` | CDR dataset (`project.dataset`) holding the condition lookup tables; defaults to the VAT dataset |
 
 Credentials are never configured here: the BigQuery client always uses
 Application Default Credentials (gcloud locally, the VM's attached service

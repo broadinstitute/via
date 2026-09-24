@@ -130,8 +130,9 @@ paths:
     get:
       operationId: bigQueryStatus
       summary: >-
-        Reports whether the backend can reach the configured BigQuery dataset
-        with its Application Default Credentials
+        Reports whether the backend can read every BigQuery table it queries
+        (the VAT table and the CDR's condition lookup tables) with its
+        Application Default Credentials
       tags:
         - system
       responses:
@@ -149,19 +150,23 @@ components:
       type: object
       required:
         - accessible
-        - dataset
+        - tables
       properties:
         accessible:
           type: boolean
-          description: True when the dataset's metadata could be read.
-        dataset:
-          type: string
-          description: The dataset that was checked, as "project:dataset".
-          example: "placeholder-project:placeholder_dataset"
+          description: True when every table's metadata could be read.
+        tables:
+          type: array
+          items:
+            type: string
+          description: The tables that were checked, as "project.dataset.table".
+          example: ["placeholder-project.placeholder_dataset.v1"]
         detail:
           type: string
           nullable: true
-          description: Why the check failed. Null when accessible is true.
+          description: >-
+            Which tables failed and why, separated by "; ". Null when
+            accessible is true.
     UserProfile:
       type: object
       required:

@@ -166,7 +166,7 @@ public class SearchResultsController implements SearchApi {
    */
   private List<CohortVariant> fetchSearchedCohortVariants(List<String> vids) {
     var configuration =
-        QueryJobConfiguration.newBuilder(SEARCH_COHORT_VARIANTS_SQL.formatted(properties.tableRef()))
+        QueryJobConfiguration.newBuilder(SEARCH_COHORT_VARIANTS_SQL.formatted(properties.vatTableRef()))
             .addNamedParameter(
                 "vids", QueryParameterValue.array(vids.toArray(new String[0]), StandardSQLTypeName.STRING))
             .setMaximumBytesBilled(MAXIMUM_BYTES_BILLED)

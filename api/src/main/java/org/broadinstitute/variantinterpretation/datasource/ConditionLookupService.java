@@ -46,10 +46,14 @@ public class ConditionLookupService {
 
   private static final Logger log = LoggerFactory.getLogger(ConditionLookupService.class);
 
-  // Fixed CDR table names; only the dataset varies. See BigQueryProperties#tableRef(String).
+  // Fixed CDR table names; only the dataset varies. See BigQueryProperties#cdrTable(String).
   private static final String CB_CRITERIA = "cb_criteria";
   private static final String CONCEPT_ANCESTOR = "concept_ancestor";
   private static final String CONDITION_OCCURRENCE = "condition_occurrence";
+
+  /** Every CDR table this service queries, for the access check in SystemController. */
+  public static final List<String> CDR_TABLES =
+      List.of(CB_CRITERIA, CONCEPT_ANCESTOR, CONDITION_OCCURRENCE);
 
   // Matches SearchResultsController: keeps development cost down and turns an accidental
   // full-table scan of condition_occurrence into an error rather than a bill. See VIA-50.
@@ -190,7 +194,7 @@ public class ConditionLookupService {
   private List<ConditionConcept> resolveConcepts(List<Long> conceptIds) {
     var configuration =
         QueryJobConfiguration.newBuilder(
-                RESOLVE_CONCEPTS_SQL.formatted(properties.tableRef(CB_CRITERIA)))
+                RESOLVE_CONCEPTS_SQL.formatted(properties.cdrTableRef(CB_CRITERIA)))
             .addNamedParameter(
                 "conceptIds",
                 QueryParameterValue.array(conceptIds.toArray(new Long[0]), StandardSQLTypeName.INT64))
@@ -249,7 +253,7 @@ public class ConditionLookupService {
     var builder =
         QueryJobConfiguration.newBuilder(
                 SEARCH_CONCEPTS_SQL.formatted(
-                    properties.tableRef(CB_CRITERIA),
+                    properties.cdrTableRef(CB_CRITERIA),
                     String.join(" AND ", predicates),
                     CANDIDATES_LIMIT))
             .addNamedParameter("exactName", QueryParameterValue.string(rawTerm.toLowerCase(Locale.ROOT)))
@@ -277,8 +281,8 @@ public class ConditionLookupService {
     var configuration =
         QueryJobConfiguration.newBuilder(
                 COHORT_COUNT_SQL.formatted(
-                    properties.tableRef(CONDITION_OCCURRENCE),
-                    properties.tableRef(CONCEPT_ANCESTOR)))
+                    properties.cdrTableRef(CONDITION_OCCURRENCE),
+                    properties.cdrTableRef(CONCEPT_ANCESTOR)))
             .addNamedParameter(
                 "seeds",
                 QueryParameterValue.array(seedConceptIds.toArray(new Long[0]), StandardSQLTypeName.INT64))
