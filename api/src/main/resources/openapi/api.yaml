@@ -154,19 +154,29 @@ components:
       properties:
         accessible:
           type: boolean
-          description: True when every table's metadata could be read.
+          description: True when every table is accessible.
         tables:
           type: array
+          description: Every table VIA queries, in the order they were checked.
           items:
-            type: string
-          description: The tables that were checked, as "project.dataset.table".
-          example: ["placeholder-project.placeholder_dataset.v1"]
+            $ref: "#/components/schemas/TableStatus"
+    TableStatus:
+      type: object
+      required:
+        - table
+        - accessible
+      properties:
+        table:
+          type: string
+          description: The table that was checked, as "project.dataset.table".
+          example: "placeholder-project.placeholder_dataset.v1"
+        accessible:
+          type: boolean
+          description: True when the table's metadata could be read.
         detail:
           type: string
           nullable: true
-          description: >-
-            Which tables failed and why, separated by "; ". Null when
-            accessible is true.
+          description: Why the check failed. Null when accessible is true.
     UserProfile:
       type: object
       required:

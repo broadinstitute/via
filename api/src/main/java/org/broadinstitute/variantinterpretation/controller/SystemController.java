@@ -10,6 +10,7 @@ import org.broadinstitute.variantinterpretation.datasource.ConditionLookupServic
 import org.broadinstitute.variantinterpretation.api.SystemApi;
 import org.broadinstitute.variantinterpretation.model.BigQueryStatus;
 import org.broadinstitute.variantinterpretation.model.DataSourceVersion;
+import org.broadinstitute.variantinterpretation.model.TableStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +31,7 @@ public class SystemController implements SystemApi {
 
   /**
    * Checks every table VIA queries, not just their datasets: a readable dataset doesn't mean the
-   * configured table is in it. Each table is checked even after one fails, so the detail names
+   * configured table is in it. Each table is checked even after one fails, so the response names
    * everything that's missing at once.
    */
   @Override
@@ -39,27 +40,24 @@ public class SystemController implements SystemApi {
     tables.add(properties.vatTable());
     ConditionLookupService.CDR_TABLES.forEach(t -> tables.add(properties.cdrTable(t)));
 
-    List<String> failures = new ArrayList<>();
-    for (TableId table : tables) {
-      String ref = name(table);
-      try {
-        if (bigQuery.getTable(table) == null) {
-          failures.add(ref + ": does not exist, or is not visible to us");
-        }
-      } catch (RuntimeException e) {
-        log.warn("BigQuery access check failed for table {}", ref, e);
-        failures.add(ref + ": " + e.getMessage());
-      }
-    }
-
-    var status =
+    List<TableStatus> statuses = tables.stream().map(this::check).toList();
+    return ResponseEntity.ok(
         new BigQueryStatus()
-            .tables(tables.stream().map(SystemController::name).toList())
-            .accessible(failures.isEmpty());
-    if (!failures.isEmpty()) {
-      status.detail(String.join("; ", failures));
+            .tables(statuses)
+            .accessible(statuses.stream().allMatch(TableStatus::getAccessible)));
+  }
+
+  private TableStatus check(TableId table) {
+    var status = new TableStatus().table(name(table));
+    try {
+      if (bigQuery.getTable(table) == null) {
+        return status.accessible(false).detail("Table does not exist, or is not visible to us.");
+      }
+      return status.accessible(true);
+    } catch (RuntimeException e) {
+      log.warn("BigQuery access check failed for table {}", status.getTable(), e);
+      return status.accessible(false).detail(e.getMessage());
     }
-    return ResponseEntity.ok(status);
   }
 
   // TODO VIA-47: right now these data source versions are hardcoded (and not entirely accurate)

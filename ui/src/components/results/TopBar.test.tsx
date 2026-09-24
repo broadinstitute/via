@@ -102,4 +102,22 @@ describe("TopBar", () => {
 
     expect(onModifySearch).toHaveBeenCalledTimes(1);
   });
+
+  it("opens the settings dialog from the gear button", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ accessible: true, tables: [] }) })),
+    );
+    renderTopBar({ userEmail: "user@example.org" });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+
+    expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    expect(await screen.findByText("All tables accessible")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
 });
