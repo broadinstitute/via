@@ -8,7 +8,9 @@ loading into BigQuery when the schema contains REPEATED (ARRAY) fields.
 CSV cannot represent arrays.
 
 Usage:
-    python3 generate_vat_synthetic.py --rows 1000 --out synthetic_vat.ndjson
+    python3 data/synthetic/generators/generate_vat_synthetic.py
+
+Defaults assume it's run from the repo root; every path can be overridden.
 """
 
 import argparse
@@ -360,9 +362,11 @@ def make_row():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rows", type=int, default=1000)
-    ap.add_argument("--out", default="synthetic_vat.ndjson")
-    ap.add_argument("--schema", default=None,
-                    help="Path to the BQ schema JSON, for field validation.")
+    ap.add_argument("--out", default="data/synthetic/tables/synthetic_foxtrot_vat.ndjson")
+    ap.add_argument("--schema",
+                    default="data/synthetic/schemas/foxtrot_v4_2025_07_29_vat_v9_r2_p2_schema.json",
+                    help="BQ schema JSON to validate generated fields against. "
+                         "Pass an empty string to skip validation.")
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
