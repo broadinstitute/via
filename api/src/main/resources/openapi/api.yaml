@@ -87,13 +87,11 @@ paths:
     get:
       operationId: conditionCandidates
       summary: >-
-        Returns condition concepts matching a free-text term, for the
-        phenotype search box's dropdown
+        Returns condition concepts matching a free-text term
       description: >-
-        The candidate half of /api/search's conditionSearch, on its own: this
-        does not expand through concept_ancestor or count participants, so it
-        is one cheap query against cb_criteria rather than two. Use
-        /api/search?condition= when the participant count is wanted.
+        This is used for a type-ahead when the user is entering a condition
+        name. The results are ranked by estimated participant count, with
+        concepts that have no estimate last.
       tags:
         - condition
       parameters:
@@ -103,10 +101,7 @@ paths:
           schema:
             type: string
           description: >-
-            Free-text condition name, e.g. "tetralogy of fallot". A blank or
-            absent term returns no candidates rather than an error, so a
-            type-ahead can call this on every keystroke without special-casing
-            the empty box.
+            Free-text condition name, e.g. "tetralogy of fallot".
       responses:
         "200":
           description: Successful response

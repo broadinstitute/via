@@ -8,11 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Condition concept lookup for the phenotype search box's dropdown.
- *
- * <p>Deliberately only the first half of the pipeline: this ranks candidate concepts and stops.
- * Expanding through {@code concept_ancestor} and counting participants is the expensive half,
- * and a type-ahead firing on every keystroke has no use for it -- see
- * {@code /api/search?condition=} for that.
  */
 @RestController
 public class ConditionController implements ConditionApi {
