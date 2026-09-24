@@ -78,16 +78,28 @@ class ConditionLookupServiceTest {
   void search_returnsNullForBlankTerm() {
     // A null BigQuery client is the assertion: touching it would NPE.
     ConditionLookupService service = new ConditionLookupService(null, null);
-    assertThat(service.search(null)).isNull();
-    assertThat(service.search("")).isNull();
-    assertThat(service.search("   ")).isNull();
+    assertThat(service.search(null, null)).isNull();
+    assertThat(service.search("", List.of())).isNull();
+    assertThat(service.search("   ", List.of())).isNull();
+  }
+
+  /**
+   * A picked concept id means a query runs, so this only asserts the guard that both inputs
+   * being empty short-circuits before BigQuery is touched -- a null client would NPE otherwise.
+   */
+  @Test
+  void search_returnsNullOnlyWhenBothTermAndConceptIdsAreEmpty() {
+    ConditionLookupService service = new ConditionLookupService(null, null);
+    assertThat(service.search(null, null)).isNull();
+    assertThat(service.search("", List.of())).isNull();
+    assertThat(service.search("   ", null)).isNull();
   }
 
   /** Terms that reduce to nothing usable skip the query too, rather than matching everything. */
   @Test
   void search_returnsEmptyCandidatesWhenNoUsableTerms() {
     ConditionLookupService service = new ConditionLookupService(null, null);
-    var result = service.search("( )");
+    var result = service.search("( )", List.of());
 
     assertThat(result).isNotNull();
     assertThat(result.getTerm()).isEqualTo("( )");
@@ -99,7 +111,7 @@ class ConditionLookupServiceTest {
   @Test
   void search_trimsTheTermItEchoesBack() {
     ConditionLookupService service = new ConditionLookupService(null, null);
-    assertThat(service.search("  ( )  ").getTerm()).isEqualTo("( )");
+    assertThat(service.search("  ( )  ", List.of()).getTerm()).isEqualTo("( )");
   }
 
   /**

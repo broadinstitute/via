@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
+import type { ConditionSearch } from "../../api/conditions";
 import type { BreakdownSegment, PhenotypeCrosswalk } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
@@ -81,6 +82,20 @@ const styles = {
     letterSpacing: "normal",
     marginBottom: 2,
   },
+  conditionNote: {
+    marginTop: 6,
+    color: colors.textMuted,
+    fontSize: 11,
+    lineHeight: 1.45,
+  },
+  noMatch: {
+    padding: "10px 12px",
+    background: colors.surface1,
+    border: `1px solid ${colors.border}`,
+    borderRadius: Style.radius,
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
   breakdownHeader: {
     display: "flex",
     alignItems: "center",
@@ -123,6 +138,11 @@ const TABS: { id: BreakdownTab; label: string }[] = [
 ];
 
 interface PhenotypeFilterPanelProps {
+  /**
+   * The condition cohort, when one was searched. Unlike everything else in this panel, this
+   * is backed by real queries rather than MockPhenotypeData.
+   */
+  conditionSearch: ConditionSearch | null;
   crosswalk: PhenotypeCrosswalk | null;
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
@@ -131,6 +151,7 @@ interface PhenotypeFilterPanelProps {
 }
 
 export default function PhenotypeFilterPanel({
+  conditionSearch,
   crosswalk,
   ancestryBreakdown,
   ageBreakdown,
@@ -139,7 +160,14 @@ export default function PhenotypeFilterPanel({
 }: PhenotypeFilterPanelProps) {
   const [activeTab, setActiveTab] = useState<BreakdownTab>("ancestry");
 
-  if (!crosswalk) {
+  // The concepts participantCount was actually counted over, which is not always every
+  // candidate: the backend picks one when the user searched by text rather than picking.
+  const countedConcepts =
+    conditionSearch?.candidates.filter((candidate) =>
+      conditionSearch.selectedConceptIds.includes(candidate.conceptId),
+    ) ?? [];
+
+  if (!crosswalk && !conditionSearch) {
     const { message, buttonLabel } = phenotypeUnavailableCopy(hpoTerm, "participant breakdowns");
     return (
       <ResultsPanel title="Phenotype filter">
@@ -148,17 +176,53 @@ export default function PhenotypeFilterPanel({
     );
   }
 
-  const centerLabel = (
-    <>
-      <div style={styles.donutCount}>{crosswalk.participantCount.toLocaleString()}</div>
-      <div>participants</div>
-    </>
-  );
   const segments = activeTab === "ancestry" ? ancestryBreakdown : ageBreakdown;
 
   return (
     <ResultsPanel title="Phenotype filter">
       <div style={styles.body}>
+        {conditionSearch &&
+          (countedConcepts.length > 0 ? (
+            <div>
+              <div style={styles.crosswalkCard}>
+                <div style={styles.crosswalkText}>
+                  {countedConcepts.map((concept, index) => (
+                    <div
+                      key={concept.conceptId}
+                      style={index === 0 ? styles.row : { ...styles.row, marginTop: 6 }}
+                    >
+                      <div style={styles.codeLine}>
+                        <span style={styles.code}>OMOP — {concept.conceptId}</span>
+                        <CopyButton
+                          getText={() => String(concept.conceptId)}
+                          label="Copy OMOP concept ID"
+                        />
+                      </div>
+                      <span style={styles.desc}>{concept.name}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={styles.countBadge}>
+                  <div style={styles.num}>
+                    {conditionSearch.participantCount?.toLocaleString() ?? "—"}
+                  </div>
+                  <div style={styles.lbl}>participants matched</div>
+                </div>
+              </div>
+              {/* Worth stating: the count is larger than the concept's own records, and
+                  larger than the estimate shown in the search dropdown. */}
+              <p style={styles.conditionNote}>
+                Participants recorded with this condition or any more specific form of it.
+              </p>
+            </div>
+          ) : (
+            <p style={styles.noMatch}>
+              No condition concept matched “{conditionSearch.term}”.
+            </p>
+          ))}
+
+        {crosswalk && (
+          <>
         <div style={styles.crosswalkCard}>
           <div style={styles.crosswalkText}>
             <div style={styles.row}>
@@ -176,10 +240,6 @@ export default function PhenotypeFilterPanel({
               <span style={styles.desc}>{crosswalk.description}</span>
             </div>
           </div>
-          {/*<div style={styles.countBadge}>*/}
-          {/*  <div style={styles.num}>{crosswalk.participantCount}</div>*/}
-          {/*  <div style={styles.lbl}>participants matched</div>*/}
-          {/*</div>*/}
         </div>
 
         <div>
@@ -201,10 +261,20 @@ export default function PhenotypeFilterPanel({
 
           {/* Keyed by tab so switching remounts the donut/legend, replaying their entrance animation. */}
           <div key={activeTab}>
-            <PopulationDonutChart segments={segments} centerLabel={centerLabel} />
+            <PopulationDonutChart
+              segments={segments}
+              centerLabel={
+                <>
+                  <div style={styles.donutCount}>{crosswalk.participantCount.toLocaleString()}</div>
+                  <div>participants</div>
+                </>
+              }
+            />
             <BreakdownLegend segments={segments} />
           </div>
         </div>
+          </>
+        )}
       </div>
     </ResultsPanel>
   );

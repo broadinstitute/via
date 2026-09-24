@@ -89,6 +89,24 @@ public class ConditionLookupService {
       LIMIT %d
       """;
 
+  /**
+   * Resolves concepts the user actually picked. Filtered to standard condition concepts on
+   * purpose: an id that isn't one is dropped rather than seeded on, so a stale or hand-edited
+   * URL can't produce a cohort counted over something that isn't a condition.
+   */
+  private static final String RESOLVE_CONCEPTS_SQL =
+      """
+      SELECT DISTINCT
+          concept_id,
+          name,
+          SAFE_CAST(est_count AS INT64) AS est_count
+      FROM %s
+      WHERE is_standard = 1
+        AND domain_id = "CONDITION"
+        AND concept_id IN UNNEST(@conceptIds)
+      ORDER BY est_count DESC NULLS LAST
+      """;
+
   private static final String COHORT_COUNT_SQL =
       """
       SELECT COUNT(DISTINCT co.person_id) AS participants
@@ -122,38 +140,63 @@ public class ConditionLookupService {
   }
 
   /**
-   * Both stages: text to ranked candidates, then the top qualifying candidate to a participant
-   * count. Returns null for a blank term so the response field stays null when no condition was
-   * asked for.
+   * Both stages: concepts, then a participant count over them.
+   *
+   * <p>Two ways in. When {@code conceptIds} is given the user picked something explicitly, so
+   * those concepts are resolved and counted directly. Otherwise the free text is searched and
+   * the best candidate auto-selected. Returns null when neither is supplied, so the response
+   * field stays null when no condition was asked for.
    */
-  public ConditionSearch search(String term) {
+  public ConditionSearch search(String term, List<Long> conceptIds) {
     String trimmed = term == null ? "" : term.trim();
-    if (trimmed.isEmpty()) {
+    List<Long> requested = conceptIds == null ? List.of() : conceptIds;
+    if (trimmed.isEmpty() && requested.isEmpty()) {
       return null;
     }
 
-    List<ConditionConcept> candidates = findRankedCandidates(trimmed);
-
-    // Auto-select the best candidate that has at least one estimated participant. A concept
-    // with est_count 0 is real in the vocabulary and absent from the data, so seeding on it
-    // would return an empty cohort and look like a bug rather than an empty answer.
-    // getEstimatedParticipantCount() is JsonNullable, and its value can itself be null (the
-    // column is nullable), so this unwraps both layers before comparing.
+    List<ConditionConcept> candidates =
+        requested.isEmpty() ? findRankedCandidates(trimmed) : resolveConcepts(requested);
     List<Long> selected =
-        candidates.stream()
-            .filter(c -> {
-              Integer estimate = c.getEstimatedParticipantCount().orElse(null);
-              return estimate != null && estimate >= 1;
-            })
-            .findFirst()
-            .map(c -> List.of(c.getConceptId()))
-            .orElseGet(List::of);
+        requested.isEmpty() ? autoSelect(candidates) : candidates.stream().map(ConditionConcept::getConceptId).toList();
 
     return new ConditionSearch()
         .term(trimmed)
         .candidates(candidates)
         .selectedConceptIds(selected)
         .participantCount(selected.isEmpty() ? null : countParticipants(selected));
+  }
+
+  /**
+   * The best candidate with at least one estimated participant.
+   *
+   * <p>The estimate floor is why an explicit selection has to be a separate path: a concept
+   * with est_count 0 is real in the vocabulary and absent from the data, so auto-selecting it
+   * would return an empty cohort that reads as a bug. When the user picks that concept
+   * deliberately, an empty cohort is the answer they asked for.
+   */
+  private static List<Long> autoSelect(List<ConditionConcept> candidates) {
+    // getEstimatedParticipantCount() is JsonNullable, and its value can itself be null (the
+    // column is nullable), so this unwraps both layers before comparing.
+    return candidates.stream()
+        .filter(c -> {
+          Integer estimate = c.getEstimatedParticipantCount().orElse(null);
+          return estimate != null && estimate >= 1;
+        })
+        .findFirst()
+        .map(c -> List.of(c.getConceptId()))
+        .orElseGet(List::of);
+  }
+
+  private List<ConditionConcept> resolveConcepts(List<Long> conceptIds) {
+    var configuration =
+        QueryJobConfiguration.newBuilder(
+                RESOLVE_CONCEPTS_SQL.formatted(properties.tableRef(CB_CRITERIA)))
+            .addNamedParameter(
+                "conceptIds",
+                QueryParameterValue.array(conceptIds.toArray(new Long[0]), StandardSQLTypeName.INT64))
+            .setMaximumBytesBilled(MAXIMUM_BYTES_BILLED)
+            .build();
+    return toConcepts(runQuery(configuration));
   }
 
   /** Stage one, shared by both entry points. Empty for a term with no usable tokens. */
@@ -215,15 +258,19 @@ public class ConditionLookupService {
       builder.addNamedParameter("term" + i, QueryParameterValue.string(likePattern(terms.get(i))));
     }
 
-    List<ConditionConcept> candidates = new ArrayList<>();
-    for (FieldValueList row : runQuery(builder.build())) {
-      candidates.add(
+    return toConcepts(runQuery(builder.build()));
+  }
+
+  private static List<ConditionConcept> toConcepts(Iterable<FieldValueList> rows) {
+    List<ConditionConcept> concepts = new ArrayList<>();
+    for (FieldValueList row : rows) {
+      concepts.add(
           new ConditionConcept()
               .conceptId(row.get("concept_id").getLongValue())
               .name(row.get("name").getStringValue())
               .estimatedParticipantCount(intOrNull(row, "est_count")));
     }
-    return candidates;
+    return concepts;
   }
 
   private Integer countParticipants(List<Long> seedConceptIds) {

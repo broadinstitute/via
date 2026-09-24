@@ -118,7 +118,7 @@ public class SearchResultsController implements SearchApi {
   // source exists. hpoTerm and condition are independent: the former is mock, the latter isn't.
   @Override
   public ResponseEntity<SearchResultsResponse> searchResults(
-      List<String> variants, String hpoTerm, String condition) {
+      List<String> variants, String hpoTerm, String condition, List<Long> conditionConceptIds) {
     List<String> requested = normalizeVariants(variants);
     List<CohortVariant> cohortVariants =
         requested.isEmpty() ? List.of() : fetchSearchedCohortVariants(requested);
@@ -128,7 +128,7 @@ public class SearchResultsController implements SearchApi {
     return ResponseEntity.ok(
         new SearchResultsResponse()
             .searchSummary(searchSummary(requested, effectiveHpoTerm))
-            .conditionSearch(conditionLookup.search(condition))
+            .conditionSearch(conditionLookup.search(condition, conditionConceptIds))
             .phenotypeCrosswalk(phenotypeFiltered ? MockPhenotypeData.crosswalk(effectiveHpoTerm) : null)
             .ancestryBreakdown(phenotypeFiltered ? MockPhenotypeData.ancestryBreakdown() : List.of())
             .ageBreakdown(phenotypeFiltered ? MockPhenotypeData.ageBreakdown() : List.of())

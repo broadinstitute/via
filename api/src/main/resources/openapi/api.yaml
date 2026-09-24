@@ -54,9 +54,28 @@ paths:
             type: string
           description: >-
             Free-text condition name, e.g. "tetralogy of fallot". Matched
-            against the condition domain of `cb_criteria` and expanded through
-            `concept_ancestor` to count participants; see conditionSearch.
-            Independent of hpoTerm, which is still mock data.
+            against the condition domain of `cb_criteria`, and the top-ranked
+            match expanded through `concept_ancestor` to count participants;
+            see conditionSearch. Ignored for selection purposes when
+            conditionConceptIds is given, though it is still echoed back as
+            conditionSearch.term. Independent of hpoTerm, which is mock data.
+        - name: conditionConceptIds
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+          description: >-
+            Condition concept IDs the user actually picked, e.g. from
+            /api/condition. When given, these are counted directly instead of
+            re-resolving the free text, which is what makes picking a concept
+            with a low or zero participant estimate work -- the text path
+            deliberately skips those when auto-selecting. IDs that aren't
+            standard condition concepts are dropped rather than counted.
       responses:
         "200":
           description: Successful response
