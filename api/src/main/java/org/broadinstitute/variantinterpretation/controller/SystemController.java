@@ -30,9 +30,7 @@ public class SystemController implements SystemApi {
   }
 
   /**
-   * Checks every table VIA queries, not just their datasets: a readable dataset doesn't mean the
-   * configured table is in it. Each table is checked even after one fails, so the response names
-   * everything that's missing at once.
+   * Checks that VIA can access all BigQuery tables.
    */
   @Override
   public ResponseEntity<BigQueryStatus> bigQueryStatus() {
@@ -48,10 +46,10 @@ public class SystemController implements SystemApi {
   }
 
   private TableStatus check(TableId table) {
-    var status = new TableStatus().table(name(table));
+    var status = new TableStatus().table("%s.%s.%s".formatted(table.getProject(), table.getDataset(), table.getTable()));
     try {
       if (bigQuery.getTable(table) == null) {
-        return status.accessible(false).detail("Table does not exist, or is not visible to us.");
+        return status.accessible(false).detail("Table does not exist, or is not visible to user.");
       }
       return status.accessible(true);
     } catch (RuntimeException e) {
@@ -70,10 +68,6 @@ public class SystemController implements SystemApi {
             source("ClinVar", "2025-06-01", "https://www.ncbi.nlm.nih.gov/clinvar/"),
             source("SpliceAI", "v1.3", "https://github.com/Illumina/SpliceAI"),
             source("LOFTEE", "v1.0.3", "https://github.com/konradjk/loftee")));
-  }
-
-  private static String name(TableId table) {
-    return "%s.%s.%s".formatted(table.getProject(), table.getDataset(), table.getTable());
   }
 
   private static DataSourceVersion source(String name, String version, String url) {
