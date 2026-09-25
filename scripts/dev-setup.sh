@@ -49,15 +49,8 @@ step "Environment (.env.local)"
 VAT_PROJECT_ID="${VAT_PROJECT_ID:-$(property_default bigquery.vat-project-id)}"
 VAT_DATASET_ID="${VAT_DATASET_ID:-$(property_default bigquery.vat-dataset-id)}"
 VAT_TABLE_ID="${VAT_TABLE_ID:-$(property_default bigquery.vat-table-id)}"
-# Workbench bills to the workspace's own project; locally that's just the VAT's project.
-GOOGLE_PROJECT="${GOOGLE_PROJECT:-${VAT_PROJECT_ID}}"
-# The app has no default for this (see application.properties), so it's written out explicitly
-# here instead: locally, the synthetic condition lookup tables live alongside the VAT table.
-WORKSPACE_CDR="${WORKSPACE_CDR:-${VAT_PROJECT_ID}.${VAT_DATASET_ID}}"
-
-# `source .env.local` is how the backend gets its environment, so a value only exported in this
-# shell doesn't count -- the file itself has to set it.
-env_file_value() { sed -n "s/^export $1=//p" "${ENV_FILE}" | tail -1; }
+GOOGLE_PROJECT="${GOOGLE_PROJECT:-$(property_default bigquery.billing-project-id)}"
+WORKSPACE_CDR="${WORKSPACE_CDR:-$(property_default bigquery.cdr)}"
 
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
@@ -77,19 +70,12 @@ else
   ok "wrote ${ENV_FILE}"
 fi
 note "table: ${VAT_PROJECT_ID}.${VAT_DATASET_ID}.${VAT_TABLE_ID}"
-if [[ -n "$(env_file_value GOOGLE_PROJECT)" ]]; then
-  ok "GOOGLE_PROJECT is ${GOOGLE_PROJECT} (query jobs are billed here)"
+note "billing project (GOOGLE_PROJECT): ${GOOGLE_PROJECT}"
+if [[ "${WORKSPACE_CDR}" =~ ^[^.]+\.[^.]+$ ]]; then
+  note "CDR (WORKSPACE_CDR): ${WORKSPACE_CDR}"
 else
-  bad ".env.local doesn't set GOOGLE_PROJECT, the project query jobs are billed to"
-  note "the backend won't start without it; for local development it's the VAT's project"
-  note "add 'export GOOGLE_PROJECT=${VAT_PROJECT_ID}' to .env.local, or delete .env.local and re-run"
-fi
-if [[ "$(env_file_value WORKSPACE_CDR)" =~ ^[^.]+\.[^.]+$ ]]; then
-  ok "WORKSPACE_CDR is ${WORKSPACE_CDR}"
-else
-  bad ".env.local must set WORKSPACE_CDR to the CDR dataset as project.dataset (got: '$(env_file_value WORKSPACE_CDR)')"
-  note "the backend won't start without it; locally it's the VAT's dataset"
-  note "add 'export WORKSPACE_CDR=${VAT_PROJECT_ID}.${VAT_DATASET_ID}' to .env.local, or delete .env.local and re-run"
+  bad "WORKSPACE_CDR must be the CDR dataset as project.dataset (got: '${WORKSPACE_CDR}')"
+  note "fix it in .env.local, or remove it there to use the default in application.properties"
 fi
 note "email: ${WORKBENCH_USER_EMAIL:-(none)}"
 

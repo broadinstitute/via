@@ -35,9 +35,10 @@ Once deployed in Workbench, access the app at the app URL.
 For local testing:
 1. Create Docker network: `docker network create app-network`
 2. From the repo root, pull and run:
-   `WORKSPACE_CDR=<project.dataset> SKIP_WORKBENCH_WAIT=true docker compose -f deploy/docker-compose.yaml up`.
-   The app won't start without `WORKSPACE_CDR`. Without `SKIP_WORKBENCH_WAIT`, the container
-   waits for Workbench's environment and then refuses to start without `GOOGLE_PROJECT` too.
+   `SKIP_WORKBENCH_WAIT=true docker compose -f deploy/docker-compose.yaml up`.
+   `WORKSPACE_CDR` and `GOOGLE_PROJECT` fall back to their defaults in `application.properties`
+   when unset, with a warning in the container log. Without `SKIP_WORKBENCH_WAIT`, the container
+   first waits up to 10 minutes for Workbench's environment.
 3. Access at: `http://localhost:8080`
 
 ## Files
