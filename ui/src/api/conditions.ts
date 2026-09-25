@@ -37,7 +37,7 @@ export interface ConditionSearch {
  *
  * This is the cheap half of the condition pipeline: one query against cb_criteria, with no
  * descendant expansion and no participant count, which is why a type-ahead can call it per
- * keystroke. Use fetchSearchResults with a `condition` for the count.
+ * keystroke. Use fetchSearchResults with a `conditionConceptId` for the count.
  *
  * Deliberately not cached, unlike fetchSearchResults: every keystroke is a distinct term, so a
  * cache would grow one entry per prefix and almost never hit.
