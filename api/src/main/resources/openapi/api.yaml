@@ -37,16 +37,18 @@ paths:
               type: string
           description: >-
             Candidate variant IDs, VAT `vid` format (e.g. "8-11708582-C-T").
-        - name: hpoTerm
+        - name: conditionConceptId
           in: query
           required: false
           schema:
-            type: string
+            type: integer
+            format: int64
           description: >-
-            HPO phenotype term to filter candidate variants by.
-            If not provided, no phenotype filtering is applied. There's no
-            participant-level data source behind this yet, so any term given
-            matches the same mock cohort -- see phenotypeCrosswalk.
+            The condition concept ID the user picked from /api/condition.
+            There's deliberately no free-text alternative: re-searching typed
+            text and choosing a match for the user could count a different
+            concept than the one they meant. When absent, conditionSearch is
+            null.
       responses:
         "200":
           description: Successful response
@@ -54,6 +56,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SearchResultsResponse"
+  /api/condition:
+    get:
+      operationId: conditionCandidates
+      summary: >-
+        Returns condition concepts matching a free-text term
+      description: >-
+        This is used for a type-ahead when the user is entering a condition
+        name. The results are ranked by estimated participant count, with
+        concepts that have no estimate last.
+      tags:
+        - condition
+      parameters:
+        - name: condition
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            Free-text condition name, e.g. "tetralogy of fallot".
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConditionCandidates"
   /api/sources:
     get:
       operationId: dataSourceVersions
@@ -75,8 +103,9 @@ paths:
     get:
       operationId: bigQueryStatus
       summary: >-
-        Reports whether the backend can reach the configured BigQuery dataset
-        with its Application Default Credentials
+        Reports whether the backend can read every BigQuery table it queries
+        (the VAT table and the CDR's condition lookup tables) with its
+        Application Default Credentials
       tags:
         - system
       responses:
@@ -94,15 +123,29 @@ components:
       type: object
       required:
         - accessible
-        - dataset
+        - tables
       properties:
         accessible:
           type: boolean
-          description: True when the dataset's metadata could be read.
-        dataset:
+          description: True when every table is accessible.
+        tables:
+          type: array
+          description: Every table VIA queries, in the order they were checked.
+          items:
+            $ref: "#/components/schemas/TableStatus"
+    TableStatus:
+      type: object
+      required:
+        - table
+        - accessible
+      properties:
+        table:
           type: string
-          description: The dataset that was checked, as "project:dataset".
-          example: "placeholder-project:placeholder_dataset"
+          description: The table that was checked, as "project.dataset.table".
+          example: "placeholder-project.placeholder_dataset.v1"
+        accessible:
+          type: boolean
+          description: True when the table's metadata could be read.
         detail:
           type: string
           nullable: true
@@ -136,28 +179,30 @@ components:
       type: object
       required:
         - searchSummary
-        - phenotypeCrosswalk
         - ancestryBreakdown
         - ageBreakdown
         - cohortVariants
         - filteredVariants
+        - conditionSearch
       properties:
         searchSummary:
           $ref: "#/components/schemas/SearchSummary"
-        phenotypeCrosswalk:
+        conditionSearch:
           nullable: true
           description: >-
-            Null when no hpoTerm was given; ancestryBreakdown, ageBreakdown,
-            and filteredVariants are empty in that same case. When a term was
-            given this is mock data -- there's no real phenotype/participant
-            data source behind it yet, so every term matches the same
-            synthetic cohort, as do the two breakdowns and filteredVariants.
+            Null when no conditionConceptId was given. Unlike the breakdowns
+            and filteredVariants, this is backed by real queries against
+            cb_criteria, concept_ancestor and condition_occurrence.
           allOf:
-            - $ref: "#/components/schemas/PhenotypeCrosswalk"
+            - $ref: "#/components/schemas/ConditionSearch"
         ancestryBreakdown:
           description: >-
-            Mock data (see phenotypeCrosswalk). Counts sum to the crosswalk's
-            participantCount, and percent is each count's share of it.
+            Mock data: there's no participant-level data source behind it yet,
+            so every condition matches the same synthetic cohort, as do
+            ageBreakdown and filteredVariants. Populated only when
+            conditionSearch found the picked concept, and empty otherwise.
+            percent is each count's share of the counts' total, which won't
+            match conditionSearch.participantCount.
           type: array
           items:
             $ref: "#/components/schemas/BreakdownSegment"
@@ -172,8 +217,8 @@ components:
             $ref: "#/components/schemas/CohortVariant"
         filteredVariants:
           description: >-
-            Mock data (see phenotypeCrosswalk), one entry per cohortVariants
-            entry and in the same order.
+            Mock data (see ancestryBreakdown), one entry per cohortVariants
+            entry and in the same order. Empty when ancestryBreakdown is.
           type: array
           items:
             $ref: "#/components/schemas/FilteredVariant"
@@ -183,7 +228,6 @@ components:
         - variantsRaw
         - variantsEnteredCount
         - variantsLimit
-        - hpoTerm
       properties:
         variantsRaw:
           type: string
@@ -192,27 +236,77 @@ components:
           type: integer
         variantsLimit:
           type: integer
-        hpoTerm:
-          type: string
-    PhenotypeCrosswalk:
+    ConditionCandidates:
       type: object
       required:
-        - hpoCode
-        - omopCode
-        - description
+        - term
+        - candidates
+      properties:
+        term:
+          type: string
+          description: >-
+            The term as entered, trimmed, echoed back so a type-ahead can
+            discard responses that arrive out of order.
+          example: "tetralogy of fallot"
+        candidates:
+          description: >-
+            Matching condition concepts, best first: exact name match, then
+            estimatedParticipantCount descending, with concepts that have no
+            estimate last. Empty when nothing matched, or when the term was
+            blank.
+          type: array
+          items:
+            $ref: "#/components/schemas/ConditionConcept"
+    ConditionSearch:
+      type: object
+      required:
+        - conceptId
+        - concept
         - participantCount
       properties:
-        hpoCode:
-          type: string
-          example: "HP:0001636"
-        omopCode:
-          type: string
-          example: "313867"
-        description:
-          type: string
-          example: "Tetralogy of Fallot"
+        conceptId:
+          type: integer
+          format: int64
+          description: The concept ID that was requested.
+          example: 9000010
+        concept:
+          nullable: true
+          description: >-
+            The requested concept. Null when conceptId isn't a standard
+            condition concept in this CDR.
+          allOf:
+            - $ref: "#/components/schemas/ConditionConcept"
         participantCount:
           type: integer
+          nullable: true
+          description: >-
+            Distinct participants having the concept or any of its
+            descendants recorded in condition_occurrence. Null when concept
+            is null. This is a real count, and will not match the concept's
+            estimatedParticipantCount exactly.
+          example: 49
+    ConditionConcept:
+      type: object
+      required:
+        - conceptId
+        - name
+      properties:
+        conceptId:
+          type: integer
+          format: int64
+          example: 9000010
+        name:
+          type: string
+          example: "Tetralogy of Fallot"
+        estimatedParticipantCount:
+          type: integer
+          nullable: true
+          description: >-
+            cb_criteria.est_count. An estimate, not a count -- it is what the
+            ranking is based on, but participantCount is the real number. Null
+            when the column was null or non-numeric; the real table also
+            carries 0 and -1.
+          example: 47
     BreakdownSegment:
       type: object
       required:

@@ -1,3 +1,4 @@
+import type { ConditionSearch } from "./conditions";
 import type {
   BreakdownSegment,
   ClinVarSignificance,
@@ -5,7 +6,6 @@ import type {
   CohortVariantRow,
   FilteredVariantRow,
   GnomadSubpopCode,
-  PhenotypeCrosswalk,
   PopulationFrequency,
   SearchSummary,
   SubpopCode,
@@ -61,10 +61,12 @@ interface RawFilteredVariant {
 
 interface RawSearchResultsResponse {
   searchSummary: SearchSummary;
-  // Null when no HPO term was given -- ancestryBreakdown, ageBreakdown, and filteredVariants
-  // are all empty in that case too. When a term was given, all four are mock data: there's no
-  // participant-level source behind them yet, so every term matches the same synthetic cohort.
-  phenotypeCrosswalk: PhenotypeCrosswalk | null;
+  // Null when neither a condition term nor concept ids were given. Unlike the phenotype
+  // fields below, this is backed by real queries.
+  conditionSearch: ConditionSearch | null;
+  // Mock data, populated only when the picked condition was found and empty otherwise: there's
+  // no participant-level source behind them yet, so every condition matches the same synthetic
+  // cohort.
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
   cohortVariants: RawCohortVariant[];
@@ -73,7 +75,7 @@ interface RawSearchResultsResponse {
 
 export interface SearchResults {
   searchSummary: SearchSummary;
-  phenotypeCrosswalk: PhenotypeCrosswalk | null;
+  conditionSearch: ConditionSearch | null;
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
   cohortVariants: CohortVariantRow[];
@@ -143,10 +145,14 @@ const MIN_LOAD_TIME_MS = 1000;
 
 export interface SearchResultsQuery {
   variants: string[];
-  hpoTerm: string;
+  /**
+   * The concept the user picked from the dropdown. There's no free-text alternative: typed text
+   * that was never picked doesn't filter anything.
+   */
+  conditionConceptId?: number;
 }
 
-// Keyed by request URL (which fully encodes variants + hpoTerm). Caching the in-flight promise
+// Keyed by request URL (which fully encodes every search criterion). Caching the in-flight promise
 // -- not just the resolved result -- means two calls for the same query made back-to-back (e.g.
 // React StrictMode's double-invoked mount effect in dev) share one network request instead of
 // firing the BigQuery query twice. Successful results stay cached for the rest of the session;
@@ -160,8 +166,8 @@ export async function fetchSearchResults(query?: SearchResultsQuery): Promise<Se
   for (const variant of query?.variants ?? []) {
     params.append("variants", variant);
   }
-  if (query?.hpoTerm) {
-    params.set("hpoTerm", query.hpoTerm);
+  if (query?.conditionConceptId !== undefined) {
+    params.set("conditionConceptId", String(query.conditionConceptId));
   }
   const queryString = params.toString();
   const url = queryString ? `/api/search?${queryString}` : "/api/search";
@@ -188,7 +194,7 @@ async function fetchAndParse(url: string): Promise<SearchResults> {
   const raw: RawSearchResultsResponse = await response.json();
   return {
     searchSummary: raw.searchSummary,
-    phenotypeCrosswalk: raw.phenotypeCrosswalk,
+    conditionSearch: raw.conditionSearch,
     ancestryBreakdown: raw.ancestryBreakdown,
     ageBreakdown: raw.ageBreakdown,
     cohortVariants: raw.cohortVariants.map(toCohortVariantRow),

@@ -42,7 +42,7 @@ describe("TopBar", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 17,
-      hpoTerm: "Seizure",
+      condition: "Seizure",
       onModifySearch: vi.fn(),
     });
 
@@ -52,11 +52,11 @@ describe("TopBar", () => {
     expect(screen.getByRole("button", { name: "Modify search" })).toBeEnabled();
   });
 
-  it("renders the fallback phenotype label when no HPO term is set", () => {
+  it("renders the fallback phenotype label when no condition is set", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 4,
-      hpoTerm: "",
+      condition: "",
       onModifySearch: vi.fn(),
     });
 
@@ -80,7 +80,7 @@ describe("TopBar", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 9,
-      hpoTerm: "Ataxia",
+      condition: "Ataxia",
       onModifySearch: vi.fn(),
     });
 
@@ -94,12 +94,30 @@ describe("TopBar", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 9,
-      hpoTerm: "Ataxia",
+      condition: "Ataxia",
       onModifySearch,
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Modify search" }));
 
     expect(onModifySearch).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the settings dialog from the gear button", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ accessible: true, tables: [] }) })),
+    );
+    renderTopBar({ userEmail: "user@example.org" });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+
+    expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    expect(await screen.findByText("All tables accessible")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    vi.unstubAllGlobals();
   });
 });

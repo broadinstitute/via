@@ -48,11 +48,6 @@ const styles = {
   phenotype: {
     color: colors.textSecondary,
   },
-  hpoCode: {
-    fontFamily: Style.monoFamily,
-    fontWeight: 600,
-    color: colors.textAccent,
-  },
   noPhenotype: {
     color: colors.textMuted,
     fontStyle: "italic",
@@ -70,38 +65,33 @@ const styles = {
 interface RecentSearch {
   id: string;
   variantsSummary: string;
-  hpoTerm: string | null;
-  hpoDescription: string | null;
+  condition: string | null;
   searchedAt: string;
 }
 
 const RECENT_SEARCHES: RecentSearch[] = [
   {
     id: "1",
-    variantsSummary: "21 variants (GATA4)",
-    hpoTerm: "HP:0001636",
-    hpoDescription: "Tetralogy of Fallot",
+    variantsSummary: "21 variants",
+    condition: "Tetralogy of Fallot",
     searchedAt: "2 hours ago",
   },
   {
     id: "2",
-    variantsSummary: "8 variants (BRCA1)",
-    hpoTerm: "HP:0003002",
-    hpoDescription: "Breast carcinoma",
+    variantsSummary: "8 variants",
+    condition: "Breast carcinoma",
     searchedAt: "Yesterday",
   },
   {
     id: "3",
-    variantsSummary: "3 variants (TTN)",
-    hpoTerm: null,
-    hpoDescription: null,
+    variantsSummary: "3 variants",
+    condition: null,
     searchedAt: "3 days ago",
   },
   {
     id: "4",
-    variantsSummary: "45 variants (CFTR)",
-    hpoTerm: "HP:0006528",
-    hpoDescription: "Chronic bronchitis",
+    variantsSummary: "45 variants",
+    condition: "Chronic bronchitis",
     searchedAt: "1 week ago",
   },
 ];
@@ -131,9 +121,9 @@ export default function RecentSearches() {
               <span style={styles.dotSeparator} aria-hidden="true">
                 ·
               </span>
-              {search.hpoTerm ? (
+              {search.condition ? (
                 <span style={styles.phenotype}>
-                  <span style={styles.hpoCode}>{search.hpoTerm}</span> {search.hpoDescription}
+                  {search.condition}
                 </span>
               ) : (
                 <span style={styles.noPhenotype}>No phenotype</span>

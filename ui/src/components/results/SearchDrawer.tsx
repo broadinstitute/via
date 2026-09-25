@@ -1,8 +1,10 @@
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
+import type { ConditionConcept } from "../../api/conditions";
 import { parseVariantsText } from "../../utils/variants";
 import Clickable from "../common/Clickable";
+import ConditionSearchField from "../ConditionSearchField";
 
 const styles = {
   drawer: {
@@ -37,10 +39,14 @@ const styles = {
 interface SearchDrawerProps {
   open: boolean;
   variantsText: string;
-  hpoText: string;
+  conditionText: string;
+  /** The concept the page was searched with, shown as already picked. */
+  initialCondition: ConditionConcept | null;
   variantsLimit: number;
   onVariantsChange: (value: string) => void;
-  onHpoChange: (value: string) => void;
+  /** Same contract as ConditionSearchField: fires before onConditionSelect on a pick. */
+  onConditionChange: (value: string) => void;
+  onConditionSelect: (concept: ConditionConcept) => void;
   onCancel: () => void;
   onSearch: () => void;
 }
@@ -48,10 +54,12 @@ interface SearchDrawerProps {
 export default function SearchDrawer({
   open,
   variantsText,
-  hpoText,
+  conditionText,
+  initialCondition,
   variantsLimit,
   onVariantsChange,
-  onHpoChange,
+  onConditionChange,
+  onConditionSelect,
   onCancel,
   onSearch,
 }: SearchDrawerProps) {
@@ -76,15 +84,16 @@ export default function SearchDrawer({
           </div>
         </div>
         <div>
-          <label htmlFor="drawerHpo" style={Style.inputs.label}>
-            Phenotype (HPO term — limit 1)
+          <label htmlFor="drawerCondition" style={Style.inputs.label}>
+            Phenotype (pick a condition from the list)
           </label>
-          <input
-            id="drawerHpo"
-            type="text"
-            value={hpoText}
-            onChange={(event) => onHpoChange(event.target.value)}
-            style={Style.inputs.text}
+          <ConditionSearchField
+            id="drawerCondition"
+            value={conditionText}
+            initialSelection={initialCondition}
+            onChange={onConditionChange}
+            onSelect={onConditionSelect}
+            placeholder="e.g. tetralogy of fallot"
           />
         </div>
       </div>

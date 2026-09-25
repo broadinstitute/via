@@ -106,7 +106,8 @@ interface ParticipantMatchedVariantsPanelProps {
   rows: FilteredVariantRow[];
   participantCount: number;
   hasPhenotypeFilter: boolean;
-  hpoTerm: string;
+  /** Names the picked condition in the empty state; empty when none was picked. */
+  condition: string;
   onAddPhenotypeFilter: () => void;
 }
 
@@ -114,7 +115,7 @@ export default function ParticipantMatchedVariantsPanel({
   rows,
   participantCount,
   hasPhenotypeFilter,
-  hpoTerm,
+  condition,
   onAddPhenotypeFilter,
 }: ParticipantMatchedVariantsPanelProps) {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>(() =>
@@ -304,7 +305,7 @@ export default function ParticipantMatchedVariantsPanel({
   }
 
   if (!hasPhenotypeFilter) {
-    const { message, buttonLabel } = phenotypeUnavailableCopy(hpoTerm, "phenotype-matched participant data");
+    const { message, buttonLabel } = phenotypeUnavailableCopy(condition, "phenotype-matched participant data");
     return (
       <ResultsPanel title="Candidate variants — phenotype-matched participants only">
         <PhenotypeFilterRequired message={message} buttonLabel={buttonLabel} onAddPhenotypeFilter={onAddPhenotypeFilter} />

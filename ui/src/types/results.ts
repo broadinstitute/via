@@ -100,16 +100,8 @@ export interface BreakdownSegment {
   color: string;
 }
 
-export interface PhenotypeCrosswalk {
-  hpoCode: string;
-  omopCode: string;
-  description: string;
-  participantCount: number;
-}
-
 export interface SearchSummary {
   variantsRaw: string;
   variantsEnteredCount: number;
   variantsLimit: number;
-  hpoTerm: string;
 }

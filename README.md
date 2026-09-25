@@ -1,6 +1,6 @@
 # VIA (Variant Interpretation Application)
 
-VIA helps clinicians rule candidate genetic variants in or out by comparing them against All of Us's full participant cohort, optionally filtered by phenotype (HPO term) — no coding required. It runs as a custom app in the All of Us Verily Researcher Workbench.
+VIA helps clinicians rule candidate genetic variants in or out by comparing them against All of Us's full participant cohort, optionally filtered by a condition — no coding required. It runs as a custom app in the All of Us Verily Researcher Workbench.
 
 This repo contains the app's frontend (ui/, TypeScript + React) and backend (api/, Java + Spring Boot), as well as the deployment configuration required to run the application in Verily Workbench (deploy/, startupscript/).
 
@@ -53,15 +53,18 @@ Open the URL Vite prints (default `http://localhost:5173`).
 ### Environment variables
 
 `.env.local` (written locally by `dev-setup.sh`) holds everything local
-development needs. The backend also runs without it, falling back to the
-defaults in `api/src/main/resources/application.properties`.
+development needs. Without it, the backend falls back to the defaults in
+`api/src/main/resources/application.properties` for everything except
+`WORKSPACE_CDR`, which has no default and must always be set.
 
 | Variable | Purpose |
 |---|---|
 | `WORKBENCH_USER_EMAIL` | The email of the user running VIA |
-| `BIGQUERY_PROJECT_ID` | Project owning the BigQuery dataset, and the one query jobs are billed to |
+| `BIGQUERY_PROJECT_ID` | Project owning the VAT dataset |
 | `BIGQUERY_DATASET_ID` | Dataset holding the variant data |
 | `BIGQUERY_TABLE_ID` | Table backing variant search |
+| `GOOGLE_PROJECT` | Project query jobs are billed to. Required in Workbench; defaults to `BIGQUERY_PROJECT_ID` locally |
+| `WORKSPACE_CDR` | CDR dataset (`project.dataset`) holding the condition lookup tables. Always required, with no default; the synthetic copies are in `aou-via-dev.foxtrot_synthetic` |
 
 Credentials are never configured here: the BigQuery client always uses
 Application Default Credentials (gcloud locally, the VM's attached service
@@ -80,7 +83,7 @@ no CORS or reverse proxy to configure). To build and run that image locally:
 
 ```bash
 docker network create app-network  # first time only
-WORKBENCH_USER_EMAIL=you@example.org SKIP_WORKBENCH_WAIT=true docker compose -f deploy/docker-compose.yaml up --build
+WORKBENCH_USER_EMAIL=you@example.org WORKSPACE_CDR=<project.dataset> SKIP_WORKBENCH_WAIT=true docker compose -f deploy/docker-compose.yaml up --build
 ```
 
 Then open `http://localhost:8080`.

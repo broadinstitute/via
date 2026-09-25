@@ -10,10 +10,19 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     boxShadow: Style.shadows.raised,
+    // elements.panel clips to its rounded corners with overflow: hidden, which also clips
+    // anything a child positions outside the panel -- notably the condition field's dropdown,
+    // which is cut off at the panel edge with no way to scroll to the rest of it. The header
+    // rounds its own top corners below, so the clipping isn't needed here.
+    overflow: "visible",
   },
   header: {
     ...Style.elements.panelHeader,
     gap: 8,
+    // Was inherited from the panel's overflow: hidden. Inset by the panel's 1px border so the
+    // header's fill doesn't bleed past the rounded edge.
+    borderTopLeftRadius: Style.panelRadius - 1,
+    borderTopRightRadius: Style.panelRadius - 1,
   },
   number: {
     display: "flex",

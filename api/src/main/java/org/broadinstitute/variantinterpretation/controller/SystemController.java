@@ -1,13 +1,16 @@
 package org.broadinstitute.variantinterpretation.controller;
 
 import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.Dataset;
+import com.google.cloud.bigquery.TableId;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.broadinstitute.variantinterpretation.datasource.BigQueryProperties;
+import org.broadinstitute.variantinterpretation.datasource.ConditionLookupService;
 import org.broadinstitute.variantinterpretation.api.SystemApi;
 import org.broadinstitute.variantinterpretation.model.BigQueryStatus;
 import org.broadinstitute.variantinterpretation.model.DataSourceVersion;
+import org.broadinstitute.variantinterpretation.model.TableStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -26,19 +29,32 @@ public class SystemController implements SystemApi {
     this.properties = properties;
   }
 
+  /**
+   * Checks that VIA can access all BigQuery tables.
+   */
   @Override
   public ResponseEntity<BigQueryStatus> bigQueryStatus() {
-    var status = new BigQueryStatus().dataset(properties.toString());
+    List<TableId> tables = new ArrayList<>();
+    tables.add(properties.vatTable());
+    ConditionLookupService.CDR_TABLES.forEach(t -> tables.add(properties.cdrTable(t)));
+
+    List<TableStatus> statuses = tables.stream().map(this::check).toList();
+    return ResponseEntity.ok(
+        new BigQueryStatus()
+            .tables(statuses)
+            .accessible(statuses.stream().allMatch(TableStatus::getAccessible)));
+  }
+
+  private TableStatus check(TableId table) {
+    var status = new TableStatus().table("%s.%s.%s".formatted(table.getProject(), table.getDataset(), table.getTable()));
     try {
-      Dataset dataset = bigQuery.getDataset(properties.dataset());
-      if (dataset == null) {
-        return ResponseEntity.ok(
-            status.accessible(false).detail("Dataset does not exist, or is not visible to us."));
+      if (bigQuery.getTable(table) == null) {
+        return status.accessible(false).detail("Table does not exist, or is not visible to user.");
       }
-      return ResponseEntity.ok(status.accessible(true));
+      return status.accessible(true);
     } catch (RuntimeException e) {
-      log.warn("BigQuery access check failed for dataset {}", properties, e);
-      return ResponseEntity.ok(status.accessible(false).detail(e.getMessage()));
+      log.warn("BigQuery access check failed for table {}", status.getTable(), e);
+      return status.accessible(false).detail(e.getMessage());
     }
   }
 

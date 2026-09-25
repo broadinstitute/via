@@ -1,9 +1,11 @@
+import { useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
-import { ArrowLeftIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
+import { ArrowLeftIcon, GearIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
+import SettingsDialog from "../settings/SettingsDialog";
 
 const styles = {
   topbar: {
@@ -77,18 +79,27 @@ const styles = {
     flexShrink: 0,
     color: colors.textAccent,
   },
+  /** Same rule as the back button's right border, between the email and the gear. */
+  userDivider: {
+    width: 1,
+    height: 16,
+    margin: "0 8px",
+    background: colors.border,
+  },
 } as const satisfies Record<string, CSSProperties>;
 
 interface TopBarProps {
   loading?: boolean;
   variantsEnteredCount?: number;
-  hpoTerm?: string;
+  /** The picked condition's name. */
+  condition?: string;
   userEmail: string;
   onModifySearch?: () => void;
 }
 
-export default function TopBar({ loading, variantsEnteredCount, hpoTerm, userEmail, onModifySearch }: TopBarProps) {
+export default function TopBar({ loading, variantsEnteredCount, condition, userEmail, onModifySearch }: TopBarProps) {
   const navigate = useNavigate();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div style={styles.topbar}>
@@ -119,7 +130,7 @@ export default function TopBar({ loading, variantsEnteredCount, hpoTerm, userEma
             {loading ? (
               <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
             ) : (
-              <span style={styles.valueBadge}>{hpoTerm || "None entered"}</span>
+              <span style={styles.valueBadge}>{condition || "None entered"}</span>
             )}
           </span>
           <Clickable
@@ -137,7 +148,19 @@ export default function TopBar({ loading, variantsEnteredCount, hpoTerm, userEma
       <div style={styles.user}>
         <UserIcon size={16} style={styles.userIcon} />
         {userEmail}
+        <span style={styles.userDivider} aria-hidden="true" />
+        <Clickable
+          style={Style.buttons.icon}
+          hoverStyle={Style.buttons.iconHover}
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Settings"
+          aria-haspopup="dialog"
+          title="Settings"
+        >
+          <GearIcon size={15} />
+        </Clickable>
       </div>
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }
