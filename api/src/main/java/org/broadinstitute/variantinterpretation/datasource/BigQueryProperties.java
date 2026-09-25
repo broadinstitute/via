@@ -24,7 +24,7 @@ public record BigQueryProperties(
 
   /**
    * Fails startup on a missing or malformed CDR, rather than letting it surface later as broken
-   * SQL. There's no default to fall back to: see application.properties.
+   * SQL. application.properties supplies a default, so "missing" means it was set to blank.
    */
   public BigQueryProperties {
     if (cdr == null || cdr.isBlank()) {

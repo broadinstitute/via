@@ -34,17 +34,17 @@ else
   else
     echo "WARNING: ${WORKBENCH_ENV_FILE} not found after ${MAX_WAIT_SECONDS}s; starting without Workbench environment variables." >&2
   fi
-
-  # Checked here, not just left to the app, so the log names where each value should have come
-  # from. Neither has a default in application.properties.
-  missing=()
-  [[ -n "${WORKSPACE_CDR:-}" ]] || missing+=("WORKSPACE_CDR (set on the VM; passed through by docker-compose.yaml)")
-  [[ -n "${GOOGLE_PROJECT:-}" ]] || missing+=("GOOGLE_PROJECT (exported by startupscript/setup-bashrc.sh)")
-  if [[ "${#missing[@]}" -gt 0 ]]; then
-    echo "ERROR: required Workbench environment variables are not set:" >&2
-    printf '  - %s\n' "${missing[@]}" >&2
-    exit 1
-  fi
 fi
+
+# docker-compose.yaml passes WORKSPACE_CDR through as an empty string when the VM doesn't set it,
+# and Spring treats an empty value as set, skipping application.properties' default. So drop empty
+# ones and let the defaults apply -- but say so, since in a real workspace these should be the
+# workspace's own values, and the defaults point at the dev project's synthetic data.
+for var in WORKSPACE_CDR GOOGLE_PROJECT; do
+  if [[ -z "${!var:-}" ]]; then
+    unset "${var}"
+    echo "WARNING: ${var} is not set; using its default from application.properties." >&2
+  fi
+done
 
 exec java -jar /app/app.jar

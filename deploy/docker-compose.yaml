@@ -11,9 +11,9 @@ services:
     # entrypoint.sh), so they can't be passed via this environment: block.
     environment:
       # The exception: the workspace's CDR dataset ("project.dataset") is set
-      # on the VM itself, so it's passed straight through. The app has no
-      # default for it and won't start without it; for a local run, set it
-      # in the shell running `docker compose`.
+      # on the VM itself, so it's passed straight through. When it isn't set,
+      # entrypoint.sh drops the empty value so application.properties'
+      # default applies, and logs a warning saying so.
       - WORKSPACE_CDR=${WORKSPACE_CDR:-}
       # Set to "true" for local dev to skip entrypoint.sh's wait for
       # /root/.workbench-env, which is only ever created by Workbench's
