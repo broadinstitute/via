@@ -22,6 +22,7 @@ import org.broadinstitute.variantinterpretation.datasource.MockPhenotypeData;
 import org.broadinstitute.variantinterpretation.api.SearchApi;
 import org.broadinstitute.variantinterpretation.model.ClinvarSubmission;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
+import org.broadinstitute.variantinterpretation.model.ConditionSearch;
 import org.broadinstitute.variantinterpretation.model.PopulationFrequency;
 import org.broadinstitute.variantinterpretation.model.SearchResultsResponse;
 import org.broadinstitute.variantinterpretation.model.SearchSummary;
@@ -113,24 +114,23 @@ public class SearchResultsController implements SearchApi {
   // cohortVariants and conditionSearch are the parts of this response backed by real queries:
   // cohortVariants against the VAT, conditionSearch against cb_criteria / concept_ancestor /
   // condition_occurrence. The VAT holds only variant-level annotation -- no phenotype,
-  // participant, ancestry or age data -- so phenotypeCrosswalk, the breakdowns and
-  // filteredVariants are still served from MockPhenotypeData until a genotype-level data
-  // source exists. hpoTerm and conditionConceptId are independent: the former is mock, the latter
-  // isn't.
+  // participant, ancestry or age data -- so the breakdowns and filteredVariants are still served
+  // from MockPhenotypeData until a genotype-level data source exists. They're shown whenever the
+  // picked condition was found, standing in for data about that condition's participants.
   @Override
   public ResponseEntity<SearchResultsResponse> searchResults(
-      List<String> variants, String hpoTerm, Long conditionConceptId) {
+      List<String> variants, Long conditionConceptId) {
     List<String> requested = normalizeVariants(variants);
     List<CohortVariant> cohortVariants =
         requested.isEmpty() ? List.of() : fetchSearchedCohortVariants(requested);
-    String effectiveHpoTerm = hpoTerm == null ? "" : hpoTerm.trim();
-    boolean phenotypeFiltered = !effectiveHpoTerm.isEmpty();
+    ConditionSearch conditionSearch = conditionLookup.search(conditionConceptId);
+    boolean phenotypeFiltered =
+        conditionSearch != null && conditionSearch.getConcept().orElse(null) != null;
 
     return ResponseEntity.ok(
         new SearchResultsResponse()
-            .searchSummary(searchSummary(requested, effectiveHpoTerm))
-            .conditionSearch(conditionLookup.search(conditionConceptId))
-            .phenotypeCrosswalk(phenotypeFiltered ? MockPhenotypeData.crosswalk(effectiveHpoTerm) : null)
+            .searchSummary(searchSummary(requested))
+            .conditionSearch(conditionSearch)
             .ancestryBreakdown(phenotypeFiltered ? MockPhenotypeData.ancestryBreakdown() : List.of())
             .ageBreakdown(phenotypeFiltered ? MockPhenotypeData.ageBreakdown() : List.of())
             .cohortVariants(cohortVariants)
@@ -152,12 +152,11 @@ public class SearchResultsController implements SearchApi {
         .toList();
   }
 
-  private static SearchSummary searchSummary(List<String> variantsRaw, String hpoTerm) {
+  private static SearchSummary searchSummary(List<String> variantsRaw) {
     return new SearchSummary()
         .variantsRaw(String.join("\n", variantsRaw))
         .variantsEnteredCount(variantsRaw.size())
-        .variantsLimit(VARIANTS_LIMIT)
-        .hpoTerm(hpoTerm);
+        .variantsLimit(VARIANTS_LIMIT);
   }
 
   /**

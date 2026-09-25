@@ -46,7 +46,7 @@ describe("SearchEntryPage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("offers a condition combobox rather than the old HPO input", () => {
+  it("offers a condition combobox for the phenotype step", () => {
     stubApi([], "");
     renderPage();
 

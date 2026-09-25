@@ -31,7 +31,13 @@ export default function SearchResultsPage() {
   const [revealed, setRevealed] = useState<RevealedSections>(NOT_REVEALED);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariants, setDrawerVariants] = useState("");
-  const [drawerHpo, setDrawerHpo] = useState("");
+  const [drawerCondition, setDrawerCondition] = useState("");
+  // The concept behind drawerCondition while it's still a pick; cleared by any edit, as on the
+  // entry page, so re-running only filters by a condition the user actually chose.
+  const [drawerConceptId, setDrawerConceptId] = useState<number | null>(null);
+  // Remounts the drawer on cancel, so its condition field goes back to showing the searched
+  // concept as picked instead of re-querying the restored name.
+  const [drawerKey, setDrawerKey] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
   const isNarrow = useMediaQuery(NARROW_LAYOUT_QUERY);
 
@@ -46,7 +52,6 @@ export default function SearchResultsPage() {
   // Depending on searchParams.toString() would re-run this on every such change, wiping results
   // and flashing every section's loading state for a fetch that's a cache hit anyway.
   const variantsKey = searchParams.getAll("variants").join("\n");
-  const hpoTermKey = searchParams.get("hpoTerm") ?? "";
   const conditionConceptIdKey = searchParams.get("conditionConceptId") ?? "";
 
   // Re-runs whenever the URL's search criteria change -- both the initial load (e.g. arriving
@@ -57,17 +62,15 @@ export default function SearchResultsPage() {
     setError(null);
     fetchSearchResults({
       variants: variantsKey ? variantsKey.split("\n") : [],
-      hpoTerm: hpoTermKey,
       conditionConceptId: conditionConceptIdKey ? Number(conditionConceptIdKey) : undefined,
     })
       .then((data) => {
         setResults(data);
-        setDrawerVariants(data.searchSummary.variantsRaw);
-        setDrawerHpo(data.searchSummary.hpoTerm);
+        resetDrawer(data);
       })
       .catch((err: Error) => setError(err.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variantsKey, hpoTermKey, conditionConceptIdKey]);
+  }, [variantsKey, conditionConceptIdKey]);
 
   // Once data arrives, reveal each section in quick, slightly jittered succession
   // rather than all at once, so the page doesn't feel like it's snapping into place.
@@ -85,23 +88,28 @@ export default function SearchResultsPage() {
     return () => timers.forEach((id) => window.clearTimeout(id));
   }, [results]);
 
+  function resetDrawer(data: SearchResults) {
+    setDrawerVariants(data.searchSummary.variantsRaw);
+    setDrawerCondition(data.conditionSearch?.concept?.name ?? "");
+    setDrawerConceptId(data.conditionSearch?.concept?.conceptId ?? null);
+    setDrawerKey((key) => key + 1);
+  }
+
   function handleCancelDrawer() {
     if (results) {
-      setDrawerVariants(results.searchSummary.variantsRaw);
-      setDrawerHpo(results.searchSummary.hpoTerm);
+      resetDrawer(results);
     }
     setDrawerOpen(false);
   }
 
   function handleRerunSearch() {
     const variants = parseVariantsText(drawerVariants);
-    const hpoTerm = drawerHpo.trim();
     const nextParams = new URLSearchParams();
     for (const variant of variants) {
       nextParams.append("variants", variant);
     }
-    if (hpoTerm) {
-      nextParams.set("hpoTerm", hpoTerm);
+    if (drawerConceptId !== null) {
+      nextParams.set("conditionConceptId", String(drawerConceptId));
     }
     setSearchParams(nextParams);
     setDrawerOpen(false);
@@ -120,19 +128,25 @@ export default function SearchResultsPage() {
       <TopBar
         loading={!results}
         variantsEnteredCount={results?.searchSummary.variantsEnteredCount ?? 0}
-        hpoTerm={results?.searchSummary.hpoTerm ?? ""}
+        condition={results?.conditionSearch?.concept?.name ?? ""}
         userEmail={userEmail}
         onModifySearch={() => setDrawerOpen((open) => !open)}
       />
 
       {results && (
         <SearchDrawer
+          key={drawerKey}
           open={drawerOpen}
           variantsText={drawerVariants}
-          hpoText={drawerHpo}
+          conditionText={drawerCondition}
+          initialCondition={results.conditionSearch?.concept ?? null}
           variantsLimit={results.searchSummary.variantsLimit}
           onVariantsChange={setDrawerVariants}
-          onHpoChange={setDrawerHpo}
+          onConditionChange={(value) => {
+            setDrawerCondition(value);
+            setDrawerConceptId(null);
+          }}
+          onConditionSelect={(concept) => setDrawerConceptId(concept.conceptId)}
           onCancel={handleCancelDrawer}
           onSearch={handleRerunSearch}
         />
@@ -160,10 +174,8 @@ export default function SearchResultsPage() {
           {results && revealed.phenotype ? (
             <PhenotypeFilterPanel
               conditionSearch={results.conditionSearch}
-              crosswalk={results.phenotypeCrosswalk}
               ancestryBreakdown={results.ancestryBreakdown}
               ageBreakdown={results.ageBreakdown}
-              hpoTerm={results.searchSummary.hpoTerm}
               onAddPhenotypeFilter={() => setDrawerOpen(true)}
             />
           ) : (
@@ -174,9 +186,14 @@ export default function SearchResultsPage() {
         {results && revealed.filtered ? (
           <ParticipantMatchedVariantsPanel
             rows={results.filteredVariants}
-            participantCount={results.phenotypeCrosswalk?.participantCount ?? 0}
-            hasPhenotypeFilter={results.phenotypeCrosswalk !== null}
-            hpoTerm={results.searchSummary.hpoTerm}
+            // The mock cohort's size, matching the breakdown donut; see PhenotypeFilterPanel.
+            participantCount={results.ancestryBreakdown.reduce((total, segment) => total + segment.count, 0)}
+            hasPhenotypeFilter={results.ancestryBreakdown.length > 0}
+            condition={
+              results.conditionSearch
+                ? (results.conditionSearch.concept?.name ?? `concept ${results.conditionSearch.conceptId}`)
+                : ""
+            }
             onAddPhenotypeFilter={() => setDrawerOpen(true)}
           />
         ) : (

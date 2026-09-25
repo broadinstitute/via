@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import type { ConditionSearch } from "../../api/conditions";
-import type { BreakdownSegment, PhenotypeCrosswalk } from "../../types/results";
+import type { BreakdownSegment } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
 import BreakdownLegend from "./BreakdownLegend";
@@ -23,7 +23,7 @@ const styles = {
     padding: 14,
     overflowY: "auto",
   },
-  crosswalkCard: {
+  conceptCard: {
     display: "flex",
     alignItems: "center",
     gap: 10,
@@ -32,13 +32,11 @@ const styles = {
     border: `1px solid ${colors.border}`,
     borderRadius: Style.radius,
   },
-  crosswalkText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  row: {
+  conceptText: {
     display: "flex",
     flexDirection: "column",
+    flex: 1,
+    minWidth: 0,
   },
   codeLine: {
     display: "flex",
@@ -139,31 +137,26 @@ const TABS: { id: BreakdownTab; label: string }[] = [
 
 interface PhenotypeFilterPanelProps {
   /**
-   * The condition cohort, when one was searched. Unlike everything else in this panel, this
-   * is backed by real queries rather than MockPhenotypeData.
+   * The condition cohort, when one was picked. Unlike the breakdowns, this is backed by real
+   * queries rather than MockPhenotypeData.
    */
   conditionSearch: ConditionSearch | null;
-  crosswalk: PhenotypeCrosswalk | null;
+  /** Mock; empty unless the picked condition was found. */
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
-  hpoTerm: string;
   onAddPhenotypeFilter: () => void;
 }
 
 export default function PhenotypeFilterPanel({
   conditionSearch,
-  crosswalk,
   ancestryBreakdown,
   ageBreakdown,
-  hpoTerm,
   onAddPhenotypeFilter,
 }: PhenotypeFilterPanelProps) {
   const [activeTab, setActiveTab] = useState<BreakdownTab>("ancestry");
 
-  const concept = conditionSearch?.concept ?? null;
-
-  if (!crosswalk && !conditionSearch) {
-    const { message, buttonLabel } = phenotypeUnavailableCopy(hpoTerm, "participant breakdowns");
+  if (!conditionSearch) {
+    const { message, buttonLabel } = phenotypeUnavailableCopy("", "participant breakdowns");
     return (
       <ResultsPanel title="Phenotype filter">
         <PhenotypeFilterRequired message={message} buttonLabel={buttonLabel} onAddPhenotypeFilter={onAddPhenotypeFilter} />
@@ -171,99 +164,74 @@ export default function PhenotypeFilterPanel({
     );
   }
 
+  const concept = conditionSearch.concept;
   const segments = activeTab === "ancestry" ? ancestryBreakdown : ageBreakdown;
+  // The mock cohort's size, taken from the breakdown itself so the donut's center always agrees
+  // with its legend. It is not conditionSearch.participantCount, the real count shown above.
+  const breakdownTotal = ancestryBreakdown.reduce((total, segment) => total + segment.count, 0);
 
   return (
     <ResultsPanel title="Phenotype filter">
       <div style={styles.body}>
-        {conditionSearch &&
-          (concept ? (
-            <div>
-              <div style={styles.crosswalkCard}>
-                <div style={styles.crosswalkText}>
-                  <div style={styles.row}>
-                    <div style={styles.codeLine}>
-                      <span style={styles.code}>OMOP — {concept.conceptId}</span>
-                      <CopyButton
-                        getText={() => String(concept.conceptId)}
-                        label="Copy OMOP concept ID"
-                      />
-                    </div>
-                    <span style={styles.desc}>{concept.name}</span>
-                  </div>
+        {concept ? (
+          <div>
+            <div style={styles.conceptCard}>
+              <div style={styles.conceptText}>
+                <div style={styles.codeLine}>
+                  <span style={styles.code}>OMOP — {concept.conceptId}</span>
+                  <CopyButton getText={() => String(concept.conceptId)} label="Copy OMOP concept ID" />
                 </div>
-                <div style={styles.countBadge}>
-                  <div style={styles.num}>
-                    {conditionSearch.participantCount?.toLocaleString() ?? "—"}
-                  </div>
-                  <div style={styles.lbl}>participants matched</div>
-                </div>
+                <span style={styles.desc}>{concept.name}</span>
               </div>
-              {/* Worth stating: the count is larger than the concept's own records, and
-                  larger than the estimate shown in the search dropdown. */}
-              <p style={styles.conditionNote}>
-                Participants recorded with this condition or any more specific form of it.
-              </p>
+              <div style={styles.countBadge}>
+                <div style={styles.num}>{conditionSearch.participantCount?.toLocaleString() ?? "—"}</div>
+                <div style={styles.lbl}>participants matched</div>
+              </div>
             </div>
-          ) : (
-            <p style={styles.noMatch}>
-              Condition concept {conditionSearch.conceptId} wasn’t found in this CDR.
+            {/* Worth stating: the count is larger than the concept's own records, and
+                larger than the estimate shown in the search dropdown. */}
+            <p style={styles.conditionNote}>
+              Participants recorded with this condition or any more specific form of it.
             </p>
-          ))}
+          </div>
+        ) : (
+          <p style={styles.noMatch}>
+            Condition concept {conditionSearch.conceptId} wasn’t found in this CDR.
+          </p>
+        )}
 
-        {crosswalk && (
-          <>
-        <div style={styles.crosswalkCard}>
-          <div style={styles.crosswalkText}>
-            <div style={styles.row}>
-              <div style={styles.codeLine}>
-                <span style={styles.code}>HPO — {crosswalk.hpoCode}</span>
-                <CopyButton getText={() => crosswalk.hpoCode} label="Copy HPO code" />
+        {ancestryBreakdown.length > 0 && (
+          <div>
+            <div style={styles.breakdownHeader}>
+              <div style={styles.breakdownTitle}>Participant breakdown</div>
+              <div style={styles.breakdownTabs}>
+                {TABS.map((tab) => (
+                  <Clickable
+                    key={tab.id}
+                    style={{ ...styles.tab, ...(activeTab === tab.id ? styles.tabActive : undefined) }}
+                    hoverStyle={{ color: colors.textAccent }}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    {tab.label}
+                  </Clickable>
+                ))}
               </div>
-              <span style={styles.desc}>{crosswalk.description}</span>
             </div>
-            <div style={{ ...styles.row, marginTop: 6 }}>
-              <div style={styles.codeLine}>
-                <span style={styles.code}>OMOP — {crosswalk.omopCode}</span>
-                <CopyButton getText={() => crosswalk.omopCode} label="Copy OMOP concept ID" />
-              </div>
-              <span style={styles.desc}>{crosswalk.description}</span>
-            </div>
-          </div>
-        </div>
 
-        <div>
-          <div style={styles.breakdownHeader}>
-            <div style={styles.breakdownTitle}>Participant breakdown</div>
-            <div style={styles.breakdownTabs}>
-              {TABS.map((tab) => (
-                <Clickable
-                  key={tab.id}
-                  style={{ ...styles.tab, ...(activeTab === tab.id ? styles.tabActive : undefined) }}
-                  hoverStyle={{ color: colors.textAccent }}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.label}
-                </Clickable>
-              ))}
+            {/* Keyed by tab so switching remounts the donut/legend, replaying their entrance animation. */}
+            <div key={activeTab}>
+              <PopulationDonutChart
+                segments={segments}
+                centerLabel={
+                  <>
+                    <div style={styles.donutCount}>{breakdownTotal.toLocaleString()}</div>
+                    <div>participants</div>
+                  </>
+                }
+              />
+              <BreakdownLegend segments={segments} />
             </div>
           </div>
-
-          {/* Keyed by tab so switching remounts the donut/legend, replaying their entrance animation. */}
-          <div key={activeTab}>
-            <PopulationDonutChart
-              segments={segments}
-              centerLabel={
-                <>
-                  <div style={styles.donutCount}>{crosswalk.participantCount.toLocaleString()}</div>
-                  <div>participants</div>
-                </>
-              }
-            />
-            <BreakdownLegend segments={segments} />
-          </div>
-        </div>
-          </>
         )}
       </div>
     </ResultsPanel>

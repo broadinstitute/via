@@ -126,8 +126,8 @@ export default function SearchEntryPage() {
               value={condition}
               // Relies on ConditionSearchField calling onChange before onSelect when a concept
               // is picked: this clears the id for a plain edit, and the onSelect below puts it
-              // back for a pick. Typed-but-unpicked text therefore carries no id, which is
-              // what makes the backend fall back to searching the text.
+              // back for a pick. Typed-but-unpicked text therefore carries no id, and so
+              // doesn't filter the search.
               onChange={(value) => {
                 setCondition(value);
                 setConditionConceptId(null);

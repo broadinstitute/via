@@ -37,16 +37,6 @@ paths:
               type: string
           description: >-
             Candidate variant IDs, VAT `vid` format (e.g. "8-11708582-C-T").
-        - name: hpoTerm
-          in: query
-          required: false
-          schema:
-            type: string
-          description: >-
-            HPO phenotype term to filter candidate variants by.
-            If not provided, no phenotype filtering is applied. There's no
-            participant-level data source behind this yet, so any term given
-            matches the same mock cohort -- see phenotypeCrosswalk.
         - name: conditionConceptId
           in: query
           required: false
@@ -189,7 +179,6 @@ components:
       type: object
       required:
         - searchSummary
-        - phenotypeCrosswalk
         - ancestryBreakdown
         - ageBreakdown
         - cohortVariants
@@ -198,28 +187,22 @@ components:
       properties:
         searchSummary:
           $ref: "#/components/schemas/SearchSummary"
-        phenotypeCrosswalk:
-          nullable: true
-          description: >-
-            Null when no hpoTerm was given; ancestryBreakdown, ageBreakdown,
-            and filteredVariants are empty in that same case. When a term was
-            given this is mock data -- there's no real phenotype/participant
-            data source behind it yet, so every term matches the same
-            synthetic cohort, as do the two breakdowns and filteredVariants.
-          allOf:
-            - $ref: "#/components/schemas/PhenotypeCrosswalk"
         conditionSearch:
           nullable: true
           description: >-
-            Null when no conditionConceptId was given. Unlike phenotypeCrosswalk
-            and the breakdowns, this is backed by real queries against
+            Null when no conditionConceptId was given. Unlike the breakdowns
+            and filteredVariants, this is backed by real queries against
             cb_criteria, concept_ancestor and condition_occurrence.
           allOf:
             - $ref: "#/components/schemas/ConditionSearch"
         ancestryBreakdown:
           description: >-
-            Mock data (see phenotypeCrosswalk). Counts sum to the crosswalk's
-            participantCount, and percent is each count's share of it.
+            Mock data: there's no participant-level data source behind it yet,
+            so every condition matches the same synthetic cohort, as do
+            ageBreakdown and filteredVariants. Populated only when
+            conditionSearch found the picked concept, and empty otherwise.
+            percent is each count's share of the counts' total, which won't
+            match conditionSearch.participantCount.
           type: array
           items:
             $ref: "#/components/schemas/BreakdownSegment"
@@ -234,8 +217,8 @@ components:
             $ref: "#/components/schemas/CohortVariant"
         filteredVariants:
           description: >-
-            Mock data (see phenotypeCrosswalk), one entry per cohortVariants
-            entry and in the same order.
+            Mock data (see ancestryBreakdown), one entry per cohortVariants
+            entry and in the same order. Empty when ancestryBreakdown is.
           type: array
           items:
             $ref: "#/components/schemas/FilteredVariant"
@@ -245,7 +228,6 @@ components:
         - variantsRaw
         - variantsEnteredCount
         - variantsLimit
-        - hpoTerm
       properties:
         variantsRaw:
           type: string
@@ -254,8 +236,6 @@ components:
           type: integer
         variantsLimit:
           type: integer
-        hpoTerm:
-          type: string
     ConditionCandidates:
       type: object
       required:
@@ -327,25 +307,6 @@ components:
             when the column was null or non-numeric; the real table also
             carries 0 and -1.
           example: 47
-    PhenotypeCrosswalk:
-      type: object
-      required:
-        - hpoCode
-        - omopCode
-        - description
-        - participantCount
-      properties:
-        hpoCode:
-          type: string
-          example: "HP:0001636"
-        omopCode:
-          type: string
-          example: "313867"
-        description:
-          type: string
-          example: "Tetralogy of Fallot"
-        participantCount:
-          type: integer
     BreakdownSegment:
       type: object
       required:

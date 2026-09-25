@@ -170,6 +170,11 @@ interface ConditionSearchFieldProps {
    * immediately after the onChange carrying the concept's name -- see applySelection.
    */
   onSelect?: (concept: ConditionConcept) => void;
+  /**
+   * A concept already picked before this field mounted, e.g. the one a results page was
+   * searched with. `value` should be its name. It's shown as picked, and isn't re-queried.
+   */
+  initialSelection?: ConditionConcept | null;
   placeholder?: string;
 }
 
@@ -185,6 +190,7 @@ export default function ConditionSearchField({
   value,
   onChange,
   onSelect,
+  initialSelection = null,
   placeholder,
 }: ConditionSearchFieldProps) {
   const [candidates, setCandidates] = useState<ConditionConcept[]>([]);
@@ -192,7 +198,7 @@ export default function ConditionSearchField({
   const [error, setError] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [selected, setSelected] = useState<ConditionConcept | null>(null);
+  const [selected, setSelected] = useState<ConditionConcept | null>(initialSelection);
   const { focused, focusProps } = useFocus();
   const { hoveredKey, hoverProps } = useHoveredKey<number>();
   const listboxRef = useRef<HTMLUListElement>(null);
@@ -200,8 +206,9 @@ export default function ConditionSearchField({
   const [listboxMaxHeight, setListboxMaxHeight] = useState<number | undefined>(undefined);
 
   // Set while applying a pick, to stop the effect below from firing a fresh query for the name
-  // we just wrote into the field -- which would reopen the list the user just dismissed.
-  const justSelected = useRef(false);
+  // we just wrote into the field -- which would reopen the list the user just dismissed. Starts
+  // set for an initial selection, whose name is in the field on mount for the same reason.
+  const justSelected = useRef(initialSelection !== null);
 
   const query = value.trim();
 

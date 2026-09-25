@@ -42,7 +42,7 @@ describe("TopBar", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 17,
-      hpoTerm: "Seizure",
+      condition: "Seizure",
       onModifySearch: vi.fn(),
     });
 
@@ -52,11 +52,11 @@ describe("TopBar", () => {
     expect(screen.getByRole("button", { name: "Modify search" })).toBeEnabled();
   });
 
-  it("renders the fallback phenotype label when no HPO term is set", () => {
+  it("renders the fallback phenotype label when no condition is set", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 4,
-      hpoTerm: "",
+      condition: "",
       onModifySearch: vi.fn(),
     });
 
@@ -80,7 +80,7 @@ describe("TopBar", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 9,
-      hpoTerm: "Ataxia",
+      condition: "Ataxia",
       onModifySearch: vi.fn(),
     });
 
@@ -94,7 +94,7 @@ describe("TopBar", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 9,
-      hpoTerm: "Ataxia",
+      condition: "Ataxia",
       onModifySearch,
     });
 

@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ConditionSearch } from "../../api/conditions";
-import type { PhenotypeCrosswalk } from "../../types/results";
+import type { BreakdownSegment } from "../../types/results";
 import PhenotypeFilterPanel from "./PhenotypeFilterPanel";
 
 const CONDITION: ConditionSearch = {
@@ -10,21 +10,19 @@ const CONDITION: ConditionSearch = {
   participantCount: 49,
 };
 
-const CROSSWALK: PhenotypeCrosswalk = {
-  hpoCode: "HP:0001636",
-  omopCode: "313867",
-  description: "Tetralogy of Fallot",
-  participantCount: 120,
-};
+const ANCESTRY: BreakdownSegment[] = [
+  { label: "EUR", count: 20, percent: 66.7, color: "#F9C854" },
+  { label: "AFR", count: 10, percent: 33.3, color: "#2078B4" },
+];
+
+const AGE: BreakdownSegment[] = [{ label: "40–49", count: 30, percent: 100, color: "#5FAEDA" }];
 
 function renderPanel(props: Partial<React.ComponentProps<typeof PhenotypeFilterPanel>> = {}) {
   render(
     <PhenotypeFilterPanel
       conditionSearch={null}
-      crosswalk={null}
       ancestryBreakdown={[]}
       ageBreakdown={[]}
-      hpoTerm=""
       onAddPhenotypeFilter={vi.fn()}
       {...props}
     />,
@@ -34,7 +32,7 @@ function renderPanel(props: Partial<React.ComponentProps<typeof PhenotypeFilterP
 describe("PhenotypeFilterPanel", () => {
   afterEach(cleanup);
 
-  it("prompts for a phenotype when there is neither a condition nor a crosswalk", () => {
+  it("prompts for a phenotype when no condition was picked", () => {
     renderPanel();
 
     expect(screen.getByRole("button", { name: /add phenotype filter/i })).toBeInTheDocument();
@@ -64,34 +62,18 @@ describe("PhenotypeFilterPanel", () => {
     expect(screen.getByText("Condition concept 123 wasn’t found in this CDR.")).toBeInTheDocument();
   });
 
-  /**
-   * A condition alone must not send the panel to its empty state, which is the regression
-   * introduced by replacing the entry page's HPO input: hpoTerm is empty on that path, so
-   * crosswalk comes back null.
-   */
-  it("does not fall back to the empty state when only a condition is present", () => {
+  it("shows the mock breakdown, totalled from its own segments, beside the real count", () => {
+    renderPanel({ conditionSearch: CONDITION, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+
+    expect(screen.getByText("Participant breakdown")).toBeInTheDocument();
+    // 49 is the real condition count; 30 is what the mock segments add up to.
+    expect(screen.getByText("49")).toBeInTheDocument();
+    expect(screen.getByText("30")).toBeInTheDocument();
+  });
+
+  it("leaves the breakdown out when there isn't one", () => {
     renderPanel({ conditionSearch: CONDITION });
 
-    expect(screen.queryByRole("button", { name: /add phenotype filter/i })).not.toBeInTheDocument();
-  });
-
-  it("still renders the HPO crosswalk when one is present", () => {
-    renderPanel({ crosswalk: CROSSWALK });
-
-    expect(screen.getByText("HPO — HP:0001636")).toBeInTheDocument();
-    expect(screen.getByText("OMOP — 313867")).toBeInTheDocument();
-  });
-
-  it("renders both when a condition and an HPO term were given", () => {
-    renderPanel({ conditionSearch: CONDITION, crosswalk: CROSSWALK });
-
-    expect(screen.getByText("OMOP — 9000010")).toBeInTheDocument();
-    expect(screen.getByText("HPO — HP:0001636")).toBeInTheDocument();
-    expect(screen.getByText("49")).toBeInTheDocument();
-  });
-
-  /** Guards the crash: the donut reads crosswalk.participantCount unconditionally. */
-  it("renders without a crosswalk", () => {
-    expect(() => renderPanel({ conditionSearch: CONDITION })).not.toThrow();
+    expect(screen.queryByText("Participant breakdown")).not.toBeInTheDocument();
   });
 });

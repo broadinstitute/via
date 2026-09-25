@@ -91,12 +91,13 @@ const styles = {
 interface TopBarProps {
   loading?: boolean;
   variantsEnteredCount?: number;
-  hpoTerm?: string;
+  /** The picked condition's name. */
+  condition?: string;
   userEmail: string;
   onModifySearch?: () => void;
 }
 
-export default function TopBar({ loading, variantsEnteredCount, hpoTerm, userEmail, onModifySearch }: TopBarProps) {
+export default function TopBar({ loading, variantsEnteredCount, condition, userEmail, onModifySearch }: TopBarProps) {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -129,7 +130,7 @@ export default function TopBar({ loading, variantsEnteredCount, hpoTerm, userEma
             {loading ? (
               <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
             ) : (
-              <span style={styles.valueBadge}>{hpoTerm || "None entered"}</span>
+              <span style={styles.valueBadge}>{condition || "None entered"}</span>
             )}
           </span>
           <Clickable

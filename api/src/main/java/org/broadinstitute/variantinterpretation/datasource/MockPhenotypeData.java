@@ -4,12 +4,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import org.broadinstitute.variantinterpretation.model.BreakdownSegment;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
 import org.broadinstitute.variantinterpretation.model.FilteredVariant;
-import org.broadinstitute.variantinterpretation.model.PhenotypeCrosswalk;
 
 /**
  * Stand-in phenotype/participant data for the phenotype-matched half of the search results.
@@ -17,8 +15,8 @@ import org.broadinstitute.variantinterpretation.model.PhenotypeCrosswalk;
  * <p>None of this is real. The VAT is a variant-transcript aggregate table with no participant,
  * phenotype, ancestry, or age data in it at all -- and per the VAT design doc it never will have
  * (see docs/vat_schema_mapping.md), so the phenotype-matched panels need a genotype-level data
- * source that doesn't exist yet. Until it does, this makes those panels demo-able: every supplied
- * phenotype "matches" the same synthetic cohort of {@value #PARTICIPANT_COUNT} participants, and
+ * source that doesn't exist yet. Until it does, this makes those panels demo-able: every picked
+ * condition "matches" the same synthetic cohort of {@value #PARTICIPANT_COUNT} participants, and
  * each searched variant gets synthetic cohort stats for it.
  *
  * <p>The stats are derived from the variant's real (well, synthetic-VAT) cohort-wide AoU frequency
@@ -27,7 +25,7 @@ import org.broadinstitute.variantinterpretation.model.PhenotypeCrosswalk;
  */
 public final class MockPhenotypeData {
 
-  /** How many participants any supplied phenotype matches. There's no cohort behind the number. */
+  /** How many participants any picked condition matches. There's no cohort behind the number. */
   static final int PARTICIPANT_COUNT = 978;
 
   // Two alleles per participant, and mock data has no missing calls, so every variant with stats
@@ -42,43 +40,7 @@ public final class MockPhenotypeData {
   // 1.0 in the phenotype-matched cohort would read as a data error rather than a signal.
   private static final double MAX_COHORT_AF = 0.98;
 
-  private record KnownPhenotype(String omopCode, String description) {}
-
-  // Enough of a crosswalk to cover the terms a demo is likely to type -- HP:0001636 is the one the
-  // search form suggests. The OMOP concept ids are illustrative rather than looked up, except
-  // HP:0001636 -> 313867, which came from the real crosswalk.
-  private static final Map<String, KnownPhenotype> KNOWN_PHENOTYPES =
-      Map.of(
-          "HP:0001636", new KnownPhenotype("313867", "Tetralogy of Fallot"),
-          "HP:0001631", new KnownPhenotype("314054", "Atrial septal defect"),
-          "HP:0001629", new KnownPhenotype("4184582", "Ventricular septal defect"),
-          "HP:0001644", new KnownPhenotype("316139", "Dilated cardiomyopathy"),
-          "HP:0001250", new KnownPhenotype("377091", "Seizure"),
-          "HP:0000822", new KnownPhenotype("316866", "Hypertension"),
-          "HP:0003002", new KnownPhenotype("4112853", "Breast carcinoma"),
-          "HP:0001166", new KnownPhenotype("4048228", "Arachnodactyly"));
-
   private MockPhenotypeData() {}
-
-  /**
-   * The HPO -> OMOP crosswalk for a supplied term. Terms outside {@link #KNOWN_PHENOTYPES} still
-   * get a crosswalk -- the point is that every phenotype matches -- with a description that says
-   * so and an OMOP code derived from the term.
-   */
-  public static PhenotypeCrosswalk crosswalk(String hpoTerm) {
-    KnownPhenotype known = KNOWN_PHENOTYPES.get(hpoTerm.toUpperCase());
-    return new PhenotypeCrosswalk()
-        .hpoCode(hpoTerm)
-        .omopCode(known == null ? derivedOmopCode(hpoTerm) : known.omopCode())
-        .description(known == null ? "Mock phenotype (not in demo crosswalk)" : known.description())
-        .participantCount(PARTICIPANT_COUNT);
-  }
-
-  // Stable per term, and in the 6-digit range real OMOP condition concept ids fall in, so an
-  // unmapped term at least looks like it was crosswalked to something.
-  private static String derivedOmopCode(String hpoTerm) {
-    return Integer.toString(300_000 + Math.floorMod(hpoTerm.hashCode(), 700_000));
-  }
 
   /**
    * Ancestry makeup of the matched participants. Proportions are the ones from the design
