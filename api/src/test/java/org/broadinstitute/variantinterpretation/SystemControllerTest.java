@@ -61,7 +61,7 @@ class SystemControllerTest {
             tuple(
                 "test-project.test_dataset.v1",
                 false,
-                "Table does not exist, or is not visible to us."),
+                "Table does not exist, or is not visible to user."),
             tuple("cdr-project.test_cdr.cb_criteria", true, null),
             tuple("cdr-project.test_cdr.concept_ancestor", false, "Access Denied"),
             tuple("cdr-project.test_cdr.condition_occurrence", true, null));
