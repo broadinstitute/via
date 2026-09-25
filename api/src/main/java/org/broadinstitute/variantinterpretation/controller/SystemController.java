@@ -1,30 +1,26 @@
 package org.broadinstitute.variantinterpretation.controller;
 
-import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.TableId;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.broadinstitute.variantinterpretation.datasource.BigQueryProperties;
+import org.broadinstitute.variantinterpretation.datasource.BigQueryService;
 import org.broadinstitute.variantinterpretation.datasource.ConditionLookupService;
 import org.broadinstitute.variantinterpretation.api.SystemApi;
 import org.broadinstitute.variantinterpretation.model.BigQueryStatus;
 import org.broadinstitute.variantinterpretation.model.DataSourceVersion;
 import org.broadinstitute.variantinterpretation.model.TableStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class SystemController implements SystemApi {
 
-  private static final Logger log = LoggerFactory.getLogger(SystemController.class);
-
-  private final BigQuery bigQuery;
+  private final BigQueryService bigQuery;
   private final BigQueryProperties properties;
 
-  public SystemController(BigQuery bigQuery, BigQueryProperties properties) {
+  public SystemController(BigQueryService bigQuery, BigQueryProperties properties) {
     this.bigQuery = bigQuery;
     this.properties = properties;
   }
@@ -38,24 +34,11 @@ public class SystemController implements SystemApi {
     tables.add(properties.vatTable());
     ConditionLookupService.CDR_TABLES.forEach(t -> tables.add(properties.cdrTable(t)));
 
-    List<TableStatus> statuses = tables.stream().map(this::check).toList();
+    List<TableStatus> statuses = tables.stream().map(bigQuery::checkAccess).toList();
     return ResponseEntity.ok(
         new BigQueryStatus()
             .tables(statuses)
             .accessible(statuses.stream().allMatch(TableStatus::getAccessible)));
-  }
-
-  private TableStatus check(TableId table) {
-    var status = new TableStatus().table("%s.%s.%s".formatted(table.getProject(), table.getDataset(), table.getTable()));
-    try {
-      if (bigQuery.getTable(table) == null) {
-        return status.accessible(false).detail("Table does not exist, or is not visible to user.");
-      }
-      return status.accessible(true);
-    } catch (RuntimeException e) {
-      log.warn("BigQuery access check failed for table {}", status.getTable(), e);
-      return status.accessible(false).detail(e.getMessage());
-    }
   }
 
   // TODO VIA-47: right now these data source versions are hardcoded (and not entirely accurate)

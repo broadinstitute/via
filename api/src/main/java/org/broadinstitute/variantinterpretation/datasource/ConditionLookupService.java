@@ -1,7 +1,5 @@
 package org.broadinstitute.variantinterpretation.datasource;
 
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.QueryParameterValue;
@@ -11,11 +9,11 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static org.broadinstitute.variantinterpretation.util.BigQueryValues.intValue;
+
 import org.broadinstitute.variantinterpretation.model.ConditionCandidates;
 import org.broadinstitute.variantinterpretation.model.ConditionConcept;
 import org.broadinstitute.variantinterpretation.model.ConditionSearch;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -40,8 +38,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class ConditionLookupService {
 
-  private static final Logger log = LoggerFactory.getLogger(ConditionLookupService.class);
-
   // Fixed CDR table names; only the dataset varies. See BigQueryProperties#cdrTable(String).
   private static final String CB_CRITERIA = "cb_criteria";
   private static final String CONCEPT_ANCESTOR = "concept_ancestor";
@@ -50,9 +46,6 @@ public class ConditionLookupService {
   /** Every CDR table this service queries, for the access check in SystemController. */
   public static final List<String> CDR_TABLES =
       List.of(CB_CRITERIA, CONCEPT_ANCESTOR, CONDITION_OCCURRENCE);
-
-  // Prevents accidental full-table scans during development. See VIA-50.
-  private static final long MAXIMUM_BYTES_BILLED = 100L * 1024 * 1024;
 
   // Only show the top 50 candidates in the type-ahead
   private static final int CANDIDATES_LIMIT = 50;
@@ -117,10 +110,10 @@ public class ConditionLookupService {
       )
       """;
 
-  private final BigQuery bigQuery;
+  private final BigQueryService bigQuery;
   private final BigQueryProperties properties;
 
-  public ConditionLookupService(BigQuery bigQuery, BigQueryProperties properties) {
+  public ConditionLookupService(BigQueryService bigQuery, BigQueryProperties properties) {
     this.bigQuery = bigQuery;
     this.properties = properties;
   }
@@ -159,13 +152,11 @@ public class ConditionLookupService {
 
   /** The concept, or null when the ID isn't a standard condition concept. */
   private ConditionConcept resolveConcept(long conceptId) {
-    var configuration =
+    var query =
         QueryJobConfiguration.newBuilder(
                 RESOLVE_CONCEPT_SQL.formatted(properties.cdrTableRef(CB_CRITERIA)))
-            .addNamedParameter("conceptId", QueryParameterValue.int64(conceptId))
-            .setMaximumBytesBilled(MAXIMUM_BYTES_BILLED)
-            .build();
-    List<ConditionConcept> concepts = toConcepts(runQuery(configuration));
+            .addNamedParameter("conceptId", QueryParameterValue.int64(conceptId));
+    List<ConditionConcept> concepts = toConcepts(bigQuery.query(query));
     return concepts.isEmpty() ? null : concepts.get(0);
   }
 
@@ -222,13 +213,12 @@ public class ConditionLookupService {
                     properties.cdrTableRef(CB_CRITERIA),
                     String.join(" AND ", predicates),
                     CANDIDATES_LIMIT))
-            .addNamedParameter("exactName", QueryParameterValue.string(rawTerm.toLowerCase(Locale.ROOT)))
-            .setMaximumBytesBilled(MAXIMUM_BYTES_BILLED);
+            .addNamedParameter("exactName", QueryParameterValue.string(rawTerm.toLowerCase(Locale.ROOT)));
     for (int i = 0; i < terms.size(); i++) {
       builder.addNamedParameter("term" + i, QueryParameterValue.string(likePattern(terms.get(i))));
     }
 
-    return toConcepts(runQuery(builder.build()));
+    return toConcepts(bigQuery.query(builder));
   }
 
   private static List<ConditionConcept> toConcepts(Iterable<FieldValueList> rows) {
@@ -238,38 +228,21 @@ public class ConditionLookupService {
           new ConditionConcept()
               .conceptId(row.get("concept_id").getLongValue())
               .name(row.get("name").getStringValue())
-              .estimatedParticipantCount(intOrNull(row, "est_count")));
+              .estimatedParticipantCount(intValue(row, "est_count")));
     }
     return concepts;
   }
 
   private Integer countParticipants(long conceptId) {
-    var configuration =
+    var query =
         QueryJobConfiguration.newBuilder(
                 COHORT_COUNT_SQL.formatted(
                     properties.cdrTableRef(CONDITION_OCCURRENCE),
                     properties.cdrTableRef(CONCEPT_ANCESTOR)))
-            .addNamedParameter("conceptId", QueryParameterValue.int64(conceptId))
-            .setMaximumBytesBilled(MAXIMUM_BYTES_BILLED)
-            .build();
-    for (FieldValueList row : runQuery(configuration)) {
+            .addNamedParameter("conceptId", QueryParameterValue.int64(conceptId));
+    for (FieldValueList row : bigQuery.query(query)) {
       return (int) row.get("participants").getLongValue();
     }
     return 0;
-  }
-
-  private Iterable<FieldValueList> runQuery(QueryJobConfiguration configuration) {
-    log.info("Running BigQuery query: {}", configuration.getQuery());
-    try {
-      return bigQuery.query(configuration).iterateAll();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IllegalStateException("Interrupted while querying BigQuery", e);
-    }
-  }
-
-  private static Integer intOrNull(FieldValueList row, String column) {
-    FieldValue value = row.get(column);
-    return value.isNull() ? null : (int) value.getLongValue();
   }
 }
