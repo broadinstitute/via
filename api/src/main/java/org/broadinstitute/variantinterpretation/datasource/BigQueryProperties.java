@@ -8,15 +8,19 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * @param billingProjectId project query jobs run in and are billed to: the workspace's own
  *     project ({@code GOOGLE_PROJECT}) on a Workbench VM
- * @param projectId project owning the VAT dataset
- * @param datasetId dataset holding the VAT table
- * @param tableId the VAT table backing variant search
+ * @param vatProjectId project owning the VAT dataset
+ * @param vatDatasetId dataset holding the VAT table
+ * @param vatTableId the VAT table backing variant search
  * @param cdr the workspace's CDR dataset as {@code project.dataset} ({@code WORKSPACE_CDR} on a
  *     Workbench VM), holding the condition lookup tables
  */
 @ConfigurationProperties(prefix = "bigquery")
 public record BigQueryProperties(
-    String billingProjectId, String projectId, String datasetId, String tableId, String cdr) {
+    String billingProjectId,
+    String vatProjectId,
+    String vatDatasetId,
+    String vatTableId,
+    String cdr) {
 
   /**
    * Fails startup on a missing or malformed CDR, rather than letting it surface later as broken
@@ -35,7 +39,7 @@ public record BigQueryProperties(
 
   /** The configured VAT table, as the id type the BigQuery client expects. */
   public TableId vatTable() {
-    return TableId.of(projectId, datasetId, tableId);
+    return TableId.of(vatProjectId, vatDatasetId, vatTableId);
   }
 
   /**

@@ -186,8 +186,7 @@ export default function SearchResultsPage() {
         {results && revealed.filtered ? (
           <ParticipantMatchedVariantsPanel
             rows={results.filteredVariants}
-            // The mock cohort's size, matching the breakdown donut; see PhenotypeFilterPanel.
-            participantCount={results.ancestryBreakdown.reduce((total, segment) => total + segment.count, 0)}
+            participantCount={results.conditionSearch?.participantCount ?? 0}
             hasPhenotypeFilter={results.ancestryBreakdown.length > 0}
             condition={
               results.conditionSearch

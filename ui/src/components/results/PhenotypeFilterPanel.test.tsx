@@ -10,12 +10,13 @@ const CONDITION: ConditionSearch = {
   participantCount: 49,
 };
 
+// Sum to CONDITION's participantCount, as the backend's scaled mock breakdowns do.
 const ANCESTRY: BreakdownSegment[] = [
-  { label: "EUR", count: 20, percent: 66.7, color: "#F9C854" },
-  { label: "AFR", count: 10, percent: 33.3, color: "#2078B4" },
+  { label: "EUR", count: 33, percent: 67.3, color: "#F9C854" },
+  { label: "AFR", count: 16, percent: 32.7, color: "#2078B4" },
 ];
 
-const AGE: BreakdownSegment[] = [{ label: "40–49", count: 30, percent: 100, color: "#5FAEDA" }];
+const AGE: BreakdownSegment[] = [{ label: "40–49", count: 49, percent: 100, color: "#5FAEDA" }];
 
 function renderPanel(props: Partial<React.ComponentProps<typeof PhenotypeFilterPanel>> = {}) {
   render(
@@ -38,13 +39,20 @@ describe("PhenotypeFilterPanel", () => {
     expect(screen.getByRole("button", { name: /add phenotype filter/i })).toBeInTheDocument();
   });
 
-  it("shows the real participant count for a searched condition", () => {
+  it("shows the picked concept, with its count left to the breakdown", () => {
     renderPanel({ conditionSearch: CONDITION });
 
-    expect(screen.getByText("49")).toBeInTheDocument();
-    expect(screen.getByText("participants matched")).toBeInTheDocument();
     expect(screen.getByText("OMOP — 9000010")).toBeInTheDocument();
     expect(screen.getByText("Tetralogy of Fallot")).toBeInTheDocument();
+    expect(screen.queryByText("49")).not.toBeInTheDocument();
+    expect(screen.queryByText("participants matched")).not.toBeInTheDocument();
+  });
+
+  /** No donut appears for nobody, so the card's note is what has to say so. */
+  it("says when the picked condition matched nobody", () => {
+    renderPanel({ conditionSearch: { ...CONDITION, participantCount: 0 } });
+
+    expect(screen.getByText(/No participants are recorded with this condition/)).toBeInTheDocument();
   });
 
   /** The count includes descendants, so it exceeds the concept's own records. Say so. */
@@ -62,13 +70,12 @@ describe("PhenotypeFilterPanel", () => {
     expect(screen.getByText("Condition concept 123 wasn’t found in this CDR.")).toBeInTheDocument();
   });
 
-  it("shows the mock breakdown, totalled from its own segments, beside the real count", () => {
+  it("centers the breakdown donut on the real participant count", () => {
     renderPanel({ conditionSearch: CONDITION, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
 
     expect(screen.getByText("Participant breakdown")).toBeInTheDocument();
-    // 49 is the real condition count; 30 is what the mock segments add up to.
-    expect(screen.getByText("49")).toBeInTheDocument();
-    expect(screen.getByText("30")).toBeInTheDocument();
+    // Only in the donut's center now; the condition card no longer repeats it.
+    expect(screen.getAllByText("49")).toHaveLength(1);
   });
 
   it("leaves the breakdown out when there isn't one", () => {

@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { useNavigate } from "react-router-dom";
 import colors from "../libs/colors";
 import { useMediaQuery } from "../libs/hooks";
 import * as Style from "../libs/style";
@@ -97,7 +96,6 @@ const RECENT_SEARCHES: RecentSearch[] = [
 ];
 
 export default function RecentSearches() {
-  const navigate = useNavigate();
   const isNarrow = useMediaQuery(NARROW_LAYOUT_QUERY);
 
   return (
@@ -133,7 +131,10 @@ export default function RecentSearches() {
             <Clickable
               style={{ ...styles.viewButton, ...(isNarrow ? { alignSelf: "flex-end" } : undefined) }}
               hoverStyle={Style.buttons.accentHover}
-              onClick={() => navigate("/results")}
+              disabledStyle={Style.buttons.disabled}
+              // These searches are placeholders with no saved criteria behind them, so there's
+              // nothing to show yet.
+              disabled
             >
               View results
               <ArrowRightIcon size={13} strokeWidth={2.5} />

@@ -108,7 +108,7 @@ export default function SystemStatusPanel() {
           onClick={check}
           disabled={loading}
         >
-          {loading ? "Checking…" : "Recheck"}
+          {loading ? "Refreshing..." : "Refresh"}
         </Clickable>
       </div>
       <p style={styles.intro}>

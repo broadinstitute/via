@@ -35,6 +35,7 @@ const styles = {
   conceptText: {
     display: "flex",
     flexDirection: "column",
+    gap: 3,
     flex: 1,
     minWidth: 0,
   },
@@ -44,6 +45,7 @@ const styles = {
     gap: 5,
   },
   code: {
+    ...Style.elements.trimmedText,
     color: colors.textAccent,
     fontFamily: "monospace",
     fontSize: 11,
@@ -51,26 +53,8 @@ const styles = {
   },
   desc: {
     color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: 500,
-  },
-  countBadge: {
-    flexShrink: 0,
-    paddingLeft: 10,
-    borderLeft: `1px solid ${colors.border}`,
-    textAlign: "center",
-  },
-  num: {
-    color: colors.textPrimary,
-    fontSize: 22,
-    fontWeight: 700,
-    lineHeight: 1,
-  },
-  lbl: {
-    width: 64,
-    marginTop: 3,
-    color: colors.textMuted,
-    fontSize: 11,
+    fontSize: 14,
+    fontWeight: 600,
     lineHeight: 1.3,
   },
   // Overrides the donut center's own uppercase micro-label treatment for the headline number.
@@ -141,7 +125,10 @@ interface PhenotypeFilterPanelProps {
    * queries rather than MockPhenotypeData.
    */
   conditionSearch: ConditionSearch | null;
-  /** Mock; empty unless the picked condition was found. */
+  /**
+   * Mock groups, but scaled so their counts sum to conditionSearch.participantCount. Empty unless
+   * that count is above zero.
+   */
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
   onAddPhenotypeFilter: () => void;
@@ -166,9 +153,6 @@ export default function PhenotypeFilterPanel({
 
   const concept = conditionSearch.concept;
   const segments = activeTab === "ancestry" ? ancestryBreakdown : ageBreakdown;
-  // The mock cohort's size, taken from the breakdown itself so the donut's center always agrees
-  // with its legend. It is not conditionSearch.participantCount, the real count shown above.
-  const breakdownTotal = ancestryBreakdown.reduce((total, segment) => total + segment.count, 0);
 
   return (
     <ResultsPanel title="Phenotype filter">
@@ -177,21 +161,20 @@ export default function PhenotypeFilterPanel({
           <div>
             <div style={styles.conceptCard}>
               <div style={styles.conceptText}>
+                <span style={styles.desc}>{concept.name}</span>
                 <div style={styles.codeLine}>
                   <span style={styles.code}>OMOP — {concept.conceptId}</span>
                   <CopyButton getText={() => String(concept.conceptId)} label="Copy OMOP concept ID" />
                 </div>
-                <span style={styles.desc}>{concept.name}</span>
-              </div>
-              <div style={styles.countBadge}>
-                <div style={styles.num}>{conditionSearch.participantCount?.toLocaleString() ?? "—"}</div>
-                <div style={styles.lbl}>participants matched</div>
               </div>
             </div>
-            {/* Worth stating: the count is larger than the concept's own records, and
-                larger than the estimate shown in the search dropdown. */}
+            {/* The count itself is in the breakdown donut below. Worth stating what it covers:
+                it's larger than the concept's own records, and than the dropdown's estimate.
+                With nobody matched there's no donut, so this is the only place that says so. */}
             <p style={styles.conditionNote}>
-              Participants recorded with this condition or any more specific form of it.
+              {conditionSearch.participantCount
+                ? "Participant counts include anyone recorded with this condition or any more specific form of it."
+                : "No participants are recorded with this condition or any more specific form of it."}
             </p>
           </div>
         ) : (
@@ -224,7 +207,7 @@ export default function PhenotypeFilterPanel({
                 segments={segments}
                 centerLabel={
                   <>
-                    <div style={styles.donutCount}>{breakdownTotal.toLocaleString()}</div>
+                    <div style={styles.donutCount}>{conditionSearch.participantCount?.toLocaleString()}</div>
                     <div>participants</div>
                   </>
                 }

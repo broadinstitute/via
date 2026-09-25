@@ -89,14 +89,6 @@ const styles = {
   estimateOnActive: {
     background: colors.surface2,
   },
-  /**
-   * Trims the label's box to cap height and baseline. Otherwise it keeps the font's descender
-   * space, which digits don't use, so centering it against the icon leaves the digits ~0.5px
-   * high. Browsers without text-box just keep that small offset.
-   */
-  estimateLabel: {
-    textBox: "trim-both cap alphabetic",
-  },
   estimateIcon: {
     display: "block",
     flexShrink: 0,
@@ -156,7 +148,7 @@ function Estimate({ estimate, onActiveRow = false }: { estimate: number | null; 
   return (
     <span style={{ ...styles.estimate, ...(onActiveRow ? styles.estimateOnActive : undefined) }} title={tooltip}>
       <UserIcon size={11} strokeWidth={2.5} style={styles.estimateIcon} aria-hidden="true" />
-      <span style={styles.estimateLabel}>{label}</span>
+      <span style={Style.elements.trimmedText}>{label}</span>
     </span>
   );
 }

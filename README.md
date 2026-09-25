@@ -20,6 +20,7 @@ This repo contains the app's frontend (ui/, TypeScript + React) and backend (api
   `postCreateCommand`/`postStartCommand`; see [its README](startupscript/README.md)
   for why this lives at the repo root instead of under `deploy/`.
 - `scripts/` - Local development helpers (`dev-setup.sh`).
+- `data/` - Example data for local development, with generators.
 
 ## Local development
 
@@ -32,7 +33,7 @@ gcloud auth application-default login   # if you haven't already
 
 `dev-setup.sh` checks your local environment for JDK 21, Node 20+ and gcloud, writes
 `.env.local`, and uses your Application Default Credentials to confirm you can
-actually read the configured BigQuery table. If needed, delete `.env.local` to
+actually read the configured BigQuery tables. If needed, delete `.env.local` to
 regenerate it from scratch.
 
 Then run the backend and frontend separately, with Vite proxying `/api` calls
@@ -52,23 +53,14 @@ Open the URL Vite prints (default `http://localhost:5173`).
 
 ### Environment variables
 
-`.env.local` (written locally by `dev-setup.sh`) holds everything local
-development needs. Without it, the backend falls back to the defaults in
-`api/src/main/resources/application.properties` for everything except
-`WORKSPACE_CDR`, which has no default and must always be set.
-
 | Variable | Purpose |
 |---|---|
 | `WORKBENCH_USER_EMAIL` | The email of the user running VIA |
-| `BIGQUERY_PROJECT_ID` | Project owning the VAT dataset |
-| `BIGQUERY_DATASET_ID` | Dataset holding the variant data |
-| `BIGQUERY_TABLE_ID` | Table backing variant search |
-| `GOOGLE_PROJECT` | Project query jobs are billed to. Required in Workbench; defaults to `BIGQUERY_PROJECT_ID` locally |
-| `WORKSPACE_CDR` | CDR dataset (`project.dataset`) holding the condition lookup tables. Always required, with no default; the synthetic copies are in `aou-via-dev.foxtrot_synthetic` |
-
-Credentials are never configured here: the BigQuery client always uses
-Application Default Credentials (gcloud locally, the VM's attached service
-account in Workbench).
+| `VAT_PROJECT_ID` | Project owning the VAT dataset |
+| `VAT_DATASET_ID` | Dataset holding the VAT table |
+| `VAT_TABLE_ID` | VAT table backing variant search |
+| `GOOGLE_PROJECT` | Project query jobs are billed to |
+| `WORKSPACE_CDR` | CDR dataset (`project.dataset`) |
 
 ### Browsing the API
 

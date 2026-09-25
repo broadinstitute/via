@@ -60,11 +60,11 @@ describe("SettingsDialog", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("status 500");
   });
 
-  it("rechecks on demand", async () => {
+  it("refreshes on demand", async () => {
     render(<SettingsDialog onClose={vi.fn()} />);
     await screen.findByText("All tables accessible");
 
-    fireEvent.click(screen.getByRole("button", { name: "Recheck" }));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
 
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(await screen.findByText("All tables accessible")).toBeInTheDocument();
