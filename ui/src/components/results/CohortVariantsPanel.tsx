@@ -99,9 +99,7 @@ const styles = {
     color: colors.textMuted,
     fontStyle: "italic",
   },
-  /** The same outlined badge for both calls; LC is the muted one, so it reads as weaker. */
   plofBadge: {
-    // One fixed width, so the column lines up: bold "HC" is ~27px and "LC" ~24px otherwise.
     display: "inline-block",
     width: 28,
     textAlign: "center",
