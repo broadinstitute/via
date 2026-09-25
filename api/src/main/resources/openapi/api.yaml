@@ -457,9 +457,10 @@ components:
           type: string
           nullable: true
           description: >-
-            "HC" (high-confidence LOF) or null. Null means either "not
-            scored by LOFTEE" (when annotated) or n/a (when not annotated).
-          enum: [HC]
+            LOFTEE's predicted loss-of-function call: "HC" (high confidence)
+            or "LC" (low confidence). Null means either "not scored by
+            LOFTEE" (when annotated) or n/a (when not annotated).
+          enum: [HC, LC]
     FilteredVariant:
       type: object
       required:

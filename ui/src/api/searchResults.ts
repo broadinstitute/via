@@ -42,7 +42,7 @@ interface RawCohortVariant {
   clinvarLastUpdated: string | null;
   clinvarSubmissions: ClinvarSubmission[];
   spliceAi: number | null;
-  plof: "HC" | null;
+  plof: "HC" | "LC" | null;
 }
 
 interface RawFilteredVariant {

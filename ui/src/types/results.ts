@@ -57,8 +57,8 @@ export interface AnnotatedCohortVariant extends CohortVariantBase {
   clinvarLastUpdated: string | null;
   clinvarSubmissions: ClinvarSubmission[];
   spliceAi: number;
-  /** null = LOFTEE does not score this consequence type. */
-  plof: "HC" | null;
+  /** LOFTEE's call. null = LOFTEE does not score this consequence type. */
+  plof: "HC" | "LC" | null;
 }
 
 /** Nothing is known about this variant — it is in no annotation or frequency source. */

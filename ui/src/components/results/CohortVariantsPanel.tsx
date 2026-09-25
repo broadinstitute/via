@@ -21,6 +21,8 @@ import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "../elements/SubpopBadge";
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
+const PLOF_RANK = { HC: 0, LC: 1, none: 2 } as const;
+
 const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
   Pathogenic: 0,
   "Likely pathogenic": 1,
@@ -97,7 +99,19 @@ const styles = {
     color: colors.textMuted,
     fontStyle: "italic",
   },
+  plofBadge: {
+    display: "inline-block",
+    width: 28,
+    textAlign: "center",
+    padding: "0 4px",
+    border: `1px solid ${colors.borderStrong}`,
+    borderRadius: 4,
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: 600,
+  },
   plofHc: {
+    borderColor: colors.textPrimary,
     color: colors.textPrimary,
     fontWeight: 700,
   },
@@ -399,15 +413,22 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             cell: ({ row }) => (row.original.annotated ? row.original.spliceAi : <NotAvailable />),
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => (row.annotated ? (row.plof === "HC" ? 0 : 1) : undefined), {
+          columnHelper.accessor((row) => (row.annotated ? PLOF_RANK[row.plof ?? "none"] : undefined), {
             id: "plof",
             header: "pLOF",
             cell: ({ row }) => {
-              if (!row.original.annotated) return <NotAvailable />;
-              if (row.original.plof === "HC") return <span style={styles.plofHc}>HC</span>;
+              const variant = row.original;
+              if (!variant.annotated) return <NotAvailable />;
+              if (variant.plof === null) {
+                return (
+                  <span style={styles.plofNa} title="LOFTEE does not score this consequence type">
+                    —
+                  </span>
+                );
+              }
               return (
-                <span style={styles.plofNa} title="LOFTEE does not score this consequence type">
-                  —
+                <span style={{ ...styles.plofBadge, ...(variant.plof === "HC" ? styles.plofHc : undefined) }}>
+                  {variant.plof}
                 </span>
               );
             },
