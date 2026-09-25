@@ -18,11 +18,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record BigQueryProperties(
     String billingProjectId, String projectId, String datasetId, String tableId, String cdr) {
 
-  /** Fails startup on a malformed CDR rather than letting it surface later as broken SQL. */
+  /**
+   * Fails startup on a missing or malformed CDR, rather than letting it surface later as broken
+   * SQL. There's no default to fall back to: see application.properties.
+   */
   public BigQueryProperties {
-    if (cdr == null || cdr.split("\\.").length != 2) {
+    if (cdr == null || cdr.isBlank()) {
       throw new IllegalArgumentException(
-          "bigquery.cdr must be \"project.dataset\", got: " + cdr);
+          "WORKSPACE_CDR is not set. Set it to the CDR dataset as \"project.dataset\".");
+    }
+    if (cdr.split("\\.").length != 2) {
+      throw new IllegalArgumentException(
+          "WORKSPACE_CDR must be the CDR dataset as \"project.dataset\", got: " + cdr);
     }
   }
 

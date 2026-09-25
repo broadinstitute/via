@@ -34,6 +34,18 @@ else
   else
     echo "WARNING: ${WORKBENCH_ENV_FILE} not found after ${MAX_WAIT_SECONDS}s; starting without Workbench environment variables." >&2
   fi
+
+  # Checked here, not just left to the app, so the log names where each value should have come
+  # from. The app itself refuses to start without WORKSPACE_CDR; GOOGLE_PROJECT would otherwise
+  # fall back to the dev project, billing jobs to a project the workspace can't use.
+  missing=()
+  [[ -n "${WORKSPACE_CDR:-}" ]] || missing+=("WORKSPACE_CDR (set on the VM; passed through by docker-compose.yaml)")
+  [[ -n "${GOOGLE_PROJECT:-}" ]] || missing+=("GOOGLE_PROJECT (exported by startupscript/setup-bashrc.sh)")
+  if [[ "${#missing[@]}" -gt 0 ]]; then
+    echo "ERROR: required Workbench environment variables are not set:" >&2
+    printf '  - %s\n' "${missing[@]}" >&2
+    exit 1
+  fi
 fi
 
 exec java -jar /app/app.jar

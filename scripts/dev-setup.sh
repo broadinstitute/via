@@ -49,6 +49,8 @@ step "Environment (.env.local)"
 BIGQUERY_PROJECT_ID="${BIGQUERY_PROJECT_ID:-$(property_default bigquery.project-id)}"
 BIGQUERY_DATASET_ID="${BIGQUERY_DATASET_ID:-$(property_default bigquery.dataset-id)}"
 BIGQUERY_TABLE_ID="${BIGQUERY_TABLE_ID:-$(property_default bigquery.table-id)}"
+# No default, on purpose: the backend won't start without it (see application.properties).
+WORKSPACE_CDR="${WORKSPACE_CDR:-}"
 
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
@@ -62,10 +64,21 @@ else
     printf 'export BIGQUERY_PROJECT_ID=%q\n' "${BIGQUERY_PROJECT_ID}"
     printf 'export BIGQUERY_DATASET_ID=%q\n' "${BIGQUERY_DATASET_ID}"
     printf 'export BIGQUERY_TABLE_ID=%q\n' "${BIGQUERY_TABLE_ID}"
+    if [[ -n "${WORKSPACE_CDR}" ]]; then
+      printf 'export WORKSPACE_CDR=%q\n' "${WORKSPACE_CDR}"
+    fi
   } > "${ENV_FILE}"
   ok "wrote ${ENV_FILE}"
 fi
 note "table: ${BIGQUERY_PROJECT_ID}.${BIGQUERY_DATASET_ID}.${BIGQUERY_TABLE_ID}"
+if [[ "${WORKSPACE_CDR:-}" =~ ^[^.]+\.[^.]+$ ]]; then
+  ok "WORKSPACE_CDR is ${WORKSPACE_CDR}"
+else
+  bad "WORKSPACE_CDR must be set to the CDR dataset as project.dataset (got: '${WORKSPACE_CDR:-}')"
+  note "the backend won't start without it; there's no default"
+  note "add 'export WORKSPACE_CDR=<project.dataset>' to .env.local, or delete .env.local and re-run"
+  note "  with it set -- e.g. aou-via-dev.foxtrot_synthetic for the synthetic lookup tables"
+fi
 note "email: ${WORKBENCH_USER_EMAIL:-(none)}"
 
 # ---------------------------------------------------------------------------

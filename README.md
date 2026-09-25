@@ -53,8 +53,9 @@ Open the URL Vite prints (default `http://localhost:5173`).
 ### Environment variables
 
 `.env.local` (written locally by `dev-setup.sh`) holds everything local
-development needs. The backend also runs without it, falling back to the
-defaults in `api/src/main/resources/application.properties`.
+development needs. Without it, the backend falls back to the defaults in
+`api/src/main/resources/application.properties` for everything except
+`WORKSPACE_CDR`, which has no default and must always be set.
 
 | Variable | Purpose |
 |---|---|
@@ -62,8 +63,8 @@ defaults in `api/src/main/resources/application.properties`.
 | `BIGQUERY_PROJECT_ID` | Project owning the VAT dataset |
 | `BIGQUERY_DATASET_ID` | Dataset holding the variant data |
 | `BIGQUERY_TABLE_ID` | Table backing variant search |
-| `GOOGLE_PROJECT` | Project query jobs are billed to; defaults to `BIGQUERY_PROJECT_ID` |
-| `WORKSPACE_CDR` | CDR dataset (`project.dataset`) holding the condition lookup tables; defaults to the VAT dataset |
+| `GOOGLE_PROJECT` | Project query jobs are billed to. Required in Workbench; defaults to `BIGQUERY_PROJECT_ID` locally |
+| `WORKSPACE_CDR` | CDR dataset (`project.dataset`) holding the condition lookup tables. Always required, with no default; the synthetic copies are in `aou-via-dev.foxtrot_synthetic` |
 
 Credentials are never configured here: the BigQuery client always uses
 Application Default Credentials (gcloud locally, the VM's attached service
@@ -82,7 +83,7 @@ no CORS or reverse proxy to configure). To build and run that image locally:
 
 ```bash
 docker network create app-network  # first time only
-WORKBENCH_USER_EMAIL=you@example.org SKIP_WORKBENCH_WAIT=true docker compose -f deploy/docker-compose.yaml up --build
+WORKBENCH_USER_EMAIL=you@example.org WORKSPACE_CDR=<project.dataset> SKIP_WORKBENCH_WAIT=true docker compose -f deploy/docker-compose.yaml up --build
 ```
 
 Then open `http://localhost:8080`.
