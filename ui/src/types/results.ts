@@ -59,10 +59,6 @@ export interface AnnotatedCohortVariant extends CohortVariantBase {
   spliceAi: number;
   /** LOFTEE's call. null = LOFTEE does not score this consequence type. */
   plof: "HC" | "LC" | null;
-  /** LOFTEE's codes for why a call is low confidence; see utils/loftee.ts. */
-  plofFilters: string[];
-  /** LOFTEE's warning codes, which can accompany either call. */
-  plofFlags: string[];
 }
 
 /** Nothing is known about this variant — it is in no annotation or frequency source. */

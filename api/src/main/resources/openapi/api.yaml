@@ -458,25 +458,9 @@ components:
           nullable: true
           description: >-
             LOFTEE's predicted loss-of-function call: "HC" (high confidence)
-            or "LC" (low confidence; see plofFilters for why). Null means
-            either "not scored by LOFTEE" (when annotated) or n/a (when not
-            annotated).
+            or "LC" (low confidence). Null means either "not scored by
+            LOFTEE" (when annotated) or n/a (when not annotated).
           enum: [HC, LC]
-        plofFilters:
-          description: >-
-            LOFTEE's reasons for an LC call, as its own codes (e.g.
-            END_TRUNC, NON_CAN_SPLICE). Empty unless plof is set.
-          type: array
-          items:
-            type: string
-        plofFlags:
-          description: >-
-            LOFTEE's warnings on a call, as its own codes (e.g. SINGLE_EXON,
-            PHYLOCSF_WEAK). Can accompany HC as well as LC. Empty unless plof
-            is set.
-          type: array
-          items:
-            type: string
     FilteredVariant:
       type: object
       required:

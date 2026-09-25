@@ -12,7 +12,6 @@ import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
 import { formatAcAn, formatAf } from "../../utils/format";
-import { lofteeRank, lofteeTooltip } from "../../utils/loftee";
 import Clickable from "../common/Clickable";
 import { ChevronRightIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
@@ -22,6 +21,8 @@ import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "../elements/SubpopBadge";
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
+const PLOF_RANK = { HC: 0, LC: 1, none: 2 } as const;
+
 const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
   Pathogenic: 0,
   "Likely pathogenic": 1,
@@ -110,7 +111,6 @@ const styles = {
     color: colors.textSecondary,
     fontSize: 11,
     fontWeight: 600,
-    cursor: "help",
   },
   plofHc: {
     borderColor: colors.textPrimary,
@@ -415,25 +415,21 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             cell: ({ row }) => (row.original.annotated ? row.original.spliceAi : <NotAvailable />),
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => (row.annotated ? lofteeRank(row) : undefined), {
+          columnHelper.accessor((row) => (row.annotated ? PLOF_RANK[row.plof ?? "none"] : undefined), {
             id: "plof",
             header: "pLOF",
             cell: ({ row }) => {
               const variant = row.original;
               if (!variant.annotated) return <NotAvailable />;
-              const tooltip = lofteeTooltip(variant);
               if (variant.plof === null) {
                 return (
-                  <span style={styles.plofNa} title={tooltip}>
+                  <span style={styles.plofNa} title="LOFTEE does not score this consequence type">
                     —
                   </span>
                 );
               }
               return (
-                <span
-                  style={{ ...styles.plofBadge, ...(variant.plof === "HC" ? styles.plofHc : undefined) }}
-                  title={tooltip}
-                >
+                <span style={{ ...styles.plofBadge, ...(variant.plof === "HC" ? styles.plofHc : undefined) }}>
                   {variant.plof}
                 </span>
               );

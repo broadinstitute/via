@@ -70,7 +70,7 @@ public class SearchResultsController implements SearchApi {
              clinvar_rcv_ids, clinvar_rcv_classifications, clinvar_rcv_num_stars,
              splice_ai_acceptor_gain_score, splice_ai_acceptor_loss_score,
              splice_ai_donor_gain_score, splice_ai_donor_loss_score,
-             LoF, LoF_filter, LoF_flags
+             LoF
       FROM %s
       """;
 
@@ -253,15 +253,6 @@ public class SearchResultsController implements SearchApi {
     // ClinVar record to view even though there's no clean aggregate call for the row.
     boolean inClinvar = !clinvarRcvIds.isEmpty();
     String variant = string(row, "vid");
-    // LOFTEE's other values (e.g. OS, "other splice") aren't a call the UI shows, so they read as
-    // unscored, like a null.
-    CohortVariant.PlofEnum plof =
-        switch (Objects.requireNonNullElse(string(row, "LoF"), "")) {
-          case "HC" -> CohortVariant.PlofEnum.HC;
-          case "LC" -> CohortVariant.PlofEnum.LC;
-          default -> null;
-        };
-
     return new CohortVariant()
         .variant(variant)
         .gene(string(row, "gene_symbol"))
@@ -295,9 +286,7 @@ public class SearchResultsController implements SearchApi {
         .clinvarLastUpdated(clinvarLastUpdated == null ? null : LocalDate.parse(clinvarLastUpdated))
         .clinvarSubmissions(clinvarSubmissions(clinvarRcvIds, clinvarRcvClassifications, clinvarRcvStars))
         .spliceAi(bigDecimal(spliceAi))
-        .plof(plof)
-        .plofFilters(plof == null ? List.of() : stringList(row, "LoF_filter"))
-        .plofFlags(plof == null ? List.of() : stringList(row, "LoF_flags"));
+        .plof(plof(string(row, "LoF")));
   }
 
   private static List<PopulationFrequency> populationFrequencies(
@@ -328,6 +317,14 @@ public class SearchResultsController implements SearchApi {
               .stars(i < stars.size() ? stars.get(i) : null));
     }
     return submissions;
+  }
+
+  // Other LOFTEE values (e.g. OS, "other splice") aren't a call the UI shows, so they read as
+  // unscored, like a null.
+  private static CohortVariant.PlofEnum plof(String lof) {
+    if ("HC".equals(lof)) return CohortVariant.PlofEnum.HC;
+    if ("LC".equals(lof)) return CohortVariant.PlofEnum.LC;
+    return null;
   }
 
   private static String string(FieldValueList row, String column) {
