@@ -47,35 +47,18 @@ paths:
             If not provided, no phenotype filtering is applied. There's no
             participant-level data source behind this yet, so any term given
             matches the same mock cohort -- see phenotypeCrosswalk.
-        - name: condition
+        - name: conditionConceptId
           in: query
           required: false
           schema:
-            type: string
+            type: integer
+            format: int64
           description: >-
-            Free-text condition name, e.g. "tetralogy of fallot". Matched
-            against the condition domain of `cb_criteria`, and the top-ranked
-            match expanded through `concept_ancestor` to count participants;
-            see conditionSearch. Ignored for selection purposes when
-            conditionConceptIds is given, though it is still echoed back as
-            conditionSearch.term. Independent of hpoTerm, which is mock data.
-        - name: conditionConceptIds
-          in: query
-          required: false
-          style: form
-          explode: true
-          schema:
-            type: array
-            items:
-              type: integer
-              format: int64
-          description: >-
-            Condition concept IDs the user actually picked, e.g. from
-            /api/condition. When given, these are counted directly instead of
-            re-resolving the free text, which is what makes picking a concept
-            with a low or zero participant estimate work -- the text path
-            deliberately skips those when auto-selecting. IDs that aren't
-            standard condition concepts are dropped rather than counted.
+            The condition concept ID the user picked from /api/condition.
+            There's deliberately no free-text alternative: re-searching typed
+            text and choosing a match for the user could count a different
+            concept than the one they meant. When absent, conditionSearch is
+            null.
       responses:
         "200":
           description: Successful response
@@ -228,7 +211,7 @@ components:
         conditionSearch:
           nullable: true
           description: >-
-            Null when no condition term was given. Unlike phenotypeCrosswalk
+            Null when no conditionConceptId was given. Unlike phenotypeCrosswalk
             and the breakdowns, this is backed by real queries against
             cb_criteria, concept_ancestor and condition_occurrence.
           allOf:
@@ -287,48 +270,40 @@ components:
           example: "tetralogy of fallot"
         candidates:
           description: >-
-            Ranked as in ConditionSearch.candidates. Empty when nothing
-            matched, or when the term was blank.
+            Matching condition concepts, best first: exact name match, then
+            estimatedParticipantCount descending, with concepts that have no
+            estimate last. Empty when nothing matched, or when the term was
+            blank.
           type: array
           items:
             $ref: "#/components/schemas/ConditionConcept"
     ConditionSearch:
       type: object
       required:
-        - term
-        - candidates
-        - selectedConceptIds
+        - conceptId
+        - concept
         - participantCount
       properties:
-        term:
-          type: string
-          description: The condition term as entered, trimmed.
-          example: "tetralogy of fallot"
-        candidates:
+        conceptId:
+          type: integer
+          format: int64
+          description: The concept ID that was requested.
+          example: 9000010
+        concept:
+          nullable: true
           description: >-
-            Matching condition concepts, best first: exact name match, then
-            estimatedParticipantCount descending, with concepts that have no
-            estimate last. Empty when nothing matched.
-          type: array
-          items:
-            $ref: "#/components/schemas/ConditionConcept"
-        selectedConceptIds:
-          description: >-
-            The concepts participantCount was counted over: currently the
-            top-ranked candidate with at least one estimated participant.
-            Empty when no candidate qualified.
-          type: array
-          items:
-            type: integer
-            format: int64
+            The requested concept. Null when conceptId isn't a standard
+            condition concept in this CDR.
+          allOf:
+            - $ref: "#/components/schemas/ConditionConcept"
         participantCount:
           type: integer
           nullable: true
           description: >-
-            Distinct participants having any *descendant* of selectedConceptIds
-            recorded in condition_occurrence. Null when selectedConceptIds is
-            empty. This is a real count, and will not match the selected
-            concept's estimatedParticipantCount exactly.
+            Distinct participants having the concept or any of its
+            descendants recorded in condition_occurrence. Null when concept
+            is null. This is a real count, and will not match the concept's
+            estimatedParticipantCount exactly.
           example: 49
     ConditionConcept:
       type: object

@@ -64,14 +64,17 @@ describe("SearchEntryPage", () => {
     expect(screen.queryByTestId("location")).not.toBeInTheDocument();
   });
 
-  it("carries a picked condition into the results URL", async () => {
+  /**
+   * The backend counts exactly the concept that was picked, which is what makes a low- or
+   * zero-estimate concept countable. Its name isn't sent: there's no free-text path to use it.
+   */
+  it("carries the picked concept's id into the results URL", async () => {
     stubApi([TETRALOGY], "tetralogy");
     renderPage();
 
     fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), {
       target: { value: "8-11708582-C-T" },
     });
-
     const combobox = screen.getByRole("combobox");
     fireEvent.focus(combobox);
     fireEvent.change(combobox, { target: { value: "tetralogy" } });
@@ -79,36 +82,14 @@ describe("SearchEntryPage", () => {
     // Fallot" (it's the description for HP:0001636), so a plain findByText picks up that
     // instead and the click silently does nothing.
     fireEvent.mouseDown(await screen.findByRole("option", { name: /Tetralogy of Fallot/ }));
-
     fireEvent.click(screen.getByRole("button", { name: /search/i }));
 
     await waitFor(() =>
       expect(screen.getByTestId("location")).toHaveTextContent(
-        "/results?variants=8-11708582-C-T&condition=Tetralogy+of+Fallot",
+        "/results?variants=8-11708582-C-T&conditionConceptId=9000010",
       ),
     );
-  });
-
-  /**
-   * The whole point of the concept id: the backend counts exactly what was picked instead of
-   * re-resolving the name, which is what makes a low- or zero-estimate concept countable.
-   */
-  it("carries the picked concept's id, not just its name", async () => {
-    stubApi([TETRALOGY], "tetralogy");
-    renderPage();
-
-    fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), {
-      target: { value: "8-11708582-C-T" },
-    });
-    const combobox = screen.getByRole("combobox");
-    fireEvent.focus(combobox);
-    fireEvent.change(combobox, { target: { value: "tetralogy" } });
-    fireEvent.mouseDown(await screen.findByRole("option", { name: /Tetralogy of Fallot/ }));
-    fireEvent.click(screen.getByRole("button", { name: /search/i }));
-
-    await waitFor(() =>
-      expect(screen.getByTestId("location")).toHaveTextContent("conditionConceptIds=9000010"),
-    );
+    expect(screen.getByTestId("location")).not.toHaveTextContent("condition=");
   });
 
   /**
@@ -129,8 +110,10 @@ describe("SearchEntryPage", () => {
     fireEvent.change(combobox, { target: { value: "something else" } });
     fireEvent.click(screen.getByRole("button", { name: /search/i }));
 
-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("condition="));
-    expect(screen.getByTestId("location")).not.toHaveTextContent("conditionConceptIds");
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/results?variants=8-11708582-C-T"),
+    );
+    expect(screen.getByTestId("location")).not.toHaveTextContent("condition");
   });
 
   /** The condition is optional, so a variants-only search must still go through. */
@@ -146,11 +129,11 @@ describe("SearchEntryPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("location")).toHaveTextContent("/results?variants=8-11708582-C-T"),
     );
-    expect(screen.getByTestId("location")).not.toHaveTextContent("condition=");
+    expect(screen.getByTestId("location")).not.toHaveTextContent("condition");
   });
 
-  /** Free text that was never picked from the list is still a legitimate search term. */
-  it("carries typed-but-unpicked text through as the condition", async () => {
+  /** Text that was never picked from the list doesn't filter, same as an empty field. */
+  it("ignores typed-but-unpicked text", async () => {
     stubApi([], "");
     renderPage();
 
@@ -161,12 +144,8 @@ describe("SearchEntryPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /search/i }));
 
     await waitFor(() =>
-      expect(screen.getByTestId("location")).toHaveTextContent(
-        "/results?variants=8-11708582-C-T&condition=diabetes",
-      ),
+      expect(screen.getByTestId("location")).toHaveTextContent("/results?variants=8-11708582-C-T"),
     );
-    // No id, so the backend searches the text rather than counting a concept the user never
-    // actually chose.
-    expect(screen.getByTestId("location")).not.toHaveTextContent("conditionConceptIds");
+    expect(screen.getByTestId("location")).not.toHaveTextContent("condition");
   });
 });

@@ -149,14 +149,11 @@ const MIN_LOAD_TIME_MS = 1000;
 export interface SearchResultsQuery {
   variants: string[];
   hpoTerm: string;
-  /** Free-text condition term. Searched only when conditionConceptIds is empty. */
-  condition?: string;
   /**
-   * Concepts the user picked from the dropdown. Counted directly, which is what lets a
-   * deliberately-chosen low- or zero-estimate concept be counted at all -- the text path
-   * skips those when auto-selecting.
+   * The concept the user picked from the dropdown. There's no free-text alternative: typed text
+   * that was never picked doesn't filter anything.
    */
-  conditionConceptIds?: number[];
+  conditionConceptId?: number;
 }
 
 // Keyed by request URL (which fully encodes every search criterion). Caching the in-flight promise
@@ -176,11 +173,8 @@ export async function fetchSearchResults(query?: SearchResultsQuery): Promise<Se
   if (query?.hpoTerm) {
     params.set("hpoTerm", query.hpoTerm);
   }
-  if (query?.condition) {
-    params.set("condition", query.condition);
-  }
-  for (const conceptId of query?.conditionConceptIds ?? []) {
-    params.append("conditionConceptIds", String(conceptId));
+  if (query?.conditionConceptId !== undefined) {
+    params.set("conditionConceptId", String(query.conditionConceptId));
   }
   const queryString = params.toString();
   const url = queryString ? `/api/search?${queryString}` : "/api/search";

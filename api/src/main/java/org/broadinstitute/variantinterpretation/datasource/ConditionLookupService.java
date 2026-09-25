@@ -5,7 +5,6 @@ import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.QueryParameterValue;
-import com.google.cloud.bigquery.StandardSQLTypeName;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -20,25 +19,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Free text -> condition concept_id -> participant count, against the All of Us
- * {@code cb_criteria}, {@code concept_ancestor} and {@code condition_occurrence} tables.
+ * Free text -> condition concepts (the type-ahead), and a picked concept -> participant count,
+ * against the All of Us {@code cb_criteria}, {@code concept_ancestor} and
+ * {@code condition_occurrence} tables.
  *
- * <p>Condition domain only. A term that maps onto a drug, measurement or procedure concept
- * comes back with no candidates rather than being routed elsewhere, which is a visible
- * failure; the other domains get added when something actually needs them.
- *
- * <p>Two things here are load-bearing and shouldn't be simplified away:
+ * <p>Two things here are worth noting:
  *
  * <ul>
  *   <li><b>Descendant expansion through {@code concept_ancestor}.</b> EHR data lands on
  *       specific leaf concepts, not the parent that was searched for, so matching the seed
- *       concept alone undercounts — silently. Against the synthetic fixture, seeding on
+ *       concept alone will undercount matches. Against the synthetic fixture, seeding on
  *       Tetralogy of Fallot returns 49 participants expanded and 40 unexpanded.
  *   <li><b>Ranking by {@code est_count}.</b> The only reason to use {@code cb_criteria}
  *       instead of the plain vocabulary tables. A concept can be perfectly named, perfectly
  *       standard, and have zero participants in this CDR — which is invisible in
- *       {@code concept}. Count ranking is what makes auto-selecting a top candidate
- *       defensible at all.
+ *       {@code concept}. Ranking by count puts the concepts someone is likely to mean at the
+ *       top of the type-ahead.
  * </ul>
  */
 @Service
@@ -55,16 +51,16 @@ public class ConditionLookupService {
   public static final List<String> CDR_TABLES =
       List.of(CB_CRITERIA, CONCEPT_ANCESTOR, CONDITION_OCCURRENCE);
 
-  // Matches SearchResultsController: keeps development cost down and turns an accidental
-  // full-table scan of condition_occurrence into an error rather than a bill. See VIA-50.
+  // Prevents accidental full-table scans during development. See VIA-50.
   private static final long MAXIMUM_BYTES_BILLED = 100L * 1024 * 1024;
 
+  // Only show the top 50 candidates in the type-ahead
   private static final int CANDIDATES_LIMIT = 50;
 
   /**
-   * Connectives, dropped from the required terms. This is load-bearing rather than tidiness:
-   * requiring the literal token "of" would exclude the synonym "Fallot tetralogy", which is
-   * exactly the inverted-word-order case this matching exists to catch.
+   * Stop words to exclude from token matching.
+   * For example, we don't want searching for "Fallot tetralogy" to
+   * not match "Tetralogy of Fallot" just because "of" is a stop word.
    */
   private static final Set<String> STOP_WORDS =
       Set.of("of", "the", "and", "or", "with", "in", "to", "for", "by", "on", "at", "as");
@@ -98,7 +94,7 @@ public class ConditionLookupService {
    * purpose: an id that isn't one is dropped rather than seeded on, so a stale or hand-edited
    * URL can't produce a cohort counted over something that isn't a condition.
    */
-  private static final String RESOLVE_CONCEPTS_SQL =
+  private static final String RESOLVE_CONCEPT_SQL =
       """
       SELECT DISTINCT
           concept_id,
@@ -107,8 +103,7 @@ public class ConditionLookupService {
       FROM %s
       WHERE is_standard = 1
         AND domain_id = "CONDITION"
-        AND concept_id IN UNNEST(@conceptIds)
-      ORDER BY est_count DESC NULLS LAST
+        AND concept_id = @conceptId
       """;
 
   private static final String COHORT_COUNT_SQL =
@@ -118,7 +113,7 @@ public class ConditionLookupService {
       WHERE co.condition_concept_id IN (
           SELECT descendant_concept_id
           FROM %s
-          WHERE ancestor_concept_id IN UNNEST(@seeds)
+          WHERE ancestor_concept_id = @conceptId
       )
       """;
 
@@ -131,7 +126,7 @@ public class ConditionLookupService {
   }
 
   /**
-   * Stage one on its own: text to ranked candidates, no expansion and no participant count.
+   * Text to ranked candidates, with no expansion and no participant count.
    * This is what the phenotype search box's dropdown runs on every keystroke, so it stays one
    * query against {@code cb_criteria}.
    *
@@ -144,66 +139,37 @@ public class ConditionLookupService {
   }
 
   /**
-   * Both stages: concepts, then a participant count over them.
+   * The participant count for a concept the user picked from the type-ahead.
    *
-   * <p>Two ways in. When {@code conceptIds} is given the user picked something explicitly, so
-   * those concepts are resolved and counted directly. Otherwise the free text is searched and
-   * the best candidate auto-selected. Returns null when neither is supplied, so the response
-   * field stays null when no condition was asked for.
+   * <p>Returns null when nothing was picked, so the response field stays null, the same as
+   * leaving the phenotype field empty. There's deliberately no free-text fallback: searching
+   * typed text and choosing a match on the user's behalf can count a different concept than the
+   * one they meant.
    */
-  public ConditionSearch search(String term, List<Long> conceptIds) {
-    String trimmed = term == null ? "" : term.trim();
-    List<Long> requested = conceptIds == null ? List.of() : conceptIds;
-    if (trimmed.isEmpty() && requested.isEmpty()) {
+  public ConditionSearch search(Long conceptId) {
+    if (conceptId == null) {
       return null;
     }
-
-    List<ConditionConcept> candidates =
-        requested.isEmpty() ? findRankedCandidates(trimmed) : resolveConcepts(requested);
-    List<Long> selected =
-        requested.isEmpty() ? autoSelect(candidates) : candidates.stream().map(ConditionConcept::getConceptId).toList();
-
+    ConditionConcept concept = resolveConcept(conceptId);
     return new ConditionSearch()
-        .term(trimmed)
-        .candidates(candidates)
-        .selectedConceptIds(selected)
-        .participantCount(selected.isEmpty() ? null : countParticipants(selected));
+        .conceptId(conceptId)
+        .concept(concept)
+        .participantCount(concept == null ? null : countParticipants(conceptId));
   }
 
-  /**
-   * The best candidate with at least one estimated participant.
-   *
-   * <p>The estimate floor is why an explicit selection has to be a separate path: a concept
-   * with est_count 0 is real in the vocabulary and absent from the data, so auto-selecting it
-   * would return an empty cohort that reads as a bug. When the user picks that concept
-   * deliberately, an empty cohort is the answer they asked for.
-   */
-  private static List<Long> autoSelect(List<ConditionConcept> candidates) {
-    // getEstimatedParticipantCount() is JsonNullable, and its value can itself be null (the
-    // column is nullable), so this unwraps both layers before comparing.
-    return candidates.stream()
-        .filter(c -> {
-          Integer estimate = c.getEstimatedParticipantCount().orElse(null);
-          return estimate != null && estimate >= 1;
-        })
-        .findFirst()
-        .map(c -> List.of(c.getConceptId()))
-        .orElseGet(List::of);
-  }
-
-  private List<ConditionConcept> resolveConcepts(List<Long> conceptIds) {
+  /** The concept, or null when the ID isn't a standard condition concept. */
+  private ConditionConcept resolveConcept(long conceptId) {
     var configuration =
         QueryJobConfiguration.newBuilder(
-                RESOLVE_CONCEPTS_SQL.formatted(properties.cdrTableRef(CB_CRITERIA)))
-            .addNamedParameter(
-                "conceptIds",
-                QueryParameterValue.array(conceptIds.toArray(new Long[0]), StandardSQLTypeName.INT64))
+                RESOLVE_CONCEPT_SQL.formatted(properties.cdrTableRef(CB_CRITERIA)))
+            .addNamedParameter("conceptId", QueryParameterValue.int64(conceptId))
             .setMaximumBytesBilled(MAXIMUM_BYTES_BILLED)
             .build();
-    return toConcepts(runQuery(configuration));
+    List<ConditionConcept> concepts = toConcepts(runQuery(configuration));
+    return concepts.isEmpty() ? null : concepts.get(0);
   }
 
-  /** Stage one, shared by both entry points. Empty for a term with no usable tokens. */
+  /** Empty for a blank term, or one with no usable tokens. */
   private List<ConditionConcept> findRankedCandidates(String trimmedTerm) {
     if (trimmedTerm.isEmpty()) {
       return List.of();
@@ -214,7 +180,7 @@ public class ConditionLookupService {
 
   /**
    * Tokenizes the query the way the matching needs it: lowercased, punctuation stripped,
-   * single characters and connectives dropped.
+   * single characters and stop words dropped.
    *
    * <p>Falls back to the unfiltered tokens when every one of them is a stop word, so that
    * searching "in the" is a search for something rather than a match against everything.
@@ -277,15 +243,13 @@ public class ConditionLookupService {
     return concepts;
   }
 
-  private Integer countParticipants(List<Long> seedConceptIds) {
+  private Integer countParticipants(long conceptId) {
     var configuration =
         QueryJobConfiguration.newBuilder(
                 COHORT_COUNT_SQL.formatted(
                     properties.cdrTableRef(CONDITION_OCCURRENCE),
                     properties.cdrTableRef(CONCEPT_ANCESTOR)))
-            .addNamedParameter(
-                "seeds",
-                QueryParameterValue.array(seedConceptIds.toArray(new Long[0]), StandardSQLTypeName.INT64))
+            .addNamedParameter("conceptId", QueryParameterValue.int64(conceptId))
             .setMaximumBytesBilled(MAXIMUM_BYTES_BILLED)
             .build();
     for (FieldValueList row : runQuery(configuration)) {

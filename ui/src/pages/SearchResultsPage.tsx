@@ -47,8 +47,7 @@ export default function SearchResultsPage() {
   // and flashing every section's loading state for a fetch that's a cache hit anyway.
   const variantsKey = searchParams.getAll("variants").join("\n");
   const hpoTermKey = searchParams.get("hpoTerm") ?? "";
-  const conditionKey = searchParams.get("condition") ?? "";
-  const conditionConceptIdsKey = searchParams.getAll("conditionConceptIds").join(",");
+  const conditionConceptIdKey = searchParams.get("conditionConceptId") ?? "";
 
   // Re-runs whenever the URL's search criteria change -- both the initial load (e.g. arriving
   // from SearchEntryPage with ?variants=...) and a drawer re-search (which updates the URL rather
@@ -59,10 +58,7 @@ export default function SearchResultsPage() {
     fetchSearchResults({
       variants: variantsKey ? variantsKey.split("\n") : [],
       hpoTerm: hpoTermKey,
-      condition: conditionKey,
-      conditionConceptIds: conditionConceptIdsKey
-        ? conditionConceptIdsKey.split(",").map(Number)
-        : [],
+      conditionConceptId: conditionConceptIdKey ? Number(conditionConceptIdKey) : undefined,
     })
       .then((data) => {
         setResults(data);
@@ -71,7 +67,7 @@ export default function SearchResultsPage() {
       })
       .catch((err: Error) => setError(err.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variantsKey, hpoTermKey, conditionKey, conditionConceptIdsKey]);
+  }, [variantsKey, hpoTermKey, conditionConceptIdKey]);
 
   // Once data arrives, reveal each section in quick, slightly jittered succession
   // rather than all at once, so the page doesn't feel like it's snapping into place.

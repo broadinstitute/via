@@ -160,12 +160,7 @@ export default function PhenotypeFilterPanel({
 }: PhenotypeFilterPanelProps) {
   const [activeTab, setActiveTab] = useState<BreakdownTab>("ancestry");
 
-  // The concepts participantCount was actually counted over, which is not always every
-  // candidate: the backend picks one when the user searched by text rather than picking.
-  const countedConcepts =
-    conditionSearch?.candidates.filter((candidate) =>
-      conditionSearch.selectedConceptIds.includes(candidate.conceptId),
-    ) ?? [];
+  const concept = conditionSearch?.concept ?? null;
 
   if (!crosswalk && !conditionSearch) {
     const { message, buttonLabel } = phenotypeUnavailableCopy(hpoTerm, "participant breakdowns");
@@ -182,25 +177,20 @@ export default function PhenotypeFilterPanel({
     <ResultsPanel title="Phenotype filter">
       <div style={styles.body}>
         {conditionSearch &&
-          (countedConcepts.length > 0 ? (
+          (concept ? (
             <div>
               <div style={styles.crosswalkCard}>
                 <div style={styles.crosswalkText}>
-                  {countedConcepts.map((concept, index) => (
-                    <div
-                      key={concept.conceptId}
-                      style={index === 0 ? styles.row : { ...styles.row, marginTop: 6 }}
-                    >
-                      <div style={styles.codeLine}>
-                        <span style={styles.code}>OMOP — {concept.conceptId}</span>
-                        <CopyButton
-                          getText={() => String(concept.conceptId)}
-                          label="Copy OMOP concept ID"
-                        />
-                      </div>
-                      <span style={styles.desc}>{concept.name}</span>
+                  <div style={styles.row}>
+                    <div style={styles.codeLine}>
+                      <span style={styles.code}>OMOP — {concept.conceptId}</span>
+                      <CopyButton
+                        getText={() => String(concept.conceptId)}
+                        label="Copy OMOP concept ID"
+                      />
                     </div>
-                  ))}
+                    <span style={styles.desc}>{concept.name}</span>
+                  </div>
                 </div>
                 <div style={styles.countBadge}>
                   <div style={styles.num}>
@@ -217,7 +207,7 @@ export default function PhenotypeFilterPanel({
             </div>
           ) : (
             <p style={styles.noMatch}>
-              No condition concept matched “{conditionSearch.term}”.
+              Condition concept {conditionSearch.conceptId} wasn’t found in this CDR.
             </p>
           ))}
 

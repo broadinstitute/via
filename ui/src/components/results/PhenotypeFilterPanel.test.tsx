@@ -5,12 +5,8 @@ import type { PhenotypeCrosswalk } from "../../types/results";
 import PhenotypeFilterPanel from "./PhenotypeFilterPanel";
 
 const CONDITION: ConditionSearch = {
-  term: "tetralogy of fallot",
-  candidates: [
-    { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47 },
-    { conceptId: 9000011, name: "Tetralogy of Fallot with pulmonary atresia", estimatedParticipantCount: 6 },
-  ],
-  selectedConceptIds: [9000010],
+  conceptId: 9000010,
+  concept: { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47 },
   participantCount: 49,
 };
 
@@ -53,18 +49,6 @@ describe("PhenotypeFilterPanel", () => {
     expect(screen.getByText("Tetralogy of Fallot")).toBeInTheDocument();
   });
 
-  /**
-   * Only the concepts the count was actually taken over belong in the card. The other
-   * candidates were offered in the dropdown but not counted, and listing them here would
-   * imply the 49 covers them too.
-   */
-  it("shows only the counted concepts, not every candidate", () => {
-    renderPanel({ conditionSearch: CONDITION });
-
-    expect(screen.queryByText("Tetralogy of Fallot with pulmonary atresia")).not.toBeInTheDocument();
-    expect(screen.queryByText("OMOP — 9000011")).not.toBeInTheDocument();
-  });
-
   /** The count includes descendants, so it exceeds the concept's own records. Say so. */
   it("explains that the count includes more specific forms", () => {
     renderPanel({ conditionSearch: CONDITION });
@@ -74,13 +58,10 @@ describe("PhenotypeFilterPanel", () => {
     ).toBeInTheDocument();
   });
 
-  it("reports a condition that matched nothing", () => {
-    renderPanel({
-      conditionSearch: { term: "asdfqwerty", candidates: [], selectedConceptIds: [], participantCount: null },
-    });
+  it("reports a picked concept the CDR doesn't have", () => {
+    renderPanel({ conditionSearch: { conceptId: 123, concept: null, participantCount: null } });
 
-    expect(screen.getByText(/No condition concept matched/)).toBeInTheDocument();
-    expect(screen.getByText(/asdfqwerty/)).toBeInTheDocument();
+    expect(screen.getByText("Condition concept 123 wasn’t found in this CDR.")).toBeInTheDocument();
   });
 
   /**

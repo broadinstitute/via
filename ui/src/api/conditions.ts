@@ -17,19 +17,18 @@ export interface ConditionCandidates {
 }
 
 /**
- * The condition half of a /api/search response. Null there when neither a condition term nor
- * concept ids were given.
+ * The condition half of a /api/search response. Null there when no concept was picked.
  *
- * Note the two counts are different things and will not agree: each candidate's
+ * Note the two counts are different things and will not agree: the concept's
  * `estimatedParticipantCount` is All of Us's estimate for that concept alone, while
- * `participantCount` is a real count over `selectedConceptIds` *and all their descendants*.
+ * `participantCount` is a real count over the concept *and all its descendants*.
  */
 export interface ConditionSearch {
-  term: string;
-  candidates: ConditionConcept[];
-  /** What participantCount was counted over. Empty when nothing qualified. */
-  selectedConceptIds: number[];
-  /** Null when selectedConceptIds is empty. */
+  /** The concept ID that was requested. */
+  conceptId: number;
+  /** Null when conceptId isn't a standard condition concept in this CDR. */
+  concept: ConditionConcept | null;
+  /** Null when concept is null. */
   participantCount: number | null;
 }
 

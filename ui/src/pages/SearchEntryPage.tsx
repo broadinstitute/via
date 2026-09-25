@@ -85,12 +85,10 @@ export default function SearchEntryPage() {
     for (const variant of parsedVariants) {
       params.append("variants", variant);
     }
-    const trimmedCondition = condition.trim();
-    if (trimmedCondition) {
-      params.set("condition", trimmedCondition);
-    }
+    // Only a picked concept filters: text typed without picking from the list is ignored, the
+    // same as leaving the field empty.
     if (conditionConceptId !== null) {
-      params.set("conditionConceptIds", String(conditionConceptId));
+      params.set("conditionConceptId", String(conditionConceptId));
     }
     navigate(`/results?${params.toString()}`);
   }

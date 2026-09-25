@@ -73,45 +73,12 @@ class ConditionLookupServiceTest {
     assertThat(ConditionLookupService.likePattern("fallot's")).isEqualTo("%fallot's%");
   }
 
-  /** A blank or absent term must not run any query, and leaves the response field null. */
+  /** Nothing picked means no query, and leaves the response field null. */
   @Test
-  void search_returnsNullForBlankTerm() {
+  void search_returnsNullWhenNoConceptWasPicked() {
     // A null BigQuery client is the assertion: touching it would NPE.
     ConditionLookupService service = new ConditionLookupService(null, null);
-    assertThat(service.search(null, null)).isNull();
-    assertThat(service.search("", List.of())).isNull();
-    assertThat(service.search("   ", List.of())).isNull();
-  }
-
-  /**
-   * A picked concept id means a query runs, so this only asserts the guard that both inputs
-   * being empty short-circuits before BigQuery is touched -- a null client would NPE otherwise.
-   */
-  @Test
-  void search_returnsNullOnlyWhenBothTermAndConceptIdsAreEmpty() {
-    ConditionLookupService service = new ConditionLookupService(null, null);
-    assertThat(service.search(null, null)).isNull();
-    assertThat(service.search("", List.of())).isNull();
-    assertThat(service.search("   ", null)).isNull();
-  }
-
-  /** Terms that reduce to nothing usable skip the query too, rather than matching everything. */
-  @Test
-  void search_returnsEmptyCandidatesWhenNoUsableTerms() {
-    ConditionLookupService service = new ConditionLookupService(null, null);
-    var result = service.search("( )", List.of());
-
-    assertThat(result).isNotNull();
-    assertThat(result.getTerm()).isEqualTo("( )");
-    assertThat(result.getCandidates()).isEmpty();
-    assertThat(result.getSelectedConceptIds()).isEmpty();
-    assertThat(result.getParticipantCount().orElse(null)).isNull();
-  }
-
-  @Test
-  void search_trimsTheTermItEchoesBack() {
-    ConditionLookupService service = new ConditionLookupService(null, null);
-    assertThat(service.search("  ( )  ", List.of()).getTerm()).isEqualTo("( )");
+    assertThat(service.search(null)).isNull();
   }
 
   /**
