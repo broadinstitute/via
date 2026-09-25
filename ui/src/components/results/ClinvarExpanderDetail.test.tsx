@@ -42,6 +42,8 @@ function makeVariant(overrides: Partial<AnnotatedCohortVariant> = {}): Annotated
     ],
     spliceAi: 0.12,
     plof: "HC",
+    plofFilters: [],
+    plofFlags: [],
     ...overrides,
   };
 }

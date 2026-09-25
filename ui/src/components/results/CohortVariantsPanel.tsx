@@ -12,6 +12,7 @@ import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
 import { formatAcAn, formatAf } from "../../utils/format";
+import { lofteeRank, lofteeTooltip } from "../../utils/loftee";
 import Clickable from "../common/Clickable";
 import { ChevronRightIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
@@ -97,7 +98,22 @@ const styles = {
     color: colors.textMuted,
     fontStyle: "italic",
   },
+  /** The same outlined badge for both calls; LC is the muted one, so it reads as weaker. */
+  plofBadge: {
+    // One fixed width, so the column lines up: bold "HC" is ~27px and "LC" ~24px otherwise.
+    display: "inline-block",
+    width: 28,
+    textAlign: "center",
+    padding: "0 4px",
+    border: `1px solid ${colors.borderStrong}`,
+    borderRadius: 4,
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: "help",
+  },
   plofHc: {
+    borderColor: colors.textPrimary,
     color: colors.textPrimary,
     fontWeight: 700,
   },
@@ -399,15 +415,26 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             cell: ({ row }) => (row.original.annotated ? row.original.spliceAi : <NotAvailable />),
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => (row.annotated ? (row.plof === "HC" ? 0 : 1) : undefined), {
+          columnHelper.accessor((row) => (row.annotated ? lofteeRank(row) : undefined), {
             id: "plof",
             header: "pLOF",
             cell: ({ row }) => {
-              if (!row.original.annotated) return <NotAvailable />;
-              if (row.original.plof === "HC") return <span style={styles.plofHc}>HC</span>;
+              const variant = row.original;
+              if (!variant.annotated) return <NotAvailable />;
+              const tooltip = lofteeTooltip(variant);
+              if (variant.plof === null) {
+                return (
+                  <span style={styles.plofNa} title={tooltip}>
+                    —
+                  </span>
+                );
+              }
               return (
-                <span style={styles.plofNa} title="LOFTEE does not score this consequence type">
-                  —
+                <span
+                  style={{ ...styles.plofBadge, ...(variant.plof === "HC" ? styles.plofHc : undefined) }}
+                  title={tooltip}
+                >
+                  {variant.plof}
                 </span>
               );
             },
