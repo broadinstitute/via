@@ -198,11 +198,10 @@ components:
         ancestryBreakdown:
           description: >-
             Mock data: there's no participant-level data source behind it yet,
-            so every condition matches the same synthetic cohort, as do
-            ageBreakdown and filteredVariants. Populated only when
-            conditionSearch found the picked concept, and empty otherwise.
-            percent is each count's share of the counts' total, which won't
-            match conditionSearch.participantCount.
+            so the groups are made up, as are ageBreakdown and filteredVariants.
+            The counts do sum to conditionSearch.participantCount, the real
+            count, and percent is each count's share of it. Empty unless that
+            count is above zero; groups that round to nobody are left out.
           type: array
           items:
             $ref: "#/components/schemas/BreakdownSegment"
@@ -218,7 +217,9 @@ components:
         filteredVariants:
           description: >-
             Mock data (see ancestryBreakdown), one entry per cohortVariants
-            entry and in the same order. Empty when ancestryBreakdown is.
+            entry and in the same order, generated for a cohort of
+            conditionSearch.participantCount participants. Empty when
+            ancestryBreakdown is.
           type: array
           items:
             $ref: "#/components/schemas/FilteredVariant"

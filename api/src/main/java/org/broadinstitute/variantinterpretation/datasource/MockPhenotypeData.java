@@ -3,8 +3,10 @@ package org.broadinstitute.variantinterpretation.datasource;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.IntStream;
 import org.broadinstitute.variantinterpretation.model.BreakdownSegment;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
 import org.broadinstitute.variantinterpretation.model.FilteredVariant;
@@ -15,22 +17,15 @@ import org.broadinstitute.variantinterpretation.model.FilteredVariant;
  * <p>None of this is real. The VAT is a variant-transcript aggregate table with no participant,
  * phenotype, ancestry, or age data in it at all -- and per the VAT design doc it never will have
  * (see docs/vat_schema_mapping.md), so the phenotype-matched panels need a genotype-level data
- * source that doesn't exist yet. Until it does, this makes those panels demo-able: every picked
- * condition "matches" the same synthetic cohort of {@value #PARTICIPANT_COUNT} participants, and
- * each searched variant gets synthetic cohort stats for it.
+ * source that doesn't exist yet. Until it does, this makes those panels demo-able: the picked
+ * condition's real participant count is split across made-up ancestry and age groups, and each
+ * searched variant gets synthetic stats for a cohort of that size.
  *
  * <p>The stats are derived from the variant's real (well, synthetic-VAT) cohort-wide AoU frequency
  * and seeded off its vid, so a given variant always comes back with the same numbers and its AF
  * ratio stays consistent with the frequency shown for it in the all-participants table.
  */
 public final class MockPhenotypeData {
-
-  /** How many participants any picked condition matches. There's no cohort behind the number. */
-  static final int PARTICIPANT_COUNT = 978;
-
-  // Two alleles per participant, and mock data has no missing calls, so every variant with stats
-  // reports this same cohort AN.
-  private static final int COHORT_AN = 2 * PARTICIPANT_COUNT;
 
   // An AF ratio at or above this is what the UI flags as an enrichment worth a look, so the
   // generated data deliberately puts some variants over the line and keeps the rest under it.
@@ -40,59 +35,110 @@ public final class MockPhenotypeData {
   // 1.0 in the phenotype-matched cohort would read as a data error rather than a signal.
   private static final double MAX_COHORT_AF = 0.98;
 
+  private record Weight(String label, int weight, String color) {}
+
+  // Proportions from the design mock-ups, as weights. They're rescaled to however many
+  // participants the picked condition really matched, so the donut agrees with that count.
+  private static final List<Weight> ANCESTRY =
+      List.of(
+          new Weight("EUR", 469, "#F9C854"),
+          new Weight("AFR", 192, "#2078B4"),
+          new Weight("AMR", 174, "#6DACE4"),
+          new Weight("OTH", 87, "#B3AEAD"),
+          new Weight("EAS", 32, "#A27BD7"),
+          new Weight("SAS", 19, "#8CCA90"),
+          new Weight("MID", 5, "#CB2D4C"));
+
+  private static final List<Weight> AGE =
+      List.of(
+          new Weight("18–29", 78, "#B8DCEF"),
+          new Weight("30–39", 137, "#8DC6E5"),
+          new Weight("40–49", 210, "#5FAEDA"),
+          new Weight("50–59", 256, "#3B8FC4"),
+          new Weight("60–69", 215, "#2569A0"),
+          new Weight("70+", 82, "#17456F"));
+
   private MockPhenotypeData() {}
 
+  /** Ancestry makeup of the matched participants. Counts sum to {@code participants}. */
+  public static List<BreakdownSegment> ancestryBreakdown(int participants) {
+    return breakdown(ANCESTRY, participants);
+  }
+
+  /** Age makeup of the same matched participants, so it sums to {@code participants} too. */
+  public static List<BreakdownSegment> ageBreakdown(int participants) {
+    return breakdown(AGE, participants);
+  }
+
   /**
-   * Ancestry makeup of the matched participants. Proportions are the ones from the design
-   * mock-ups, rescaled to {@link #PARTICIPANT_COUNT}.
+   * Splits {@code participants} across the weights by largest remainder, so the counts are whole
+   * numbers that sum exactly to it -- plain rounding can land one or two off. A group that gets
+   * nobody, which small cohorts make likely, is left out rather than listed with a 0.
    */
-  public static List<BreakdownSegment> ancestryBreakdown() {
-    return List.of(
-        segment("EUR", 469, "#F9C854"),
-        segment("AFR", 192, "#2078B4"),
-        segment("AMR", 174, "#6DACE4"),
-        segment("OTH", 87, "#B3AEAD"),
-        segment("EAS", 32, "#A27BD7"),
-        segment("SAS", 19, "#8CCA90"),
-        segment("MID", 5, "#CB2D4C"));
+  private static List<BreakdownSegment> breakdown(List<Weight> weights, int participants) {
+    int totalWeight = weights.stream().mapToInt(Weight::weight).sum();
+    int[] counts = new int[weights.size()];
+    double[] remainders = new double[weights.size()];
+    int assigned = 0;
+    for (int i = 0; i < weights.size(); i++) {
+      double exact = (double) participants * weights.get(i).weight() / totalWeight;
+      counts[i] = (int) exact;
+      remainders[i] = exact - counts[i];
+      assigned += counts[i];
+    }
+    // Truncating leaves fewer than weights.size() participants unassigned; they go to the largest
+    // remainders, with ties broken toward the bigger group.
+    List<Integer> byRemainder =
+        IntStream.range(0, weights.size())
+            .boxed()
+            .sorted(
+                Comparator.comparingDouble((Integer i) -> -remainders[i])
+                    .thenComparingInt(i -> -weights.get(i).weight()))
+            .toList();
+    for (int k = 0; k < participants - assigned; k++) {
+      counts[byRemainder.get(k)]++;
+    }
+
+    List<BreakdownSegment> segments = new ArrayList<>();
+    for (int i = 0; i < weights.size(); i++) {
+      if (counts[i] > 0) {
+        Weight weight = weights.get(i);
+        segments.add(segment(weight.label(), counts[i], weight.color(), participants));
+      }
+    }
+    return segments;
   }
 
-  /** Age makeup of the same matched participants, so it totals {@link #PARTICIPANT_COUNT} too. */
-  public static List<BreakdownSegment> ageBreakdown() {
-    return List.of(
-        segment("18–29", 78, "#B8DCEF"),
-        segment("30–39", 137, "#8DC6E5"),
-        segment("40–49", 210, "#5FAEDA"),
-        segment("50–59", 256, "#3B8FC4"),
-        segment("60–69", 215, "#2569A0"),
-        segment("70+", 82, "#17456F"));
-  }
-
-  // Counts are what's authored (they have to sum to PARTICIPANT_COUNT); percent is derived from
-  // the count rather than authored alongside it, so the donut and its legend can't disagree.
-  private static BreakdownSegment segment(String label, int count, String color) {
+  // Percent is derived from the count rather than carried alongside it, so the donut and its
+  // legend can't disagree.
+  private static BreakdownSegment segment(String label, int count, String color, int participants) {
     BigDecimal percent =
-        BigDecimal.valueOf(100L * count).divide(BigDecimal.valueOf(PARTICIPANT_COUNT), 1, RoundingMode.HALF_UP);
+        BigDecimal.valueOf(100L * count).divide(BigDecimal.valueOf(participants), 1, RoundingMode.HALF_UP);
     return new BreakdownSegment().label(label).count(count).percent(percent).color(color);
   }
 
   /**
    * Synthetic phenotype-matched stats for each searched variant, in the order searched -- one
-   * FilteredVariant per CohortVariant, so the two tables line up row for row.
+   * FilteredVariant per CohortVariant, so the two tables line up row for row. Generated against a
+   * cohort of {@code participants}, the picked condition's real count: two alleles each and no
+   * missing calls, so every variant with stats reports an AN of twice that.
    *
    * <p>A variant that isn't annotated, or that the VAT has no cohort-wide AoU frequency for, comes
    * back as {@code hasStats: false}: having no participants at all in the full cohort is the one
    * case where inventing a phenotype-matched count would contradict what the other table shows.
    */
-  public static List<FilteredVariant> filteredVariants(List<CohortVariant> cohortVariants) {
+  public static List<FilteredVariant> filteredVariants(List<CohortVariant> cohortVariants, int participants) {
+    if (participants <= 0) {
+      throw new IllegalArgumentException("participants must be positive, got " + participants);
+    }
     List<FilteredVariant> filtered = new ArrayList<>();
     for (CohortVariant cohortVariant : cohortVariants) {
-      filtered.add(filteredVariant(cohortVariant));
+      filtered.add(filteredVariant(cohortVariant, participants));
     }
     return filtered;
   }
 
-  private static FilteredVariant filteredVariant(CohortVariant cohortVariant) {
+  private static FilteredVariant filteredVariant(CohortVariant cohortVariant, int participants) {
     String variant = cohortVariant.getVariant();
     if (!Boolean.TRUE.equals(cohortVariant.getAnnotated())) {
       return withoutStats(variant, null, null);
@@ -105,19 +151,26 @@ public final class MockPhenotypeData {
       return withoutStats(variant, gene, classification);
     }
 
+    int cohortAn = 2 * participants;
     Random random = seededRandom(variant);
     double enrichment = enrichment(random);
     double cohortAf = Math.min(aouAllAf.doubleValue() * enrichment, MAX_COHORT_AF);
-    int cohortAc = (int) Math.round(cohortAf * COHORT_AN);
+    int cohortAc = (int) Math.round(cohortAf * cohortAn);
     // A variant rare enough that even an enriched frequency rounds to zero carriers would show up
     // as a 0x ratio, hiding exactly the signal this row is meant to demonstrate.
     if (cohortAc == 0 && enrichment >= ELEVATED_AF_RATIO) {
       cohortAc = 1 + random.nextInt(3);
     }
+    // A small cohort can't hold what the bump above, or a high AF, asks for. Keep at least one
+    // reference allele, for the same reason as MAX_COHORT_AF.
+    cohortAc = Math.min(cohortAc, cohortAn - 1);
     // Everything below is computed back from the final integer AC, so AF, the zygosity split, and
     // the ratio all agree with each other and with the AoU frequency they were derived from.
-    cohortAf = (double) cohortAc / COHORT_AN;
-    int homozygotes = Math.min((int) Math.round(PARTICIPANT_COUNT * cohortAf * cohortAf), cohortAc / 2);
+    cohortAf = (double) cohortAc / cohortAn;
+    int homozygotes = Math.min((int) Math.round(participants * cohortAf * cohortAf), cohortAc / 2);
+    // Carriers (homozygotes + heterozygotes) can't outnumber the cohort, which a small one with a
+    // high AC otherwise would; each extra homozygote carries two alleles on one participant.
+    homozygotes = Math.max(homozygotes, cohortAc - participants);
     int heterozygotes = cohortAc - 2 * homozygotes;
 
     return new FilteredVariant()
@@ -126,7 +179,7 @@ public final class MockPhenotypeData {
         .classification(classification)
         .hasStats(true)
         .cohortAc(cohortAc)
-        .cohortAn(COHORT_AN)
+        .cohortAn(cohortAn)
         .cohortAf(BigDecimal.valueOf(cohortAf).setScale(6, RoundingMode.HALF_UP))
         .homozygotes(homozygotes)
         .heterozygotes(heterozygotes)

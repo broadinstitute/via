@@ -64,9 +64,9 @@ interface RawSearchResultsResponse {
   // Null when neither a condition term nor concept ids were given. Unlike the phenotype
   // fields below, this is backed by real queries.
   conditionSearch: ConditionSearch | null;
-  // Mock data, populated only when the picked condition was found and empty otherwise: there's
-  // no participant-level source behind them yet, so every condition matches the same synthetic
-  // cohort.
+  // Mock data: there's no participant-level source behind them yet. They're scaled to the picked
+  // condition's real participant count (the breakdowns sum to it), and empty when it's zero or no
+  // condition was found.
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
   cohortVariants: RawCohortVariant[];

@@ -115,8 +115,9 @@ public class SearchResultsController implements SearchApi {
   // cohortVariants against the VAT, conditionSearch against cb_criteria / concept_ancestor /
   // condition_occurrence. The VAT holds only variant-level annotation -- no phenotype,
   // participant, ancestry or age data -- so the breakdowns and filteredVariants are still served
-  // from MockPhenotypeData until a genotype-level data source exists. They're shown whenever the
-  // picked condition was found, standing in for data about that condition's participants.
+  // from MockPhenotypeData until a genotype-level data source exists. They're scaled to the
+  // picked condition's real participant count, standing in for data about those participants,
+  // and left empty when it matched nobody.
   @Override
   public ResponseEntity<SearchResultsResponse> searchResults(
       List<String> variants, Long conditionConceptId) {
@@ -124,18 +125,19 @@ public class SearchResultsController implements SearchApi {
     List<CohortVariant> cohortVariants =
         requested.isEmpty() ? List.of() : fetchSearchedCohortVariants(requested);
     ConditionSearch conditionSearch = conditionLookup.search(conditionConceptId);
-    boolean phenotypeFiltered =
-        conditionSearch != null && conditionSearch.getConcept().orElse(null) != null;
+    // Null both when no condition was picked and when the picked concept wasn't found.
+    Integer participants = conditionSearch == null ? null : conditionSearch.getParticipantCount().orElse(null);
+    boolean phenotypeFiltered = participants != null && participants > 0;
 
     return ResponseEntity.ok(
         new SearchResultsResponse()
             .searchSummary(searchSummary(requested))
             .conditionSearch(conditionSearch)
-            .ancestryBreakdown(phenotypeFiltered ? MockPhenotypeData.ancestryBreakdown() : List.of())
-            .ageBreakdown(phenotypeFiltered ? MockPhenotypeData.ageBreakdown() : List.of())
+            .ancestryBreakdown(phenotypeFiltered ? MockPhenotypeData.ancestryBreakdown(participants) : List.of())
+            .ageBreakdown(phenotypeFiltered ? MockPhenotypeData.ageBreakdown(participants) : List.of())
             .cohortVariants(cohortVariants)
             .filteredVariants(
-                phenotypeFiltered ? MockPhenotypeData.filteredVariants(cohortVariants) : List.of()));
+                phenotypeFiltered ? MockPhenotypeData.filteredVariants(cohortVariants, participants) : List.of()));
   }
 
   // Trims, drops blanks, dedupes (keeping the first occurrence's position), and caps num

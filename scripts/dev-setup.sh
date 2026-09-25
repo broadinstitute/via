@@ -46,11 +46,18 @@ fi
 # ---------------------------------------------------------------------------
 step "Environment (.env.local)"
 
-BIGQUERY_PROJECT_ID="${BIGQUERY_PROJECT_ID:-$(property_default bigquery.project-id)}"
-BIGQUERY_DATASET_ID="${BIGQUERY_DATASET_ID:-$(property_default bigquery.dataset-id)}"
-BIGQUERY_TABLE_ID="${BIGQUERY_TABLE_ID:-$(property_default bigquery.table-id)}"
-# No default, on purpose: the backend won't start without it (see application.properties).
-WORKSPACE_CDR="${WORKSPACE_CDR:-}"
+VAT_PROJECT_ID="${VAT_PROJECT_ID:-$(property_default bigquery.vat-project-id)}"
+VAT_DATASET_ID="${VAT_DATASET_ID:-$(property_default bigquery.vat-dataset-id)}"
+VAT_TABLE_ID="${VAT_TABLE_ID:-$(property_default bigquery.vat-table-id)}"
+# Workbench bills to the workspace's own project; locally that's just the VAT's project.
+GOOGLE_PROJECT="${GOOGLE_PROJECT:-${VAT_PROJECT_ID}}"
+# The app has no default for this (see application.properties), so it's written out explicitly
+# here instead: locally, the synthetic condition lookup tables live alongside the VAT table.
+WORKSPACE_CDR="${WORKSPACE_CDR:-${VAT_PROJECT_ID}.${VAT_DATASET_ID}}"
+
+# `source .env.local` is how the backend gets its environment, so a value only exported in this
+# shell doesn't count -- the file itself has to set it.
+env_file_value() { sed -n "s/^export $1=//p" "${ENV_FILE}" | tail -1; }
 
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
@@ -61,23 +68,28 @@ else
   {
     printf 'export JAVA_HOME=%q\n' "${java_home}"
     printf 'export WORKBENCH_USER_EMAIL=%q\n' "${WORKBENCH_USER_EMAIL}"
-    printf 'export BIGQUERY_PROJECT_ID=%q\n' "${BIGQUERY_PROJECT_ID}"
-    printf 'export BIGQUERY_DATASET_ID=%q\n' "${BIGQUERY_DATASET_ID}"
-    printf 'export BIGQUERY_TABLE_ID=%q\n' "${BIGQUERY_TABLE_ID}"
-    if [[ -n "${WORKSPACE_CDR}" ]]; then
-      printf 'export WORKSPACE_CDR=%q\n' "${WORKSPACE_CDR}"
-    fi
+    printf 'export VAT_PROJECT_ID=%q\n' "${VAT_PROJECT_ID}"
+    printf 'export VAT_DATASET_ID=%q\n' "${VAT_DATASET_ID}"
+    printf 'export VAT_TABLE_ID=%q\n' "${VAT_TABLE_ID}"
+    printf 'export GOOGLE_PROJECT=%q\n' "${GOOGLE_PROJECT}"
+    printf 'export WORKSPACE_CDR=%q\n' "${WORKSPACE_CDR}"
   } > "${ENV_FILE}"
   ok "wrote ${ENV_FILE}"
 fi
-note "table: ${BIGQUERY_PROJECT_ID}.${BIGQUERY_DATASET_ID}.${BIGQUERY_TABLE_ID}"
-if [[ "${WORKSPACE_CDR:-}" =~ ^[^.]+\.[^.]+$ ]]; then
+note "table: ${VAT_PROJECT_ID}.${VAT_DATASET_ID}.${VAT_TABLE_ID}"
+if [[ -n "$(env_file_value GOOGLE_PROJECT)" ]]; then
+  ok "GOOGLE_PROJECT is ${GOOGLE_PROJECT} (query jobs are billed here)"
+else
+  bad ".env.local doesn't set GOOGLE_PROJECT, the project query jobs are billed to"
+  note "the backend won't start without it; for local development it's the VAT's project"
+  note "add 'export GOOGLE_PROJECT=${VAT_PROJECT_ID}' to .env.local, or delete .env.local and re-run"
+fi
+if [[ "$(env_file_value WORKSPACE_CDR)" =~ ^[^.]+\.[^.]+$ ]]; then
   ok "WORKSPACE_CDR is ${WORKSPACE_CDR}"
 else
-  bad "WORKSPACE_CDR must be set to the CDR dataset as project.dataset (got: '${WORKSPACE_CDR:-}')"
-  note "the backend won't start without it; there's no default"
-  note "add 'export WORKSPACE_CDR=<project.dataset>' to .env.local, or delete .env.local and re-run"
-  note "  with it set -- e.g. aou-via-dev.foxtrot_synthetic for the synthetic lookup tables"
+  bad ".env.local must set WORKSPACE_CDR to the CDR dataset as project.dataset (got: '$(env_file_value WORKSPACE_CDR)')"
+  note "the backend won't start without it; locally it's the VAT's dataset"
+  note "add 'export WORKSPACE_CDR=${VAT_PROJECT_ID}.${VAT_DATASET_ID}' to .env.local, or delete .env.local and re-run"
 fi
 note "email: ${WORKBENCH_USER_EMAIL:-(none)}"
 
@@ -93,14 +105,14 @@ else
   trap 'rm -f "${body}"' EXIT
   api_error() { sed -n 's/.*"message": "\(.*\)".*/\1/p' "${body}" | head -1; }
 
-  base="https://bigquery.googleapis.com/bigquery/v2/projects/${BIGQUERY_PROJECT_ID}"
+  api="https://bigquery.googleapis.com/bigquery/v2/projects"
   status="$(curl -sS -o "${body}" -w '%{http_code}' \
     -H "Authorization: Bearer ${token}" \
-    "${base}/datasets/${BIGQUERY_DATASET_ID}")"
+    "${api}/${VAT_PROJECT_ID}/datasets/${VAT_DATASET_ID}")"
   if [[ "${status}" == "200" ]]; then
-    ok "dataset ${BIGQUERY_PROJECT_ID}:${BIGQUERY_DATASET_ID} is readable"
+    ok "dataset ${VAT_PROJECT_ID}:${VAT_DATASET_ID} is readable"
   else
-    bad "cannot read dataset ${BIGQUERY_PROJECT_ID}:${BIGQUERY_DATASET_ID} (HTTP ${status})"
+    bad "cannot read dataset ${VAT_PROJECT_ID}:${VAT_DATASET_ID} (HTTP ${status})"
     note "$(api_error)"
     if [[ "${status}" == "403" ]]; then note "ask for roles/bigquery.dataViewer on the dataset"; fi
   fi
@@ -110,14 +122,14 @@ else
   status="$(curl -sS -o "${body}" -w '%{http_code}' -X POST \
     -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' \
     -d "{\"configuration\":{\"dryRun\":true,\"query\":{\"useLegacySql\":false,\"query\":
-         \"SELECT vid FROM \`${BIGQUERY_PROJECT_ID}.${BIGQUERY_DATASET_ID}.${BIGQUERY_TABLE_ID}\` LIMIT 1\"}}}" \
-    "${base}/jobs")"
+         \"SELECT vid FROM \`${VAT_PROJECT_ID}.${VAT_DATASET_ID}.${VAT_TABLE_ID}\` LIMIT 1\"}}}" \
+    "${api}/${GOOGLE_PROJECT}/jobs")"
   if [[ "${status}" == "200" ]]; then
     ok "can query the table (dry run succeeded)"
   else
     bad "cannot query the table (HTTP ${status})"
     note "$(api_error)"
-    if [[ "${status}" == "403" ]]; then note "ask for roles/bigquery.jobUser on ${BIGQUERY_PROJECT_ID}"; fi
+    if [[ "${status}" == "403" ]]; then note "ask for roles/bigquery.jobUser on ${GOOGLE_PROJECT}"; fi
   fi
 fi
 

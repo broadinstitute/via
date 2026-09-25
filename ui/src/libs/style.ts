@@ -65,6 +65,14 @@ export const elements = {
     fontFamily: monoFamily,
     fontSize: 11.5,
   },
+  /**
+   * For text centered against an icon beside it. Trims the text's box to cap height and baseline;
+   * otherwise it keeps the font's descender space, which digits and capitals don't use, so they
+   * sit ~0.5px high of the icon. Browsers without text-box just keep that small offset.
+   */
+  trimmedText: {
+    textBox: "trim-both cap alphabetic",
+  },
   /** The em dash in muted ink that stands in for "no value here". */
   notAvailable: {
     color: colors.textMuted,
