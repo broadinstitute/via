@@ -103,7 +103,9 @@ describe("ConditionSearchField", () => {
     const options = await screen.findAllByRole("option");
     expect(options).toHaveLength(2);
     expect(options[0]).toHaveTextContent("Tetralogy of Fallot");
-    expect(options[0]).toHaveTextContent("47 est.");
+    expect(options[0]).toHaveTextContent("47");
+    expect(options[0]).toHaveAccessibleName("Tetralogy of Fallot, about 47 participants");
+    expect(screen.getAllByTitle(/^Estimated participants with this condition/)).toHaveLength(2);
     expect(screen.getByRole("combobox")).toHaveAttribute("aria-expanded", "true");
   });
 
@@ -111,7 +113,10 @@ describe("ConditionSearchField", () => {
   it("labels a candidate with no estimate rather than showing a blank", async () => {
     renderOpen([NO_ESTIMATE]);
 
-    expect(await screen.findByRole("option")).toHaveTextContent("no estimate");
+    const option = await screen.findByRole("option");
+    expect(option).toHaveTextContent("—");
+    expect(option).toHaveAccessibleName(`${NO_ESTIMATE.name}, no participant estimate`);
+    expect(screen.getByTitle(/^No participant estimate/)).toBeInTheDocument();
   });
 
   it("reports the picked concept to the caller", async () => {

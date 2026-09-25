@@ -1,10 +1,11 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { fetchConditionCandidates } from "../api/conditions";
 import type { ConditionConcept } from "../api/conditions";
 import colors from "../libs/colors";
 import { useFocus, useHoveredKey } from "../libs/hooks";
 import * as Style from "../libs/style";
+import { UserIcon } from "./icons";
 
 /**
  * Below this we don't query at all. Matching is substring-based, so one or two characters pull
@@ -16,6 +17,12 @@ const MIN_QUERY_LENGTH = 3;
 /** Long enough that ordinary typing produces one request per word, not per letter. */
 const DEBOUNCE_MS = 250;
 
+/**
+ * Rows shown before the list scrolls. The next row is cut off halfway, so it's evident there's
+ * more below -- a list that ends exactly on a row boundary reads as complete.
+ */
+const VISIBLE_OPTIONS = 5;
+
 const styles = {
   wrap: {
     position: "relative",
@@ -26,7 +33,9 @@ const styles = {
     left: 0,
     right: 0,
     zIndex: 10,
-    maxHeight: 260,
+    // Replaced by a measured height once the options render (see useLayoutEffect below); this is
+    // 5.5 single-line rows, for the first paint.
+    maxHeight: 175,
     margin: 0,
     padding: 4,
     overflowY: "auto",
@@ -38,7 +47,9 @@ const styles = {
   },
   option: {
     display: "flex",
-    alignItems: "baseline",
+    // Center, not baseline: the estimate pill leads with an icon, which has no text baseline,
+    // so baseline alignment would line the row up on the icon's bottom edge.
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
     padding: "7px 9px",
@@ -55,14 +66,41 @@ const styles = {
   },
   /**
    * The estimate, not the real cohort size -- /api/search returns the actual count for a
-   * concept, and the two differ. Kept visually quiet so it reads as a sorting cue.
+   * concept, and the two differ. Kept visually quiet so it reads as a sorting cue; the tooltip
+   * carries the explanation.
    */
-  optionCount: {
+  estimate: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
     flexShrink: 0,
-    color: colors.textMuted,
+    padding: "3px 7px",
+    borderRadius: 999,
+    background: colors.bgAccent,
+    color: colors.textPrimary,
     fontFamily: Style.monoFamily,
     fontSize: 11,
+    fontWeight: 600,
+    lineHeight: 1,
     whiteSpace: "nowrap",
+    cursor: "help",
+  },
+  /** On the highlighted row, whose background is the pill's own bgAccent. */
+  estimateOnActive: {
+    background: colors.surface2,
+  },
+  /**
+   * Trims the label's box to cap height and baseline. Otherwise it keeps the font's descender
+   * space, which digits don't use, so centering it against the icon leaves the digits ~0.5px
+   * high. Browsers without text-box just keep that small offset.
+   */
+  estimateLabel: {
+    textBox: "trim-both cap alphabetic",
+  },
+  estimateIcon: {
+    display: "block",
+    flexShrink: 0,
+    color: colors.textAccent,
   },
   status: {
     padding: "8px 9px",
@@ -90,15 +128,37 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
-/** "47 est." / "no estimate" -- est_count is nullable, and can be 0 or -1, in the real table. */
-function formatEstimate(estimate: number | null): string {
-  if (estimate === null) {
-    return "no estimate";
+const EXACT_COUNT_NOTE = "The exact count is calculated when you search.";
+
+/**
+ * How a concept's participant estimate is shown: the number beside a person icon, with the
+ * explanation in a tooltip, plus a spoken form for screen readers, which don't get the icon.
+ * est_count is nullable, and can be -1, in the real table; both mean there's no estimate.
+ */
+function describeEstimate(estimate: number | null): { label: string; tooltip: string; spoken: string } {
+  if (estimate === null || estimate < 0) {
+    return {
+      label: "—",
+      tooltip: `No participant estimate for this condition. ${EXACT_COUNT_NOTE}`,
+      spoken: "no participant estimate",
+    };
   }
-  if (estimate < 0) {
-    return "unknown";
-  }
-  return `${estimate.toLocaleString()} est.`;
+  const count = estimate.toLocaleString();
+  return {
+    label: count,
+    tooltip: `Estimated participants with this condition, from the All of Us Cohort Builder. ${EXACT_COUNT_NOTE}`,
+    spoken: `about ${count} participants`,
+  };
+}
+
+function Estimate({ estimate, onActiveRow = false }: { estimate: number | null; onActiveRow?: boolean }) {
+  const { label, tooltip } = describeEstimate(estimate);
+  return (
+    <span style={{ ...styles.estimate, ...(onActiveRow ? styles.estimateOnActive : undefined) }} title={tooltip}>
+      <UserIcon size={11} strokeWidth={2.5} style={styles.estimateIcon} aria-hidden="true" />
+      <span style={styles.estimateLabel}>{label}</span>
+    </span>
+  );
 }
 
 interface ConditionSearchFieldProps {
@@ -137,6 +197,7 @@ export default function ConditionSearchField({
   const { hoveredKey, hoverProps } = useHoveredKey<number>();
   const listboxRef = useRef<HTMLUListElement>(null);
   const listboxId = `${useId()}-listbox`;
+  const [listboxMaxHeight, setListboxMaxHeight] = useState<number | undefined>(undefined);
 
   // Set while applying a pick, to stop the effect below from firing a fresh query for the name
   // we just wrote into the field -- which would reopen the list the user just dismissed.
@@ -204,6 +265,19 @@ export default function ConditionSearchField({
     // Guarded: jsdom doesn't implement scrollIntoView.
     option?.scrollIntoView?.({ block: "nearest" });
   }, [activeIndex]);
+
+  // Measured rather than computed from the row style: long condition names wrap onto a second
+  // line, so rows aren't a fixed height. Layout effect so the list never paints at the wrong size.
+  useLayoutEffect(() => {
+    const cutoff = listboxRef.current?.querySelectorAll<HTMLElement>('[role="option"]')[VISIBLE_OPTIONS];
+    if (!cutoff) {
+      setListboxMaxHeight(undefined);
+      return;
+    }
+    // offsetTop is from the listbox's padding edge; border-box sizing also counts its border.
+    const border = listboxRef.current!.offsetHeight - listboxRef.current!.clientHeight;
+    setListboxMaxHeight(cutoff.offsetTop + cutoff.offsetHeight / 2 + border);
+  }, [candidates, open, focused]);
 
   function applySelection(concept: ConditionConcept) {
     justSelected.current = true;
@@ -287,7 +361,7 @@ export default function ConditionSearchField({
           ref={listboxRef}
           role="listbox"
           aria-label="Matching conditions"
-          style={styles.listbox}
+          style={{ ...styles.listbox, ...(listboxMaxHeight ? { maxHeight: listboxMaxHeight } : undefined) }}
         >
           {loading && candidates.length === 0 && (
             <li style={styles.status} role="presentation">
@@ -305,6 +379,7 @@ export default function ConditionSearchField({
               id={`${listboxId}-option-${index}`}
               role="option"
               aria-selected={index === activeIndex}
+              aria-label={`${concept.name}, ${describeEstimate(concept.estimatedParticipantCount).spoken}`}
               style={{
                 ...styles.option,
                 ...(index === activeIndex || hoveredKey === index ? styles.optionActive : undefined),
@@ -318,7 +393,10 @@ export default function ConditionSearchField({
               {...hoverProps(index)}
             >
               <span style={styles.optionName}>{concept.name}</span>
-              <span style={styles.optionCount}>{formatEstimate(concept.estimatedParticipantCount)}</span>
+              <Estimate
+                estimate={concept.estimatedParticipantCount}
+                onActiveRow={index === activeIndex || hoveredKey === index}
+              />
             </li>
           ))}
         </ul>
@@ -333,7 +411,7 @@ export default function ConditionSearchField({
       {selected && (
         <p style={styles.selected}>
           <span style={styles.selectedCode}>OMOP — {selected.conceptId}</span>
-          <span>{formatEstimate(selected.estimatedParticipantCount)} participants</span>
+          <Estimate estimate={selected.estimatedParticipantCount} />
         </p>
       )}
     </div>
