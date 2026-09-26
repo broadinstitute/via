@@ -19,12 +19,31 @@ describe("StepPanel", () => {
 
   it("renders an optional tag", () => {
     render(
-      <StepPanel stepNumber={2} title="Phenotype" tag={{ label: "Optional", variant: "optional" }}>
+      <StepPanel stepNumber={2} title="Phenotype" tags={[{ label: "Optional", variant: "optional" }]}>
         <p>body</p>
       </StepPanel>,
     );
 
     expect(screen.getByText("Optional")).toBeInTheDocument();
+  });
+
+  it("renders several tags in order, with any hover text", () => {
+    render(
+      <StepPanel
+        stepNumber={1}
+        title="Candidate variants"
+        tags={[
+          { label: "3 entered", variant: "count", title: "Variants entered" },
+          { label: "limit 50", variant: "limit" },
+        ]}
+      >
+        <p>body</p>
+      </StepPanel>,
+    );
+
+    const header = screen.getByRole("heading", { name: "Candidate variants" }).parentElement!;
+    expect(header).toHaveTextContent(/3 entered.*limit 50/);
+    expect(screen.getByText("3 entered")).toHaveAttribute("title", "Variants entered");
   });
 
   /**

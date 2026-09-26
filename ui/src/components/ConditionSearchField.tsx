@@ -99,20 +99,6 @@ const styles = {
     color: colors.textMuted,
     fontSize: 12,
   },
-  selected: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 6,
-    fontSize: 11.5,
-    color: colors.textSecondary,
-  },
-  selectedCode: {
-    color: colors.textAccent,
-    fontFamily: Style.monoFamily,
-    fontSize: 11,
-    fontWeight: 600,
-  },
   error: {
     marginTop: 6,
     color: colors.textDanger,
@@ -190,7 +176,6 @@ export default function ConditionSearchField({
   const [error, setError] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [selected, setSelected] = useState<ConditionConcept | null>(initialSelection);
   const { focused, focusProps } = useFocus();
   const { hoveredKey, hoverProps } = useHoveredKey<number>();
   const listboxRef = useRef<HTMLUListElement>(null);
@@ -201,6 +186,12 @@ export default function ConditionSearchField({
   // we just wrote into the field -- which would reopen the list the user just dismissed. Starts
   // set for an initial selection, whose name is in the field on mount for the same reason.
   const justSelected = useRef(initialSelection !== null);
+  // Bumped to re-run the lookup for the text already in the field, when there's no list to
+  // reopen: e.g. an initial selection, whose query was skipped above.
+  const [lookupRequest, setLookupRequest] = useState(0);
+  // The term the current candidates are for, so reopening a list that came back empty doesn't
+  // repeat a query whose answer is already known.
+  const lookedUpTerm = useRef<string | null>(null);
 
   const query = value.trim();
 
@@ -228,6 +219,7 @@ export default function ConditionSearchField({
           if (result.term !== query) {
             return;
           }
+          lookedUpTerm.current = result.term;
           setCandidates(result.candidates);
           setError(false);
           setActiveIndex(-1);
@@ -251,7 +243,7 @@ export default function ConditionSearchField({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [query, lookupRequest]);
 
   // Arrowing past the last visible row would otherwise move the highlight out of the
   // listbox's scroll area, leaving the user driving a selection they can't see. "nearest"
@@ -280,7 +272,6 @@ export default function ConditionSearchField({
 
   function applySelection(concept: ConditionConcept) {
     justSelected.current = true;
-    setSelected(concept);
     setOpen(false);
     setActiveIndex(-1);
     // Order matters. Callers that track the picked concept id clear it in onChange (so a
@@ -290,10 +281,27 @@ export default function ConditionSearchField({
     onSelect?.(concept);
   }
 
-  function handleChange(next: string) {
-    // Any edit invalidates the pick: the text no longer necessarily names a concept.
-    setSelected(null);
-    onChange(next);
+  /**
+   * Brings the list back after it was closed, so a pick can be changed without retyping. Runs
+   * on click as well as focus: after a pick the field keeps focus, so clicking back into it
+   * fires no focus event.
+   */
+  function reopen() {
+    if (open) {
+      return;
+    }
+    setOpen(true);
+    if (
+      candidates.length === 0 &&
+      !loading &&
+      query.length >= MIN_QUERY_LENGTH &&
+      lookedUpTerm.current !== query
+    ) {
+      // Set here rather than left to the effect, so the list opens on "Searching…" instead
+      // of flashing the empty state first.
+      setLoading(true);
+      setLookupRequest((current) => current + 1);
+    }
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -342,16 +350,15 @@ export default function ConditionSearchField({
         autoComplete="off"
         value={value}
         placeholder={placeholder}
-        onChange={(event) => handleChange(event.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
         style={{ ...Style.inputs.text, ...(focused ? Style.inputs.focused : undefined) }}
         {...focusProps}
         onFocus={() => {
           focusProps.onFocus();
-          if (candidates.length > 0) {
-            setOpen(true);
-          }
+          reopen();
         }}
+        onClick={reopen}
       />
 
       {showListbox && (candidates.length > 0 || loading || showEmpty) && (
@@ -404,13 +411,6 @@ export default function ConditionSearchField({
       {error && (
         <p style={styles.error} role="alert">
           Couldn't load matching conditions.
-        </p>
-      )}
-
-      {selected && (
-        <p style={styles.selected}>
-          <span style={styles.selectedCode}>OMOP — {selected.conceptId}</span>
-          <Estimate estimate={selected.estimatedParticipantCount} />
         </p>
       )}
     </div>

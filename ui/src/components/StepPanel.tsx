@@ -2,7 +2,14 @@ import type { CSSProperties, ReactNode } from "react";
 import colors from "../libs/colors";
 import * as Style from "../libs/style";
 
-export type StepTagVariant = "limit" | "optional";
+export type StepTagVariant = "limit" | "optional" | "count" | "overLimit";
+
+export interface StepTag {
+  label: string;
+  variant: StepTagVariant;
+  /** Hover text, for a tag whose label needs explaining. */
+  title?: string;
+}
 
 const styles = {
   panel: {
@@ -67,22 +74,35 @@ const TAG_VARIANT_STYLE: Record<StepTagVariant, CSSProperties> = {
     background: colors.bgAccent,
     color: colors.textAccent,
   },
+  count: {
+    background: colors.bgAccent,
+    color: colors.textAccent,
+  },
+  overLimit: {
+    background: colors.bgDanger,
+    color: colors.textDanger,
+  },
 };
 
 interface StepPanelProps {
   stepNumber: number;
   title: string;
-  tag?: { label: string; variant: StepTagVariant };
+  /** Shown at the right of the header, in order. */
+  tags?: StepTag[];
   children: ReactNode;
 }
 
-export default function StepPanel({ stepNumber, title, tag, children }: StepPanelProps) {
+export default function StepPanel({ stepNumber, title, tags = [], children }: StepPanelProps) {
   return (
     <div style={styles.panel}>
       <div style={styles.header}>
         <div style={styles.number}>{stepNumber}</div>
         <h2 style={styles.title}>{title}</h2>
-        {tag && <span style={{ ...styles.tag, ...TAG_VARIANT_STYLE[tag.variant] }}>{tag.label}</span>}
+        {tags.map((tag) => (
+          <span key={tag.label} style={{ ...styles.tag, ...TAG_VARIANT_STYLE[tag.variant] }} title={tag.title}>
+            {tag.label}
+          </span>
+        ))}
       </div>
       <div style={styles.body}>{children}</div>
     </div>

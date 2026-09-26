@@ -65,14 +65,55 @@ describe("SearchEntryPage", () => {
     expect(screen.getByRole("contentinfo")).toContainElement(screen.getByRole("img", { name: "Broad Institute" }));
   });
 
-  it("refuses to search with no variants", () => {
+  it("counts the variants entered, ignoring blank lines, and flags going over the limit", () => {
     stubApi([], "");
     renderPage();
+    const textarea = screen.getByPlaceholderText(/8-11708582-C-T/);
 
+    expect(screen.getByText("0 entered")).toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: "8-11708582-C-T\n\n  8-11708590-G-GAA  \n" } });
+    expect(screen.getByText("2 entered")).toHaveAttribute("title", "Variants entered, one per line.");
+
+    const tooMany = Array.from({ length: 51 }, (_, index) => `1-${index + 1}-A-G`).join("\n");
+    fireEvent.change(textarea, { target: { value: tooMany } });
+    expect(screen.getByText("51 entered")).toHaveAttribute("title", "Search is limited to 50 variants.");
+  });
+
+  it("disables search above the limit, and says how many to remove", () => {
+    stubApi([], "");
+    renderPage();
+    const textarea = screen.getByPlaceholderText(/8-11708582-C-T/);
+    const variantLines = (count: number) =>
+      Array.from({ length: count }, (_, index) => `1-${index + 1}-A-G`).join("\n");
+
+    fireEvent.change(textarea, { target: { value: variantLines(50) } });
+    expect(screen.getByRole("button", { name: /search/i })).toBeEnabled();
+
+    fireEvent.change(textarea, { target: { value: variantLines(53) } });
+    expect(screen.getByRole("button", { name: /search/i })).toBeDisabled();
+    expect(screen.getByText(/53 variants entered\. Remove 3 to search \(limit 50\)\./)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /search/i }));
-
-    expect(screen.getByRole("alert")).toHaveTextContent("Please enter at least one candidate variant.");
     expect(screen.queryByTestId("location")).not.toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: variantLines(50) } });
+    expect(screen.getByRole("button", { name: /search/i })).toBeEnabled();
+    expect(screen.queryByText(/Remove \d+ to search/)).not.toBeInTheDocument();
+  });
+
+  it("disables search until a variant is entered", () => {
+    stubApi([], "");
+    renderPage();
+    const textarea = screen.getByPlaceholderText(/8-11708582-C-T/);
+
+    expect(screen.getByRole("button", { name: /search/i })).toBeDisabled();
+
+    // Blank lines alone don't count as a variant.
+    fireEvent.change(textarea, { target: { value: "\n  \n" } });
+    expect(screen.getByRole("button", { name: /search/i })).toBeDisabled();
+
+    fireEvent.change(textarea, { target: { value: "8-11708582-C-T" } });
+    expect(screen.getByRole("button", { name: /search/i })).toBeEnabled();
   });
 
   /**

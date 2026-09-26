@@ -17,6 +17,10 @@ import Footer from "../components/results/Footer";
 import TopBar from "../components/results/TopBar";
 import { parseVariantsText } from "../utils/variants";
 
+// Matches the backend's VARIANTS_LIMIT. Search is disabled above it, since the backend would
+// otherwise quietly drop the extras.
+const VARIANTS_LIMIT = 50;
+
 // Below this the two step panels no longer fit side by side, so they stack.
 const NARROW_LAYOUT_QUERY = "(max-width: 720px)";
 
@@ -64,7 +68,6 @@ export default function SearchEntryPage() {
   // re-resolving the name -- which matters for concepts the text path would skip, e.g. ones
   // with a zero participant estimate.
   const [conditionConceptId, setConditionConceptId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState("");
   const isNarrow = useMediaQuery(NARROW_LAYOUT_QUERY);
   const { focused: variantsFocused, focusProps: variantsFocusProps } = useFocus();
@@ -75,13 +78,12 @@ export default function SearchEntryPage() {
       .catch((err: Error) => console.error("Failed to load profile", err));
   }, []);
 
+  const variantCount = parseVariantsText(variants).length;
+  const overLimit = variantCount > VARIANTS_LIMIT;
+  const canSearch = variantCount > 0 && !overLimit;
+
   function handleSearch() {
     const parsedVariants = parseVariantsText(variants);
-    if (parsedVariants.length === 0) {
-      setError("Please enter at least one candidate variant.");
-      return;
-    }
-    setError(null);
     const params = new URLSearchParams();
     for (const variant of parsedVariants) {
       params.append("variants", variant);
@@ -110,7 +112,20 @@ export default function SearchEntryPage() {
             alignItems: "stretch",
           }}
         >
-          <StepPanel stepNumber={1} title="Candidate variants" tag={{ label: "limit 50", variant: "limit" }}>
+          <StepPanel
+            stepNumber={1}
+            title="Candidate variants"
+            tags={[
+              {
+                label: `${variantCount} entered`,
+                variant: overLimit ? "overLimit" : "count",
+                title: overLimit
+                  ? `Search is limited to ${VARIANTS_LIMIT} variants.`
+                  : "Variants entered, one per line.",
+              },
+              { label: `limit ${VARIANTS_LIMIT}`, variant: "limit" },
+            ]}
+          >
             <textarea
               value={variants}
               onChange={(event) => setVariants(event.target.value)}
@@ -121,7 +136,7 @@ export default function SearchEntryPage() {
             <FieldHint>One variant per line, entered as chr-pos-ref-alt (e.g. 8-11708582-C-T).</FieldHint>
           </StepPanel>
 
-          <StepPanel stepNumber={2} title="Phenotype" tag={{ label: "Optional", variant: "optional" }}>
+          <StepPanel stepNumber={2} title="Phenotype" tags={[{ label: "Optional", variant: "optional" }]}>
             <ConditionSearchField
               id="condition"
               value={condition}
@@ -150,15 +165,20 @@ export default function SearchEntryPage() {
           </StepPanel>
         </div>
 
-        {error && (
-          <p style={styles.error} role="alert">
-            {error}
+        {/* Said here rather than in a tooltip: the disabled button takes no pointer events. An
+            empty field needs no explaining, so it just disables the button. */}
+        {overLimit && (
+          <p style={styles.error} aria-live="polite">
+            {variantCount} variants entered. Remove {variantCount - VARIANTS_LIMIT} to search (limit{" "}
+            {VARIANTS_LIMIT}).
           </p>
         )}
 
         <Clickable
           style={styles.searchButton}
           hoverStyle={Style.buttons.primaryHover}
+          disabledStyle={Style.buttons.disabled}
+          disabled={!canSearch}
           onClick={handleSearch}
         >
           <SearchIcon size={16} aria-hidden="true" style={{ flexShrink: 0 }} />

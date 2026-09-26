@@ -139,12 +139,59 @@ describe("ConditionSearchField", () => {
     await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
   });
 
-  it("shows the picked concept's OMOP id once chosen", async () => {
-    renderOpen([TETRALOGY]);
+  it("shows only the picked concept's name, not its OMOP id or estimate", async () => {
+    const { onChange } = renderOpen([TETRALOGY]);
 
     fireEvent.mouseDown(await screen.findByText("Tetralogy of Fallot"));
 
-    expect(await screen.findByText("OMOP — 9000010")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
+    expect(onChange).toHaveBeenCalledWith("Tetralogy of Fallot");
+    expect(screen.queryByText(/OMOP/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/47/)).not.toBeInTheDocument();
+  });
+
+  it("reopens the same list when the field is clicked after a pick, so the pick can be changed", async () => {
+    const onSelect = vi.fn();
+    const { input, fetchMock } = renderOpen([TETRALOGY, REPAIRED], { onSelect });
+
+    fireEvent.mouseDown(await screen.findByText("Tetralogy of Fallot"));
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
+
+    // The field kept focus through the pick, so this is a click with no focus event.
+    fireEvent.click(input);
+    fireEvent.mouseDown(await screen.findByText("Fallot tetralogy, repaired"));
+
+    expect(onSelect).toHaveBeenLastCalledWith(REPAIRED);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("looks up the initial selection's name when focused, since there's no list yet to reopen", async () => {
+    const fetchMock = mockCandidates("Tetralogy of Fallot", [TETRALOGY, REPAIRED]);
+    vi.stubGlobal("fetch", fetchMock);
+    renderField({ value: "Tetralogy of Fallot", initialSelection: TETRALOGY });
+    await wait(PAST_DEBOUNCE_MS);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.focus(screen.getByRole("combobox"));
+
+    expect(screen.getByText("Searching…")).toBeInTheDocument();
+    expect(await screen.findAllByRole("option")).toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't repeat a lookup that found nothing when the field is refocused", async () => {
+    const fetchMock = mockCandidates("zzzz", []);
+    vi.stubGlobal("fetch", fetchMock);
+    renderField({ value: "zzzz" });
+    const input = screen.getByRole("combobox");
+    fireEvent.focus(input);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    fireEvent.keyDown(input, { key: "Escape" });
+    fireEvent.click(input);
+    await wait(PAST_DEBOUNCE_MS);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("moves through the list with the arrow keys and picks with Enter", async () => {
