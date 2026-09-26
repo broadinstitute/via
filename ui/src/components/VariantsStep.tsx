@@ -8,7 +8,12 @@ import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 const styles = {
   input: {
     ...Style.inputs.mono,
-    flex: 1,
+    // Grows to fill the card, but from its own height (flexBasis auto), not from 0 as `flex: 1`
+    // would: a zero basis overrides `height`, so dragging the resize handle -- which sets
+    // `height` -- did nothing. flexShrink 0 so the dragged height isn't squeezed back either.
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: "auto",
     lineHeight: 1.6,
     resize: "vertical",
   },

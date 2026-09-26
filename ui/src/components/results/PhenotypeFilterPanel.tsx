@@ -59,7 +59,9 @@ const styles = {
   },
   // Overrides the donut center's own uppercase micro-label treatment for the headline number.
   donutCount: {
-    fontSize: 20,
+    // Sized to fit a six-digit count ("123,456") inside the ring's ~130px hole.
+    fontSize: 26,
+    lineHeight: 1.1,
     textTransform: "none",
     letterSpacing: "normal",
     marginBottom: 2,
