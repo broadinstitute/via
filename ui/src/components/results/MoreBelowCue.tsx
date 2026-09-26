@@ -1,6 +1,6 @@
 import type { CSSProperties, RefObject } from "react";
 import colors, { alpha } from "../../libs/colors";
-import { useHasMoreBelow } from "../../libs/hooks";
+import { useMoreBelow } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
 import { ChevronDownIcon } from "../icons";
@@ -44,15 +44,19 @@ const styles = {
 interface MoreBelowCueProps {
   /** The scroll container to watch and scroll. */
   scrollRef: RefObject<HTMLElement | null>;
+  /** Which elements in it count as rows for "N more below", e.g. "[data-variant-row]". */
+  rowSelector: string;
 }
 
 /**
- * A fade over a scroll container's bottom edge and a "More below" pill, shown only while there
- * are rows out of sight below. Render it as a sibling of the scroll container, inside a
- * position: relative wrapper that the container fills.
+ * A fade over a scroll container's bottom edge and a "12 more below" pill, shown only while
+ * there's content out of sight below. Only elements matching `rowSelector` are counted; if
+ * what's below isn't one, e.g. the last row's expanded detail, the pill just says "More below".
+ * Render it as a sibling of the scroll container, inside a position: relative wrapper that the
+ * container fills.
  */
-export default function MoreBelowCue({ scrollRef }: MoreBelowCueProps) {
-  const hasMoreBelow = useHasMoreBelow(scrollRef);
+export default function MoreBelowCue({ scrollRef, rowSelector }: MoreBelowCueProps) {
+  const { hasMoreBelow, rowsBelow } = useMoreBelow(scrollRef, rowSelector);
 
   if (!hasMoreBelow) return null;
 
@@ -66,7 +70,7 @@ export default function MoreBelowCue({ scrollRef }: MoreBelowCueProps) {
     <>
       <div style={styles.fade} aria-hidden="true" />
       <Clickable style={styles.button} hoverStyle={styles.buttonHover} onClick={scrollDown}>
-        More below
+        {rowsBelow > 0 ? `${rowsBelow} more below` : "More below"}
         <ChevronDownIcon size={12} strokeWidth={2.5} aria-hidden="true" />
       </Clickable>
     </>

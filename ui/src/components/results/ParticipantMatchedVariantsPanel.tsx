@@ -376,7 +376,7 @@ export default function ParticipantMatchedVariantsPanel({
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} {...rowHoverProps(row.id)}>
+                <tr key={row.id} data-variant-row {...rowHoverProps(row.id)}>
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
@@ -393,7 +393,7 @@ export default function ParticipantMatchedVariantsPanel({
             </tbody>
           </table>
         </div>
-        <MoreBelowCue scrollRef={scrollRef} />
+        <MoreBelowCue scrollRef={scrollRef} rowSelector="[data-variant-row]" />
       </div>
     </ResultsPanel>
   );

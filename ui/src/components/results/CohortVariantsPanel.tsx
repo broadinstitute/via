@@ -519,6 +519,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 return (
                   <Fragment key={row.id}>
                     <tr
+                      data-variant-row
                       style={styles.dataRow}
                       onClick={() => toggleExpanded(row.original.variant)}
                       {...rowHoverProps(row.id)}
@@ -580,7 +581,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             </tbody>
           </table>
         </div>
-        <MoreBelowCue scrollRef={scrollRef} />
+        <MoreBelowCue scrollRef={scrollRef} rowSelector="[data-variant-row]" />
       </div>
     </ResultsPanel>
   );

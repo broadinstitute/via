@@ -65,34 +65,60 @@ export function useMediaQuery(query: string): boolean {
 }
 
 /**
- * Whether a scroll container has content hidden below its bottom edge, for a "more below" cue.
+ * Whether a scroll container has content hidden below its bottom edge, and how many of its rows
+ * are out of sight there, for a "more below" cue. `rowSelector` picks out what counts as a row
+ * within the container -- a table's data rows, say, and not a row's expanded detail.
  *
- * Re-checked on scroll and whenever the container or its content resizes, so expanding a row,
- * re-sorting or a layout change all keep it current.
+ * A row counts as below once more than half of it is past the bottom edge. Re-checked on scroll,
+ * whenever the container or its content resizes, and when rows are added or removed, so
+ * expanding a row, re-sorting or a new set of results all keep it current.
  */
-export function useHasMoreBelow(ref: RefObject<HTMLElement | null>): boolean {
-  const [hasMoreBelow, setHasMoreBelow] = useState(false);
+export function useMoreBelow(
+  ref: RefObject<HTMLElement | null>,
+  rowSelector: string,
+): { hasMoreBelow: boolean; rowsBelow: number } {
+  const [state, setState] = useState({ hasMoreBelow: false, rowsBelow: 0 });
 
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
 
-    // 1px of slack: scrollTop can be fractional on zoomed or high-DPI displays, which would
-    // otherwise leave the cue showing at the very bottom.
-    const update = () =>
-      setHasMoreBelow(element.scrollTop + element.clientHeight < element.scrollHeight - 1);
+    const update = () => {
+      // 1px of slack: scrollTop can be fractional on zoomed or high-DPI displays, which would
+      // otherwise leave the cue showing at the very bottom.
+      const hasMoreBelow = element.scrollTop + element.clientHeight < element.scrollHeight - 1;
+      // clientTop/clientHeight rather than the rect's bottom, which would include a horizontal
+      // scrollbar that no row can be seen through.
+      const visibleBottom = element.getBoundingClientRect().top + element.clientTop + element.clientHeight;
+      let rowsBelow = 0;
+      if (hasMoreBelow) {
+        for (const row of element.querySelectorAll(rowSelector)) {
+          const rect = row.getBoundingClientRect();
+          if (rect.top + rect.height / 2 > visibleBottom) rowsBelow++;
+        }
+      }
+      // Bail out of the re-render when nothing changed, since this runs on every scroll event.
+      setState((current) =>
+        current.hasMoreBelow === hasMoreBelow && current.rowsBelow === rowsBelow
+          ? current
+          : { hasMoreBelow, rowsBelow },
+      );
+    };
 
     update();
     element.addEventListener("scroll", update, { passive: true });
     // Guarded: jsdom doesn't implement ResizeObserver.
-    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
-    observer?.observe(element);
-    for (const child of Array.from(element.children)) observer?.observe(child);
+    const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    resizeObserver?.observe(element);
+    for (const child of Array.from(element.children)) resizeObserver?.observe(child);
+    const mutationObserver = new MutationObserver(update);
+    mutationObserver.observe(element, { childList: true, subtree: true });
     return () => {
       element.removeEventListener("scroll", update);
-      observer?.disconnect();
+      resizeObserver?.disconnect();
+      mutationObserver.disconnect();
     };
-  }, [ref]);
+  }, [ref, rowSelector]);
 
-  return hasMoreBelow;
+  return state;
 }
