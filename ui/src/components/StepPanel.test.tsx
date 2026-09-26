@@ -64,6 +64,16 @@ describe("StepPanel", () => {
     expect(container.firstChild).toHaveStyle({ overflow: "visible" });
   });
 
+  it("drops the raised shadow when flat", () => {
+    const { container } = render(
+      <StepPanel stepNumber={2} title="Phenotype" flat>
+        <p>body</p>
+      </StepPanel>,
+    );
+
+    expect(container.firstChild).toHaveStyle({ boxShadow: "none" });
+  });
+
   /** The header rounds its own top corners, which is what overflow: hidden used to do. */
   it("rounds the header's top corners itself", () => {
     render(

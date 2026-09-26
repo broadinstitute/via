@@ -2,37 +2,31 @@ import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import type { ConditionConcept } from "../../api/conditions";
-import { parseVariantsText } from "../../utils/variants";
+import { overLimitMessage, variantEntryStatus } from "../../utils/variants";
 import Clickable from "../common/Clickable";
-import ConditionSearchField from "../ConditionSearchField";
+import { SearchIcon } from "../icons";
+import PhenotypeStep from "../PhenotypeStep";
+import SearchSteps from "../SearchSteps";
+import VariantsStep from "../VariantsStep";
 
 const styles = {
   drawer: {
-    padding: "16px 20px",
-    background: colors.surface1,
+    padding: 16,
+    background: colors.surface0,
     borderBottom: `1px solid ${colors.border}`,
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "2fr 1fr",
-    gap: 16,
-    alignItems: "start",
-  },
-  variantsInput: {
-    ...Style.inputs.text,
-    minHeight: 60,
-    resize: "vertical",
-  },
-  hint: {
-    marginTop: 3,
-    fontSize: 10,
-    color: colors.textMuted,
   },
   actions: {
     display: "flex",
+    alignItems: "center",
     justifyContent: "flex-end",
     gap: 8,
-    marginTop: 14,
+    marginTop: 16,
+  },
+  error: {
+    marginRight: "auto",
+    color: colors.textDanger,
+    fontSize: 12.5,
+    fontWeight: 600,
   },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -51,6 +45,7 @@ interface SearchDrawerProps {
   onSearch: () => void;
 }
 
+/** The results page's "Modify search" form: the entry page's two steps, in a drop-down drawer. */
 export default function SearchDrawer({
   open,
   variantsText,
@@ -63,45 +58,45 @@ export default function SearchDrawer({
   onCancel,
   onSearch,
 }: SearchDrawerProps) {
-  const enteredCount = parseVariantsText(variantsText).length;
+  const { count: enteredCount, overLimit, canSearch } = variantEntryStatus(variantsText, variantsLimit);
 
   return (
     <div style={{ ...styles.drawer, display: open ? "block" : "none" }}>
-      <div style={styles.grid}>
-        <div>
-          <label htmlFor="drawerVariants" style={Style.inputs.label}>
-            Candidate genes or variants (limit {variantsLimit})
-          </label>
-          <textarea
-            id="drawerVariants"
-            rows={10}
-            value={variantsText}
-            onChange={(event) => onVariantsChange(event.target.value)}
-            style={styles.variantsInput}
-          />
-          <div style={styles.hint}>
-            {enteredCount} of {variantsLimit} candidate variants entered
-          </div>
-        </div>
-        <div>
-          <label htmlFor="drawerCondition" style={Style.inputs.label}>
-            Phenotype (pick a condition from the list)
-          </label>
-          <ConditionSearchField
-            id="drawerCondition"
-            value={conditionText}
-            initialSelection={initialCondition}
-            onChange={onConditionChange}
-            onSelect={onConditionSelect}
-            placeholder="e.g. tetralogy of fallot"
-          />
-        </div>
-      </div>
+      <SearchSteps>
+        <VariantsStep
+          value={variantsText}
+          onChange={onVariantsChange}
+          limit={variantsLimit}
+          minHeight={140}
+          flat
+        />
+        <PhenotypeStep
+          id="drawerCondition"
+          value={conditionText}
+          initialSelection={initialCondition}
+          onChange={onConditionChange}
+          onSelect={onConditionSelect}
+          flat
+        />
+      </SearchSteps>
+
       <div style={styles.actions}>
+        {overLimit && (
+          <p style={styles.error} aria-live="polite">
+            {overLimitMessage(enteredCount, variantsLimit)}
+          </p>
+        )}
         <Clickable style={Style.buttons.secondary} hoverStyle={Style.buttons.secondaryHover} onClick={onCancel}>
           Cancel
         </Clickable>
-        <Clickable style={Style.buttons.primary} hoverStyle={Style.buttons.primaryHover} onClick={onSearch}>
+        <Clickable
+          style={Style.buttons.primary}
+          hoverStyle={Style.buttons.primaryHover}
+          disabledStyle={Style.buttons.disabled}
+          disabled={!canSearch}
+          onClick={onSearch}
+        >
+          <SearchIcon size={14} aria-hidden="true" />
           Search
         </Clickable>
       </div>

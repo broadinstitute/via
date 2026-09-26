@@ -89,12 +89,14 @@ interface StepPanelProps {
   title: string;
   /** Shown at the right of the header, in order. */
   tags?: StepTag[];
+  /** Drops the raised shadow, for a panel sitting inside another surface such as the search drawer. */
+  flat?: boolean;
   children: ReactNode;
 }
 
-export default function StepPanel({ stepNumber, title, tags = [], children }: StepPanelProps) {
+export default function StepPanel({ stepNumber, title, tags = [], flat = false, children }: StepPanelProps) {
   return (
-    <div style={styles.panel}>
+    <div style={{ ...styles.panel, ...(flat ? { boxShadow: "none" } : undefined) }}>
       <div style={styles.header}>
         <div style={styles.number}>{stepNumber}</div>
         <h2 style={styles.title}>{title}</h2>
