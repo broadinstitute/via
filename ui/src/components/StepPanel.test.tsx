@@ -64,14 +64,17 @@ describe("StepPanel", () => {
     expect(container.firstChild).toHaveStyle({ overflow: "visible" });
   });
 
-  it("drops the raised shadow when flat", () => {
+  it("drops the card and step number when plain, keeping the title and tags", () => {
     const { container } = render(
-      <StepPanel stepNumber={2} title="Phenotype" flat>
+      <StepPanel stepNumber={2} title="Phenotype" appearance="plain" tags={[{ label: "Optional", variant: "optional" }]}>
         <p>body</p>
       </StepPanel>,
     );
 
-    expect(container.firstChild).toHaveStyle({ boxShadow: "none" });
+    expect(screen.getByRole("heading", { name: "Phenotype" })).toBeInTheDocument();
+    expect(screen.getByText("Optional")).toBeInTheDocument();
+    expect(screen.queryByText("2")).not.toBeInTheDocument();
+    expect(container.firstChild).not.toHaveStyle({ borderRadius: "12px" });
   });
 
   /** The header rounds its own top corners, which is what overflow: hidden used to do. */

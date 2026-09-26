@@ -3,7 +3,7 @@ import { useFocus } from "../libs/hooks";
 import * as Style from "../libs/style";
 import { variantEntryStatus } from "../utils/variants";
 import FieldHint from "./FieldHint";
-import StepPanel, { type StepTag } from "./StepPanel";
+import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
 const styles = {
   input: {
@@ -34,16 +34,16 @@ interface VariantsStepProps {
   /** The textarea's starting height; it can still be resized taller. */
   minHeight: number;
   /** See StepPanel. */
-  flat?: boolean;
+  appearance?: StepPanelAppearance;
 }
 
 /** Step 1 of a search: the candidate-variants textarea, with its count and limit. */
-export default function VariantsStep({ value, onChange, limit, minHeight, flat }: VariantsStepProps) {
+export default function VariantsStep({ value, onChange, limit, minHeight, appearance }: VariantsStepProps) {
   const { focused, focusProps } = useFocus();
   const { count } = variantEntryStatus(value, limit);
 
   return (
-    <StepPanel stepNumber={1} title="Candidate variants" tags={countTags(count, limit)} flat={flat}>
+    <StepPanel stepNumber={1} title="Candidate variants" tags={countTags(count, limit)} appearance={appearance}>
       <textarea
         aria-label="Candidate variants"
         value={value}

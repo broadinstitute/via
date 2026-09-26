@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { ConditionConcept } from "../api/conditions";
 import ConditionSearchField from "./ConditionSearchField";
 import FieldHint from "./FieldHint";
-import StepPanel from "./StepPanel";
+import StepPanel, { type StepPanelAppearance } from "./StepPanel";
 
 interface PhenotypeStepProps {
   id: string;
@@ -13,7 +13,7 @@ interface PhenotypeStepProps {
   onChange: (value: string) => void;
   onSelect: (concept: ConditionConcept) => void;
   /** See StepPanel. */
-  flat?: boolean;
+  appearance?: StepPanelAppearance;
   /** Extra content below the hint, e.g. the entry page's callout. */
   children?: ReactNode;
 }
@@ -25,11 +25,11 @@ export default function PhenotypeStep({
   initialSelection,
   onChange,
   onSelect,
-  flat,
+  appearance,
   children,
 }: PhenotypeStepProps) {
   return (
-    <StepPanel stepNumber={2} title="Phenotype" tags={[{ label: "Optional", variant: "optional" }]} flat={flat}>
+    <StepPanel stepNumber={2} title="Phenotype" tags={[{ label: "Optional", variant: "optional" }]} appearance={appearance}>
       <ConditionSearchField
         id={id}
         value={value}

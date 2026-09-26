@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import colors from "../../libs/colors";
 import { useHover } from "../../libs/hooks";
@@ -8,12 +8,24 @@ import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, GearIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
 import SettingsDialog from "../settings/SettingsDialog";
 
+/** Exported for what has to sit just below the bar, e.g. the edit-search popover's backdrop. */
+export const TOP_BAR_HEIGHT = 41;
+
 const styles = {
   topbar: {
+    // Pinned to the top of the window. The edit-search popover's backdrop is fixed to the window
+    // and starts TOP_BAR_HEIGHT down, so it only lines up with the bar if the bar can't scroll
+    // away; otherwise an undimmed strip is left over the results. Keeps the search summary in
+    // view while scrolling, too.
+    position: "sticky",
+    top: 0,
+    // Above the page, so the edit-search popover and its backdrop, rendered in here, cover
+    // the results -- including their own stacked bits, like the tables' sticky headers.
+    zIndex: 50,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    height: 41,
+    height: TOP_BAR_HEIGHT,
     padding: "0 20px",
     background: colors.surface2,
     borderBottom: `1px solid ${colors.border}`,
@@ -39,14 +51,20 @@ const styles = {
     cursor: "pointer",
   },
   // Styled as a search field holding the current terms; clicking anywhere in it opens the drawer.
+  // Positioning context for the edit-search popover, which hangs from the search box.
+  searchAnchor: {
+    position: "relative",
+    display: "flex",
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 575,
+  },
   searchBox: {
     ...Style.inputs.text,
     display: "flex",
     alignItems: "center",
     gap: 12,
-    flex: 1,
     minWidth: 0,
-    maxWidth: 575,
     height: 29,
     // A pill, the usual shape for a search box; the extra left padding clears the curve.
     borderRadius: 999,
@@ -149,8 +167,10 @@ interface TopBarProps {
   condition?: string;
   userEmail: string;
   onModifySearch?: () => void;
-  /** Whether the modify-search drawer is open, which the search box shows as focused. */
+  /** Whether the edit-search popover is open, which the search box shows as focused. */
   modifyOpen?: boolean;
+  /** The edit-search popover (SearchPopover), anchored under the search box. */
+  editSearchPanel?: ReactNode;
 }
 
 export default function TopBar({
@@ -160,6 +180,7 @@ export default function TopBar({
   userEmail,
   onModifySearch,
   modifyOpen = false,
+  editSearchPanel,
 }: TopBarProps) {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -179,52 +200,55 @@ export default function TopBar({
           >
             <ArrowLeftIcon size={14} strokeWidth={2.5} />
           </Clickable>
-          <Clickable
-            style={{
-              ...styles.searchBox,
-              ...(searchHovered && !loading ? styles.searchBoxHover : undefined),
-              ...(modifyOpen ? Style.inputs.focused : undefined),
-            }}
-            disabledStyle={{ cursor: "default" }}
-            onClick={onModifySearch}
-            disabled={loading}
-            aria-label="Edit search"
-            aria-describedby={termsId}
-            aria-expanded={modifyOpen}
-            {...searchHoverProps}
-          >
-            <SearchIcon size={14} strokeWidth={2.5} style={styles.searchIcon} aria-hidden="true" />
-            <span id={termsId} style={styles.searchTerms}>
-              <span style={styles.searchField}>
-                Variants
-                {loading ? (
-                  <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
-                ) : (
-                  <span style={styles.valueBadge}>{variantsEnteredCount} entered</span>
-                )}
+          <div style={styles.searchAnchor}>
+            <Clickable
+              style={{
+                ...styles.searchBox,
+                ...(searchHovered && !loading ? styles.searchBoxHover : undefined),
+                ...(modifyOpen ? Style.inputs.focused : undefined),
+              }}
+              disabledStyle={{ cursor: "default" }}
+              onClick={onModifySearch}
+              disabled={loading}
+              aria-label="Edit search"
+              aria-describedby={termsId}
+              aria-expanded={modifyOpen}
+              {...searchHoverProps}
+            >
+              <SearchIcon size={14} strokeWidth={2.5} style={styles.searchIcon} aria-hidden="true" />
+              <span id={termsId} style={styles.searchTerms}>
+                <span style={styles.searchField}>
+                  Variants
+                  {loading ? (
+                    <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
+                  ) : (
+                    <span style={styles.valueBadge}>{variantsEnteredCount} entered</span>
+                  )}
+                </span>
+                <span style={styles.termDivider} aria-hidden="true" />
+                <span style={styles.searchField}>
+                  Phenotype
+                  {loading ? (
+                    <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
+                  ) : (
+                    <span style={styles.valueBadge} title={condition || undefined}>
+                      {condition || "None entered"}
+                    </span>
+                  )}
+                </span>
               </span>
-              <span style={styles.termDivider} aria-hidden="true" />
-              <span style={styles.searchField}>
-                Phenotype
-                {loading ? (
-                  <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
-                ) : (
-                  <span style={styles.valueBadge} title={condition || undefined}>
-                    {condition || "None entered"}
-                  </span>
-                )}
-              </span>
-            </span>
-            {!loading && (
-              <span
-                style={{ ...styles.modifyHint, ...(searchHovered ? styles.modifyHintHover : undefined) }}
-                aria-hidden="true"
-              >
-                <PencilIcon size={11} strokeWidth={2.5} />
-                Edit
-              </span>
-            )}
-          </Clickable>
+              {!loading && (
+                <span
+                  style={{ ...styles.modifyHint, ...(searchHovered ? styles.modifyHintHover : undefined) }}
+                  aria-hidden="true"
+                >
+                  <PencilIcon size={11} strokeWidth={2.5} />
+                  Edit
+                </span>
+              )}
+            </Clickable>
+            {editSearchPanel}
+          </div>
         </div>
       )}
       <div style={styles.user}>

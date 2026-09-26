@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import SearchDrawer from "./SearchDrawer";
+import SearchPopover from "./SearchPopover";
 
-function renderDrawer(props: Partial<Parameters<typeof SearchDrawer>[0]> = {}) {
+function renderPopover(props: Partial<Parameters<typeof SearchPopover>[0]> = {}) {
   const handlers = {
     onVariantsChange: vi.fn(),
     onConditionChange: vi.fn(),
@@ -11,7 +11,7 @@ function renderDrawer(props: Partial<Parameters<typeof SearchDrawer>[0]> = {}) {
     onSearch: vi.fn(),
   };
   render(
-    <SearchDrawer
+    <SearchPopover
       open
       variantsText=""
       conditionText=""
@@ -26,11 +26,11 @@ function renderDrawer(props: Partial<Parameters<typeof SearchDrawer>[0]> = {}) {
 
 const variantLines = (count: number) => Array.from({ length: count }, (_, index) => `1-${index + 1}-A-G`).join("\n");
 
-describe("SearchDrawer", () => {
+describe("SearchPopover", () => {
   afterEach(cleanup);
 
-  it("lays out the same two steps as the entry page", () => {
-    renderDrawer({ variantsText: "8-11708582-C-T\n8-11708590-G-GAA" });
+  it("lays out the entry page's two steps, without their cards", () => {
+    renderPopover({ variantsText: "8-11708582-C-T\n8-11708590-G-GAA" });
 
     expect(screen.getByRole("heading", { name: "Candidate variants" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Phenotype" })).toBeInTheDocument();
@@ -41,7 +41,7 @@ describe("SearchDrawer", () => {
   });
 
   it("searches and cancels", () => {
-    const { onSearch, onCancel } = renderDrawer({ variantsText: "8-11708582-C-T" });
+    const { onSearch, onCancel } = renderPopover({ variantsText: "8-11708582-C-T" });
 
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -51,13 +51,13 @@ describe("SearchDrawer", () => {
   });
 
   it("disables search with no variants", () => {
-    renderDrawer({ variantsText: "\n  \n" });
+    renderPopover({ variantsText: "\n  \n" });
 
     expect(screen.getByRole("button", { name: "Search" })).toBeDisabled();
   });
 
   it("disables search above the limit, and says how many to remove", () => {
-    renderDrawer({ variantsText: variantLines(52) });
+    renderPopover({ variantsText: variantLines(52) });
 
     expect(screen.getByRole("button", { name: "Search" })).toBeDisabled();
     expect(screen.getByText("52 entered")).toHaveAttribute("title", "Search is limited to 50 variants.");
@@ -65,7 +65,7 @@ describe("SearchDrawer", () => {
   });
 
   it("restores the variants field's grey border after it loses focus", () => {
-    renderDrawer();
+    renderPopover();
     const textarea = screen.getByRole("textbox", { name: "Candidate variants" });
 
     fireEvent.focus(textarea);
@@ -75,8 +75,42 @@ describe("SearchDrawer", () => {
   });
 
   it("is hidden while closed", () => {
-    renderDrawer({ open: false });
+    renderPopover({ open: false });
 
-    expect(screen.queryByRole("heading", { name: "Candidate variants" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Edit search" })).not.toBeInTheDocument();
+  });
+
+  it("puts focus in the variants field when it opens", () => {
+    renderPopover();
+
+    expect(screen.getByRole("textbox", { name: "Candidate variants" })).toHaveFocus();
+  });
+
+  it("cancels on Escape and on a click on the backdrop", () => {
+    const { onCancel } = renderPopover();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByTestId("searchPopoverBackdrop"));
+    fireEvent.click(screen.getByRole("dialog", { name: "Edit search" }));
+
+    expect(onCancel).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves an Escape that something inside already handled, e.g. closing the condition dropdown", () => {
+    const { onCancel } = renderPopover();
+
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    event.preventDefault();
+    document.dispatchEvent(event);
+
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("stops listening for Escape once closed", () => {
+    const { onCancel } = renderPopover({ open: false });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(onCancel).not.toHaveBeenCalled();
   });
 });

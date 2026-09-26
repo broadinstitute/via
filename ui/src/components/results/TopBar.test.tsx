@@ -106,6 +106,17 @@ describe("TopBar", () => {
     expect(searchBox.style.borderColor).toBe(grey);
   });
 
+  /**
+   * Regression guard. The edit-search popover's backdrop is fixed to the window and starts at
+   * the bar's height. When the bar scrolled with the page, that left an undimmed strip at the
+   * top of the window, over the results, once the page was scrolled.
+   */
+  it("stays pinned to the top of the window", () => {
+    const { container } = renderTopBar({ userEmail: "user@example.org" });
+
+    expect(container.firstChild).toHaveStyle({ position: "sticky", top: "0px" });
+  });
+
   it("renders the fallback phenotype label when no condition is set", () => {
     renderTopBar({
       userEmail: "user@example.org",

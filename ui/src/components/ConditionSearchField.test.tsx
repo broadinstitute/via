@@ -176,6 +176,16 @@ describe("ConditionSearchField", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("claims Escape only when it closes the list, so an outer popover can take the next one", async () => {
+    const { input } = renderOpen([TETRALOGY]);
+    await screen.findAllByRole("option");
+
+    // fireEvent returns false when the handler called preventDefault.
+    expect(fireEvent.keyDown(input, { key: "Escape" })).toBe(false);
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
+    expect(fireEvent.keyDown(input, { key: "Escape" })).toBe(true);
+  });
+
   it("moves through the list with the arrow keys and picks with Enter", async () => {
     const onChange = vi.fn();
     const { input } = renderOpen([TETRALOGY, REPAIRED], { onChange });

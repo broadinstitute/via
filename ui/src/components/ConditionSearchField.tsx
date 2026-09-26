@@ -306,6 +306,11 @@ export default function ConditionSearchField({
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
+      // Claimed only when there's a list to close, so an Escape that has nothing to do here
+      // still reaches whatever the field sits in, e.g. the edit-search popover, which closes.
+      if (showListbox) {
+        event.preventDefault();
+      }
       setOpen(false);
       setActiveIndex(-1);
       return;
