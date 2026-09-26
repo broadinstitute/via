@@ -29,7 +29,7 @@ every "same collapse" note below rather than being repeated per row.
 | `variant` | `vid` | Direct. |
 | `gene` | `gene_symbol` (via canonical-transcript pick) | Needs the collapse step above. |
 | `proteinChange` | `aa_change` (hgvsp) | Same collapse. |
-| `classification` | `consequence` (array) | Same collapse; also needs picking/rendering one value from the array. |
+| `consequence` | `consequence` (array) | Same collapse; also needs picking/rendering one value from the array. |
 | `aouSubpopulation`/`aouAf`/`aouAc`/`aouAn` | `gvs_max_subpop`/`gvs_max_af`/`gvs_max_ac`/`gvs_max_an` | Direct — the VAT was designed with exactly this "max subpopulation" concept (Appendix G). |
 | `gnomadSubpopulation`/`gnomadAf`/`gnomadAc`/`gnomadAn` | `gnomad_max_subpop`/`gnomad_max_af`/`gnomad_max_ac`/`gnomad_max_an` | Direct, same pattern. |
 | `gnomadUrl` | — | Not a VAT field. Trivial to construct client/API-side from `vid`, but it's new work, not a lookup. |
@@ -42,7 +42,7 @@ every "same collapse" note below rather than being repeated per row.
 
 | UI field | VAT source | Notes |
 |---|---|---|
-| `variant`, `gene`, `classification` | same as above | Same caveats apply. |
+| `variant`, `gene`, `consequence` | same as above | Same caveats apply. |
 | `cohortAc`/`cohortAn`/`cohortAf` | **none** | The doc is explicit: *"user defined cohort metrics will not be included in the VAT."* VAT only has whole-biobank (`gvs_all_*`) and ancestry-subpopulation (`gvs_<subpop>_*`) stats — nothing for an arbitrary phenotype-filtered participant subset. That requires querying genotype-level data directly (GVS or similar), since the VAT explicitly drops all sample/genotype info by design. |
 | `homozygotes`/`heterozygotes` | **none** | Same root cause. Even for the *whole* cohort, Appendix H describes how to compute `n_het`/`n_homalt` but says plainly *"only sample_count is ever surfaced"* in the current design — this per-sample zygosity detail isn't planned to exist in the VAT at all, let alone for a filtered subgroup. |
 | `clinvarPlpInTrans` | **none, by a wide margin** | Confirmed to be the biggest lift of anything here. It needs per-participant phased genotypes to know if a P/LP variant sits on the *other* allele (trans) — that's compound-het phasing across two variants per sample, which is categorically outside anything a variant-transcript aggregate table like the VAT can hold. This needs its own pipeline against raw per-sample genotype data, independent of the VAT entirely. |

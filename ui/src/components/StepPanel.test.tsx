@@ -19,12 +19,31 @@ describe("StepPanel", () => {
 
   it("renders an optional tag", () => {
     render(
-      <StepPanel stepNumber={2} title="Phenotype" tag={{ label: "Optional", variant: "optional" }}>
+      <StepPanel stepNumber={2} title="Phenotype" tags={[{ label: "Optional", variant: "optional" }]}>
         <p>body</p>
       </StepPanel>,
     );
 
     expect(screen.getByText("Optional")).toBeInTheDocument();
+  });
+
+  it("renders several tags in order, with any hover text", () => {
+    render(
+      <StepPanel
+        stepNumber={1}
+        title="Candidate variants"
+        tags={[
+          { label: "3 entered", variant: "count", title: "Variants entered" },
+          { label: "limit 50", variant: "limit" },
+        ]}
+      >
+        <p>body</p>
+      </StepPanel>,
+    );
+
+    const header = screen.getByRole("heading", { name: "Candidate variants" }).parentElement!;
+    expect(header).toHaveTextContent(/3 entered.*limit 50/);
+    expect(screen.getByText("3 entered")).toHaveAttribute("title", "Variants entered");
   });
 
   /**
@@ -43,6 +62,19 @@ describe("StepPanel", () => {
     );
 
     expect(container.firstChild).toHaveStyle({ overflow: "visible" });
+  });
+
+  it("drops the card and step number when plain, keeping the title and tags", () => {
+    const { container } = render(
+      <StepPanel stepNumber={2} title="Phenotype" appearance="plain" tags={[{ label: "Optional", variant: "optional" }]}>
+        <p>body</p>
+      </StepPanel>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Phenotype" })).toBeInTheDocument();
+    expect(screen.getByText("Optional")).toBeInTheDocument();
+    expect(screen.queryByText("2")).not.toBeInTheDocument();
+    expect(container.firstChild).not.toHaveStyle({ borderRadius: "12px" });
   });
 
   /** The header rounds its own top corners, which is what overflow: hidden used to do. */

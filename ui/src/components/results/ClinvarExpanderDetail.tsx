@@ -64,7 +64,7 @@ const styles = {
     gap: 4,
     padding: "4px 10px",
     background: colors.surface1,
-    border: `1px solid ${colors.border}`,
+    ...Style.stateBorder(colors.border),
     borderRadius: 5,
     color: colors.textAccent,
     fontSize: 11,

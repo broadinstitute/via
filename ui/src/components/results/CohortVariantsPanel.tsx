@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { flexRender, type SortingState } from "@tanstack/react-table";
 import {
@@ -16,6 +16,7 @@ import Clickable from "../common/Clickable";
 import { ChevronRightIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
+import MoreBelowCue from "./MoreBelowCue";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "../elements/SubpopBadge";
@@ -203,6 +204,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
   const [sorting, setSorting] = useState<SortingState>([]);
   const { hoveredKey: hoveredRow, hoverProps: rowHoverProps } = useHoveredKey<string>();
   const { hoveredKey: hoveredHeader, hoverProps: headerHoverProps } = useHoveredKey<string>();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   function toggleExpanded(variant: string) {
     setExpandedVariants((current) => {
@@ -276,10 +278,10 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               ),
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => (row.annotated ? row.classification : undefined), {
-            id: "classification",
-            header: "Classification",
-            cell: ({ row }) => (row.original.annotated ? row.original.classification : <NotAvailable />),
+          columnHelper.accessor((row) => (row.annotated ? row.consequence : undefined), {
+            id: "consequence",
+            header: "Consequence",
+            cell: ({ row }) => (row.original.annotated ? row.original.consequence : <NotAvailable />),
             sortUndefined: "last",
           }),
         ]),
@@ -463,7 +465,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
       headerRight={<span style={styles.sub}>Showing {rows.length} results</span>}
     >
       <div style={styles.tableWrap}>
-        <div style={styles.tableScroll}>
+        <div ref={scrollRef} style={styles.tableScroll}>
           <table style={styles.table}>
             <thead>
               {table.getHeaderGroups().map((headerGroup, depth) => {
@@ -517,6 +519,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                 return (
                   <Fragment key={row.id}>
                     <tr
+                      data-variant-row
                       style={styles.dataRow}
                       onClick={() => toggleExpanded(row.original.variant)}
                       {...rowHoverProps(row.id)}
@@ -578,6 +581,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             </tbody>
           </table>
         </div>
+        <MoreBelowCue scrollRef={scrollRef} rowSelector="[data-variant-row]" />
       </div>
     </ResultsPanel>
   );

@@ -8,7 +8,7 @@ function makeVariant(overrides: Partial<AnnotatedCohortVariant> = {}): Annotated
     annotated: true,
     variant: "1-12345-A-G",
     gene: "SCN1A",
-    classification: "missense_variant",
+    consequence: "Missense",
     proteinChange: "p.Arg1Gly",
     aouSubpopulation: "EUR",
     aouAf: 0.001,

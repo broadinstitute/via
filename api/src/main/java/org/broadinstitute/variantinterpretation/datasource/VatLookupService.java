@@ -68,7 +68,7 @@ public class VatLookupService {
 
   // VAT consequence terms (VEP) that map onto the simplified labels used elsewhere in this
   // table; anything else is left as an unclassified (null) row.
-  private static final Map<String, String> CONSEQUENCE_TO_CLASSIFICATION =
+  private static final Map<String, String> CONSEQUENCE_LABELS =
       Map.of(
           "missense_variant", "Missense",
           "synonymous_variant", "Synonymous",
@@ -124,9 +124,9 @@ public class VatLookupService {
 
   private static CohortVariant vatRowToCohortVariant(FieldValueList row) {
     List<String> consequences = stringList(row, "consequence");
-    String classification =
+    String consequence =
         consequences.stream()
-            .map(CONSEQUENCE_TO_CLASSIFICATION::get)
+            .map(CONSEQUENCE_LABELS::get)
             .filter(Objects::nonNull)
             .findFirst()
             .orElse(null);
@@ -179,7 +179,7 @@ public class VatLookupService {
         .variant(variant)
         .gene(string(row, "gene_symbol"))
         .annotated(true)
-        .classification(classification)
+        .consequence(consequence)
         .proteinChange(string(row, "aa_change"))
         .aouSubpopulation(
             aouSubpop == null ? null : CohortVariant.AouSubpopulationEnum.fromValue(aouSubpop.toUpperCase()))

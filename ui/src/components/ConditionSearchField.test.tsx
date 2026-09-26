@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ConditionSearchField from "./ConditionSearchField";
 
@@ -6,11 +6,8 @@ const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedPa
 const REPAIRED = { conceptId: 9000018, name: "Fallot tetralogy, repaired", estimatedParticipantCount: 8 };
 const NO_ESTIMATE = { conceptId: 9000016, name: "Tetralogy of Fallot in adult", estimatedParticipantCount: null };
 
-// Real timers throughout, deliberately: findBy*/waitFor poll on real time, and freezing it
-// deadlocks them against the field's debounce. The debounce sits well inside the 1s default
-// query timeout, so waiting it out costs a fraction of a second per test and keeps the async
-// behaviour honest.
-const PAST_DEBOUNCE_MS = 400;
+const PAST_DEBOUNCE_MS = 1200;
+configure({ asyncUtilTimeout: 2500 });
 
 function mockCandidates(term: string, candidates: unknown[]) {
   return vi.fn().mockResolvedValue({
@@ -26,9 +23,6 @@ describe("ConditionSearchField", () => {
 
   afterEach(() => {
     Element.prototype.scrollIntoView = realScrollIntoView;
-    // Explicit, because vitest runs without `globals`, so Testing Library's automatic afterEach
-    // cleanup never registers and rendered trees would otherwise pile up -- which makes
-    // getByRole("combobox") ambiguous from the second test onwards.
     cleanup();
     vi.unstubAllGlobals();
   });
@@ -39,7 +33,7 @@ describe("ConditionSearchField", () => {
     return { onChange };
   }
 
-  /** Renders with a term already typed and the field focused, the usual starting point. */
+  /** Renders with a term already typed and the field focused. */
   function renderOpen(
     candidates: unknown[],
     props: Partial<React.ComponentProps<typeof ConditionSearchField>> = {},
@@ -138,12 +132,58 @@ describe("ConditionSearchField", () => {
     await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
   });
 
-  it("shows the picked concept's OMOP id once chosen", async () => {
-    renderOpen([TETRALOGY]);
+  it("reopens the same list when the field is clicked after a pick, so the pick can be changed", async () => {
+    const onSelect = vi.fn();
+    const { input, fetchMock } = renderOpen([TETRALOGY, REPAIRED], { onSelect });
 
     fireEvent.mouseDown(await screen.findByText("Tetralogy of Fallot"));
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
 
-    expect(await screen.findByText("OMOP — 9000010")).toBeInTheDocument();
+    // The field kept focus through the pick, so this is a click with no focus event.
+    fireEvent.click(input);
+    fireEvent.mouseDown(await screen.findByText("Fallot tetralogy, repaired"));
+
+    expect(onSelect).toHaveBeenLastCalledWith(REPAIRED);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("looks up the initial selection's name when focused, since there's no list yet to reopen", async () => {
+    const fetchMock = mockCandidates("Tetralogy of Fallot", [TETRALOGY, REPAIRED]);
+    vi.stubGlobal("fetch", fetchMock);
+    renderField({ value: "Tetralogy of Fallot", initialSelection: TETRALOGY });
+    await wait(PAST_DEBOUNCE_MS);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.focus(screen.getByRole("combobox"));
+
+    expect(screen.getByText("Searching…")).toBeInTheDocument();
+    expect(await screen.findAllByRole("option")).toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't repeat a lookup that found nothing when the field is refocused", async () => {
+    const fetchMock = mockCandidates("zzzz", []);
+    vi.stubGlobal("fetch", fetchMock);
+    renderField({ value: "zzzz" });
+    const input = screen.getByRole("combobox");
+    fireEvent.focus(input);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    fireEvent.keyDown(input, { key: "Escape" });
+    fireEvent.click(input);
+    await wait(PAST_DEBOUNCE_MS);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("claims Escape only when it closes the list, so an outer popover can take the next one", async () => {
+    const { input } = renderOpen([TETRALOGY]);
+    await screen.findAllByRole("option");
+
+    // fireEvent returns false when the handler called preventDefault.
+    expect(fireEvent.keyDown(input, { key: "Escape" })).toBe(false);
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
+    expect(fireEvent.keyDown(input, { key: "Escape" })).toBe(true);
   });
 
   it("moves through the list with the arrow keys and picks with Enter", async () => {
@@ -211,7 +251,7 @@ describe("ConditionSearchField", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("says so when nothing matches", async () => {
+  it("says no matching conditions when nothing matches", async () => {
     vi.stubGlobal("fetch", mockCandidates("asdfqwerty", []));
     renderField({ value: "asdfqwerty" });
     fireEvent.focus(screen.getByRole("combobox"));
@@ -250,7 +290,7 @@ describe("ConditionSearchField", () => {
 
   /**
    * A fast typist can otherwise leave a dozen queries in flight, and BigQuery bills per query,
-   * not per rendered result.
+   * not per rendered result. This query may already be in progress in the backend, but we can at least try...
    */
   it("aborts an in-flight request when the term changes", async () => {
     const fetchMock = mockCandidates("tetralogy", [TETRALOGY]);
