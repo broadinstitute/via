@@ -1,9 +1,13 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SearchEntryPage from "./SearchEntryPage";
 
 const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47 };
+
+// The condition field debounces its lookup by 1s, the same as findBy*'s default timeout, so
+// waiting for its options needs headroom. See ConditionSearchField.test.tsx.
+configure({ asyncUtilTimeout: 2500 });
 
 /**
  * Covers the wiring the component tests can't: that Step 2 really is the condition combobox,

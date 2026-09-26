@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ConditionSearchField from "./ConditionSearchField";
 
@@ -7,10 +7,11 @@ const REPAIRED = { conceptId: 9000018, name: "Fallot tetralogy, repaired", estim
 const NO_ESTIMATE = { conceptId: 9000016, name: "Tetralogy of Fallot in adult", estimatedParticipantCount: null };
 
 // Real timers throughout, deliberately: findBy*/waitFor poll on real time, and freezing it
-// deadlocks them against the field's debounce. The debounce sits well inside the 1s default
-// query timeout, so waiting it out costs a fraction of a second per test and keeps the async
-// behaviour honest.
-const PAST_DEBOUNCE_MS = 400;
+// deadlocks them against the field's debounce. Keep these in step with the field's DEBOUNCE_MS
+// (1000ms): PAST_DEBOUNCE_MS just clears it, and findBy*/waitFor get enough headroom to wait it
+// out, since their 1s default would race the debounce itself.
+const PAST_DEBOUNCE_MS = 1200;
+configure({ asyncUtilTimeout: 2500 });
 
 function mockCandidates(term: string, candidates: unknown[]) {
   return vi.fn().mockResolvedValue({
