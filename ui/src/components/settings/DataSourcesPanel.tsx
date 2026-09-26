@@ -4,7 +4,7 @@ import { fetchDataSourceVersions, type DataSourceVersion } from "../../api/dataS
 import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
-import { APP_VERSION } from "../../libs/version";
+import AppVersion from "../elements/AppVersion";
 
 const styles = {
   title: {
@@ -62,14 +62,6 @@ const styles = {
     background: colors.bgDanger,
     color: colors.textDanger,
     fontSize: 12,
-  },
-  appVersion: {
-    ...Style.elements.mono,
-    display: "block",
-    marginTop: 14,
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: 600,
   },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -140,9 +132,7 @@ export default function DataSourcesPanel() {
         </ul>
       )}
 
-      <span style={styles.appVersion} title="VIA application version">
-        VIA v{APP_VERSION}
-      </span>
+      <AppVersion style={{ marginTop: 14 }} />
     </>
   );
 }

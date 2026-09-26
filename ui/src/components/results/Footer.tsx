@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
-import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
-import { APP_VERSION } from "../../libs/version";
+import AppVersion from "../elements/AppVersion";
 
 const styles = {
   footer: {
@@ -14,35 +13,20 @@ const styles = {
     padding: "12px 18px",
     boxShadow: Style.shadows.panel,
   },
-  identity: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-  },
-  version: {
-    ...Style.elements.mono,
-    padding: "2px 7px",
-    borderRadius: 6,
-    background: colors.bgAccent,
-    color: colors.textAccent,
-    fontSize: 11,
-    fontWeight: 600,
-  },
   logo: {
     height: 32,
     width: "auto",
   },
 } as const satisfies Record<string, CSSProperties>;
 
-// Data source versions live in the settings dialog's "Data sources" panel.
-export default function Footer() {
+interface FooterProps {
+  style?: CSSProperties;
+}
+
+export default function Footer({ style }: FooterProps) {
   return (
-    <footer style={styles.footer}>
-      <div style={styles.identity}>
-        <span style={styles.version} title="VIA version">
-          v{APP_VERSION}
-        </span>
-      </div>
+    <footer style={{ ...styles.footer, ...style }}>
+      <AppVersion />
       <img style={styles.logo} src="/broad-logo.svg" alt="Broad Institute" />
     </footer>
   );

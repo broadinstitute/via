@@ -58,6 +58,13 @@ describe("SearchEntryPage", () => {
     expect(screen.queryByPlaceholderText("e.g. HP:0001636")).not.toBeInTheDocument();
   });
 
+  it("ends with the footer", () => {
+    stubApi([], "");
+    renderPage();
+
+    expect(screen.getByRole("contentinfo")).toContainElement(screen.getByRole("img", { name: "Broad Institute" }));
+  });
+
   it("refuses to search with no variants", () => {
     stubApi([], "");
     renderPage();

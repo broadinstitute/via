@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { APP_VERSION } from "../../libs/version";
 import DataSourcesPanel from "./DataSourcesPanel";
 
 const { fetchDataSourceVersions } = vi.hoisted(() => ({
@@ -25,7 +26,7 @@ describe("DataSourcesPanel", () => {
     const { container } = render(<DataSourcesPanel />);
 
     expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
-    expect(screen.getByText("VIA v0.0.1")).toBeInTheDocument();
+    expect(screen.getByText(`VIA v${APP_VERSION}`)).toBeInTheDocument();
   });
 
   it("lists each source with its version and a link to its site", async () => {

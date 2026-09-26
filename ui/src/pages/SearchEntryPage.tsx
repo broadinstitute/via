@@ -13,6 +13,7 @@ import RecentSearches from "../components/RecentSearches";
 import StepPanel from "../components/StepPanel";
 import ValueCallout from "../components/ValueCallout";
 import { SearchIcon } from "../components/icons";
+import Footer from "../components/results/Footer";
 import TopBar from "../components/results/TopBar";
 import { parseVariantsText } from "../utils/variants";
 
@@ -165,6 +166,8 @@ export default function SearchEntryPage() {
         </Clickable>
 
         <RecentSearches />
+
+        <Footer style={{ marginTop: 28 }} />
       </main>
     </>
   );

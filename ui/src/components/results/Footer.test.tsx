@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { APP_VERSION } from "../../libs/version";
 import Footer from "./Footer";
 
 describe("Footer", () => {
@@ -7,10 +8,11 @@ describe("Footer", () => {
     cleanup();
   });
 
-  it("renders the version and Broad logo", () => {
+  it("renders the version, beta badge, and Broad logo", () => {
     render(<Footer />);
 
-    expect(screen.getByTitle("VIA version")).toHaveTextContent("v0.0.1");
+    expect(screen.getByText("Beta")).toBeInTheDocument();
+    expect(screen.getByTitle("VIA version")).toHaveTextContent(`VIA v${APP_VERSION}`);
     expect(screen.getByRole("img", { name: "Broad Institute" })).toHaveAttribute("src", "/broad-logo.svg");
   });
 });
