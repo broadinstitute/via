@@ -137,7 +137,7 @@ export const buttons = {
   secondaryHover: {
     background: colors.surface1,
   },
-  /** Outlined button in accent ink: "Modify search", "View results". */
+  /** Outlined button in accent ink: "View results". */
   accent: {
     display: "inline-flex",
     alignItems: "center",
@@ -177,6 +177,16 @@ export const buttons = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
+/**
+ * A 1px solid border, written as longhands for anything whose border colour changes on hover or
+ * focus. With the `border` shorthand plus a `borderColor` override, React deletes the override
+ * when the state ends instead of restoring the colour, and the border falls back to the text
+ * colour -- a near-black outline. Longhands keep `borderColor` a key React always sets.
+ */
+export function stateBorder(color: string): CSSProperties {
+  return { borderWidth: 1, borderStyle: "solid", borderColor: color };
+}
+
 export const inputs = {
   label: {
     display: "block",
@@ -189,7 +199,7 @@ export const inputs = {
   text: {
     width: "100%",
     padding: "8px 10px",
-    border: `1px solid ${colors.borderStrong}`,
+    ...stateBorder(colors.borderStrong),
     borderRadius: radius,
     background: colors.surface2,
     color: colors.textBody,
@@ -200,14 +210,14 @@ export const inputs = {
   mono: {
     width: "100%",
     padding: "10px 12px",
-    border: `1px solid ${colors.borderStrong}`,
+    ...stateBorder(colors.borderStrong),
     borderRadius: radius,
     background: colors.surface1,
     color: colors.textBody,
     fontFamily: monoFamily,
     fontSize: 13,
   },
-  /** Merged over the base while focused, in place of a `:focus` rule. */
+  /** Merged over the base while focused, in place of a `:focus` rule. Needs a stateBorder base. */
   focused: {
     outline: "none",
     borderColor: colors.textAccent,

@@ -45,7 +45,7 @@ interface SearchDrawerProps {
   onSearch: () => void;
 }
 
-/** The results page's "Modify search" form: the entry page's two steps, in a drop-down drawer. */
+/** The results page's "Edit search" form: the entry page's two steps, in a drop-down drawer. */
 export default function SearchDrawer({
   open,
   variantsText,

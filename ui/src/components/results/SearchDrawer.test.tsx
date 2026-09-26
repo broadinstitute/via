@@ -64,6 +64,16 @@ describe("SearchDrawer", () => {
     expect(screen.getByText("52 variants entered. Remove 2 to search (limit 50).")).toBeInTheDocument();
   });
 
+  it("restores the variants field's grey border after it loses focus", () => {
+    renderDrawer();
+    const textarea = screen.getByRole("textbox", { name: "Candidate variants" });
+
+    fireEvent.focus(textarea);
+    fireEvent.blur(textarea);
+
+    expect(textarea.style.borderColor).toBe("rgb(199, 198, 192)");
+  });
+
   it("is hidden while closed", () => {
     renderDrawer({ open: false });
 

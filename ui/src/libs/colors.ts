@@ -32,6 +32,8 @@ const colors = {
   surface2: "#ffffff",
   border: "#e2e1dc",
   borderStrong: "#c7c6c0",
+  /** borderStrong a step darker: a field's border under the pointer. */
+  borderHover: "#a9a8a1",
 
   // Tinted fills, each paired with the ink of the same name
   bgAccent: "#d8e6ee",

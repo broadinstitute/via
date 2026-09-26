@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import colors from "../../libs/colors";
+import { useHover } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, GearIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
@@ -22,7 +23,10 @@ const styles = {
   caseInfo: {
     display: "flex",
     alignItems: "center",
-    gap: 20,
+    gap: 16,
+    flex: 1,
+    minWidth: 0,
+    marginRight: 20,
   },
   backButton: {
     display: "flex",
@@ -34,18 +38,57 @@ const styles = {
     color: colors.textSecondary,
     cursor: "pointer",
   },
-  searchLead: {
+  // Styled as a search field holding the current terms; clicking anywhere in it opens the drawer.
+  searchBox: {
+    ...Style.inputs.text,
     display: "flex",
     alignItems: "center",
-    color: colors.textPrimary,
+    gap: 12,
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 575,
+    height: 29,
+    // A pill, the usual shape for a search box; the extra left padding clears the curve.
+    borderRadius: 999,
+    padding: "0 4px 0 12px",
+    // Page-coloured against the white bar, so it reads as a field. Goes white while the drawer
+    // is open, via inputs.focused.
+    background: colors.surface0,
+    color: colors.textSecondary,
+    textAlign: "left",
+    cursor: "pointer",
+  },
+  searchBoxHover: {
+    borderColor: colors.borderHover,
+  },
+  searchIcon: {
+    flexShrink: 0,
+    color: colors.textMuted,
+  },
+  searchTerms: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    minWidth: 0,
+    overflow: "hidden",
   },
   searchField: {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
-    color: colors.textSecondary,
+    minWidth: 0,
+    whiteSpace: "nowrap",
+  },
+  termDivider: {
+    flexShrink: 0,
+    width: 1,
+    height: 14,
+    background: colors.border,
   },
   valueBadge: {
+    maxWidth: 240,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
     padding: "2px 8px",
     borderRadius: 6,
     background: colors.bgAccent,
@@ -56,15 +99,26 @@ const styles = {
   skeletonBadge: {
     display: "inline-block",
     width: 72,
-    height: 20,
+    height: 18,
     borderRadius: 6,
     background: colors.border,
   },
-  editButton: {
-    ...Style.buttons.accent,
+  modifyHint: {
+    display: "inline-flex",
+    alignItems: "center",
     gap: 4,
-    padding: "4px 10px",
+    flexShrink: 0,
+    marginLeft: "auto",
+    padding: "3px 8px",
+    // Matches the box's curve, so its hover fill sits snugly in the rounded end.
+    borderRadius: 999,
+    color: colors.textAccent,
     fontSize: 11,
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+  },
+  modifyHintHover: {
+    background: colors.bgAccent,
   },
   user: {
     display: "flex",
@@ -95,11 +149,22 @@ interface TopBarProps {
   condition?: string;
   userEmail: string;
   onModifySearch?: () => void;
+  /** Whether the modify-search drawer is open, which the search box shows as focused. */
+  modifyOpen?: boolean;
 }
 
-export default function TopBar({ loading, variantsEnteredCount, condition, userEmail, onModifySearch }: TopBarProps) {
+export default function TopBar({
+  loading,
+  variantsEnteredCount,
+  condition,
+  userEmail,
+  onModifySearch,
+  modifyOpen = false,
+}: TopBarProps) {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { hovered: searchHovered, hoverProps: searchHoverProps } = useHover();
+  const termsId = useId();
 
   return (
     <div style={styles.topbar}>
@@ -114,34 +179,51 @@ export default function TopBar({ loading, variantsEnteredCount, condition, userE
           >
             <ArrowLeftIcon size={14} strokeWidth={2.5} />
           </Clickable>
-          <span style={styles.searchLead} role="img" aria-label="Search terms" title="Search terms">
-            <SearchIcon size={14} strokeWidth={2.5} />
-          </span>
-          <span style={styles.searchField}>
-            Candidate variants{" "}
-            {loading ? (
-              <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
-            ) : (
-              <span style={styles.valueBadge}>{variantsEnteredCount} entered</span>
-            )}
-          </span>
-          <span style={styles.searchField}>
-            Phenotype{" "}
-            {loading ? (
-              <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
-            ) : (
-              <span style={styles.valueBadge}>{condition || "None entered"}</span>
-            )}
-          </span>
           <Clickable
-            style={styles.editButton}
-            hoverStyle={Style.buttons.accentHover}
-            disabledStyle={Style.buttons.disabled}
+            style={{
+              ...styles.searchBox,
+              ...(searchHovered && !loading ? styles.searchBoxHover : undefined),
+              ...(modifyOpen ? Style.inputs.focused : undefined),
+            }}
+            disabledStyle={{ cursor: "default" }}
             onClick={onModifySearch}
             disabled={loading}
+            aria-label="Edit search"
+            aria-describedby={termsId}
+            aria-expanded={modifyOpen}
+            {...searchHoverProps}
           >
-            <PencilIcon size={11} strokeWidth={2.5} />
-            Modify search
+            <SearchIcon size={14} strokeWidth={2.5} style={styles.searchIcon} aria-hidden="true" />
+            <span id={termsId} style={styles.searchTerms}>
+              <span style={styles.searchField}>
+                Variants
+                {loading ? (
+                  <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
+                ) : (
+                  <span style={styles.valueBadge}>{variantsEnteredCount} entered</span>
+                )}
+              </span>
+              <span style={styles.termDivider} aria-hidden="true" />
+              <span style={styles.searchField}>
+                Phenotype
+                {loading ? (
+                  <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
+                ) : (
+                  <span style={styles.valueBadge} title={condition || undefined}>
+                    {condition || "None entered"}
+                  </span>
+                )}
+              </span>
+            </span>
+            {!loading && (
+              <span
+                style={{ ...styles.modifyHint, ...(searchHovered ? styles.modifyHintHover : undefined) }}
+                aria-hidden="true"
+              >
+                <PencilIcon size={11} strokeWidth={2.5} />
+                Edit
+              </span>
+            )}
           </Clickable>
         </div>
       )}

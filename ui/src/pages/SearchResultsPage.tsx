@@ -131,6 +131,7 @@ export default function SearchResultsPage() {
         condition={results?.conditionSearch?.concept?.name ?? ""}
         userEmail={userEmail}
         onModifySearch={() => setDrawerOpen((open) => !open)}
+        modifyOpen={drawerOpen}
       />
 
       {results && (
