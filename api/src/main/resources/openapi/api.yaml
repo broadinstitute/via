@@ -348,8 +348,7 @@ components:
           type: string
           nullable: true
           description: >-
-            What the variant does to the protein (e.g. Missense, Frameshift), from the
-            VAT's VEP consequence. Not a pathogenicity call -- that's clinvarSignificance.
+            What the variant does to the protein (e.g. Missense, Frameshift).
           example: "Missense"
         proteinChange:
           type: string
