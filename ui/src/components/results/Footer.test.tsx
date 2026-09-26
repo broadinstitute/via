@@ -10,8 +10,8 @@ describe("Footer", () => {
   it("renders the app name, version, and Broad logo", () => {
     render(<Footer />);
 
-    expect(screen.getByText("Variant Interpretation Application")).toBeInTheDocument();
-    expect(screen.getByTitle("VIA application version")).toHaveTextContent("v0.0.1");
+    expect(screen.getByText("VIA")).toBeInTheDocument();
+    expect(screen.getByTitle("VIA version")).toHaveTextContent("v0.0.1");
     expect(screen.getByRole("img", { name: "Broad Institute" })).toHaveAttribute("src", "/broad-logo.svg");
   });
 });
