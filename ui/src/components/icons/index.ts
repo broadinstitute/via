@@ -2,6 +2,7 @@ export type { IconProps } from "./Icon";
 export { default as ArrowLeftIcon } from "./ArrowLeftIcon";
 export { default as ArrowRightIcon } from "./ArrowRightIcon";
 export { default as CheckIcon } from "./CheckIcon";
+export { default as ChevronDownIcon } from "./ChevronDownIcon";
 export { default as ChevronRightIcon } from "./ChevronRightIcon";
 export { default as CloseIcon } from "./CloseIcon";
 export { default as CopyIcon } from "./CopyIcon";

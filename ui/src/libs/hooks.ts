@@ -1,6 +1,7 @@
 // State hooks standing in for the CSS features an inline style object can't express.
 
 import { useEffect, useState } from "react";
+import type { RefObject } from "react";
 
 /** Tracks ":hover" as state, so a hovered style can be merged over the base one. */
 export function useHover() {
@@ -61,4 +62,37 @@ export function useMediaQuery(query: string): boolean {
   }, [query]);
 
   return matches;
+}
+
+/**
+ * Whether a scroll container has content hidden below its bottom edge, for a "more below" cue.
+ *
+ * Re-checked on scroll and whenever the container or its content resizes, so expanding a row,
+ * re-sorting or a layout change all keep it current.
+ */
+export function useHasMoreBelow(ref: RefObject<HTMLElement | null>): boolean {
+  const [hasMoreBelow, setHasMoreBelow] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    // 1px of slack: scrollTop can be fractional on zoomed or high-DPI displays, which would
+    // otherwise leave the cue showing at the very bottom.
+    const update = () =>
+      setHasMoreBelow(element.scrollTop + element.clientHeight < element.scrollHeight - 1);
+
+    update();
+    element.addEventListener("scroll", update, { passive: true });
+    // Guarded: jsdom doesn't implement ResizeObserver.
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(element);
+    for (const child of Array.from(element.children)) observer?.observe(child);
+    return () => {
+      element.removeEventListener("scroll", update);
+      observer?.disconnect();
+    };
+  }, [ref]);
+
+  return hasMoreBelow;
 }
