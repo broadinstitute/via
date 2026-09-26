@@ -165,8 +165,6 @@ export default function SearchEntryPage() {
           </StepPanel>
         </div>
 
-        {/* Said here rather than in a tooltip: the disabled button takes no pointer events. An
-            empty field needs no explaining, so it just disables the button. */}
         {overLimit && (
           <p style={styles.error} aria-live="polite">
             {variantCount} variants entered. Remove {variantCount - VARIANTS_LIMIT} to search (limit{" "}

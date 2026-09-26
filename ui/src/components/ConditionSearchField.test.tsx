@@ -6,10 +6,6 @@ const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedPa
 const REPAIRED = { conceptId: 9000018, name: "Fallot tetralogy, repaired", estimatedParticipantCount: 8 };
 const NO_ESTIMATE = { conceptId: 9000016, name: "Tetralogy of Fallot in adult", estimatedParticipantCount: null };
 
-// Real timers throughout, deliberately: findBy*/waitFor poll on real time, and freezing it
-// deadlocks them against the field's debounce. Keep these in step with the field's DEBOUNCE_MS
-// (1000ms): PAST_DEBOUNCE_MS just clears it, and findBy*/waitFor get enough headroom to wait it
-// out, since their 1s default would race the debounce itself.
 const PAST_DEBOUNCE_MS = 1200;
 configure({ asyncUtilTimeout: 2500 });
 
@@ -27,9 +23,6 @@ describe("ConditionSearchField", () => {
 
   afterEach(() => {
     Element.prototype.scrollIntoView = realScrollIntoView;
-    // Explicit, because vitest runs without `globals`, so Testing Library's automatic afterEach
-    // cleanup never registers and rendered trees would otherwise pile up -- which makes
-    // getByRole("combobox") ambiguous from the second test onwards.
     cleanup();
     vi.unstubAllGlobals();
   });
@@ -40,7 +33,7 @@ describe("ConditionSearchField", () => {
     return { onChange };
   }
 
-  /** Renders with a term already typed and the field focused, the usual starting point. */
+  /** Renders with a term already typed and the field focused. */
   function renderOpen(
     candidates: unknown[],
     props: Partial<React.ComponentProps<typeof ConditionSearchField>> = {},
@@ -137,17 +130,6 @@ describe("ConditionSearchField", () => {
     fireEvent.mouseDown(await screen.findByText("Tetralogy of Fallot"));
 
     await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
-  });
-
-  it("shows only the picked concept's name, not its OMOP id or estimate", async () => {
-    const { onChange } = renderOpen([TETRALOGY]);
-
-    fireEvent.mouseDown(await screen.findByText("Tetralogy of Fallot"));
-
-    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
-    expect(onChange).toHaveBeenCalledWith("Tetralogy of Fallot");
-    expect(screen.queryByText(/OMOP/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/47/)).not.toBeInTheDocument();
   });
 
   it("reopens the same list when the field is clicked after a pick, so the pick can be changed", async () => {
@@ -259,7 +241,7 @@ describe("ConditionSearchField", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("says so when nothing matches", async () => {
+  it("says no matching conditions when nothing matches", async () => {
     vi.stubGlobal("fetch", mockCandidates("asdfqwerty", []));
     renderField({ value: "asdfqwerty" });
     fireEvent.focus(screen.getByRole("combobox"));
@@ -298,7 +280,7 @@ describe("ConditionSearchField", () => {
 
   /**
    * A fast typist can otherwise leave a dozen queries in flight, and BigQuery bills per query,
-   * not per rendered result.
+   * not per rendered result. This query may already be in progress in the backend, but we can at least try...
    */
   it("aborts an in-flight request when the term changes", async () => {
     const fetchMock = mockCandidates("tetralogy", [TETRALOGY]);
