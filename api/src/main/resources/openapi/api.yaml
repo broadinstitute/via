@@ -344,9 +344,12 @@ components:
           description: >-
             False when this variant is in no annotation or frequency source at
             all; every other field below is only meaningful when true.
-        classification:
+        consequence:
           type: string
           nullable: true
+          description: >-
+            What the variant does to the protein (e.g. Missense, Frameshift), from the
+            VAT's VEP consequence. Not a pathogenicity call -- that's clinvarSignificance.
           example: "Missense"
         proteinChange:
           type: string
@@ -473,12 +476,12 @@ components:
         gene:
           type: string
           nullable: true
-        classification:
+        consequence:
           type: string
           nullable: true
           description: >-
-            Some variants have consequence annotation even when
-            phenotype-filtered cohort stats don't exist yet.
+            As CohortVariant.consequence. Some variants have consequence annotation
+            even when phenotype-filtered cohort stats don't exist yet.
         hasStats:
           type: boolean
           description: >-

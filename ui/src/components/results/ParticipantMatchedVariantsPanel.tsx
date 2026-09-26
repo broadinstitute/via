@@ -73,7 +73,7 @@ function rowToTsvValues(row: FilteredVariantRow): string[] {
     return [
       row.variant,
       row.gene ?? "n/a",
-      row.classification ?? "n/a",
+      row.consequence ?? "n/a",
       String(row.cohortAc),
       String(row.cohortAn),
       row.cohortAf.toFixed(4),
@@ -86,7 +86,7 @@ function rowToTsvValues(row: FilteredVariantRow): string[] {
   return [
     row.variant,
     row.gene ?? "n/a",
-    row.classification ?? "n/a",
+    row.consequence ?? "n/a",
     "n/a",
     "n/a",
     "n/a",
@@ -169,10 +169,10 @@ export default function ParticipantMatchedVariantsPanel({
           cell: ({ row }) => row.original.gene ?? <NotAvailable />,
           sortUndefined: "last",
         }),
-        columnHelper.accessor((row) => row.classification ?? undefined, {
-          id: "classification",
-          header: "Classification",
-          cell: ({ row }) => row.original.classification ?? <NotAvailable />,
+        columnHelper.accessor((row) => row.consequence ?? undefined, {
+          id: "consequence",
+          header: "Consequence",
+          cell: ({ row }) => row.original.consequence ?? <NotAvailable />,
           sortUndefined: "last",
         }),
         columnHelper.accessor((row) => (row.hasStats ? row.cohortAc : undefined), {
@@ -293,7 +293,7 @@ export default function ParticipantMatchedVariantsPanel({
     const header = [
       "variant",
       "gene",
-      "classification",
+      "consequence",
       "filtered_ac",
       "filtered_an",
       "filtered_af",

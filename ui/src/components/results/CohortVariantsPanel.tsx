@@ -278,10 +278,10 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               ),
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => (row.annotated ? row.classification : undefined), {
-            id: "classification",
-            header: "Classification",
-            cell: ({ row }) => (row.original.annotated ? row.original.classification : <NotAvailable />),
+          columnHelper.accessor((row) => (row.annotated ? row.consequence : undefined), {
+            id: "consequence",
+            header: "Consequence",
+            cell: ({ row }) => (row.original.annotated ? row.original.consequence : <NotAvailable />),
             sortUndefined: "last",
           }),
         ]),

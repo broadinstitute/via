@@ -15,7 +15,7 @@ interface RawCohortVariant {
   variant: string;
   gene: string | null;
   annotated: boolean;
-  classification: string | null;
+  consequence: string | null;
   proteinChange: string | null;
   aouSubpopulation: SubpopCode | null;
   aouAf: number | null;
@@ -48,7 +48,7 @@ interface RawCohortVariant {
 interface RawFilteredVariant {
   variant: string;
   gene: string | null;
-  classification: string | null;
+  consequence: string | null;
   hasStats: boolean;
   cohortAc: number | null;
   cohortAn: number | null;
@@ -90,7 +90,7 @@ function toCohortVariantRow(raw: RawCohortVariant): CohortVariantRow {
     annotated: true,
     variant: raw.variant,
     gene: raw.gene!,
-    classification: raw.classification!,
+    consequence: raw.consequence!,
     proteinChange: raw.proteinChange!,
     aouSubpopulation: raw.aouSubpopulation,
     aouAf: raw.aouAf,
@@ -123,13 +123,13 @@ function toCohortVariantRow(raw: RawCohortVariant): CohortVariantRow {
 
 function toFilteredVariantRow(raw: RawFilteredVariant): FilteredVariantRow {
   if (!raw.hasStats) {
-    return { hasStats: false, variant: raw.variant, gene: raw.gene, classification: raw.classification };
+    return { hasStats: false, variant: raw.variant, gene: raw.gene, consequence: raw.consequence };
   }
   return {
     hasStats: true,
     variant: raw.variant,
     gene: raw.gene,
-    classification: raw.classification,
+    consequence: raw.consequence,
     cohortAc: raw.cohortAc!,
     cohortAn: raw.cohortAn!,
     cohortAf: raw.cohortAf!,
