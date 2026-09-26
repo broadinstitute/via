@@ -106,7 +106,9 @@ describe("TopBar", () => {
   it("opens the settings dialog from the gear button", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ accessible: true, tables: [] }) })),
+      vi.fn(() =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve([{ name: "gnomAD", version: "v3.1.2", url: null }]) }),
+      ),
     );
     renderTopBar({ userEmail: "user@example.org" });
 
@@ -114,7 +116,7 @@ describe("TopBar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
 
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
-    expect(await screen.findByText("All tables accessible")).toBeInTheDocument();
+    expect(await screen.findByText("gnomAD")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

@@ -5,7 +5,7 @@ import { fetchSearchResults, type SearchResults } from "../api/searchResults";
 import colors from "../libs/colors";
 import { useMediaQuery } from "../libs/hooks";
 import CohortVariantsPanel from "../components/results/CohortVariantsPanel";
-import DataSourceVersionsFooter from "../components/results/DataSourceVersionsFooter";
+import Footer from "../components/results/Footer";
 import ParticipantMatchedVariantsPanel from "../components/results/ParticipantMatchedVariantsPanel";
 import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
 import SearchDrawer from "../components/results/SearchDrawer";
@@ -203,7 +203,7 @@ export default function SearchResultsPage() {
           />
         )}
 
-        <DataSourceVersionsFooter />
+        <Footer />
       </main>
     </>
   );

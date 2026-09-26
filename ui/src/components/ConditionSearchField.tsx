@@ -15,7 +15,7 @@ import { UserIcon } from "./icons";
 const MIN_QUERY_LENGTH = 3;
 
 /** Long enough that ordinary typing produces one request per word, not per letter. */
-const DEBOUNCE_MS = 250;
+const DEBOUNCE_MS = 1000;
 
 /**
  * Rows shown before the list scrolls. The next row is cut off halfway, so it's evident there's
@@ -137,7 +137,7 @@ function describeEstimate(estimate: number | null): { label: string; tooltip: st
   }
   const count = estimate.toLocaleString();
   return {
-    label: count,
+    label: `~${count}`,
     tooltip: `Estimated participants with this condition, from the All of Us Cohort Builder. ${EXACT_COUNT_NOTE}`,
     spoken: `about ${count} participants`,
   };
