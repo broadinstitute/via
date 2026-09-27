@@ -36,7 +36,8 @@ const styles = {
     padding: 16,
     background: colors.surface2,
     border: `1px solid ${colors.border}`,
-    borderRadius: Style.panelRadius,
+    // Square along the top, where it hangs from the search box; rounded only at the bottom.
+    borderRadius: `0 0 ${Style.panelRadius}px ${Style.panelRadius}px`,
     boxShadow: Style.shadows.raised,
     cursor: "auto",
   },
