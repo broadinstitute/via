@@ -106,6 +106,50 @@ describe("SearchPopover", () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
+  /**
+   * Regression guard. When the page could scroll behind the popover (e.g. macOS rubber-banding
+   * past the top), the sticky top bar moved while the window-fixed backdrop didn't, leaving an
+   * undimmed band above the bar.
+   */
+  it("locks page scrolling while open, and restores it on close", () => {
+    const root = document.documentElement;
+    root.style.overflow = "auto";
+    const popover = (open: boolean) => (
+      <SearchPopover
+        open={open}
+        variantsText=""
+        conditionText=""
+        initialCondition={null}
+        variantsLimit={50}
+        onVariantsChange={vi.fn()}
+        onConditionChange={vi.fn()}
+        onConditionSelect={vi.fn()}
+        onCancel={vi.fn()}
+        onSearch={vi.fn()}
+      />
+    );
+
+    const { rerender } = render(popover(true));
+    expect(root.style.overflow).toBe("hidden");
+
+    rerender(popover(false));
+    expect(root.style.overflow).toBe("auto");
+    root.style.overflow = "";
+  });
+
+  it("pads for a space-taking scrollbar while locked, so the page doesn't shift", () => {
+    const root = document.documentElement;
+    Object.defineProperty(root, "clientWidth", { configurable: true, value: window.innerWidth - 15 });
+
+    renderPopover();
+    expect(root.style.paddingRight).toBe("15px");
+
+    cleanup();
+    expect(root.style.paddingRight).toBe("");
+    // Back to jsdom's own (prototype) getter.
+    delete (root as { clientWidth?: number }).clientWidth;
+  });
+
   it("stops listening for Escape once closed", () => {
     const { onCancel } = renderPopover({ open: false });
 

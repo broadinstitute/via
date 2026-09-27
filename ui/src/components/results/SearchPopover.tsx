@@ -94,6 +94,24 @@ export default function SearchPopover({
   const popoverRef = useRef<HTMLDivElement>(null);
   const { count: enteredCount, overLimit, canSearch } = variantEntryStatus(variantsText, variantsLimit);
 
+  // Locks page scrolling while open. The backdrop is fixed to the window, starting just below
+  // the sticky top bar; if the page could move behind it, e.g. macOS rubber-banding when
+  // scrolling up past the top, the bar would be dragged down while the backdrop stayed put,
+  // leaving an undimmed band above the bar. The results aren't meant to be used while dimmed
+  // anyway.
+  useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    const previous = { overflow: root.style.overflow, paddingRight: root.style.paddingRight };
+    const scrollbarWidth = window.innerWidth - root.clientWidth;
+    root.style.overflow = "hidden";
+    if (scrollbarWidth > 0) root.style.paddingRight = `${scrollbarWidth}px`;
+    return () => {
+      root.style.overflow = previous.overflow;
+      root.style.paddingRight = previous.paddingRight;
+    };
+  }, [open]);
+
   // Starts you in the variants field, the usual thing to edit.
   useEffect(() => {
     if (open) popoverRef.current?.querySelector("textarea")?.focus();
