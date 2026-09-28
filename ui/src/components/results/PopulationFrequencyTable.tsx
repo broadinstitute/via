@@ -58,8 +58,9 @@ const styles = {
   allPopulationsLabel: {
     color: colors.textMuted,
   },
-  lastRow: {
-    paddingBottom: 12,
+  bottomSpacer: {
+    height: 12,
+    padding: 0,
   },
   sourceLink: {
     color: "inherit",
@@ -110,11 +111,10 @@ interface FrequencyCellsProps {
   isMax: boolean;
   source: Source;
   hovered: boolean;
-  style?: CSSProperties;
 }
 
-function FrequencyCells({ af, ac, an, inVocabulary, isMax, source, hovered, style }: FrequencyCellsProps) {
-  const cellStyle = { ...sourceCellStyle(source, hovered), ...style };
+function FrequencyCells({ af, ac, an, inVocabulary, isMax, source, hovered }: FrequencyCellsProps) {
+  const cellStyle = sourceCellStyle(source, hovered);
 
   if (af == null || ac == null || an == null) {
     return (
@@ -259,7 +259,6 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
             style={{
               ...labelCellStyle(hoveredRow === ALL_POPULATIONS_ROW),
               ...styles.allPopulationsLabel,
-              ...styles.lastRow,
             }}
           >
             All populations
@@ -272,7 +271,6 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
             isMax={false}
             source="aou"
             hovered={hoveredRow === ALL_POPULATIONS_ROW}
-            style={styles.lastRow}
           />
           <FrequencyCells
             af={variant.gnomadAllAf}
@@ -282,8 +280,13 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
             isMax={false}
             source="gnomad"
             hovered={hoveredRow === ALL_POPULATIONS_ROW}
-            style={styles.lastRow}
           />
+        </tr>
+        <tr aria-hidden="true">
+          <td style={styles.bottomSpacer} />
+          {(["aou", "aou", "gnomad", "gnomad"] as const).map((source, index) => (
+            <td key={index} style={{ ...sourceCellStyle(source, false), ...styles.bottomSpacer }} />
+          ))}
         </tr>
       </tbody>
     </table>
