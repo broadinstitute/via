@@ -68,10 +68,10 @@ export default function SearchResultsPage() {
       .then((data) => {
         setResults(data);
         resetDrawer(data);
-        // Only searches that actually loaded go into the entry page's history.
+        // Only searches that actually loaded go into the entry page's history
         const concept = data.conditionSearch?.concept;
         recordRecentSearch({
-          variants: variantsKey ? variantsKey.split("\n") : [],
+          variants: parseVariantsText(data.searchSummary.variantsRaw),
           condition: concept ? { conceptId: concept.conceptId, name: concept.name } : null,
         });
       })
