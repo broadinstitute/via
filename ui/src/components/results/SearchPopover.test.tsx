@@ -97,6 +97,48 @@ describe("SearchPopover", () => {
     expect(screen.getByRole("textbox", { name: "Candidate variants" })).toHaveFocus();
   });
 
+  it("is marked modal", () => {
+    renderPopover();
+
+    expect(screen.getByRole("dialog", { name: "Edit search" })).toHaveAttribute("aria-modal", "true");
+  });
+
+  it("keeps Tab inside the popover, wrapping at either end", () => {
+    renderPopover({ variantsText: "8-11708582-C-T" });
+    const dialog = screen.getByRole("dialog", { name: "Edit search" });
+    const first = dialog.querySelector<HTMLElement>("button, textarea, input")!;
+    const search = screen.getByRole("button", { name: "Search" });
+
+    search.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(first).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(search).toHaveFocus();
+  });
+
+  it("skips a disabled Search button when wrapping", () => {
+    renderPopover({ variantsText: "" });
+
+    screen.getByRole("button", { name: "Cancel" }).focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+
+    expect(screen.getByRole("dialog", { name: "Edit search" })).toContainElement(document.activeElement as HTMLElement);
+    expect(screen.getByRole("button", { name: "Cancel" })).not.toHaveFocus();
+  });
+
+  it("pulls a Tab from outside back into the popover", () => {
+    renderPopover();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+
+    fireEvent.keyDown(document, { key: "Tab" });
+
+    expect(screen.getByRole("dialog", { name: "Edit search" })).toContainElement(document.activeElement as HTMLElement);
+    outside.remove();
+  });
+
   it("cancels on Escape and on a click on the backdrop", () => {
     const { onCancel } = renderPopover();
 

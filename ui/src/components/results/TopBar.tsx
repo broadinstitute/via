@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import colors from "../../libs/colors";
@@ -201,6 +201,15 @@ export default function TopBar({
   const { hovered: brandHovered, hoverProps: brandHoverProps } = useHover();
   const { hovered: searchHovered, hoverProps: searchHoverProps } = useHover();
   const termsId = useId();
+  const searchBoxRef = useRef<HTMLButtonElement>(null);
+
+  // When the edit-search popover closes, hand focus back to the box that opened it; otherwise it
+  // stays on a field that's now hidden.
+  const wasModifyOpen = useRef(modifyOpen);
+  useEffect(() => {
+    if (wasModifyOpen.current && !modifyOpen) searchBoxRef.current?.focus();
+    wasModifyOpen.current = modifyOpen;
+  }, [modifyOpen]);
 
   return (
     <div style={styles.topbar}>
@@ -221,6 +230,7 @@ export default function TopBar({
         {onModifySearch && (
           <div style={styles.searchAnchor}>
             <Clickable
+              ref={searchBoxRef}
               style={{
                 ...styles.searchBox,
                 ...(searchHovered && !loading ? styles.searchBoxHover : undefined),

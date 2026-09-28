@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, CSSProperties } from "react";
+import type { ButtonHTMLAttributes, CSSProperties, Ref } from "react";
 import { useHover } from "../../libs/hooks";
 
 interface ClickableProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "style"> {
@@ -7,6 +7,7 @@ interface ClickableProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "
   hoverStyle?: CSSProperties;
   /** Merged over `style` while disabled, in place of a ":disabled" rule. */
   disabledStyle?: CSSProperties;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 /**

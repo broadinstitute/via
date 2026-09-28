@@ -12,9 +12,6 @@ import VariantsStep from "../VariantsStep";
 import { TOP_BAR_HEIGHT } from "./TopBar";
 
 const styles = {
-  // Dims the results behind the popover; clicking it cancels, like clicking off any popover.
-  // Starts below the top bar, so the search box the popover hangs from stays undimmed. That
-  // relies on the bar being sticky: if it scrolled away, this would leave an undimmed strip.
   backdrop: {
     position: "fixed",
     top: TOP_BAR_HEIGHT,
@@ -23,9 +20,6 @@ const styles = {
     bottom: 0,
     background: alpha(colors.textPrimary, 0.18),
   },
-  // Hangs from TopBar's anchor around the search box, left-aligned with it. The max width keeps
-  // it on screen when the window is narrower than the popover plus the box's offset from the
-  // left edge (the back button and bar padding, ~70px).
   popover: {
     position: "absolute",
     top: "calc(100% + 6px)",
@@ -36,7 +30,6 @@ const styles = {
     padding: 16,
     background: colors.surface2,
     border: `1px solid ${colors.border}`,
-    // Square along the top, where it hangs from the search box; rounded only at the bottom.
     borderRadius: `0 0 ${Style.panelRadius}px ${Style.panelRadius}px`,
     boxShadow: Style.shadows.raised,
     cursor: "auto",
@@ -57,6 +50,9 @@ const styles = {
     fontWeight: 600,
   },
 } as const satisfies Record<string, CSSProperties>;
+
+/** What Tab can land on inside the popover, for keeping focus there while it's open. */
+const FOCUSABLE = 'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
 interface SearchPopoverProps {
   open: boolean;
@@ -94,11 +90,7 @@ export default function SearchPopover({
   const popoverRef = useRef<HTMLDivElement>(null);
   const { count: enteredCount, overLimit, canSearch } = variantEntryStatus(variantsText, variantsLimit);
 
-  // Locks page scrolling while open. The backdrop is fixed to the window, starting just below
-  // the sticky top bar; if the page could move behind it, e.g. macOS rubber-banding when
-  // scrolling up past the top, the bar would be dragged down while the backdrop stayed put,
-  // leaving an undimmed band above the bar. The results aren't meant to be used while dimmed
-  // anyway.
+  // Locks page scrolling while open
   useEffect(() => {
     if (!open) return;
     const root = document.documentElement;
@@ -112,17 +104,30 @@ export default function SearchPopover({
     };
   }, [open]);
 
-  // Starts you in the variants field, the usual thing to edit.
+  // Starts you in the variants field.
   useEffect(() => {
     if (open) popoverRef.current?.querySelector("textarea")?.focus();
   }, [open]);
 
-  // On the document so it works wherever focus is. An Escape the condition field used to close
-  // its dropdown arrives already handled (defaultPrevented), and only closes the dropdown.
+  // On the document so it works wherever focus is. Tab wraps between the popover's first and last
+  // controls rather than reaching the page behind the backdrop.
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) onCancel();
+      if (event.key !== "Tab" || !popoverRef.current) return;
+      const focusable = [...popoverRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const inside = popoverRef.current.contains(document.activeElement);
+      if (event.shiftKey && (!inside || document.activeElement === first)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (!inside || document.activeElement === last)) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
@@ -131,7 +136,7 @@ export default function SearchPopover({
   return (
     <div style={{ display: open ? "block" : "none" }}>
       <div style={styles.backdrop} onClick={onCancel} aria-hidden="true" data-testid="searchPopoverBackdrop" />
-      <div ref={popoverRef} role="dialog" aria-label="Edit search" style={styles.popover}>
+      <div ref={popoverRef} role="dialog" aria-modal="true" aria-label="Edit search" style={styles.popover}>
         <SearchSteps>
           <VariantsStep
             value={variantsText}

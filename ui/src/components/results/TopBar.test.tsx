@@ -68,6 +68,27 @@ describe("TopBar", () => {
     expect(searchBox).toHaveAttribute("aria-expanded", "true");
   });
 
+  it("returns focus to the search box when the drawer closes", () => {
+    const props = { userEmail: "user@example.org", variantsEnteredCount: 3, condition: "", onModifySearch: vi.fn() };
+    const { rerender } = renderTopBar({ ...props, modifyOpen: true });
+    const searchBox = screen.getByRole("button", { name: "Edit search" });
+    expect(searchBox).not.toHaveFocus();
+
+    rerender(
+      <MemoryRouter>
+        <TopBar {...props} modifyOpen={false} />
+      </MemoryRouter>,
+    );
+
+    expect(searchBox).toHaveFocus();
+  });
+
+  it("doesn't take focus on first render with the drawer closed", () => {
+    renderTopBar({ userEmail: "user@example.org", variantsEnteredCount: 3, condition: "", onModifySearch: vi.fn() });
+
+    expect(screen.getByRole("button", { name: "Edit search" })).not.toHaveFocus();
+  });
+
   /**
    * Regression guard. The box's border was once the `border` shorthand with a `borderColor`
    * override for hover and open, and ending either state left it with no colour at all -- so it
