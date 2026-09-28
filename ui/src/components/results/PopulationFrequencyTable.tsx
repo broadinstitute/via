@@ -38,9 +38,18 @@ const styles = {
     padding: "1px 10px",
     textAlign: "left",
   },
+  // Spans both header rows, and sits on the lower one's line with the AF / AC/AN labels.
   populationHeader: {
     color: colors.textSecondary,
     fontWeight: 600,
+    verticalAlign: "bottom",
+  },
+  // The source over its pair of columns, as in the cohort table's own group row.
+  groupHeader: {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.2,
+    textAlign: "center",
   },
   // inline-flex on a span nested in the td, not the td itself -- display: flex directly on a td
   // overrides its table-cell display, which fights the table's own row-height/vertical-align
@@ -150,6 +159,10 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
     return { ...sourceCellStyle(source, false), fontWeight: 600 };
   }
 
+  function groupHeaderStyle(source: Source): CSSProperties {
+    return { ...sourceCellStyle(source, false), ...styles.groupHeader };
+  }
+
   function labelCellStyle(hovered: boolean): CSSProperties {
     return { ...styles.cell, ...(hovered ? { background: colors.surface1 } : undefined) };
   }
@@ -158,11 +171,14 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
     <table style={styles.table}>
       <thead>
         <tr>
-          <th style={{ ...styles.cell, ...styles.populationHeader }}>Population</th>
-          <th style={headerStyle("aou")}>AoU AF</th>
-          <th style={headerStyle("aou")}>AoU AC/AN</th>
-          <th style={headerStyle("gnomad")}>
-            gnomAD AF{" "}
+          <th rowSpan={2} style={{ ...styles.cell, ...styles.populationHeader }}>
+            Population
+          </th>
+          <th colSpan={2} style={groupHeaderStyle("aou")}>
+            All of Us
+          </th>
+          <th colSpan={2} style={groupHeaderStyle("gnomad")}>
+            gnomAD{" "}
             {variant.gnomadUrl && (
               <a
                 style={{ ...styles.sourceLink, ...(linkHovered ? { color: colors.textAccent } : undefined) }}
@@ -178,7 +194,12 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
               </a>
             )}
           </th>
-          <th style={headerStyle("gnomad")}>gnomAD AC/AN</th>
+        </tr>
+        <tr>
+          <th style={headerStyle("aou")}>AF</th>
+          <th style={headerStyle("aou")}>AC/AN</th>
+          <th style={headerStyle("gnomad")}>AF</th>
+          <th style={headerStyle("gnomad")}>AC/AN</th>
         </tr>
       </thead>
       <tbody>
