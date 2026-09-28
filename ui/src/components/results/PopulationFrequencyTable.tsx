@@ -43,6 +43,7 @@ const styles = {
     verticalAlign: "bottom",
   },
   groupHeader: {
+    paddingTop: 11,
     fontSize: 11,
     fontWeight: 700,
     letterSpacing: 0.2,
@@ -56,6 +57,9 @@ const styles = {
   },
   allPopulationsLabel: {
     color: colors.textMuted,
+  },
+  lastRow: {
+    paddingBottom: 12,
   },
   sourceLink: {
     color: "inherit",
@@ -106,10 +110,11 @@ interface FrequencyCellsProps {
   isMax: boolean;
   source: Source;
   hovered: boolean;
+  style?: CSSProperties;
 }
 
-function FrequencyCells({ af, ac, an, inVocabulary, isMax, source, hovered }: FrequencyCellsProps) {
-  const cellStyle = sourceCellStyle(source, hovered);
+function FrequencyCells({ af, ac, an, inVocabulary, isMax, source, hovered, style }: FrequencyCellsProps) {
+  const cellStyle = { ...sourceCellStyle(source, hovered), ...style };
 
   if (af == null || ac == null || an == null) {
     return (
@@ -254,6 +259,7 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
             style={{
               ...labelCellStyle(hoveredRow === ALL_POPULATIONS_ROW),
               ...styles.allPopulationsLabel,
+              ...styles.lastRow,
             }}
           >
             All populations
@@ -266,6 +272,7 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
             isMax={false}
             source="aou"
             hovered={hoveredRow === ALL_POPULATIONS_ROW}
+            style={styles.lastRow}
           />
           <FrequencyCells
             af={variant.gnomadAllAf}
@@ -275,6 +282,7 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
             isMax={false}
             source="gnomad"
             hovered={hoveredRow === ALL_POPULATIONS_ROW}
+            style={styles.lastRow}
           />
         </tr>
       </tbody>
