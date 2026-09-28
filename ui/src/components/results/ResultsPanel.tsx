@@ -50,7 +50,7 @@ const styles = {
     color: colors.textSecondary,
   },
   chipAccent: {
-    border: `1px solid ${colors.bgAccent}`,
+    border: `1px solid ${alpha(colors.textAccent, 0.35)}`,
     background: colors.bgAccent,
     color: colors.textPrimary,
   },
