@@ -1,6 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-/** An eye with a slash through it: not shown here. */
 export default function EyeOffIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>
