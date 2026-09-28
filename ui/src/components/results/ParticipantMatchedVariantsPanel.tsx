@@ -20,6 +20,13 @@ import MoreBelowCue from "./MoreBelowCue";
 import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
 import ResultsPanel, { ScopeChip } from "./ResultsPanel";
 
+/**
+ * Shows the same number of rows as the cohort table above at its floor. That table's
+ * COHORT_TABLE_MIN_HEIGHT (431px) less its two header rows (28 + 34px) leaves 369px of 33.25px
+ * rows; this one has a single 35.5px header row and 34px rows, so 35.5 + 369 × 34 / 33.25 ≈ 413.
+ */
+export const MATCHED_TABLE_HEIGHT = 413;
+
 const styles = {
   actions: {
     display: "flex",
@@ -34,9 +41,10 @@ const styles = {
   tableWrap: {
     position: "relative",
   },
+  // A fixed height, like the cohort table's floor, rather than shrinking to fit a few rows.
   tableScroll: {
     ...Style.table.scroller,
-    maxHeight: 346,
+    height: MATCHED_TABLE_HEIGHT,
   },
   table: {
     ...Style.table.base,
@@ -290,7 +298,12 @@ export default function ParticipantMatchedVariantsPanel({
     const { message, buttonLabel } = phenotypeUnavailableCopy(condition, "phenotype-matched participant data");
     return (
       <ResultsPanel title="Candidate variants" scope={<ScopeChip>Phenotype-matched participants</ScopeChip>}>
-        <PhenotypeFilterRequired message={message} buttonLabel={buttonLabel} onAddPhenotypeFilter={onAddPhenotypeFilter} />
+        <PhenotypeFilterRequired
+          message={message}
+          buttonLabel={buttonLabel}
+          onAddPhenotypeFilter={onAddPhenotypeFilter}
+          minHeight={MATCHED_TABLE_HEIGHT}
+        />
       </ResultsPanel>
     );
   }

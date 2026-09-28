@@ -28,7 +28,7 @@ import SubpopBadge from "../elements/SubpopBadge";
  * Sized so this panel is at least as tall as a loaded phenotype panel with a one-line condition
  * name: any shorter and the phenotype panel stretches the row taller the moment it loads.
  */
-export const COHORT_TABLE_MIN_HEIGHT = 430;
+export const COHORT_TABLE_MIN_HEIGHT = 431;
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
 const PLOF_RANK = { HC: 0, LC: 1, none: 2 } as const;

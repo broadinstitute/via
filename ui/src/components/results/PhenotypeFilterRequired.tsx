@@ -7,24 +7,25 @@ interface PhenotypeFilterRequiredProps {
   message: string;
   buttonLabel: string;
   onAddPhenotypeFilter: () => void;
+  /** The footprint of whatever this prompt stands in for, so the panel keeps its size. */
+  minHeight: number;
 }
 
 export default function PhenotypeFilterRequired({
   message,
   buttonLabel,
   onAddPhenotypeFilter,
+  minHeight,
 }: PhenotypeFilterRequiredProps) {
   return (
     <div
-      // minHeight matches the scroller in ParticipantMatchedVariantsPanel, so this empty-state
-      // prompt takes up roughly the same footprint as the populated table would.
       style={{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         gap: 14,
-        minHeight: 346,
+        minHeight,
         padding: "56px 20px",
         color: colors.textSecondary,
         fontSize: 12.5,

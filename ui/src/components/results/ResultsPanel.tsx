@@ -9,10 +9,13 @@ const styles = {
     flexDirection: "column",
     boxShadow: Style.shadows.panel,
   },
+  // Tall enough for a primary button on the right (the matched table's Export TSV), so every
+  // panel's header is the same height whether or not it has one.
   header: {
     ...Style.elements.panelHeader,
     justifyContent: "space-between",
     gap: 12,
+    minHeight: 53,
   },
   heading: {
     display: "flex",

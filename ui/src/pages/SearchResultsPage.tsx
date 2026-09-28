@@ -6,7 +6,7 @@ import colors from "../libs/colors";
 import { useMediaQuery } from "../libs/hooks";
 import CohortVariantsPanel, { COHORT_TABLE_MIN_HEIGHT } from "../components/results/CohortVariantsPanel";
 import Footer from "../components/results/Footer";
-import ParticipantMatchedVariantsPanel from "../components/results/ParticipantMatchedVariantsPanel";
+import ParticipantMatchedVariantsPanel, { MATCHED_TABLE_HEIGHT } from "../components/results/ParticipantMatchedVariantsPanel";
 import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
 import { ScopeChip } from "../components/results/ResultsPanel";
 import SearchPopover from "../components/results/SearchPopover";
@@ -212,7 +212,7 @@ export default function SearchResultsPage() {
             title="Candidate variants"
             scope={<ScopeChip>Phenotype-matched participants</ScopeChip>}
             message="Loading variants…"
-            minHeight={346}
+            minHeight={MATCHED_TABLE_HEIGHT}
           />
         )}
 
