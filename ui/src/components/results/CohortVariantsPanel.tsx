@@ -276,6 +276,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             cell: ({ row }) => (row.original.annotated ? row.original.gene : <NotAvailable />),
             sortUndefined: "last",
           }),
+          columnHelper.accessor((row) => (row.annotated ? row.consequence : undefined), {
+            id: "consequence",
+            header: "Consequence",
+            cell: ({ row }) => (row.original.annotated ? row.original.consequence : <NotAvailable />),
+            sortUndefined: "last",
+          }),
           columnHelper.accessor((row) => (row.annotated ? row.proteinChange : undefined), {
             id: "proteinChange",
             header: "Protein ∆",
@@ -285,12 +291,6 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               ) : (
                 <NotAvailable />
               ),
-            sortUndefined: "last",
-          }),
-          columnHelper.accessor((row) => (row.annotated ? row.consequence : undefined), {
-            id: "consequence",
-            header: "Consequence",
-            cell: ({ row }) => (row.original.annotated ? row.original.consequence : <NotAvailable />),
             sortUndefined: "last",
           }),
         ]),
