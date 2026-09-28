@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import SearchPopover from "./SearchPopover";
+import SearchPopover, { placePopover } from "./SearchPopover";
 
 function renderPopover(props: Partial<Parameters<typeof SearchPopover>[0]> = {}) {
   const handlers = {
@@ -217,5 +217,23 @@ describe("SearchPopover", () => {
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(onCancel).not.toHaveBeenCalled();
+  });
+});
+
+describe("placePopover", () => {
+  it("hangs from the search box at full width when there's room", () => {
+    expect(placePopover(110, 1440)).toEqual({ width: 760, left: 0 });
+  });
+
+  it("slides left just enough to keep the right margin", () => {
+    // 110 + 760 + 20 = 890, so 40px short at 850.
+    expect(placePopover(110, 850)).toEqual({ width: 760, left: -40 });
+  });
+
+  it("narrows to the viewport less both margins on a small screen", () => {
+    const { width, left } = placePopover(110, 390);
+    expect(width).toBe(350);
+    // Its left edge lands 20px into the viewport.
+    expect(110 + left).toBe(20);
   });
 });

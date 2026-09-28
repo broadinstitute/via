@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import colors, { alpha } from "../../libs/colors";
 import * as Style from "../../libs/style";
@@ -21,13 +21,11 @@ const styles = {
     bottom: 0,
     background: alpha(colors.textPrimary, 0.18),
   },
+  // Width and left offset come from placePopover, which keeps it inside the viewport.
   popover: {
     position: "absolute",
     top: "calc(100% + 6px)",
-    left: 0,
     zIndex: 1,
-    width: 760,
-    maxWidth: "calc(100vw - 88px)",
     padding: 16,
     background: colors.surface2,
     border: `1px solid ${colors.border}`,
@@ -51,6 +49,21 @@ const styles = {
     fontWeight: 600,
   },
 } as const satisfies Record<string, CSSProperties>;
+
+const POPOVER_WIDTH = 760;
+/** Kept clear on either side, matching the top bar's own padding. */
+const VIEWPORT_MARGIN = 20;
+
+/**
+ * The popover's width and left offset from the search box, for a box `anchorLeft` px into a
+ * `viewportWidth` px viewport. It hangs from the box's left edge when it fits; otherwise it
+ * narrows to the viewport and slides left as far as needed to keep the right margin.
+ */
+export function placePopover(anchorLeft: number, viewportWidth: number) {
+  const width = Math.min(POPOVER_WIDTH, viewportWidth - 2 * VIEWPORT_MARGIN);
+  const left = Math.min(0, viewportWidth - VIEWPORT_MARGIN - width - anchorLeft);
+  return { width, left };
+}
 
 /** What Tab can land on inside the popover, for keeping focus there while it's open. */
 const FOCUSABLE = 'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
@@ -89,6 +102,7 @@ export default function SearchPopover({
   onSearch,
 }: SearchPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [placement, setPlacement] = useState({ width: POPOVER_WIDTH, left: 0 });
   const { count: enteredCount, overLimit, canSearch } = variantEntryStatus(variantsText, variantsLimit);
 
   // Locks page scrolling while open
@@ -103,6 +117,21 @@ export default function SearchPopover({
       root.style.overflow = previous.overflow;
       root.style.paddingRight = previous.paddingRight;
     };
+  }, [open]);
+
+  // Measured before paint, so it never shows overflowing first. The box's own position is the
+  // popover's, less the offset already applied.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const popover = popoverRef.current;
+      if (!popover) return;
+      const anchorLeft = popover.getBoundingClientRect().left - (parseFloat(popover.style.left) || 0);
+      setPlacement(placePopover(anchorLeft, document.documentElement.clientWidth));
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
   }, [open]);
 
   // Starts you in the variants field.
@@ -142,7 +171,7 @@ export default function SearchPopover({
         role="dialog"
         aria-modal="true"
         aria-label="Edit search"
-        style={styles.popover}
+        style={{ ...styles.popover, ...placement }}
         onKeyDown={(event) => {
           if (!isSubmitShortcut(event)) return;
           event.preventDefault();

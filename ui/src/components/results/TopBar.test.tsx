@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TopBar from "./TopBar";
 
 function renderTopBar(props: Parameters<typeof TopBar>[0]) {
@@ -194,5 +194,41 @@ describe("TopBar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     vi.unstubAllGlobals();
+  });
+
+  describe("at narrow width", () => {
+    const matchMedia = window.matchMedia;
+    beforeEach(() => {
+      window.matchMedia = ((query: string) => ({ ...matchMedia(query), matches: true })) as typeof window.matchMedia;
+    });
+    afterEach(() => {
+      window.matchMedia = matchMedia;
+    });
+
+    const props = { userEmail: "user@example.org", onModifySearch: vi.fn() };
+
+    it("moves the email into the user icon's tooltip, still readable by screen readers", () => {
+      const { container } = renderTopBar({ ...props, variantsEnteredCount: 3, condition: "" });
+
+      expect(container.querySelector('[title="user@example.org"]')).toBeInTheDocument();
+      expect(screen.getByText("user@example.org").style.position).toBe("absolute");
+    });
+
+    it("shows a variant count without its label, and drops an empty phenotype", () => {
+      renderTopBar({ ...props, variantsEnteredCount: 1, condition: "" });
+      const searchBox = screen.getByRole("button", { name: "Edit search" });
+
+      expect(screen.getByText("1 variant")).toBeInTheDocument();
+      expect(screen.getByText("Variants").style.position).toBe("absolute");
+      expect(searchBox).toHaveAccessibleDescription(/Phenotype\s*None entered/);
+      expect(screen.queryByText("Edit")).not.toBeInTheDocument();
+    });
+
+    it("keeps a picked phenotype, pluralizing the count", () => {
+      renderTopBar({ ...props, variantsEnteredCount: 2, condition: "Tetralogy of Fallot" });
+
+      expect(screen.getByText("2 variants")).toBeInTheDocument();
+      expect(screen.getByText("Tetralogy of Fallot")).toHaveAttribute("title", "Tetralogy of Fallot");
+    });
   });
 });

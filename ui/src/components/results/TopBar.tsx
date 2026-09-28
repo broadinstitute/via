@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import colors from "../../libs/colors";
-import { useHover } from "../../libs/hooks";
+import { useHover, useMediaQuery } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
 import { GearIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
@@ -10,6 +10,12 @@ import SettingsDialog from "../settings/SettingsDialog";
 
 /** Exported for what has to sit just below the bar, e.g. the edit-search popover's backdrop. */
 export const TOP_BAR_HEIGHT = 41;
+
+// Below this the email no longer fits beside a readable search box, so the bar goes compact: the
+// email moves into the user icon's tooltip, the search box drops its field labels, an empty
+// phenotype and the Edit hint's text, and the spacing tightens. Hidden text stays in the
+// accessibility tree.
+const COMPACT_QUERY = "(max-width: 860px)";
 
 const styles = {
   topbar: {
@@ -112,6 +118,10 @@ const styles = {
     minWidth: 0,
     whiteSpace: "nowrap",
   },
+  /** The variant count is short and always worth showing whole; the phenotype name gives way. */
+  searchFieldFixed: {
+    flexShrink: 0,
+  },
   termDivider: {
     flexShrink: 0,
     width: 1,
@@ -175,6 +185,15 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
+const compactStyles = {
+  topbar: { padding: "0 12px" },
+  leading: { gap: 10, marginRight: 10 },
+  brandDivider: { paddingRight: 10 },
+  searchBox: { gap: 8 },
+  searchTerms: { gap: 8 },
+  userDivider: { margin: "0 4px" },
+} as const satisfies Record<string, CSSProperties>;
+
 interface TopBarProps {
   loading?: boolean;
   variantsEnteredCount?: number;
@@ -201,6 +220,10 @@ export default function TopBar({
   const { hovered: brandHovered, hoverProps: brandHoverProps } = useHover();
   const { hovered: searchHovered, hoverProps: searchHoverProps } = useHover();
   const termsId = useId();
+  const compact = useMediaQuery(COMPACT_QUERY);
+  const compactStyle = (key: keyof typeof compactStyles) => (compact ? compactStyles[key] : undefined);
+  const fieldLabel = compact ? Style.elements.visuallyHidden : undefined;
+  const hidePhenotype = compact && !loading && !condition;
   const searchBoxRef = useRef<HTMLButtonElement>(null);
 
   // When the edit-search popover closes, hand focus back to the box that opened it; otherwise it
@@ -212,13 +235,13 @@ export default function TopBar({
   }, [modifyOpen]);
 
   return (
-    <div style={styles.topbar}>
-      <div style={styles.leading}>
+    <div style={{ ...styles.topbar, ...compactStyle("topbar") }}>
+      <div style={{ ...styles.leading, ...compactStyle("leading") }}>
         <Link
           to="/"
           style={{
             ...styles.brand,
-            ...(onModifySearch ? styles.brandDivider : undefined),
+            ...(onModifySearch ? { ...styles.brandDivider, ...compactStyle("brandDivider") } : undefined),
             ...(brandHovered ? styles.brandHover : undefined),
           }}
           aria-label="VIA home, new search"
@@ -233,6 +256,7 @@ export default function TopBar({
               ref={searchBoxRef}
               style={{
                 ...styles.searchBox,
+                ...compactStyle("searchBox"),
                 ...(searchHovered && !loading ? styles.searchBoxHover : undefined),
                 ...(modifyOpen ? Style.inputs.focused : undefined),
               }}
@@ -245,18 +269,22 @@ export default function TopBar({
               {...searchHoverProps}
             >
               <SearchIcon size={14} strokeWidth={2.5} style={styles.searchIcon} aria-hidden="true" />
-              <span id={termsId} style={styles.searchTerms}>
-                <span style={styles.searchField}>
-                  Variants
+              <span id={termsId} style={{ ...styles.searchTerms, ...compactStyle("searchTerms") }}>
+                <span style={{ ...styles.searchField, ...styles.searchFieldFixed }}>
+                  <span style={fieldLabel}>Variants</span>
                   {loading ? (
                     <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
                   ) : (
-                    <span style={styles.valueBadge}>{variantsEnteredCount} entered</span>
+                    <span style={styles.valueBadge}>
+                      {compact
+                        ? `${variantsEnteredCount} variant${variantsEnteredCount === 1 ? "" : "s"}`
+                        : `${variantsEnteredCount} entered`}
+                    </span>
                   )}
                 </span>
-                <span style={styles.termDivider} aria-hidden="true" />
-                <span style={styles.searchField}>
-                  Phenotype
+                {!hidePhenotype && <span style={styles.termDivider} aria-hidden="true" />}
+                <span style={hidePhenotype ? Style.elements.visuallyHidden : styles.searchField}>
+                  <span style={fieldLabel}>Phenotype</span>
                   {loading ? (
                     <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
                   ) : (
@@ -272,7 +300,7 @@ export default function TopBar({
                   aria-hidden="true"
                 >
                   <PencilIcon size={11} strokeWidth={2.5} />
-                  Edit
+                  {!compact && "Edit"}
                 </span>
               )}
             </Clickable>
@@ -280,10 +308,10 @@ export default function TopBar({
           </div>
         )}
       </div>
-      <div style={styles.user}>
+      <div style={styles.user} title={compact ? userEmail : undefined}>
         <UserIcon size={16} style={styles.userIcon} />
-        {userEmail}
-        <span style={styles.userDivider} aria-hidden="true" />
+        <span style={compact ? Style.elements.visuallyHidden : undefined}>{userEmail}</span>
+        <span style={{ ...styles.userDivider, ...compactStyle("userDivider") }} aria-hidden="true" />
         <Clickable
           style={Style.buttons.icon}
           hoverStyle={Style.buttons.iconHover}
