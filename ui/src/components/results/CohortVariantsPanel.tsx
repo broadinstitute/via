@@ -190,16 +190,45 @@ function sourceOf(columnId: string): Source | null {
   return null;
 }
 
-const AOU_MISSING_GROUP = {
+interface MissingGroup {
+  columnIds: Set<string>;
+  mergedIntoColumnId: string;
+  message: string;
+  /** Tooltip on the merged cell. */
+  title?: string;
+}
+
+const AOU_MISSING_GROUP: MissingGroup = {
   columnIds: SOURCE_COLUMN_IDS.aou,
   mergedIntoColumnId: "aouSubpop",
   message: "Not observed in All of Us",
 };
 
-const GNOMAD_MISSING_GROUP = {
+const GNOMAD_MISSING_GROUP: MissingGroup = {
   columnIds: SOURCE_COLUMN_IDS.gnomad,
   mergedIntoColumnId: "gnomadSubpop",
   message: "Not observed in gnomAD",
+};
+
+// Everything after the Variant column. A variant that isn't in All of Us has no VAT row, so it has
+// no annotations and no gnomAD data either -- not because gnomAD lacks it, but because the VAT
+// only covers variants All of Us has seen. One message across the row says so, rather than a
+// "not observed in gnomAD" that may not be true.
+const UNANNOTATED_GROUP: MissingGroup = {
+  columnIds: new Set([
+    "gene",
+    "consequence",
+    "proteinChange",
+    ...SOURCE_COLUMN_IDS.aou,
+    ...SOURCE_COLUMN_IDS.gnomad,
+    "clinvar",
+    "spliceAi",
+    "plof",
+  ]),
+  mergedIntoColumnId: "gene",
+  message: "Not observed in All of Us",
+  title:
+    "Annotations and gnomAD frequencies come from the All of Us variant annotation table, which only includes variants observed in All of Us.",
 };
 
 /** No value for this cell — the variant isn't present in the source behind it. */
@@ -207,14 +236,13 @@ function NotAvailable() {
   return <span style={Style.elements.notAvailable}>—</span>;
 }
 
-// A variant missing from every source (annotated === false) is missing from each
-// individual source too, so both cases get the same "not observed" callout.
+// For a variant in the VAT (annotated), whether each source has data for it.
 function isMissingFromAou(row: CohortVariantRow): boolean {
-  return !row.annotated || row.aouSubpopulation === null;
+  return row.annotated && row.aouSubpopulation === null;
 }
 
 function isMissingFromGnomad(row: CohortVariantRow): boolean {
-  return !row.annotated || row.gnomadSubpopulation === null;
+  return row.annotated && row.gnomadSubpopulation === null;
 }
 
 interface CohortVariantsPanelProps {
@@ -532,10 +560,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               {table.getRowModel().rows.map((row) => {
                 // A source with no data for this variant collapses its whole column
                 // group into one "not observed" cell, rather than a row of bare n/a's.
-                const missingGroups = [
-                  isMissingFromAou(row.original) ? AOU_MISSING_GROUP : null,
-                  isMissingFromGnomad(row.original) ? GNOMAD_MISSING_GROUP : null,
-                ].filter((group) => group !== null);
+                const missingGroups: MissingGroup[] = !row.original.annotated
+                  ? [UNANNOTATED_GROUP]
+                  : [
+                      isMissingFromAou(row.original) ? AOU_MISSING_GROUP : null,
+                      isMissingFromGnomad(row.original) ? GNOMAD_MISSING_GROUP : null,
+                    ].filter((group) => group !== null);
                 const hovered = hoveredRow === row.id;
                 const expanded = expandedVariants.has(row.original.variant);
                 return (
@@ -560,7 +590,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                         if (group) {
                           if (cell.column.id !== group.mergedIntoColumnId) return null;
                           return (
-                            <td key={cell.id} colSpan={group.columnIds.size} style={{ ...cellStyle, ...styles.sourceMissing }}>
+                            <td
+                              key={cell.id}
+                              colSpan={group.columnIds.size}
+                              style={{ ...cellStyle, ...styles.sourceMissing }}
+                              title={group.title}
+                            >
                               <span style={styles.cellNa}>{group.message}</span>
                             </td>
                           );
