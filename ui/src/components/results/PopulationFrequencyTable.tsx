@@ -33,31 +33,26 @@ const styles = {
     ...Style.table.base,
     borderCollapse: "collapse",
   },
-  // Tighter than the cohort table's cells: this one is nested inside an expanded row of it.
   cell: {
     padding: "1px 10px",
     textAlign: "left",
   },
-  // Spans both header rows, and sits on the lower one's line with the AF / AC/AN labels.
   populationHeader: {
     color: colors.textSecondary,
     fontWeight: 600,
     verticalAlign: "bottom",
   },
-  // The source over its pair of columns, as in the cohort table's own group row.
   groupHeader: {
     fontSize: 11,
     fontWeight: 700,
     letterSpacing: 0.2,
     textAlign: "center",
   },
-  // inline-flex on a span nested in the td, not the td itself -- display: flex directly on a td
-  // overrides its table-cell display, which fights the table's own row-height/vertical-align
-  // handling and throws off spacing versus the plain <td> cells next to it.
   populationLabel: {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
+    verticalAlign: "top",
   },
   allPopulationsLabel: {
     color: colors.textMuted,
@@ -67,22 +62,17 @@ const styles = {
     fontWeight: 600,
     textDecoration: "none",
   },
-  // The value and its MAX marker, each trimmed to cap height and centred on each other: left on a
-  // shared baseline, the marker's smaller capitals sat ~1px low of the digits. A span inside the
-  // td, not the td itself, for the reason given on populationLabel.
   maxValue: {
     display: "inline-flex",
     alignItems: "center",
     gap: 4,
   },
   maxValueText: Style.elements.trimmedText,
-  // A filled pill rather than bare accent text, so the highest-frequency population stands out
-  // from the column at a glance. Trimmed like the value, so the padding alone sets its height.
   maxMarker: {
     ...Style.elements.trimmedText,
     padding: "2px 5px",
     borderRadius: 4,
-    background: colors.textAccent,
+    background: colors.brandNavy,
     color: colors.white,
     fontSize: 9,
     fontWeight: 700,
