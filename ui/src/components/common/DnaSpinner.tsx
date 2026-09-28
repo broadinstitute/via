@@ -38,8 +38,13 @@ const STROKE_WIDTH = 1.4;
 /** Stroke width of the background-colored band under each front stretch. */
 const HALO_WIDTH = 3.6;
 const BACK_OPACITY = 0.7;
-/** Rung heights as offsets from center, extending the favicon's rhythm to the middle. */
-const RUNG_OFFSETS = [-9.24, -5.91, -2.58, 2.58, 5.91, 9.24];
+/** Rung heights as offsets from center: evenly spaced, with the outermost where the favicon's are. */
+const RUNG_COUNT = 7;
+const RUNG_REACH = 9.24;
+const RUNG_OFFSETS = Array.from(
+  { length: RUNG_COUNT },
+  (_, i) => -RUNG_REACH + (2 * RUNG_REACH * i) / (RUNG_COUNT - 1),
+);
 /** Longest a half-rung gets; the favicon's are about this, well short of the strands. */
 const RUNG_HALF = 2.1;
 const TILT_DEGREES = 20;
