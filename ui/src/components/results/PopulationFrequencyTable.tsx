@@ -67,8 +67,17 @@ const styles = {
     fontWeight: 600,
     textDecoration: "none",
   },
+  // The value and its MAX marker, each trimmed to cap height and centred on each other: left on a
+  // shared baseline, the marker's smaller capitals sat ~1px low of the digits. A span inside the
+  // td, not the td itself, for the reason given on populationLabel.
+  maxValue: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+  },
+  maxValueText: Style.elements.trimmedText,
   maxMarker: {
-    marginLeft: 4,
+    ...Style.elements.trimmedText,
     color: colors.textAccent,
     fontSize: 9.5,
     fontWeight: 600,
@@ -134,8 +143,14 @@ function FrequencyCells({ af, ac, an, inVocabulary, isMax, source, hovered }: Fr
   return (
     <>
       <td style={valueStyle}>
-        {formatAf(af)}
-        {isMax && <span style={styles.maxMarker}>MAX</span>}
+        {isMax ? (
+          <span style={styles.maxValue}>
+            <span style={styles.maxValueText}>{formatAf(af)}</span>
+            <span style={styles.maxMarker}>MAX</span>
+          </span>
+        ) : (
+          formatAf(af)
+        )}
       </td>
       <td style={valueStyle}>{formatAcAn(ac, an)}</td>
     </>
