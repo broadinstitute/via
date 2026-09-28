@@ -1,6 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
-import colors from "../../libs/colors";
+import colors, { alpha } from "../../libs/colors";
 import * as Style from "../../libs/style";
+
+/** Shared by the chip's text and its loading placeholder, which has to match its height. */
+const CHIP_LINE_HEIGHT = 1.2;
 
 const styles = {
   panel: {
@@ -9,8 +12,6 @@ const styles = {
     flexDirection: "column",
     boxShadow: Style.shadows.panel,
   },
-  // Tall enough for a primary button on the right (the matched table's Export TSV), so every
-  // panel's header is the same height whether or not it has one.
   header: {
     ...Style.elements.panelHeader,
     justifyContent: "space-between",
@@ -40,7 +41,7 @@ const styles = {
     borderRadius: 999,
     fontSize: 11.5,
     fontWeight: 600,
-    lineHeight: 1.2,
+    lineHeight: CHIP_LINE_HEIGHT,
     whiteSpace: "nowrap",
   },
   chipNeutral: {
@@ -59,6 +60,20 @@ const styles = {
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
+  chipSkeleton: {
+    display: "inline-block",
+    width: 150,
+    height: 10,
+    marginBlock: `calc((${CHIP_LINE_HEIGHT}em - 10px) / 2)`,
+    borderRadius: 4,
+  },
+  chipSkeletonNeutral: {
+    background: colors.border,
+  },
+  // colors.border reads as muddy grey on the blue fill; a deeper tint of the chip's own blue doesn't.
+  chipSkeletonAccent: {
+    background: alpha(colors.textAccent, 0.25),
+  },
 } as const satisfies Record<string, CSSProperties>;
 
 interface ScopeChipProps {
@@ -69,14 +84,29 @@ interface ScopeChipProps {
   tone?: "neutral" | "accent";
   /** Full text, for when the chip truncates. */
   title?: string;
+  /** Shows a pulsing placeholder in place of the text (kept for screen readers), for a scope still being fetched. */
+  loading?: boolean;
 }
 
 /** The pill after a panel's title saying what the panel covers: "All participants", a phenotype. */
-export function ScopeChip({ children, icon, tone = "neutral", title }: ScopeChipProps) {
+export function ScopeChip({ children, icon, tone = "neutral", title, loading = false }: ScopeChipProps) {
+  const accent = tone === "accent";
   return (
-    <span style={{ ...styles.chip, ...(tone === "accent" ? styles.chipAccent : styles.chipNeutral) }} title={title}>
+    <span style={{ ...styles.chip, ...(accent ? styles.chipAccent : styles.chipNeutral) }} title={title}>
       {icon}
-      <span style={styles.chipText}>{children}</span>
+      {loading ? (
+        <>
+          <span
+            className="animate-skeleton-pulse"
+            style={{ ...styles.chipSkeleton, ...(accent ? styles.chipSkeletonAccent : styles.chipSkeletonNeutral) }}
+            aria-hidden="true"
+          />
+          {/* The placeholder says nothing to a screen reader; the chip's text still does. */}
+          <span style={Style.elements.visuallyHidden}>{children}</span>
+        </>
+      ) : (
+        <span style={styles.chipText}>{children}</span>
+      )}
     </span>
   );
 }

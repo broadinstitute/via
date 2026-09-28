@@ -12,6 +12,7 @@ import { ScopeChip } from "../components/results/ResultsPanel";
 import SearchPopover from "../components/results/SearchPopover";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
+import { UserIcon } from "../components/icons";
 import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
 
@@ -210,7 +211,15 @@ export default function SearchResultsPage() {
         ) : (
           <SectionLoadingPanel
             title="Candidate variants"
-            scope={<ScopeChip>Phenotype-matched participants</ScopeChip>}
+            scope={
+              conditionConceptIdKey ? (
+                <ScopeChip tone="accent" icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />} loading>
+                  Loading participant count
+                </ScopeChip>
+              ) : (
+                <ScopeChip>Phenotype-matched participants</ScopeChip>
+              )
+            }
             message="Loading variants…"
             minHeight={MATCHED_TABLE_HEIGHT}
           />
