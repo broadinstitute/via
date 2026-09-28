@@ -4,7 +4,7 @@ import { fetchProfile } from "../api/profile";
 import { fetchSearchResults, type SearchResults } from "../api/searchResults";
 import colors from "../libs/colors";
 import { useMediaQuery } from "../libs/hooks";
-import CohortVariantsPanel from "../components/results/CohortVariantsPanel";
+import CohortVariantsPanel, { COHORT_TABLE_MIN_HEIGHT } from "../components/results/CohortVariantsPanel";
 import Footer from "../components/results/Footer";
 import ParticipantMatchedVariantsPanel from "../components/results/ParticipantMatchedVariantsPanel";
 import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
@@ -177,7 +177,7 @@ export default function SearchResultsPage() {
             <SectionLoadingPanel
               title="Candidate variants — all participants"
               message="Loading variants…"
-              minHeight={425}
+              minHeight={COHORT_TABLE_MIN_HEIGHT}
             />
           )}
 

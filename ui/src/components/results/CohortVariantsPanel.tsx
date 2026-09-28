@@ -14,7 +14,7 @@ import type { ClinVarSignificance, CohortVariantRow } from "../../types/results"
 import { formatAcAn, formatAf } from "../../utils/format";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
-import InfoTooltip from "../common/InfoTooltip";
+import InfoLabel from "../common/InfoLabel";
 import { ChevronRightIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
@@ -22,6 +22,13 @@ import MoreBelowCue from "./MoreBelowCue";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
 import SubpopBadge from "../elements/SubpopBadge";
+
+/**
+ * The table's floor, shared with its loading placeholder so the swap doesn't resize the row.
+ * Sized so this panel matches a loaded phenotype panel (477px with a one-line condition name):
+ * any shorter and the phenotype panel stretches the row a few px taller the moment it loads.
+ */
+export const COHORT_TABLE_MIN_HEIGHT = 430;
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
 const PLOF_RANK = { HC: 0, LC: 1, none: 2 } as const;
@@ -52,7 +59,7 @@ const styles = {
   tableWrap: {
     position: "relative",
     flex: 1,
-    minHeight: 425,
+    minHeight: COHORT_TABLE_MIN_HEIGHT,
   },
   tableScroll: {
     ...Style.table.scroller,
@@ -291,15 +298,14 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
       columnHelper.group({
         id: "aou",
         header: () => (
-          <>
-            All of Us <span style={styles.groupQualifier}>— max subpopulation</span>{" "}
-            <InfoTooltip
-              text={
-                `Values below reflect the All of Us subpopulation (${AOU_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire All of Us cohort.\n\n` +
-                "To see the allele frequency for the entire cohort, expand the row."
-              }
-            />
-          </>
+          <InfoLabel
+            tooltip={
+              `Values below reflect the All of Us subpopulation (${AOU_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire All of Us cohort.\n\n` +
+              "To see the allele frequency for the entire cohort, expand the row."
+            }
+          >
+            All of Us <span style={styles.groupQualifier}>— max subpopulation</span>
+          </InfoLabel>
         ),
         enableSorting: false,
         columns: columnHelper.columns([
@@ -341,14 +347,14 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
       columnHelper.group({
         id: "gnomad",
         header: () => (
-          <>
-            gnomAD <span style={styles.groupQualifier}>— max subpopulation</span>{" "}
-            <InfoTooltip
-                text={
-                  `Values below reflect the gnomAD subpopulation (${GNOMAD_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire gnomAD cohort.\n\n` +
-                  "To see the allele frequency for the entire cohort, expand the row."
-            } />
-          </>
+          <InfoLabel
+            tooltip={
+              `Values below reflect the gnomAD subpopulation (${GNOMAD_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire gnomAD cohort.\n\n` +
+              "To see the allele frequency for the entire cohort, expand the row."
+            }
+          >
+            gnomAD <span style={styles.groupQualifier}>— max subpopulation</span>
+          </InfoLabel>
         ),
         enableSorting: false,
         columns: columnHelper.columns([

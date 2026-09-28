@@ -80,6 +80,8 @@ interface InfoTooltipProps {
    * since a plain JSX attribute string doesn't turn \n into a newline.
    */
   text: string;
+  /** Merged over the icon button's own style, e.g. InfoLabel's alignment margins. */
+  style?: CSSProperties;
 }
 
 /**
@@ -91,7 +93,7 @@ interface InfoTooltipProps {
  * fixed tooltip would otherwise stay behind while its icon scrolls away. Clicks on it don't
  * reach the header underneath, so it never sorts the column.
  */
-export default function InfoTooltip({ text }: InfoTooltipProps) {
+export default function InfoTooltip({ text, style }: InfoTooltipProps) {
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [keyboardFocused, setKeyboardFocused] = useState(false);
@@ -154,6 +156,7 @@ export default function InfoTooltip({ text }: InfoTooltipProps) {
         type="button"
         style={{
           ...styles.icon,
+          ...style,
           ...(hovered || open ? Style.elements.tooltipIconActive : undefined),
           ...(keyboardFocused ? Style.elements.tooltipIconFocusRing : undefined),
         }}

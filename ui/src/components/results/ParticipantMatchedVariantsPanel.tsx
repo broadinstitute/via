@@ -13,7 +13,7 @@ import * as Style from "../../libs/style";
 import type { FilteredVariantRow } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
-import InfoTooltip from "../common/InfoTooltip";
+import InfoLabel from "../common/InfoLabel";
 import CopyButton from "./CopyButton";
 import MoreBelowCue from "./MoreBelowCue";
 import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
@@ -179,10 +179,9 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.cohortAc : undefined), {
           id: "cohortAc",
           header: () => (
-            <>
-              Cohort AC{" "}
-              <InfoTooltip text="Allele count among phenotype-matched participants." />
-            </>
+            <InfoLabel tooltip="Allele count among phenotype-matched participants.">
+              Cohort AC
+            </InfoLabel>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAc : <NotAvailable />),
           sortUndefined: "last",
@@ -190,10 +189,9 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.cohortAn : undefined), {
           id: "cohortAn",
           header: () => (
-            <>
-              Cohort AN{" "}
-              <InfoTooltip text="Allele number among phenotype-matched participants." />
-            </>
+            <InfoLabel tooltip="Allele number among phenotype-matched participants.">
+              Cohort AN
+            </InfoLabel>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAn : <NotAvailable />),
           sortUndefined: "last",
@@ -201,10 +199,9 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.cohortAf : undefined), {
           id: "cohortAf",
           header: () => (
-            <>
-              Cohort AF{" "}
-              <InfoTooltip text="Allele frequency among phenotype-matched participants." />
-            </>
+            <InfoLabel tooltip="Allele frequency among phenotype-matched participants.">
+              Cohort AF
+            </InfoLabel>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAf.toFixed(4) : <NotAvailable />),
           sortUndefined: "last",
@@ -224,10 +221,9 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.clinvarPlpInTrans : undefined), {
           id: "clinvarPlpInTrans",
           header: () => (
-            <>
-              ClinVar P/LP in trans{" "}
-              <InfoTooltip text="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans with this variant." />
-            </>
+            <InfoLabel tooltip="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans with this variant.">
+              ClinVar P/LP in trans
+            </InfoLabel>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.clinvarPlpInTrans : <NotAvailable />),
           sortUndefined: "last",
@@ -235,10 +231,9 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.afRatio : undefined), {
           id: "afRatio",
           header: () => (
-            <>
-              AF Ratio{" "}
-              <InfoTooltip text="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF." />
-            </>
+            <InfoLabel tooltip="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF.">
+              AF Ratio
+            </InfoLabel>
           ),
           cell: ({ row }) => {
             if (!row.original.hasStats) return <NotAvailable />;
