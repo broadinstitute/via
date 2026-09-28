@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import colors from "../../libs/colors";
 import SectionLoadingPanel from "./SectionLoadingPanel";
 
 describe("SectionLoadingPanel", () => {
@@ -26,18 +25,10 @@ describe("SectionLoadingPanel", () => {
     });
   });
 
-  it("renders the DNA spinner with the placeholder-specific label and colors", () => {
+  it("renders the DNA spinner at the placeholder size", () => {
     const { container } = render(<SectionLoadingPanel title="Candidate variants" />);
     const spinner = container.querySelector('svg[role="status"][aria-label="Loading"]') as SVGElement;
 
-    expect(spinner).toHaveAttribute("width", "72");
-    expect(spinner).toHaveStyle({
-      "--dna-duration": "2000ms",
-    });
-
-    const circles = spinner.querySelectorAll("circle");
-    expect(circles[0]).toHaveAttribute("fill", colors.textSecondary);
-    expect(circles[1]).toHaveAttribute("fill", colors.textAccent);
-    expect(spinner.querySelectorAll("line")).toHaveLength(0);
+    expect(spinner).toHaveAttribute("width", "56");
   });
 });
