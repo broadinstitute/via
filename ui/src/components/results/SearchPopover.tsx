@@ -139,6 +139,7 @@ export default function SearchPopover({
             limit={variantsLimit}
             minHeight={120}
             appearance="plain"
+            onSubmit={canSearch ? onSearch : undefined}
           />
           <PhenotypeStep
             id="editSearchCondition"

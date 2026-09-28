@@ -74,6 +74,17 @@ describe("SearchPopover", () => {
     expect(textarea.style.borderColor).toBe("rgb(199, 198, 192)");
   });
 
+  it("searches with Ctrl/⌘+Enter from the variants field, only when a search is allowed", () => {
+    const { onSearch } = renderPopover({ variantsText: "8-11708582-C-T" });
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Candidate variants" }), { key: "Enter", metaKey: true });
+    expect(onSearch).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    const empty = renderPopover({ variantsText: "" });
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Candidate variants" }), { key: "Enter", ctrlKey: true });
+    expect(empty.onSearch).not.toHaveBeenCalled();
+  });
+
   it("is hidden while closed", () => {
     renderPopover({ open: false });
 

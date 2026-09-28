@@ -1,6 +1,8 @@
 import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { recordRecentSearch } from "../utils/recentSearches";
+import { EXAMPLE_VARIANTS } from "../utils/variants";
 import SearchEntryPage from "./SearchEntryPage";
 
 const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47 };
@@ -47,6 +49,7 @@ function stubApi(candidates: unknown[], term: string) {
 describe("SearchEntryPage", () => {
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
     vi.unstubAllGlobals();
   });
 
@@ -120,6 +123,80 @@ describe("SearchEntryPage", () => {
    * The backend counts exactly the concept that was picked, which is what makes a low- or
    * zero-estimate concept countable. Its name isn't sent: there's no free-text path to use it.
    */
+  it("fills in example variants from 'Try an example', which then steps aside", () => {
+    stubApi([], "");
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Try an example" }));
+
+    expect(screen.getByPlaceholderText(/8-11708582-C-T/)).toHaveValue(EXAMPLE_VARIANTS.join("\n"));
+    expect(screen.getByText(`${EXAMPLE_VARIANTS.length} entered`)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try an example" })).not.toBeInTheDocument();
+  });
+
+  it("says in the footer what's needed to search, and what's ready", () => {
+    stubApi([], "");
+    renderPage();
+    const textarea = screen.getByPlaceholderText(/8-11708582-C-T/);
+
+    expect(screen.getByText("Enter at least one variant to search.")).toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: "8-11708582-C-T" } });
+    expect(screen.getByText("1 variant ready")).toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: "8-11708582-C-T\n8-11708590-G-GAA" } });
+    expect(screen.getByText("2 variants ready")).toBeInTheDocument();
+  });
+
+  it("searches with Ctrl+Enter from the variants field, but plain Enter is a new line", async () => {
+    stubApi([], "");
+    renderPage();
+    const textarea = screen.getByPlaceholderText(/8-11708582-C-T/);
+    fireEvent.change(textarea, { target: { value: "8-11708582-C-T" } });
+
+    fireEvent.keyDown(textarea, { key: "Enter" });
+    expect(screen.queryByTestId("location")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
+    expect(await screen.findByTestId("location")).toHaveTextContent("/results?variants=8-11708582-C-T");
+  });
+
+  it("doesn't search with Ctrl+Enter while there's nothing to search", () => {
+    stubApi([], "");
+    renderPage();
+
+    fireEvent.keyDown(screen.getByPlaceholderText(/8-11708582-C-T/), { key: "Enter", ctrlKey: true });
+
+    expect(screen.queryByTestId("location")).not.toBeInTheDocument();
+  });
+
+  it("hides recent searches until there are some, then re-runs one with a click", async () => {
+    stubApi([], "");
+    renderPage();
+    expect(screen.queryByRole("heading", { name: "Recent searches" })).not.toBeInTheDocument();
+    cleanup();
+
+    recordRecentSearch({ variants: ["1-1-A-G", "2-2-C-T"], condition: { conceptId: 9000010, name: "Tetralogy of Fallot" } });
+    renderPage();
+
+    expect(screen.getByRole("heading", { name: "Recent searches" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Run again: 2 variants, Tetralogy of Fallot/ }));
+    expect(await screen.findByTestId("location")).toHaveTextContent(
+      "/results?variants=1-1-A-G&variants=2-2-C-T&conditionConceptId=9000010",
+    );
+  });
+
+  it("clears recent searches", () => {
+    stubApi([], "");
+    recordRecentSearch({ variants: ["1-1-A-G"], condition: null });
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+
+    expect(screen.queryByRole("heading", { name: "Recent searches" })).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("via.recentSearches.v1")).toBeNull();
+  });
+
   it("carries the picked concept's id into the results URL", async () => {
     stubApi([TETRALOGY], "tetralogy");
     renderPage();

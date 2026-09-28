@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import colors from "../libs/colors";
+import colors, { alpha } from "../libs/colors";
 import { LightbulbIcon } from "./icons";
 
 const styles = {
@@ -8,10 +8,10 @@ const styles = {
     alignItems: "flex-start",
     gap: 8,
     marginTop: 12,
-    padding: "9px 12px",
-    background: colors.bgAccent,
-    border: `1px solid ${colors.borderStrong}`,
-    borderRadius: 6,
+    padding: "10px 12px",
+    // A soft tint rather than a bordered box: a tip beside the field, not a warning.
+    background: alpha(colors.bgAccent, 0.45),
+    borderRadius: 8,
     color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 1.55,

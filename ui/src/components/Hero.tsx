@@ -4,7 +4,8 @@ import colors, { alpha } from "../libs/colors";
 const styles = {
   hero: {
     position: "relative",
-    padding: "48px 20px 90px",
+    // Bottom padding is what the search card overlaps; see SearchEntryPage.
+    padding: "44px 20px 104px",
     overflow: "hidden",
     backgroundImage: `linear-gradient(180deg, ${alpha(colors.heroScrim, 0.45)} 0%, ${alpha(
       colors.heroScrim,

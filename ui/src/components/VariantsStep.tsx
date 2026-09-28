@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
-import { useFocus } from "../libs/hooks";
+import colors from "../libs/colors";
+import { useFocus, useHover } from "../libs/hooks";
 import * as Style from "../libs/style";
 import { variantEntryStatus } from "../utils/variants";
 import FieldHint from "./FieldHint";
@@ -16,6 +17,25 @@ const styles = {
     flexBasis: "auto",
     lineHeight: 1.6,
     resize: "vertical",
+  },
+  hintRow: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  exampleLink: {
+    flexShrink: 0,
+    padding: 0,
+    border: "none",
+    background: "none",
+    color: colors.textAccent,
+    fontSize: 11.5,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  exampleLinkHover: {
+    textDecoration: "underline",
   },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -40,11 +60,24 @@ interface VariantsStepProps {
   minHeight: number;
   /** See StepPanel. */
   appearance?: StepPanelAppearance;
+  /** Ctrl/⌘+Enter in the textarea. Callers only pass it through when a search is allowed. */
+  onSubmit?: () => void;
+  /** Shows a "Try an example" link while the field is empty. */
+  onUseExample?: () => void;
 }
 
 /** Step 1 of a search: the candidate-variants textarea, with its count and limit. */
-export default function VariantsStep({ value, onChange, limit, minHeight, appearance }: VariantsStepProps) {
+export default function VariantsStep({
+  value,
+  onChange,
+  limit,
+  minHeight,
+  appearance,
+  onSubmit,
+  onUseExample,
+}: VariantsStepProps) {
   const { focused, focusProps } = useFocus();
+  const { hovered: exampleHovered, hoverProps: exampleHoverProps } = useHover();
   const { count } = variantEntryStatus(value, limit);
 
   return (
@@ -53,11 +86,31 @@ export default function VariantsStep({ value, onChange, limit, minHeight, appear
         aria-label="Candidate variants"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          // Plain Enter is a new line, since the field takes one variant per line.
+          if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && onSubmit) {
+            event.preventDefault();
+            onSubmit();
+          }
+        }}
         placeholder={"8-11708582-C-T\n8-11708590-G-GAA\n8-11708598-T-C"}
         style={{ ...styles.input, minHeight, ...(focused ? Style.inputs.focused : undefined) }}
         {...focusProps}
       />
-      <FieldHint>One variant per line, entered as chr-pos-ref-alt (e.g. 8-11708582-C-T).</FieldHint>
+      <div style={styles.hintRow}>
+        {/* Short enough to share a line with "Try an example"; the placeholder shows the format. */}
+        <FieldHint>One variant per line, as chr-pos-ref-alt.</FieldHint>
+        {onUseExample && !value.trim() && (
+          <button
+            type="button"
+            style={{ ...styles.exampleLink, ...(exampleHovered ? styles.exampleLinkHover : undefined) }}
+            onClick={onUseExample}
+            {...exampleHoverProps}
+          >
+            Try an example
+          </button>
+        )}
+      </div>
     </StepPanel>
   );
 }

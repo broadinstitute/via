@@ -14,33 +14,75 @@ import VariantsStep from "../components/VariantsStep";
 import { SearchIcon } from "../components/icons";
 import Footer from "../components/results/Footer";
 import TopBar from "../components/results/TopBar";
-import { overLimitMessage, parseVariantsText, VARIANTS_LIMIT, variantEntryStatus } from "../utils/variants";
+import {
+  EXAMPLE_VARIANTS,
+  overLimitMessage,
+  parseVariantsText,
+  resultsPath,
+  VARIANTS_LIMIT,
+  variantEntryStatus,
+} from "../utils/variants";
+
+/** For the keyboard hint: ⌘ on Apple platforms, Ctrl elsewhere. */
+const SUBMIT_SHORTCUT =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ Enter" : "Ctrl Enter";
 
 const styles = {
-  // Pulled up over the hero's bottom padding so the step panels overlap the photo.
+  // Pulled up over the hero's bottom padding so the search card overlaps the photo.
   main: {
     position: "relative",
     zIndex: 3,
     maxWidth: 900,
-    margin: "-54px auto 0",
+    margin: "-72px auto 0",
     padding: "0 20px 48px",
   },
-  error: {
-    marginTop: 12,
-    color: colors.textDanger,
+  // Both steps in one card, so the page reads as a single search form with one action.
+  card: {
+    ...Style.elements.panel,
+    // elements.panel clips with overflow: hidden, which would cut off the condition field's
+    // dropdown at the card's edge. The footer rounds its own bottom corners instead.
+    overflow: "visible",
+    boxShadow: Style.shadows.raised,
+  },
+  cardBody: {
+    padding: "20px 20px 18px",
+  },
+  cardFooter: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 12,
+    padding: "12px 20px",
+    background: colors.surface1,
+    borderTop: `1px solid ${colors.border}`,
+    // Inset by the card's 1px border, like StepPanel's header.
+    borderBottomLeftRadius: Style.panelRadius - 1,
+    borderBottomRightRadius: Style.panelRadius - 1,
+  },
+  status: {
+    color: colors.textSecondary,
     fontSize: 12.5,
+  },
+  statusReady: {
+    color: colors.textPrimary,
     fontWeight: 600,
+  },
+  statusError: {
+    color: colors.textDanger,
+    fontWeight: 600,
+  },
+  shortcut: {
+    marginLeft: 8,
+    color: colors.textMuted,
+    fontSize: 11.5,
   },
   searchButton: {
     ...Style.buttons.primary,
-    // Block-level, unlike the shared inline-flex default: it spans the page on its own line.
-    display: "flex",
-    width: "100%",
-    marginTop: 20,
-    padding: 13,
-    fontSize: 14,
-    fontWeight: 700,
     gap: 8,
+    padding: "9px 22px",
+    fontSize: 13,
+    fontWeight: 700,
   },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -64,17 +106,9 @@ export default function SearchEntryPage() {
   const { count: variantCount, overLimit, canSearch } = variantEntryStatus(variants, VARIANTS_LIMIT);
 
   function handleSearch() {
-    const parsedVariants = parseVariantsText(variants);
-    const params = new URLSearchParams();
-    for (const variant of parsedVariants) {
-      params.append("variants", variant);
-    }
     // Only a picked concept filters: text typed without picking from the list is ignored, the
     // same as leaving the field empty.
-    if (conditionConceptId !== null) {
-      params.set("conditionConceptId", String(conditionConceptId));
-    }
-    navigate(`/results?${params.toString()}`);
+    navigate(resultsPath(parseVariantsText(variants), conditionConceptId));
   }
 
   return (
@@ -85,47 +119,69 @@ export default function SearchEntryPage() {
         subtitle="Rule candidate variants in or out by comparing them against All of Us's full participant cohort — no coding required."
       />
       <main style={styles.main}>
-        <SearchSteps>
-          <VariantsStep value={variants} onChange={setVariants} limit={VARIANTS_LIMIT} minHeight={210} />
-          <PhenotypeStep
-            id="condition"
-            value={condition}
-            // Relies on ConditionSearchField calling onChange before onSelect when a concept
-            // is picked: this clears the id for a plain edit, and the onSelect below puts it
-            // back for a pick. Typed-but-unpicked text therefore carries no id, and so
-            // doesn't filter the search.
-            onChange={(value) => {
-              setCondition(value);
-              setConditionConceptId(null);
-            }}
-            onSelect={(concept) => setConditionConceptId(concept.conceptId)}
-          >
-            <ValueCallout>
-              <b style={{ color: colors.textPrimary }}>
-                Unlock the full power of All of Us by providing a phenotype.
-              </b>{" "}
-              See how often each variant shows up specifically among All of Us participants who share this
-              phenotype.
-            </ValueCallout>
-          </PhenotypeStep>
-        </SearchSteps>
+        <section style={styles.card} aria-label="Search">
+          <div style={styles.cardBody}>
+            <SearchSteps>
+              <VariantsStep
+                value={variants}
+                onChange={setVariants}
+                limit={VARIANTS_LIMIT}
+                minHeight={180}
+                appearance="plain"
+                onSubmit={canSearch ? handleSearch : undefined}
+                onUseExample={() => setVariants(EXAMPLE_VARIANTS.join("\n"))}
+              />
+              <PhenotypeStep
+                id="condition"
+                value={condition}
+                // Relies on ConditionSearchField calling onChange before onSelect when a concept
+                // is picked: this clears the id for a plain edit, and the onSelect below puts it
+                // back for a pick. Typed-but-unpicked text therefore carries no id, and so
+                // doesn't filter the search.
+                onChange={(value) => {
+                  setCondition(value);
+                  setConditionConceptId(null);
+                }}
+                onSelect={(concept) => setConditionConceptId(concept.conceptId)}
+                appearance="plain"
+              >
+                <ValueCallout>
+                  <b style={{ color: colors.textPrimary }}>Adding a phenotype unlocks more.</b> See how often
+                  each variant shows up among All of Us participants who share it.
+                </ValueCallout>
+              </PhenotypeStep>
+            </SearchSteps>
+          </div>
 
-        {overLimit && (
-          <p style={styles.error} aria-live="polite">
-            {overLimitMessage(variantCount, VARIANTS_LIMIT)}
-          </p>
-        )}
-
-        <Clickable
-          style={styles.searchButton}
-          hoverStyle={Style.buttons.primaryHover}
-          disabledStyle={Style.buttons.disabled}
-          disabled={!canSearch}
-          onClick={handleSearch}
-        >
-          <SearchIcon size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
-          Search
-        </Clickable>
+          <div style={styles.cardFooter}>
+            {/* Says why Search is disabled, since the disabled button itself takes no pointer events. */}
+            <p style={styles.status} aria-live="polite">
+              {overLimit ? (
+                <span style={styles.statusError}>{overLimitMessage(variantCount, VARIANTS_LIMIT)}</span>
+              ) : variantCount === 0 ? (
+                "Enter at least one variant to search."
+              ) : (
+                <>
+                  <span style={styles.statusReady}>
+                    {variantCount} variant{variantCount === 1 ? "" : "s"} ready
+                  </span>
+                  {conditionConceptId !== null && ` · filtered by ${condition}`}
+                  <span style={styles.shortcut}>{SUBMIT_SHORTCUT} to search</span>
+                </>
+              )}
+            </p>
+            <Clickable
+              style={styles.searchButton}
+              hoverStyle={Style.buttons.primaryHover}
+              disabledStyle={Style.buttons.disabled}
+              disabled={!canSearch}
+              onClick={handleSearch}
+            >
+              <SearchIcon size={15} aria-hidden="true" style={{ flexShrink: 0 }} />
+              Search
+            </Clickable>
+          </div>
+        </section>
 
         <RecentSearches />
 

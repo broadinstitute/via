@@ -11,6 +11,7 @@ import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
 import SearchPopover from "../components/results/SearchPopover";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
+import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
 
 interface RevealedSections {
@@ -67,6 +68,12 @@ export default function SearchResultsPage() {
       .then((data) => {
         setResults(data);
         resetDrawer(data);
+        // Only searches that actually loaded go into the entry page's history.
+        const concept = data.conditionSearch?.concept;
+        recordRecentSearch({
+          variants: variantsKey ? variantsKey.split("\n") : [],
+          condition: concept ? { conceptId: concept.conceptId, name: concept.name } : null,
+        });
       })
       .catch((err: Error) => setError(err.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
