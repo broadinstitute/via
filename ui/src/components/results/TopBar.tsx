@@ -1,11 +1,11 @@
 import { useId, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import colors from "../../libs/colors";
 import { useHover } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
-import { ArrowLeftIcon, GearIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
+import { GearIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
 import SettingsDialog from "../settings/SettingsDialog";
 
 /** Exported for what has to sit just below the bar, e.g. the edit-search popover's backdrop. */
@@ -32,7 +32,8 @@ const styles = {
     color: colors.textSecondary,
     fontSize: 12,
   },
-  caseInfo: {
+  // The mark and name, then (on the results page) the search box.
+  leading: {
     display: "flex",
     alignItems: "center",
     gap: 16,
@@ -40,15 +41,29 @@ const styles = {
     minWidth: 0,
     marginRight: 20,
   },
-  backButton: {
-    display: "flex",
+  // Links home on every page. On the results page it's the way to a new search, in place of the
+  // back arrow it replaced: the same destination, read as "home" rather than "previous page".
+  brand: {
+    display: "inline-flex",
     alignItems: "center",
-    padding: "0 16px 0 0",
-    border: "none",
+    flexShrink: 0,
+    gap: 7,
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: 800,
+    letterSpacing: 0.3,
+    textDecoration: "none",
+  },
+  brandHover: {
+    color: colors.textAccent,
+  },
+  /** On the results page, the rule between the brand and the search box. */
+  brandDivider: {
+    paddingRight: 16,
     borderRight: `1px solid ${colors.border}`,
-    background: "none",
-    color: colors.textSecondary,
-    cursor: "pointer",
+  },
+  brandMark: {
+    display: "block",
   },
   // Styled as a search field holding the current terms; clicking anywhere in it opens the drawer.
   // Positioning context for the edit-search popover, which hangs from the search box.
@@ -182,24 +197,28 @@ export default function TopBar({
   modifyOpen = false,
   editSearchPanel,
 }: TopBarProps) {
-  const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { hovered: brandHovered, hoverProps: brandHoverProps } = useHover();
   const { hovered: searchHovered, hoverProps: searchHoverProps } = useHover();
   const termsId = useId();
 
   return (
     <div style={styles.topbar}>
-      {onModifySearch && (
-        <div style={styles.caseInfo}>
-          <Clickable
-            style={styles.backButton}
-            hoverStyle={{ color: colors.textAccent }}
-            onClick={() => navigate("/")}
-            aria-label="Back to search"
-            title="Back to search"
-          >
-            <ArrowLeftIcon size={14} strokeWidth={2.5} />
-          </Clickable>
+      <div style={styles.leading}>
+        <Link
+          to="/"
+          style={{
+            ...styles.brand,
+            ...(onModifySearch ? styles.brandDivider : undefined),
+            ...(brandHovered ? styles.brandHover : undefined),
+          }}
+          aria-label="VIA home, new search"
+          {...brandHoverProps}
+        >
+          <img src="/favicon.svg" alt="" width={22} height={22} style={styles.brandMark} />
+          VIA
+        </Link>
+        {onModifySearch && (
           <div style={styles.searchAnchor}>
             <Clickable
               style={{
@@ -249,8 +268,8 @@ export default function TopBar({
             </Clickable>
             {editSearchPanel}
           </div>
-        </div>
-      )}
+        )}
+      </div>
       <div style={styles.user}>
         <UserIcon size={16} style={styles.userIcon} />
         {userEmail}

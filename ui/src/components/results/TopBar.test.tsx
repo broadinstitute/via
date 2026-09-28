@@ -1,17 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import TopBar from "./TopBar";
-
-const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
-
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
 
 function renderTopBar(props: Parameters<typeof TopBar>[0]) {
   return render(
@@ -22,10 +12,6 @@ function renderTopBar(props: Parameters<typeof TopBar>[0]) {
 }
 
 describe("TopBar", () => {
-  beforeEach(() => {
-    mockNavigate.mockReset();
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -34,7 +20,7 @@ describe("TopBar", () => {
     renderTopBar({ userEmail: "user@example.org" });
 
     expect(screen.getByText("user@example.org")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Back to search" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "VIA home, new search" })).toHaveAttribute("href", "/");
     expect(screen.queryByRole("button", { name: "Edit search" })).not.toBeInTheDocument();
   });
 
@@ -46,7 +32,7 @@ describe("TopBar", () => {
       onModifySearch: vi.fn(),
     });
 
-    expect(screen.getByRole("button", { name: "Back to search" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "VIA home, new search" })).toBeInTheDocument();
     expect(screen.getByText("17 entered")).toBeInTheDocument();
     expect(screen.getByText("Seizure")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit search" })).toBeEnabled();
@@ -141,7 +127,7 @@ describe("TopBar", () => {
     expect(screen.getByRole("button", { name: "Edit search" })).toBeDisabled();
   });
 
-  it("navigates back to the search page from the back button", () => {
+  it("links home from the VIA mark, in place of the old back arrow", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 9,
@@ -149,9 +135,10 @@ describe("TopBar", () => {
       onModifySearch: vi.fn(),
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to search" }));
-
-    expect(mockNavigate).toHaveBeenCalledWith("/");
+    const brand = screen.getByRole("link", { name: "VIA home, new search" });
+    expect(brand).toHaveAttribute("href", "/");
+    expect(brand).toHaveTextContent("VIA");
+    expect(screen.queryByRole("button", { name: "Back to search" })).not.toBeInTheDocument();
   });
 
   it("calls onModifySearch when the search box is pressed", () => {
