@@ -18,7 +18,10 @@ import { useMediaQuery } from '../../libs/hooks';
  * whole helix is tilted to lean right.
  *
  * Frames are written straight to the SVG through refs, so spinning never
- * re-renders React.
+ * re-renders React. A turn is FRAMES_PER_TURN fixed poses, each computed the
+ * first time it's shown and then reused, and every mounted spinner runs off
+ * one shared animation-frame clock -- the results page shows three at once, and
+ * they'd otherwise each recompute the same geometry every frame.
  *
  * Usage:
  *   <DnaSpinner />
@@ -129,7 +132,39 @@ function drawFrame(phase: number): Frame {
   };
 }
 
-const REST_FRAME = drawFrame(0);
+/** One per display frame at 60fps and the default 2s turn; finer steps wouldn't show. */
+const FRAMES_PER_TURN = 120;
+const frameCache: Frame[] = [];
+const frameAt = (index: number) =>
+  (frameCache[index] ??= drawFrame((index / FRAMES_PER_TURN) * 2 * Math.PI));
+
+const REST_FRAME = frameAt(0);
+
+// The shared clock: one requestAnimationFrame loop, running only while a spinner is subscribed.
+// Time is measured from when the loop started, so spinners mounted together turn in step.
+type ClockSubscriber = (elapsed: number) => void;
+const clockSubscribers = new Set<ClockSubscriber>();
+let clockStart = 0;
+let clockFrameId = 0;
+
+function clockTick(now: number) {
+  const elapsed = Math.max(0, now - clockStart);
+  clockSubscribers.forEach((subscriber) => subscriber(elapsed));
+  // A subscriber may have unsubscribed the last one during this tick.
+  if (clockSubscribers.size > 0) clockFrameId = requestAnimationFrame(clockTick);
+}
+
+function subscribeToClock(subscriber: ClockSubscriber) {
+  if (clockSubscribers.size === 0) {
+    clockStart = performance.now();
+    clockFrameId = requestAnimationFrame(clockTick);
+  }
+  clockSubscribers.add(subscriber);
+  return () => {
+    clockSubscribers.delete(subscriber);
+    if (clockSubscribers.size === 0) cancelAnimationFrame(clockFrameId);
+  };
+}
 
 export const DnaSpinner = React.forwardRef<SVGSVGElement, DnaSpinnerProps>(
   function DnaSpinner({ size = 48, duration = 2000, label = 'Loading', ...rest }, ref) {
@@ -157,15 +192,16 @@ export const DnaSpinner = React.forwardRef<SVGSVGElement, DnaSpinnerProps>(
         });
       };
 
-      let frameId = 0;
-      const start = performance.now();
-      const tick = (now: number) => {
-        apply(drawFrame((((now - start) / duration) % 1) * 2 * Math.PI));
-        frameId = requestAnimationFrame(tick);
-      };
-      frameId = requestAnimationFrame(tick);
+      // Skips the DOM writes on a tick that lands on the pose already shown, e.g. on a 120Hz display.
+      let shown = 0;
+      const unsubscribe = subscribeToClock((elapsed) => {
+        const index = Math.floor(((elapsed / duration) % 1) * FRAMES_PER_TURN);
+        if (index === shown) return;
+        shown = index;
+        apply(frameAt(index));
+      });
       return () => {
-        cancelAnimationFrame(frameId);
+        unsubscribe();
         // Settle back to the favicon pose rather than freezing mid-turn.
         apply(REST_FRAME);
       };
