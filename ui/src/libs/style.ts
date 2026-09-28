@@ -225,7 +225,7 @@ export const inputs = {
     padding: "8px 10px",
     ...stateBorder(colors.borderStrong),
     borderRadius: radius,
-    background: colors.surface2,
+    background: colors.surface1,
     color: colors.textBody,
     fontFamily: "inherit",
     fontSize: 12,
