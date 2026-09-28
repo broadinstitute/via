@@ -13,6 +13,7 @@ import * as Style from "../../libs/style";
 import type { FilteredVariantRow } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
+import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
 import { UserIcon } from "../icons";
 import CopyButton from "./CopyButton";
@@ -27,7 +28,34 @@ import ResultsPanel, { ScopeChip } from "./ResultsPanel";
  */
 export const MATCHED_TABLE_HEIGHT = 413;
 
+// The columns a variant with no All of Us stats has nothing for, in table order. They merge into
+// one "not observed" cell, which also takes in Gene and Consequence (in that order, working left)
+// when those are empty too -- they can be known without the stats.
+const STAT_COLUMN_IDS = [
+  "cohortAc",
+  "cohortAn",
+  "cohortAf",
+  "homozygotes",
+  "heterozygotes",
+  "clinvarPlpInTrans",
+  "afRatio",
+];
+
+function notObservedColumnIds(row: FilteredVariantRow): Set<string> {
+  const ids = [...STAT_COLUMN_IDS];
+  if (row.consequence === null) {
+    ids.unshift("consequence");
+    if (row.gene === null) ids.unshift("gene");
+  }
+  return new Set(ids);
+}
+
 const styles = {
+  notObserved: {
+    color: colors.textMuted,
+    fontStyle: "italic",
+    textAlign: "center",
+  },
   actions: {
     display: "flex",
     alignItems: "center",
@@ -235,7 +263,13 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.afRatio : undefined), {
           id: "afRatio",
           header: () => (
-            <InfoLabel tooltip="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF.">
+            <InfoLabel
+              tooltip={
+                <>
+                  Ratio of the phenotype-matched cohort AF to the <AllOfUs /> cohort-wide AF.
+                </>
+              }
+            >
               AF Ratio
             </InfoLabel>
           ),
@@ -368,21 +402,33 @@ export default function ParticipantMatchedVariantsPanel({
               ))}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} data-variant-row {...rowHoverProps(row.id)}>
-                  {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      style={{
-                        ...Style.table.bodyCell,
-                        ...(hoveredRow === row.id ? { background: colors.surface1 } : undefined),
-                      }}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {table.getRowModel().rows.map((row) => {
+                const cellStyle: CSSProperties = {
+                  ...Style.table.bodyCell,
+                  ...(hoveredRow === row.id ? { background: colors.surface1 } : undefined),
+                };
+                const merged = row.original.hasStats ? null : notObservedColumnIds(row.original);
+                const firstMergedId = merged && row.getVisibleCells().find((cell) => merged.has(cell.column.id))?.id;
+                return (
+                  <tr key={row.id} data-variant-row {...rowHoverProps(row.id)}>
+                    {row.getVisibleCells().map((cell) => {
+                      if (merged?.has(cell.column.id)) {
+                        if (cell.id !== firstMergedId) return null;
+                        return (
+                          <td key={cell.id} colSpan={merged.size} style={{ ...cellStyle, ...styles.notObserved }}>
+                            Not observed in <AllOfUs />
+                          </td>
+                        );
+                      }
+                      return (
+                        <td key={cell.id} style={cellStyle}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

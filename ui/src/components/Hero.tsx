@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import colors, { alpha } from "../libs/colors";
 
 const styles = {
@@ -40,7 +40,7 @@ const styles = {
 
 interface HeroProps {
   title: string;
-  subtitle: string;
+  subtitle: ReactNode;
 }
 
 export default function Hero({ title, subtitle }: HeroProps) {

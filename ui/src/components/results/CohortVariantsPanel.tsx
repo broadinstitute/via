@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { flexRender, type SortingState } from "@tanstack/react-table";
 import {
   getCoreRowModel,
@@ -11,11 +11,13 @@ import colors, { sourceTints } from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
+import { clinvarSearchUrl, gnomadVariantUrl } from "../../utils/externalLinks";
 import { formatAcAn, formatAf } from "../../utils/format";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
+import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
-import { ChevronRightIcon } from "../icons";
+import { ChevronRightIcon, EyeOffIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import MoreBelowCue from "./MoreBelowCue";
@@ -165,11 +167,48 @@ const styles = {
   detailPopulations: {
     overflowX: "auto",
   },
-  detailPlaceholder: {
-    padding: "12px 14px",
+  // The expanded view of a variant that isn't in All of Us: what's missing, and why.
+  detailEmpty: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 12,
+    padding: "14px 16px",
+  },
+  detailEmptyIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    background: colors.surface0,
+    border: `1px solid ${colors.border}`,
     color: colors.textMuted,
+  },
+  detailEmptyTitle: {
+    margin: "0 0 3px",
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: 600,
+  },
+  detailEmptyText: {
+    maxWidth: 560,
+    margin: 0,
+    color: colors.textSecondary,
     fontSize: 12,
-    fontStyle: "italic",
+    lineHeight: 1.5,
+  },
+  detailEmptyLinks: {
+    display: "flex",
+    gap: 14,
+    marginTop: 8,
+  },
+  detailEmptyLink: {
+    color: colors.textAccent,
+    fontSize: 12,
+    fontWeight: 600,
+    textDecoration: "none",
   },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -190,16 +229,53 @@ function sourceOf(columnId: string): Source | null {
   return null;
 }
 
-const AOU_MISSING_GROUP = {
+interface MissingGroup {
+  columnIds: Set<string>;
+  mergedIntoColumnId: string;
+  message: ReactNode;
+  /** Tooltip on the merged cell. */
+  title?: string;
+}
+
+const AOU_MISSING_GROUP: MissingGroup = {
   columnIds: SOURCE_COLUMN_IDS.aou,
   mergedIntoColumnId: "aouSubpop",
-  message: "Not observed in All of Us",
+  message: (
+    <>
+      Not observed in <AllOfUs />
+    </>
+  ),
 };
 
-const GNOMAD_MISSING_GROUP = {
+const GNOMAD_MISSING_GROUP: MissingGroup = {
   columnIds: SOURCE_COLUMN_IDS.gnomad,
   mergedIntoColumnId: "gnomadSubpop",
   message: "Not observed in gnomAD",
+};
+
+// Everything after the Variant column. A variant that isn't in All of Us has no VAT row, so it has
+// no annotations and no gnomAD data either -- not because gnomAD lacks it, but because the VAT
+// only covers variants All of Us has seen. One message across the row says so, rather than a
+// "not observed in gnomAD" that may not be true.
+const UNANNOTATED_GROUP: MissingGroup = {
+  columnIds: new Set([
+    "gene",
+    "consequence",
+    "proteinChange",
+    ...SOURCE_COLUMN_IDS.aou,
+    ...SOURCE_COLUMN_IDS.gnomad,
+    "clinvar",
+    "spliceAi",
+    "plof",
+  ]),
+  mergedIntoColumnId: "gene",
+  message: (
+    <>
+      Not observed in <AllOfUs />
+    </>
+  ),
+  title:
+    "Annotations and gnomAD frequencies come from the All of Us variant annotation table, which only includes variants observed in All of Us.",
 };
 
 /** No value for this cell — the variant isn't present in the source behind it. */
@@ -207,14 +283,13 @@ function NotAvailable() {
   return <span style={Style.elements.notAvailable}>—</span>;
 }
 
-// A variant missing from every source (annotated === false) is missing from each
-// individual source too, so both cases get the same "not observed" callout.
+// For a variant in the VAT (annotated), whether each source has data for it.
 function isMissingFromAou(row: CohortVariantRow): boolean {
-  return !row.annotated || row.aouSubpopulation === null;
+  return row.annotated && row.aouSubpopulation === null;
 }
 
 function isMissingFromGnomad(row: CohortVariantRow): boolean {
-  return !row.annotated || row.gnomadSubpopulation === null;
+  return row.annotated && row.gnomadSubpopulation === null;
 }
 
 interface CohortVariantsPanelProps {
@@ -313,11 +388,14 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         header: () => (
           <InfoLabel
             tooltip={
-              `Values below reflect the All of Us subpopulation (${AOU_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire All of Us cohort.\n\n` +
-              "To see the allele frequency for the entire cohort, expand the row."
+              <>
+                Values below reflect the <AllOfUs /> subpopulation ({AOU_SUBPOP_CODES.join(", ")}) with the
+                highest allele frequency for this variant, not the entire <AllOfUs /> cohort.
+                {"\n\n"}To see the allele frequency for the entire cohort, expand the row.
+              </>
             }
           >
-            All of Us <span style={styles.groupQualifier}>— max subpopulation</span>
+            <AllOfUs /> <span style={styles.groupQualifier}>— max subpopulation</span>
           </InfoLabel>
         ),
         enableSorting: false,
@@ -532,10 +610,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               {table.getRowModel().rows.map((row) => {
                 // A source with no data for this variant collapses its whole column
                 // group into one "not observed" cell, rather than a row of bare n/a's.
-                const missingGroups = [
-                  isMissingFromAou(row.original) ? AOU_MISSING_GROUP : null,
-                  isMissingFromGnomad(row.original) ? GNOMAD_MISSING_GROUP : null,
-                ].filter((group) => group !== null);
+                const missingGroups: MissingGroup[] = !row.original.annotated
+                  ? [UNANNOTATED_GROUP]
+                  : [
+                      isMissingFromAou(row.original) ? AOU_MISSING_GROUP : null,
+                      isMissingFromGnomad(row.original) ? GNOMAD_MISSING_GROUP : null,
+                    ].filter((group) => group !== null);
                 const hovered = hoveredRow === row.id;
                 const expanded = expandedVariants.has(row.original.variant);
                 return (
@@ -560,7 +640,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                         if (group) {
                           if (cell.column.id !== group.mergedIntoColumnId) return null;
                           return (
-                            <td key={cell.id} colSpan={group.columnIds.size} style={{ ...cellStyle, ...styles.sourceMissing }}>
+                            <td
+                              key={cell.id}
+                              colSpan={group.columnIds.size}
+                              style={{ ...cellStyle, ...styles.sourceMissing }}
+                              title={group.title}
+                            >
                               <span style={styles.cellNa}>{group.message}</span>
                             </td>
                           );
@@ -589,7 +674,40 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                             </div>
                           ) : (
                             <div style={{ ...styles.detailPanel, gridTemplateColumns: "1fr" }}>
-                              <div style={styles.detailPlaceholder}>No data available for this variant.</div>
+                              <div style={styles.detailEmpty}>
+                                <span style={styles.detailEmptyIcon} aria-hidden="true">
+                                  <EyeOffIcon size={16} />
+                                </span>
+                                <div>
+                                  <p style={styles.detailEmptyTitle}>
+                                    Not observed in <AllOfUs />
+                                  </p>
+                                  {/* Careful to say VIA doesn't show these, not that they don't exist: the
+                                      variant can be in gnomAD or ClinVar, just not brought in when All of Us
+                                      doesn't have it. */}
+                                  <p style={styles.detailEmptyText}>
+                                    VIA only shows annotations and frequencies for variants found in <AllOfUs />,
+                                    so there's nothing to show here. This variant may still be in gnomAD or ClinVar.
+                                  </p>
+                                  <div style={styles.detailEmptyLinks}>
+                                    {[
+                                      { label: "Look up in gnomAD ↗", href: gnomadVariantUrl(row.original.variant) },
+                                      { label: "Look up in ClinVar ↗", href: clinvarSearchUrl(row.original.variant) },
+                                    ].map(({ label, href }) => (
+                                      <a
+                                        key={href}
+                                        style={styles.detailEmptyLink}
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(event) => event.stopPropagation()}
+                                      >
+                                        {label}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           )}
                         </td>

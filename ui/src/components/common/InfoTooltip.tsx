@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
@@ -79,7 +79,7 @@ interface InfoTooltipProps {
    * breaks are kept, so "\n\n" separates paragraphs -- pass it as a JS string (text={"..."}),
    * since a plain JSX attribute string doesn't turn \n into a newline.
    */
-  text: string;
+  text: ReactNode;
   /** Merged over the icon button's own style, e.g. InfoLabel's alignment margins. */
   style?: CSSProperties;
 }

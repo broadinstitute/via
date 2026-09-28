@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ConditionConcept } from "../api/conditions";
+import AllOfUs from "./common/AllOfUs";
 import ConditionSearchField from "./ConditionSearchField";
 import FieldHint from "./FieldHint";
 import StepPanel, { type StepPanelAppearance } from "./StepPanel";
@@ -39,8 +40,8 @@ export default function PhenotypeStep({
         placeholder="e.g. tetralogy of fallot"
       />
       <FieldHint>
-        Start typing a condition and pick one from the list. Matched against All of Us's condition
-        vocabulary.
+        Start typing a condition and pick one from the list. Matched against{" "}
+        <AllOfUs />'s condition vocabulary.
       </FieldHint>
       {children}
     </StepPanel>

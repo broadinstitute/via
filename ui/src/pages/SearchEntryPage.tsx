@@ -5,6 +5,7 @@ import { fetchProfile } from "../api/profile";
 import colors from "../libs/colors";
 import * as Style from "../libs/style";
 import Clickable from "../components/common/Clickable";
+import AllOfUs from "../components/common/AllOfUs";
 import Hero from "../components/Hero";
 import PhenotypeStep from "../components/PhenotypeStep";
 import RecentSearches from "../components/RecentSearches";
@@ -113,7 +114,12 @@ export default function SearchEntryPage() {
       <TopBar userEmail={userEmail} />
       <Hero
         title="Variant Interpretation"
-        subtitle="Rule candidate variants in or out by comparing them against All of Us's full participant cohort — no coding required."
+        subtitle={
+          <>
+            Rule candidate variants in or out by comparing them against <AllOfUs />'s full participant
+            cohort — no coding required.
+          </>
+        }
       />
       <main style={styles.main}>
         <section
@@ -151,7 +157,7 @@ export default function SearchEntryPage() {
               >
                 <ValueCallout>
                   <b style={{ color: colors.textPrimary }}>Adding a phenotype unlocks more.</b> See how often
-                  each variant shows up among All of Us participants who share it.
+                  each variant shows up among <AllOfUs /> participants who share it.
                 </ValueCallout>
               </PhenotypeStep>
             </SearchSteps>
