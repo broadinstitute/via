@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { AnnotatedCohortVariant, CohortVariantRow } from "../../types/results";
 import CohortVariantsPanel from "./CohortVariantsPanel";
 
+/** A cell by its full text, which can span elements (the italic program name). */
+const cellWithText = (text: string) => (_: string, element: Element | null) =>
+  element?.tagName === "TD" && element.textContent === text;
+
 // In All of Us, but not in gnomAD.
 const IN_AOU_ONLY: AnnotatedCohortVariant = {
   annotated: true,
@@ -46,7 +50,7 @@ describe("CohortVariantsPanel", () => {
   it("spans a variant that isn't in All of Us with one message, not a claim about gnomAD", () => {
     render(<CohortVariantsPanel rows={[NOT_IN_AOU]} />);
 
-    const message = screen.getByText("Not observed in All of Us").closest("td")!;
+    const message = screen.getByText(cellWithText("Not observed in All of Us"));
     // Gene through pLOF: three annotation, six source and three more annotation columns.
     expect(message).toHaveAttribute("colspan", "12");
     expect(message.getAttribute("title")).toMatch(/only includes variants observed in All of Us/);
@@ -57,7 +61,7 @@ describe("CohortVariantsPanel", () => {
     render(<CohortVariantsPanel rows={[IN_AOU_ONLY]} />);
 
     expect(screen.getByText("Not observed in gnomAD")).toBeInTheDocument();
-    expect(screen.queryByText("Not observed in All of Us")).not.toBeInTheDocument();
+    expect(screen.queryByText(cellWithText("Not observed in All of Us"))).not.toBeInTheDocument();
     expect(screen.getByText("BRCA1")).toBeInTheDocument();
   });
 

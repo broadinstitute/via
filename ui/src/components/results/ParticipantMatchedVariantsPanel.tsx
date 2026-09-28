@@ -13,6 +13,7 @@ import * as Style from "../../libs/style";
 import type { FilteredVariantRow } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
+import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
 import { UserIcon } from "../icons";
 import CopyButton from "./CopyButton";
@@ -262,7 +263,13 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.afRatio : undefined), {
           id: "afRatio",
           header: () => (
-            <InfoLabel tooltip="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF.">
+            <InfoLabel
+              tooltip={
+                <>
+                  Ratio of the phenotype-matched cohort AF to the <AllOfUs /> cohort-wide AF.
+                </>
+              }
+            >
               AF Ratio
             </InfoLabel>
           ),
@@ -409,7 +416,7 @@ export default function ParticipantMatchedVariantsPanel({
                         if (cell.id !== firstMergedId) return null;
                         return (
                           <td key={cell.id} colSpan={merged.size} style={{ ...cellStyle, ...styles.notObserved }}>
-                            Not observed in All of Us
+                            Not observed in <AllOfUs />
                           </td>
                         );
                       }

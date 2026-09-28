@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { flexRender, type SortingState } from "@tanstack/react-table";
 import {
   getCoreRowModel,
@@ -15,8 +15,9 @@ import { clinvarSearchUrl, gnomadVariantUrl } from "../../utils/externalLinks";
 import { formatAcAn, formatAf } from "../../utils/format";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
+import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
-import { ChevronRightIcon, SearchOffIcon } from "../icons";
+import { ChevronRightIcon, EyeOffIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import MoreBelowCue from "./MoreBelowCue";
@@ -231,7 +232,7 @@ function sourceOf(columnId: string): Source | null {
 interface MissingGroup {
   columnIds: Set<string>;
   mergedIntoColumnId: string;
-  message: string;
+  message: ReactNode;
   /** Tooltip on the merged cell. */
   title?: string;
 }
@@ -239,7 +240,11 @@ interface MissingGroup {
 const AOU_MISSING_GROUP: MissingGroup = {
   columnIds: SOURCE_COLUMN_IDS.aou,
   mergedIntoColumnId: "aouSubpop",
-  message: "Not observed in All of Us",
+  message: (
+    <>
+      Not observed in <AllOfUs />
+    </>
+  ),
 };
 
 const GNOMAD_MISSING_GROUP: MissingGroup = {
@@ -264,7 +269,11 @@ const UNANNOTATED_GROUP: MissingGroup = {
     "plof",
   ]),
   mergedIntoColumnId: "gene",
-  message: "Not observed in All of Us",
+  message: (
+    <>
+      Not observed in <AllOfUs />
+    </>
+  ),
   title:
     "Annotations and gnomAD frequencies come from the All of Us variant annotation table, which only includes variants observed in All of Us.",
 };
@@ -379,11 +388,14 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         header: () => (
           <InfoLabel
             tooltip={
-              `Values below reflect the All of Us subpopulation (${AOU_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire All of Us cohort.\n\n` +
-              "To see the allele frequency for the entire cohort, expand the row."
+              <>
+                Values below reflect the <AllOfUs /> subpopulation ({AOU_SUBPOP_CODES.join(", ")}) with the
+                highest allele frequency for this variant, not the entire <AllOfUs /> cohort.
+                {"\n\n"}To see the allele frequency for the entire cohort, expand the row.
+              </>
             }
           >
-            All of Us <span style={styles.groupQualifier}>— max subpopulation</span>
+            <AllOfUs /> <span style={styles.groupQualifier}>— max subpopulation</span>
           </InfoLabel>
         ),
         enableSorting: false,
@@ -664,16 +676,18 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                             <div style={{ ...styles.detailPanel, gridTemplateColumns: "1fr" }}>
                               <div style={styles.detailEmpty}>
                                 <span style={styles.detailEmptyIcon} aria-hidden="true">
-                                  <SearchOffIcon size={16} />
+                                  <EyeOffIcon size={16} />
                                 </span>
                                 <div>
-                                  <p style={styles.detailEmptyTitle}>Not observed in All of Us</p>
+                                  <p style={styles.detailEmptyTitle}>
+                                    Not observed in <AllOfUs />
+                                  </p>
                                   {/* Careful to say VIA doesn't show these, not that they don't exist: the
                                       variant can be in gnomAD or ClinVar, just not brought in when All of Us
                                       doesn't have it. */}
                                   <p style={styles.detailEmptyText}>
-                                    VIA only shows annotations and frequencies for variants found in All of Us, so
-                                    there's nothing to show here. This variant may still be in gnomAD or ClinVar.
+                                    VIA only shows annotations and frequencies for variants found in <AllOfUs />,
+                                    so there's nothing to show here. This variant may still be in gnomAD or ClinVar.
                                   </p>
                                   <div style={styles.detailEmptyLinks}>
                                     {[

@@ -24,7 +24,7 @@ const styles = {
 interface InfoLabelProps {
   children: ReactNode;
   /** See InfoTooltip. */
-  tooltip: string;
+  tooltip: ReactNode;
 }
 
 /** A label with an InfoTooltip beside it, the icon centered on the label's text. */

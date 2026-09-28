@@ -5,6 +5,7 @@ import * as Style from "../../libs/style";
 import type { AnnotatedCohortVariant, GnomadSubpopCode, PopulationFrequency, SubpopCode } from "../../types/results";
 import { formatAcAn, formatAf } from "../../utils/format";
 import { SUBPOP_COLOR, SUBPOP_LABEL } from "../../utils/subpopulations";
+import AllOfUs from "../common/AllOfUs";
 
 // The union of both sources' subpopulation vocabularies, alphabetical by code -- a stable order
 // so rows line up across variants. AoU has EUR/MID with no gnomAD equivalent; gnomAD has
@@ -241,7 +242,7 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
     if (!firstRow) return null;
     return (
       <td colSpan={2} rowSpan={bodyRowCount} style={{ ...sourceCellStyle(source, false), ...styles.notObserved }}>
-        Not observed in {SOURCE_NAME[source]}
+        Not observed in {source === "aou" ? <AllOfUs /> : SOURCE_NAME[source]}
       </td>
     );
   }
@@ -266,7 +267,7 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
             Population
           </th>
           <th colSpan={2} style={groupHeaderStyle("aou")}>
-            All of Us
+            <AllOfUs />
           </th>
           <th colSpan={2} style={groupHeaderStyle("gnomad")}>
             gnomAD{" "}
