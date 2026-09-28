@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import colors, { POPMAX_BACKGROUND, sourceTints } from "../../libs/colors";
+import colors, { alpha, POPMAX_BACKGROUND, sourceTints } from "../../libs/colors";
 import { useHover, useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { AnnotatedCohortVariant, GnomadSubpopCode, PopulationFrequency, SubpopCode } from "../../types/results";
@@ -58,6 +58,25 @@ const styles = {
   allPopulationsLabel: {
     color: colors.textMuted,
   },
+  // Three kinds of "no number", kept apart: a population the source doesn't report at all (not
+  // covered), a variant the source has no record of (not observed), and a covered population
+  // where the variant simply has no carriers (a real 0, in muted ink).
+  notCovered: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontStyle: "italic",
+    textAlign: "center",
+    cursor: "help",
+  },
+  notObserved: {
+    color: colors.textMuted,
+    fontStyle: "italic",
+    textAlign: "center",
+    verticalAlign: "middle",
+  },
+  zeroCarriers: {
+    color: colors.textMuted,
+  },
   bottomSpacer: {
     height: 12,
     padding: 0,
@@ -99,6 +118,17 @@ function sourceCellStyle(source: Source, hovered: boolean): CSSProperties {
   };
 }
 
+const SOURCE_NAME: Record<Source, string> = {
+  aou: "All of Us",
+  gnomad: "gnomAD",
+};
+
+/** Faint diagonal hatching over a cell's fill, for a population the source doesn't cover. */
+function hatched(fill: string): string {
+  const line = alpha(colors.textMuted, 0.14);
+  return `repeating-linear-gradient(135deg, transparent 0 4px, ${line} 4px 5px), ${fill}`;
+}
+
 function byPopulation(frequencies: PopulationFrequency[]): Map<string, PopulationFrequency> {
   return new Map(frequencies.map((frequency) => [frequency.population, frequency]));
 }
@@ -107,28 +137,53 @@ interface FrequencyCellsProps {
   af: number | null | undefined;
   ac: number | null | undefined;
   an: number | null | undefined;
-  inVocabulary: boolean;
+  /** Whether the source reports this population at all. */
+  covered: boolean;
+  /** Names the population in the not-covered tooltip. */
+  populationLabel: string;
   isMax: boolean;
   source: Source;
   hovered: boolean;
 }
 
-function FrequencyCells({ af, ac, an, inVocabulary, isMax, source, hovered }: FrequencyCellsProps) {
+function FrequencyCells({ af, ac, an, covered, populationLabel, isMax, source, hovered }: FrequencyCellsProps) {
   const cellStyle = sourceCellStyle(source, hovered);
+
+  if (!covered) {
+    return (
+      <td
+        colSpan={2}
+        style={{ ...cellStyle, ...styles.notCovered, background: hatched(String(cellStyle.background)) }}
+        title={`${SOURCE_NAME[source]} doesn't report a ${populationLabel} population.`}
+      >
+        Not covered
+      </td>
+    );
+  }
 
   if (af == null || ac == null || an == null) {
     return (
       <>
         <td style={cellStyle}>
-          <span
-            style={Style.elements.notAvailable}
-            title={inVocabulary ? undefined : "Not part of this source's population scheme"}
-          >
-            —
-          </span>
+          <span style={Style.elements.notAvailable}>—</span>
         </td>
         <td style={cellStyle}>
           <span style={Style.elements.notAvailable}>—</span>
+        </td>
+      </>
+    );
+  }
+
+  if (ac === 0) {
+    const zeroStyle = { ...cellStyle, ...styles.zeroCarriers };
+    const title = `No carriers among ${an.toLocaleString()} alleles sampled in ${SOURCE_NAME[source]}.`;
+    return (
+      <>
+        <td style={zeroStyle} title={title}>
+          {formatAf(af)}
+        </td>
+        <td style={zeroStyle} title={title}>
+          {formatAcAn(ac, an)}
         </td>
       </>
     );
@@ -172,8 +227,24 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
 
   const aouByPopulation = byPopulation(variant.aouPopulations);
   const gnomadByPopulation = byPopulation(variant.gnomadPopulations);
-  const aouVocabulary = new Set(variant.aouPopulations.map((p) => p.population));
-  const gnomadVocabulary = new Set(variant.gnomadPopulations.map((p) => p.population));
+  // A source lists every population it covers, with nulls throughout when it has no record of
+  // this variant -- in which case its columns become one "not observed" block, as in the cohort
+  // table, rather than a column of dashes that reads the same as "not covered".
+  const notObserved: Record<Source, boolean> = {
+    aou: variant.aouAllAc == null && variant.aouPopulations.every((p) => p.ac == null),
+    gnomad: variant.gnomadAllAc == null && variant.gnomadPopulations.every((p) => p.ac == null),
+  };
+  // Every population row plus "All populations".
+  const bodyRowCount = ALL_POPULATION_CODES.length + 1;
+
+  function notObservedBlock(source: Source, firstRow: boolean) {
+    if (!firstRow) return null;
+    return (
+      <td colSpan={2} rowSpan={bodyRowCount} style={{ ...sourceCellStyle(source, false), ...styles.notObserved }}>
+        Not observed in {SOURCE_NAME[source]}
+      </td>
+    );
+  }
 
   function headerStyle(source: Source): CSSProperties {
     return { ...sourceCellStyle(source, false), fontWeight: 600 };
@@ -223,7 +294,7 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
         </tr>
       </thead>
       <tbody>
-        {ALL_POPULATION_CODES.map((population) => {
+        {ALL_POPULATION_CODES.map((population, rowIndex) => {
           const hovered = hoveredRow === population;
           return (
             <tr key={population} {...rowHoverProps(population)}>
@@ -233,24 +304,34 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
                   {SUBPOP_LABEL[population]}
                 </span>
               </td>
-              <FrequencyCells
-                af={aouByPopulation.get(population)?.af}
-                ac={aouByPopulation.get(population)?.ac}
-                an={aouByPopulation.get(population)?.an}
-                inVocabulary={aouVocabulary.has(population)}
-                isMax={variant.aouSubpopulation === population}
-                source="aou"
-                hovered={hovered}
-              />
-              <FrequencyCells
-                af={gnomadByPopulation.get(population)?.af}
-                ac={gnomadByPopulation.get(population)?.ac}
-                an={gnomadByPopulation.get(population)?.an}
-                inVocabulary={gnomadVocabulary.has(population)}
-                isMax={variant.gnomadSubpopulation === population}
-                source="gnomad"
-                hovered={hovered}
-              />
+              {notObserved.aou ? (
+                notObservedBlock("aou", rowIndex === 0)
+              ) : (
+                <FrequencyCells
+                  af={aouByPopulation.get(population)?.af}
+                  ac={aouByPopulation.get(population)?.ac}
+                  an={aouByPopulation.get(population)?.an}
+                  covered={aouByPopulation.has(population)}
+                  populationLabel={SUBPOP_LABEL[population]}
+                  isMax={variant.aouSubpopulation === population}
+                  source="aou"
+                  hovered={hovered}
+                />
+              )}
+              {notObserved.gnomad ? (
+                notObservedBlock("gnomad", rowIndex === 0)
+              ) : (
+                <FrequencyCells
+                  af={gnomadByPopulation.get(population)?.af}
+                  ac={gnomadByPopulation.get(population)?.ac}
+                  an={gnomadByPopulation.get(population)?.an}
+                  covered={gnomadByPopulation.has(population)}
+                  populationLabel={SUBPOP_LABEL[population]}
+                  isMax={variant.gnomadSubpopulation === population}
+                  source="gnomad"
+                  hovered={hovered}
+                />
+              )}
             </tr>
           );
         })}
@@ -263,24 +344,30 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
           >
             All populations
           </td>
-          <FrequencyCells
-            af={variant.aouAllAf}
-            ac={variant.aouAllAc}
-            an={variant.aouAllAn}
-            inVocabulary
-            isMax={false}
-            source="aou"
-            hovered={hoveredRow === ALL_POPULATIONS_ROW}
-          />
-          <FrequencyCells
-            af={variant.gnomadAllAf}
-            ac={variant.gnomadAllAc}
-            an={variant.gnomadAllAn}
-            inVocabulary
-            isMax={false}
-            source="gnomad"
-            hovered={hoveredRow === ALL_POPULATIONS_ROW}
-          />
+          {!notObserved.aou && (
+            <FrequencyCells
+              af={variant.aouAllAf}
+              ac={variant.aouAllAc}
+              an={variant.aouAllAn}
+              covered
+              populationLabel="combined"
+              isMax={false}
+              source="aou"
+              hovered={hoveredRow === ALL_POPULATIONS_ROW}
+            />
+          )}
+          {!notObserved.gnomad && (
+            <FrequencyCells
+              af={variant.gnomadAllAf}
+              ac={variant.gnomadAllAc}
+              an={variant.gnomadAllAn}
+              covered
+              populationLabel="combined"
+              isMax={false}
+              source="gnomad"
+              hovered={hoveredRow === ALL_POPULATIONS_ROW}
+            />
+          )}
         </tr>
         <tr aria-hidden="true">
           <td style={styles.bottomSpacer} />
