@@ -1,9 +1,15 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { recordRecentSearch } from "../utils/recentSearches";
+import { EXAMPLE_VARIANTS } from "../utils/variants";
 import SearchEntryPage from "./SearchEntryPage";
 
 const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47 };
+
+// The condition field debounces its lookup by 1s, the same as findBy*'s default timeout, so
+// waiting for its options needs headroom. See ConditionSearchField.test.tsx.
+configure({ asyncUtilTimeout: 2500 });
 
 /**
  * Covers the wiring the component tests can't: that Step 2 really is the condition combobox,
@@ -43,6 +49,7 @@ function stubApi(candidates: unknown[], term: string) {
 describe("SearchEntryPage", () => {
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
     vi.unstubAllGlobals();
   });
 
@@ -54,20 +61,172 @@ describe("SearchEntryPage", () => {
     expect(screen.queryByPlaceholderText("e.g. HP:0001636")).not.toBeInTheDocument();
   });
 
-  it("refuses to search with no variants", () => {
+  it("ends with the footer", () => {
     stubApi([], "");
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: /search/i }));
+    expect(screen.getByRole("contentinfo")).toContainElement(screen.getByRole("img", { name: "Broad Institute" }));
+  });
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Please enter at least one candidate variant.");
+  it("counts the variants entered, ignoring blank lines, and flags going over the limit", () => {
+    stubApi([], "");
+    renderPage();
+    const textarea = screen.getByPlaceholderText(/8-11708582-C-T/);
+
+    expect(screen.getByText("0 entered")).toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: "8-11708582-C-T\n\n  8-11708590-G-GAA  \n" } });
+    expect(screen.getByText("2 entered")).toHaveAttribute("title", "Variants entered, one per line.");
+
+    const tooMany = Array.from({ length: 51 }, (_, index) => `1-${index + 1}-A-G`).join("\n");
+    fireEvent.change(textarea, { target: { value: tooMany } });
+    expect(screen.getByText("51 entered")).toHaveAttribute("title", "Search is limited to 50 variants.");
+  });
+
+  it("disables search above the limit, and says how many to remove", () => {
+    stubApi([], "");
+    renderPage();
+    const textarea = screen.getByPlaceholderText(/8-11708582-C-T/);
+    const variantLines = (count: number) =>
+      Array.from({ length: count }, (_, index) => `1-${index + 1}-A-G`).join("\n");
+
+    fireEvent.change(textarea, { target: { value: variantLines(50) } });
+    expect(screen.getByRole("button", { name: /search/i })).toBeEnabled();
+
+    fireEvent.change(textarea, { target: { value: variantLines(53) } });
+    expect(screen.getByRole("button", { name: /search/i })).toBeDisabled();
+    expect(screen.getByText(/53 variants entered\. Remove 3 to search \(limit 50\)\./)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /search/i }));
     expect(screen.queryByTestId("location")).not.toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: variantLines(50) } });
+    expect(screen.getByRole("button", { name: /search/i })).toBeEnabled();
+    expect(screen.queryByText(/Remove \d+ to search/)).not.toBeInTheDocument();
+  });
+
+  it("disables search until a variant is entered", () => {
+    stubApi([], "");
+    renderPage();
+    const textarea = screen.getByPlaceholderText(/8-11708582-C-T/);
+
+    expect(screen.getByRole("button", { name: /search/i })).toBeDisabled();
+
+    // Blank lines alone don't count as a variant.
+    fireEvent.change(textarea, { target: { value: "\n  \n" } });
+    expect(screen.getByRole("button", { name: /search/i })).toBeDisabled();
+
+    fireEvent.change(textarea, { target: { value: "8-11708582-C-T" } });
+    expect(screen.getByRole("button", { name: /search/i })).toBeEnabled();
   });
 
   /**
    * The backend counts exactly the concept that was picked, which is what makes a low- or
    * zero-estimate concept countable. Its name isn't sent: there's no free-text path to use it.
    */
+  it("fills in example variants from 'Try an example', which then steps aside", () => {
+    stubApi([], "");
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Try an example" }));
+
+    expect(screen.getByPlaceholderText(/8-11708582-C-T/)).toHaveValue(EXAMPLE_VARIANTS.join("\n"));
+    expect(screen.getByText(`${EXAMPLE_VARIANTS.length} entered`)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try an example" })).not.toBeInTheDocument();
+  });
+
+  it("says in the footer what's needed to search, and what's ready", () => {
+    stubApi([], "");
+    renderPage();
+    const textarea = screen.getByPlaceholderText(/8-11708582-C-T/);
+
+    expect(screen.getByText("Enter at least one variant to search.")).toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: "8-11708582-C-T" } });
+    expect(screen.getByText("1 variant ready")).toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: "8-11708582-C-T\n8-11708590-G-GAA" } });
+    expect(screen.getByText("2 variants ready")).toBeInTheDocument();
+  });
+
+  it("searches with Ctrl+Enter from the variants field, but plain Enter is a new line", async () => {
+    stubApi([], "");
+    renderPage();
+    const textarea = screen.getByPlaceholderText(/8-11708582-C-T/);
+    fireEvent.change(textarea, { target: { value: "8-11708582-C-T" } });
+
+    fireEvent.keyDown(textarea, { key: "Enter" });
+    expect(screen.queryByTestId("location")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
+    expect(await screen.findByTestId("location")).toHaveTextContent("/results?variants=8-11708582-C-T");
+  });
+
+  it("doesn't search with Ctrl+Enter while there's nothing to search", () => {
+    stubApi([], "");
+    renderPage();
+
+    fireEvent.keyDown(screen.getByPlaceholderText(/8-11708582-C-T/), { key: "Enter", ctrlKey: true });
+
+    expect(screen.queryByTestId("location")).not.toBeInTheDocument();
+  });
+
+  it("searches with Ctrl+Enter from the phenotype field too", async () => {
+    stubApi([], "");
+    renderPage();
+    fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), { target: { value: "8-11708582-C-T" } });
+
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter", ctrlKey: true });
+
+    expect(await screen.findByTestId("location")).toHaveTextContent("/results?variants=8-11708582-C-T");
+  });
+
+  it("lets Ctrl+Enter on a highlighted condition pick it rather than search, then searches with it", async () => {
+    stubApi([TETRALOGY], "tetralogy");
+    renderPage();
+    fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), { target: { value: "8-11708582-C-T" } });
+    const combobox = screen.getByRole("combobox");
+    fireEvent.focus(combobox);
+    fireEvent.change(combobox, { target: { value: "tetralogy" } });
+    await screen.findByRole("option", { name: /Tetralogy of Fallot/ });
+    fireEvent.keyDown(combobox, { key: "ArrowDown" });
+
+    fireEvent.keyDown(combobox, { key: "Enter", ctrlKey: true });
+    expect(screen.queryByTestId("location")).not.toBeInTheDocument();
+    expect(combobox).toHaveValue("Tetralogy of Fallot");
+
+    fireEvent.keyDown(combobox, { key: "Enter", ctrlKey: true });
+    expect(await screen.findByTestId("location")).toHaveTextContent(
+      "/results?variants=8-11708582-C-T&conditionConceptId=9000010",
+    );
+  });
+
+  it("hides recent searches until there are some, then re-runs one with a click", async () => {
+    stubApi([], "");
+    renderPage();
+    expect(screen.queryByRole("heading", { name: "Recent searches" })).not.toBeInTheDocument();
+    cleanup();
+
+    recordRecentSearch({ variants: ["1-1-A-G", "2-2-C-T"], condition: { conceptId: 9000010, name: "Tetralogy of Fallot" } });
+    renderPage();
+
+    expect(screen.getByRole("heading", { name: "Recent searches" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Run again: 2 variants, Tetralogy of Fallot/ }));
+    expect(await screen.findByTestId("location")).toHaveTextContent(
+      "/results?variants=1-1-A-G&variants=2-2-C-T&conditionConceptId=9000010",
+    );
+  });
+
+  it("clears recent searches", () => {
+    stubApi([], "");
+    recordRecentSearch({ variants: ["1-1-A-G"], condition: null });
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+
+    expect(screen.queryByRole("heading", { name: "Recent searches" })).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("via.recentSearches.v1")).toBeNull();
+  });
+
   it("carries the picked concept's id into the results URL", async () => {
     stubApi([TETRALOGY], "tetralogy");
     renderPage();

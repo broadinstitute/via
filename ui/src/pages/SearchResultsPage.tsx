@@ -5,12 +5,13 @@ import { fetchSearchResults, type SearchResults } from "../api/searchResults";
 import colors from "../libs/colors";
 import { useMediaQuery } from "../libs/hooks";
 import CohortVariantsPanel from "../components/results/CohortVariantsPanel";
-import DataSourceVersionsFooter from "../components/results/DataSourceVersionsFooter";
+import Footer from "../components/results/Footer";
 import ParticipantMatchedVariantsPanel from "../components/results/ParticipantMatchedVariantsPanel";
 import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
-import SearchDrawer from "../components/results/SearchDrawer";
+import SearchPopover from "../components/results/SearchPopover";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
+import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
 
 interface RevealedSections {
@@ -35,7 +36,7 @@ export default function SearchResultsPage() {
   // The concept behind drawerCondition while it's still a pick; cleared by any edit, as on the
   // entry page, so re-running only filters by a condition the user actually chose.
   const [drawerConceptId, setDrawerConceptId] = useState<number | null>(null);
-  // Remounts the drawer on cancel, so its condition field goes back to showing the searched
+  // Remounts the popover on cancel, so its condition field goes back to showing the searched
   // concept as picked instead of re-querying the restored name.
   const [drawerKey, setDrawerKey] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -55,7 +56,7 @@ export default function SearchResultsPage() {
   const conditionConceptIdKey = searchParams.get("conditionConceptId") ?? "";
 
   // Re-runs whenever the URL's search criteria change -- both the initial load (e.g. arriving
-  // from SearchEntryPage with ?variants=...) and a drawer re-search (which updates the URL rather
+  // from SearchEntryPage with ?variants=...) and an edit-search re-search (which updates the URL rather
   // than fetching directly) go through this one path.
   useEffect(() => {
     setResults(null);
@@ -67,6 +68,12 @@ export default function SearchResultsPage() {
       .then((data) => {
         setResults(data);
         resetDrawer(data);
+        // Only searches that actually loaded go into the entry page's history
+        const concept = data.conditionSearch?.concept;
+        recordRecentSearch({
+          variants: parseVariantsText(data.searchSummary.variantsRaw),
+          condition: concept ? { conceptId: concept.conceptId, name: concept.name } : null,
+        });
       })
       .catch((err: Error) => setError(err.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,26 +138,29 @@ export default function SearchResultsPage() {
         condition={results?.conditionSearch?.concept?.name ?? ""}
         userEmail={userEmail}
         onModifySearch={() => setDrawerOpen((open) => !open)}
+        modifyOpen={drawerOpen}
+        editSearchPanel={
+          results && (
+            <SearchPopover
+              key={drawerKey}
+              open={drawerOpen}
+              variantsText={drawerVariants}
+              conditionText={drawerCondition}
+              initialCondition={results.conditionSearch?.concept ?? null}
+              variantsLimit={results.searchSummary.variantsLimit}
+              onVariantsChange={setDrawerVariants}
+              onConditionChange={(value) => {
+                setDrawerCondition(value);
+                setDrawerConceptId(null);
+              }}
+              onConditionSelect={(concept) => setDrawerConceptId(concept.conceptId)}
+              onCancel={handleCancelDrawer}
+              onSearch={handleRerunSearch}
+            />
+          )
+        }
       />
 
-      {results && (
-        <SearchDrawer
-          key={drawerKey}
-          open={drawerOpen}
-          variantsText={drawerVariants}
-          conditionText={drawerCondition}
-          initialCondition={results.conditionSearch?.concept ?? null}
-          variantsLimit={results.searchSummary.variantsLimit}
-          onVariantsChange={setDrawerVariants}
-          onConditionChange={(value) => {
-            setDrawerCondition(value);
-            setDrawerConceptId(null);
-          }}
-          onConditionSelect={(concept) => setDrawerConceptId(concept.conceptId)}
-          onCancel={handleCancelDrawer}
-          onSearch={handleRerunSearch}
-        />
-      )}
 
       <main style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
         <div
@@ -203,7 +213,7 @@ export default function SearchResultsPage() {
           />
         )}
 
-        <DataSourceVersionsFooter />
+        <Footer />
       </main>
     </>
   );

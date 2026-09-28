@@ -4,19 +4,20 @@ import colors, { alpha } from "../libs/colors";
 const styles = {
   hero: {
     position: "relative",
-    padding: "48px 20px 90px",
+    // Bottom padding is what the search card overlaps; see SearchEntryPage.
+    padding: "52px 20px 112px",
     overflow: "hidden",
-    backgroundImage: `linear-gradient(180deg, ${alpha(colors.heroScrim, 0.45)} 0%, ${alpha(
-      colors.heroScrim,
-      0.55,
-    )} 100%), url("/hero-background.png")`,
-    backgroundSize: "cover",
-    backgroundPosition: "top center",
+    // Brand navy with a blue glow top-right and a teal one bottom-left. Dark enough throughout for
+    // white text without a scrim or text shadows.
+    backgroundImage: [
+      `radial-gradient(ellipse 50% 110% at 92% 0%, ${alpha(colors.textAccent, 0.9)}, ${alpha(colors.textAccent, 0)} 72%)`,
+      `radial-gradient(ellipse 45% 110% at 5% 100%, ${alpha(colors.heroGlowTeal, 0.75)}, ${alpha(colors.heroGlowTeal, 0)} 72%)`,
+      `linear-gradient(180deg, ${colors.heroDeep} 0%, ${colors.textPrimary} 100%)`,
+    ].join(", "),
   },
-  // Sits above the scrim, and narrower than it, so the copy stays centered on wide viewports.
+  // Narrower than the hero, so the copy stays centered on wide viewports.
   inner: {
     position: "relative",
-    zIndex: 2,
     maxWidth: 760,
     margin: "0 auto",
     textAlign: "center",
@@ -24,18 +25,16 @@ const styles = {
   title: {
     marginBottom: 10,
     color: colors.white,
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 800,
-    letterSpacing: -0.3,
-    textShadow: `0 2px 12px ${alpha(colors.black, 0.25)}`,
+    letterSpacing: -0.4,
   },
   subtitle: {
-    maxWidth: 460,
+    maxWidth: 500,
     margin: "0 auto",
-    color: alpha(colors.white, 0.92),
-    fontSize: 13.5,
+    color: alpha(colors.white, 0.85),
+    fontSize: 15,
     lineHeight: 1.6,
-    textShadow: `0 1px 8px ${alpha(colors.black, 0.2)}`,
   },
 } as const satisfies Record<string, CSSProperties>;
 

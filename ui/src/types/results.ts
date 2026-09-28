@@ -26,7 +26,7 @@ interface CohortVariantBase {
 export interface AnnotatedCohortVariant extends CohortVariantBase {
   annotated: true;
   gene: string;
-  classification: string;
+  consequence: string;
   proteinChange: string;
   /** null for all AoU fields below = this variant was not observed in All of Us. */
   aouSubpopulation: SubpopCode | null;
@@ -73,7 +73,7 @@ interface FilteredVariantBase {
   /** null = nothing is known about this variant; it is in no annotation source. */
   gene: string | null;
   /** Some variants have consequence annotation even when cohort-filtered stats don't exist yet. */
-  classification: string | null;
+  consequence: string | null;
 }
 
 export interface FilteredVariantWithStats extends FilteredVariantBase {

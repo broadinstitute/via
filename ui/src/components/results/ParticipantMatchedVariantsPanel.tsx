@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { flexRender, type RowSelectionState, type SortingState } from "@tanstack/react-table";
 import {
@@ -13,7 +13,9 @@ import * as Style from "../../libs/style";
 import type { FilteredVariantRow } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
+import InfoTooltip from "../common/InfoTooltip";
 import CopyButton from "./CopyButton";
+import MoreBelowCue from "./MoreBelowCue";
 import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
 import ResultsPanel from "./ResultsPanel";
 
@@ -31,6 +33,10 @@ const styles = {
   selectedCount: {
     color: colors.textSecondary,
     fontSize: 12,
+  },
+  // Positioning context for MoreBelowCue, which overlays the scroller's bottom edge.
+  tableWrap: {
+    position: "relative",
   },
   tableScroll: {
     ...Style.table.scroller,
@@ -68,7 +74,7 @@ function rowToTsvValues(row: FilteredVariantRow): string[] {
     return [
       row.variant,
       row.gene ?? "n/a",
-      row.classification ?? "n/a",
+      row.consequence ?? "n/a",
       String(row.cohortAc),
       String(row.cohortAn),
       row.cohortAf.toFixed(4),
@@ -81,7 +87,7 @@ function rowToTsvValues(row: FilteredVariantRow): string[] {
   return [
     row.variant,
     row.gene ?? "n/a",
-    row.classification ?? "n/a",
+    row.consequence ?? "n/a",
     "n/a",
     "n/a",
     "n/a",
@@ -122,6 +128,7 @@ export default function ParticipantMatchedVariantsPanel({
     Object.fromEntries(rows.map((row) => [row.variant, true])),
   );
   const [sorting, setSorting] = useState<SortingState>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { hoveredKey: hoveredRow, hoverProps: rowHoverProps } = useHoveredKey<string>();
   const { hoveredKey: hoveredHeader, hoverProps: headerHoverProps } = useHoveredKey<string>();
 
@@ -163,10 +170,10 @@ export default function ParticipantMatchedVariantsPanel({
           cell: ({ row }) => row.original.gene ?? <NotAvailable />,
           sortUndefined: "last",
         }),
-        columnHelper.accessor((row) => row.classification ?? undefined, {
-          id: "classification",
-          header: "Classification",
-          cell: ({ row }) => row.original.classification ?? <NotAvailable />,
+        columnHelper.accessor((row) => row.consequence ?? undefined, {
+          id: "consequence",
+          header: "Consequence",
+          cell: ({ row }) => row.original.consequence ?? <NotAvailable />,
           sortUndefined: "last",
         }),
         columnHelper.accessor((row) => (row.hasStats ? row.cohortAc : undefined), {
@@ -174,9 +181,7 @@ export default function ParticipantMatchedVariantsPanel({
           header: () => (
             <>
               Cohort AC{" "}
-              <span style={Style.elements.tooltipIcon} title="Allele count among phenotype-matched participants.">
-                i
-              </span>
+              <InfoTooltip text="Allele count among phenotype-matched participants." />
             </>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAc : <NotAvailable />),
@@ -187,9 +192,7 @@ export default function ParticipantMatchedVariantsPanel({
           header: () => (
             <>
               Cohort AN{" "}
-              <span style={Style.elements.tooltipIcon} title="Allele number among phenotype-matched participants.">
-                i
-              </span>
+              <InfoTooltip text="Allele number among phenotype-matched participants." />
             </>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAn : <NotAvailable />),
@@ -200,9 +203,7 @@ export default function ParticipantMatchedVariantsPanel({
           header: () => (
             <>
               Cohort AF{" "}
-              <span style={Style.elements.tooltipIcon} title="Allele frequency among phenotype-matched participants.">
-                i
-              </span>
+              <InfoTooltip text="Allele frequency among phenotype-matched participants." />
             </>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAf.toFixed(4) : <NotAvailable />),
@@ -225,12 +226,7 @@ export default function ParticipantMatchedVariantsPanel({
           header: () => (
             <>
               ClinVar P/LP in trans{" "}
-              <span
-                style={Style.elements.tooltipIcon}
-                title="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans."
-              >
-                i
-              </span>
+              <InfoTooltip text="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans with this variant." />
             </>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.clinvarPlpInTrans : <NotAvailable />),
@@ -241,12 +237,7 @@ export default function ParticipantMatchedVariantsPanel({
           header: () => (
             <>
               AF Ratio{" "}
-              <span
-                style={Style.elements.tooltipIcon}
-                title="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF."
-              >
-                i
-              </span>
+              <InfoTooltip text="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF." />
             </>
           ),
           cell: ({ row }) => {
@@ -287,7 +278,7 @@ export default function ParticipantMatchedVariantsPanel({
     const header = [
       "variant",
       "gene",
-      "classification",
+      "consequence",
       "filtered_ac",
       "filtered_an",
       "filtered_af",
@@ -332,59 +323,62 @@ export default function ParticipantMatchedVariantsPanel({
         </div>
       }
     >
-      <div style={styles.tableScroll}>
-        <table style={styles.table}>
-          <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  const sortable = header.column.getCanSort();
-                  const sortDirection = header.column.getIsSorted();
-                  return (
-                    <th
-                      key={header.id}
+      <div style={styles.tableWrap}>
+        <div ref={scrollRef} style={styles.tableScroll}>
+          <table style={styles.table}>
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const sortable = header.column.getCanSort();
+                    const sortDirection = header.column.getIsSorted();
+                    return (
+                      <th
+                        key={header.id}
+                        style={{
+                          ...styles.headerCell,
+                          ...(sortable ? Style.table.sortable : undefined),
+                          ...(sortable && hoveredHeader === header.id ? Style.table.sortableHover : undefined),
+                        }}
+                        onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
+                        {...(sortable ? headerHoverProps(header.id) : undefined)}
+                      >
+                        {header.isPlaceholder ? null : (
+                          <>
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {sortable && (
+                              <span style={Style.table.sortIndicator}>
+                                {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </th>
+                    );
+                  })}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id} data-variant-row {...rowHoverProps(row.id)}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      key={cell.id}
                       style={{
-                        ...styles.headerCell,
-                        ...(sortable ? Style.table.sortable : undefined),
-                        ...(sortable && hoveredHeader === header.id ? Style.table.sortableHover : undefined),
+                        ...Style.table.bodyCell,
+                        ...(hoveredRow === row.id ? { background: colors.surface1 } : undefined),
                       }}
-                      onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
-                      {...(sortable ? headerHoverProps(header.id) : undefined)}
                     >
-                      {header.isPlaceholder ? null : (
-                        <>
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {sortable && (
-                            <span style={Style.table.sortIndicator}>
-                              {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} {...rowHoverProps(row.id)}>
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    style={{
-                      ...Style.table.bodyCell,
-                      ...(hoveredRow === row.id ? { background: colors.surface1 } : undefined),
-                    }}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <MoreBelowCue scrollRef={scrollRef} rowSelector="[data-variant-row]" />
       </div>
     </ResultsPanel>
   );

@@ -32,6 +32,8 @@ const colors = {
   surface2: "#ffffff",
   border: "#e2e1dc",
   borderStrong: "#c7c6c0",
+  /** borderStrong a step darker: a field's border under the pointer. */
+  borderHover: "#a9a8a1",
 
   // Tinted fills, each paired with the ink of the same name
   bgAccent: "#d8e6ee",
@@ -41,8 +43,10 @@ const colors = {
 
   white: "#ffffff",
   black: "#000000",
-  /** Darkens the hero photo enough for white text to stay legible over it. */
-  heroScrim: "#0f1432",
+  /** The hero's navy at its top edge, deepening into textPrimary below. */
+  heroDeep: "#1a1c4d",
+  /** The teal glow in the hero's bottom-left corner. */
+  heroGlowTeal: "#1a9a86",
 
   subpopEur: "#F9C854",
   subpopAfr: "#2078B4",

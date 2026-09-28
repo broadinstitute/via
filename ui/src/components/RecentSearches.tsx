@@ -1,143 +1,190 @@
+import { useState } from "react";
 import type { CSSProperties } from "react";
+import { useNavigate } from "react-router-dom";
 import colors from "../libs/colors";
-import { useMediaQuery } from "../libs/hooks";
+import { useHover } from "../libs/hooks";
 import * as Style from "../libs/style";
+import {
+  clearRecentSearches,
+  describeSearchedAt,
+  loadRecentSearches,
+  type RecentSearch,
+} from "../utils/recentSearches";
+import { resultsPath } from "../utils/variants";
 import Clickable from "./common/Clickable";
-import { ArrowRightIcon } from "./icons";
+import { ChevronRightIcon } from "./icons";
 
-// Below this the row's details and its button no longer fit side by side, so the row stacks.
-const NARROW_LAYOUT_QUERY = "(max-width: 720px)";
+/** Variant IDs shown in a row before the rest are summarised as "+N more". */
+const PREVIEW_VARIANTS = 3;
 
 const styles = {
-  panel: {
-    ...Style.elements.panel,
+  section: {
     marginTop: 28,
-    boxShadow: Style.shadows.raised,
   },
-  heading: {
-    ...Style.elements.panelHeader,
-    ...Style.elements.panelTitle,
-    padding: "12px 16px",
-  },
-  list: {
-    listStyle: "none",
-  },
-  item: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-    padding: "12px 16px",
-  },
-  details: {
+  header: {
     display: "flex",
     alignItems: "baseline",
-    flexWrap: "wrap",
-    gap: 8,
-    minWidth: 0,
-    fontSize: 12.5,
+    justifyContent: "space-between",
+    marginBottom: 8,
+    padding: "0 4px",
   },
-  variants: {
-    color: colors.textPrimary,
-    fontWeight: 600,
-  },
-  dotSeparator: {
-    color: colors.textMuted,
-  },
-  phenotype: {
+  heading: {
+    ...Style.elements.eyebrow,
     color: colors.textSecondary,
   },
-  noPhenotype: {
+  clear: {
+    padding: 0,
+    border: "none",
+    background: "none",
     color: colors.textMuted,
-    fontStyle: "italic",
+    fontSize: 11.5,
+    fontWeight: 600,
+    cursor: "pointer",
   },
-  timestamp: {
+  clearHover: {
+    color: colors.textAccent,
+  },
+  list: {
+    ...Style.elements.panel,
+    margin: 0,
+    padding: 0,
+    listStyle: "none",
+    boxShadow: Style.shadows.panel,
+  },
+  row: {
+    display: "flex",
+    alignItems: "center",
+    gap: 16,
+    width: "100%",
+    padding: "11px 16px",
+    border: "none",
+    background: "none",
+    textAlign: "left",
+    cursor: "pointer",
+  },
+  rowHover: {
+    background: colors.surface1,
+  },
+  summary: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 3,
+    flex: 1,
+    minWidth: 0,
+  },
+  topLine: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
+  },
+  count: {
+    flexShrink: 0,
+    color: colors.textPrimary,
+    fontSize: 12.5,
+    fontWeight: 600,
+  },
+  condition: {
+    overflow: "hidden",
+    padding: "1px 8px",
+    borderRadius: 6,
+    background: colors.bgAccent,
+    color: colors.textAccent,
+    fontSize: 11.5,
+    fontWeight: 600,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  noCondition: {
     color: colors.textMuted,
     fontSize: 11.5,
   },
-  viewButton: {
-    ...Style.buttons.accent,
+  preview: {
+    ...Style.elements.mono,
+    overflow: "hidden",
+    color: colors.textMuted,
+    fontSize: 11,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  time: {
     flexShrink: 0,
+    color: colors.textMuted,
+    fontSize: 11.5,
+  },
+  chevron: {
+    flexShrink: 0,
+    color: colors.textMuted,
   },
 } as const satisfies Record<string, CSSProperties>;
 
-interface RecentSearch {
-  id: string;
-  variantsSummary: string;
-  condition: string | null;
-  searchedAt: string;
+function previewVariants(variants: string[]): string {
+  const shown = variants.slice(0, PREVIEW_VARIANTS).join(", ");
+  const rest = variants.length - PREVIEW_VARIANTS;
+  return rest > 0 ? `${shown} +${rest} more` : shown;
 }
 
-const RECENT_SEARCHES: RecentSearch[] = [
-  {
-    id: "1",
-    variantsSummary: "21 variants",
-    condition: "Tetralogy of Fallot",
-    searchedAt: "2 hours ago",
-  },
-  {
-    id: "2",
-    variantsSummary: "8 variants",
-    condition: "Breast carcinoma",
-    searchedAt: "Yesterday",
-  },
-  {
-    id: "3",
-    variantsSummary: "3 variants",
-    condition: null,
-    searchedAt: "3 days ago",
-  },
-  {
-    id: "4",
-    variantsSummary: "45 variants",
-    condition: "Chronic bronchitis",
-    searchedAt: "1 week ago",
-  },
-];
+const variantCount = (search: RecentSearch) =>
+  `${search.variants.length} variant${search.variants.length === 1 ? "" : "s"}`;
 
+/**
+ * The last few searches run in this browser (see utils/recentSearches), each re-run with a
+ * click. Renders nothing until there's history, so a first visit isn't met with an empty list.
+ */
 export default function RecentSearches() {
-  const isNarrow = useMediaQuery(NARROW_LAYOUT_QUERY);
+  const navigate = useNavigate();
+  const [searches, setSearches] = useState(loadRecentSearches);
+  const { hovered: clearHovered, hoverProps: clearHoverProps } = useHover();
+
+  if (searches.length === 0) return null;
 
   return (
-    <section style={styles.panel}>
-      <h2 style={styles.heading}>Recent searches</h2>
+    <section style={styles.section} aria-labelledby="recentSearchesHeading">
+      <div style={styles.header}>
+        <h2 id="recentSearchesHeading" style={styles.heading}>
+          Recent searches
+        </h2>
+        <button
+          type="button"
+          style={{ ...styles.clear, ...(clearHovered ? styles.clearHover : undefined) }}
+          onClick={() => {
+            clearRecentSearches();
+            setSearches([]);
+          }}
+          {...clearHoverProps}
+        >
+          Clear
+        </button>
+      </div>
       <ul style={styles.list}>
-        {RECENT_SEARCHES.map((search, index) => (
+        {searches.map((search, index) => (
           <li
-            key={search.id}
-            style={{
-              ...styles.item,
-              ...(isNarrow ? { flexDirection: "column", alignItems: "flex-start" } : undefined),
-              // Stands in for ":last-child" -- the panel's own border closes the list off.
-              ...(index < RECENT_SEARCHES.length - 1
-                ? { borderBottom: `1px solid ${colors.border}` }
-                : undefined),
-            }}
+            key={search.searchedAt}
+            style={index > 0 ? { borderTop: `1px solid ${colors.border}` } : undefined}
           >
-            <div style={styles.details}>
-              <span style={styles.variants}>{search.variantsSummary}</span>
-              <span style={styles.dotSeparator} aria-hidden="true">
-                ·
-              </span>
-              {search.condition ? (
-                <span style={styles.phenotype}>
-                  {search.condition}
-                </span>
-              ) : (
-                <span style={styles.noPhenotype}>No phenotype</span>
-              )}
-              <span style={styles.timestamp}>{search.searchedAt}</span>
-            </div>
             <Clickable
-              style={{ ...styles.viewButton, ...(isNarrow ? { alignSelf: "flex-end" } : undefined) }}
-              hoverStyle={Style.buttons.accentHover}
-              disabledStyle={Style.buttons.disabled}
-              // These searches are placeholders with no saved criteria behind them, so there's
-              // nothing to show yet.
-              disabled
+              style={styles.row}
+              hoverStyle={styles.rowHover}
+              onClick={() => navigate(resultsPath(search.variants, search.condition?.conceptId ?? null))}
+              aria-label={`Run again: ${variantCount(search)}, ${
+                search.condition?.name ?? "no phenotype"
+              }, ${describeSearchedAt(search.searchedAt)}`}
             >
-              View results
-              <ArrowRightIcon size={13} strokeWidth={2.5} />
+              <span style={styles.summary}>
+                <span style={styles.topLine}>
+                  <span style={styles.count}>{variantCount(search)}</span>
+                  {search.condition ? (
+                    <span style={styles.condition} title={search.condition.name}>
+                      {search.condition.name}
+                    </span>
+                  ) : (
+                    <span style={styles.noCondition}>No phenotype</span>
+                  )}
+                </span>
+                <span style={styles.preview}>{previewVariants(search.variants)}</span>
+              </span>
+              <span style={styles.time}>{describeSearchedAt(search.searchedAt)}</span>
+              <ChevronRightIcon size={14} strokeWidth={2.5} style={styles.chevron} aria-hidden="true" />
             </Clickable>
           </li>
         ))}

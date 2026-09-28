@@ -77,21 +77,45 @@ export const elements = {
   notAvailable: {
     color: colors.textMuted,
   },
-  /** Circled "i" carrying a title-attribute explanation of the column beside it. */
+  /** In the accessibility tree for screen readers, but not drawn. */
+  visuallyHidden: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    margin: -1,
+    padding: 0,
+    border: 0,
+    overflow: "hidden",
+    clip: "rect(0 0 0 0)",
+    whiteSpace: "nowrap",
+  },
+  /**
+   * InfoTooltip's button around its outlined "i". Muted until hovered or open (tooltipIconActive),
+   * so a header row of them doesn't read as a row of buttons. 20px, larger than the 15px icon,
+   * for an easier target; the small margin plus that padding keeps it ~4px from its label.
+   */
   tooltipIcon: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 14,
-    height: 14,
-    marginLeft: 4,
+    width: 20,
+    height: 20,
+    marginLeft: 1,
+    padding: 0,
     border: "none",
     borderRadius: "50%",
-    background: colors.textAccent,
-    color: colors.white,
-    fontSize: 9,
-    fontWeight: 600,
+    background: "none",
+    color: colors.textMuted,
+    verticalAlign: "middle",
     cursor: "help",
+  },
+  tooltipIconActive: {
+    color: colors.textAccent,
+  },
+  /** Keyboard focus only, not a click; see InfoTooltip. */
+  tooltipIconFocusRing: {
+    outline: "none",
+    boxShadow: `0 0 0 2px ${alpha(colors.textAccent, 0.35)}`,
   },
   /** Explanatory line under a form field. */
   fieldHint: {
@@ -137,7 +161,7 @@ export const buttons = {
   secondaryHover: {
     background: colors.surface1,
   },
-  /** Outlined button in accent ink: "Modify search", "View results". */
+  /** Outlined button in accent ink: "View results". */
   accent: {
     display: "inline-flex",
     alignItems: "center",
@@ -177,6 +201,16 @@ export const buttons = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
+/**
+ * A 1px solid border, written as longhands for anything whose border colour changes on hover or
+ * focus. With the `border` shorthand plus a `borderColor` override, React deletes the override
+ * when the state ends instead of restoring the colour, and the border falls back to the text
+ * colour -- a near-black outline. Longhands keep `borderColor` a key React always sets.
+ */
+export function stateBorder(color: string): CSSProperties {
+  return { borderWidth: 1, borderStyle: "solid", borderColor: color };
+}
+
 export const inputs = {
   label: {
     display: "block",
@@ -189,9 +223,9 @@ export const inputs = {
   text: {
     width: "100%",
     padding: "8px 10px",
-    border: `1px solid ${colors.borderStrong}`,
+    ...stateBorder(colors.borderStrong),
     borderRadius: radius,
-    background: colors.surface2,
+    background: colors.surface1,
     color: colors.textBody,
     fontFamily: "inherit",
     fontSize: 12,
@@ -200,14 +234,14 @@ export const inputs = {
   mono: {
     width: "100%",
     padding: "10px 12px",
-    border: `1px solid ${colors.borderStrong}`,
+    ...stateBorder(colors.borderStrong),
     borderRadius: radius,
     background: colors.surface1,
     color: colors.textBody,
     fontFamily: monoFamily,
     fontSize: 13,
   },
-  /** Merged over the base while focused, in place of a `:focus` rule. */
+  /** Merged over the base while focused, in place of a `:focus` rule. Needs a stateBorder base. */
   focused: {
     outline: "none",
     borderColor: colors.textAccent,

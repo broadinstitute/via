@@ -145,10 +145,10 @@ public final class MockPhenotypeData {
     }
 
     String gene = cohortVariant.getGene().orElse(null);
-    String classification = cohortVariant.getClassification().orElse(null);
+    String consequence = cohortVariant.getConsequence().orElse(null);
     BigDecimal aouAllAf = cohortVariant.getAouAllAf().orElse(null);
     if (aouAllAf == null || aouAllAf.signum() <= 0) {
-      return withoutStats(variant, gene, classification);
+      return withoutStats(variant, gene, consequence);
     }
 
     int cohortAn = 2 * participants;
@@ -176,7 +176,7 @@ public final class MockPhenotypeData {
     return new FilteredVariant()
         .variant(variant)
         .gene(gene)
-        .classification(classification)
+        .consequence(consequence)
         .hasStats(true)
         .cohortAc(cohortAc)
         .cohortAn(cohortAn)
@@ -188,11 +188,11 @@ public final class MockPhenotypeData {
             BigDecimal.valueOf(cohortAf / aouAllAf.doubleValue()).setScale(2, RoundingMode.HALF_UP));
   }
 
-  private static FilteredVariant withoutStats(String variant, String gene, String classification) {
+  private static FilteredVariant withoutStats(String variant, String gene, String consequence) {
     return new FilteredVariant()
         .variant(variant)
         .gene(gene)
-        .classification(classification)
+        .consequence(consequence)
         .hasStats(false)
         .cohortAc(null)
         .cohortAn(null)
