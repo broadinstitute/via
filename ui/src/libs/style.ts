@@ -191,7 +191,7 @@ export const buttons = {
     cursor: "pointer",
   },
   iconHover: {
-    background: colors.surface1,
+    background: colors.surface0,
     color: colors.textAccent,
   },
   disabled: {
