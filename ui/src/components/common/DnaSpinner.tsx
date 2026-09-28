@@ -1,115 +1,172 @@
 import * as React from 'react';
+import colors from '../../libs/colors';
+import { useMediaQuery } from '../../libs/hooks';
 
 /**
  * DnaSpinner
  *
- * A minimal double-helix loading indicator. Pure SVG + CSS keyframes — no
- * animation library, no JS timers, no re-renders while spinning.
+ * The favicon, with its double helix turning in 3D. At rest (first paint, and
+ * whenever the user prefers reduced motion) it is drawn at the favicon's own
+ * pose, so the static fallback is the favicon itself.
  *
- * Each node orbits a circle in the Y/Z plane; the projection gives vertical
- * travel (translateY), and the depth component drives scale and opacity so the
- * strands read as passing in front of and behind one another. A fixed phase
- * offset per column makes one full turn across the width.
+ * The helix is modelled as two strands winding round a vertical axis, half a
+ * turn tall, with base-pair rungs at fixed heights. Each frame advances the
+ * turn and redraws: each strand is split wherever it passes from the front of
+ * the axis to the back, rear stretches are dimmed and drawn first, and front
+ * stretches get a halo in the background color so the strand behind shows a
+ * gap where it passes underneath, just as the favicon's green strand does. The
+ * whole helix is tilted to lean right.
+ *
+ * Frames are written straight to the SVG through refs, so spinning never
+ * re-renders React.
  *
  * Usage:
  *   <DnaSpinner />
- *   <DnaSpinner size={72} colors={['#35C4D7', '#F2647C']} />
- *   <DnaSpinner label="Interpreting variant" duration={2000} rungs={false} />
+ *   <DnaSpinner size={56} duration={2000} label="Interpreting variant" />
  */
 
-const COLUMNS = 9;
-const X_START = 8;
-const X_STEP = 10;
-const CENTER_Y = 24;
-const AMPLITUDE = 15;
-const NODE_RADIUS = 3.2;
+// Geometry in the favicon's 37×38 viewBox.
+const VIEW_W = 37;
+const VIEW_H = 38;
+const CENTER_X = 18.5;
+const CENTER_Y = 19;
+/** The favicon's strands run from y 8.5 to 29.5 — half a turn. */
+const HALF_HEIGHT = 10.5;
+const AMPLITUDE = 5.26;
+const WAVE = Math.PI / (2 * HALF_HEIGHT);
+const STROKE_WIDTH = 1.4;
+/** Stroke width of the background-colored band under each front stretch. */
+const HALO_WIDTH = 3.6;
+const BACK_OPACITY = 0.7;
+/** Rung heights as offsets from center, extending the favicon's rhythm to the middle. */
+const RUNG_OFFSETS = [-9.24, -5.91, -2.58, 2.58, 5.91, 9.24];
+/** Longest a half-rung gets; the favicon's are about this, well short of the strands. */
+const RUNG_HALF = 2.1;
+const TILT_DEGREES = 20;
+const SAMPLE_STEP = 0.35;
 
-const VIEW_W = X_START * 2 + X_STEP * (COLUMNS - 1); // 116
-const VIEW_H = CENTER_Y * 2; // 48
-
-const STYLES = `
-.dna-node,
-.dna-rung {
-  animation-duration: var(--dna-duration, 1500ms);
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-.dna-node { animation-name: dna-node; }
-.dna-rung { animation-name: dna-rung; }
-
-@keyframes dna-node {
-  0%     { transform: translateY(0px)       scale(1.34); opacity: 1;     }
-  12.5%  { transform: translateY(10.61px)   scale(1.24); opacity: 0.919; }
-  25%    { transform: translateY(15px)      scale(1);    opacity: 0.725; }
-  37.5%  { transform: translateY(10.61px)   scale(0.76); opacity: 0.531; }
-  50%    { transform: translateY(0px)       scale(0.66); opacity: 0.45;  }
-  62.5%  { transform: translateY(-10.61px)  scale(0.76); opacity: 0.531; }
-  75%    { transform: translateY(-15px)     scale(1);    opacity: 0.725; }
-  87.5%  { transform: translateY(-10.61px)  scale(1.24); opacity: 0.919; }
-  100%   { transform: translateY(0px)       scale(1.34); opacity: 1;     }
-}
-
-@keyframes dna-rung {
-  0%    { transform: scaleY(0);     opacity: 0;   }
-  12.5% { transform: scaleY(0.707); opacity: 0.6; }
-  25%   { transform: scaleY(1);     opacity: 1;   }
-  37.5% { transform: scaleY(0.707); opacity: 0.6; }
-  50%   { transform: scaleY(0);     opacity: 0;   }
-  62.5% { transform: scaleY(0.707); opacity: 0.6; }
-  75%   { transform: scaleY(1);     opacity: 1;   }
-  87.5% { transform: scaleY(0.707); opacity: 0.6; }
-  100%  { transform: scaleY(0);     opacity: 0;   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Pausing holds each element at its negative-delay offset, so the helix
-     freezes into a static shape instead of collapsing to a flat line. */
-  .dna-node,
-  .dna-rung { animation-play-state: paused; }
-}
-`;
+const STRAND_COLORS = [colors.white, colors.brandGreen] as const;
 
 export interface DnaSpinnerProps
   extends Omit<React.SVGProps<SVGSVGElement>, 'width' | 'height' | 'children'> {
-  /** Rendered width in px. Height follows the 116:48 aspect ratio. Default 116. */
+  /** Rendered width in px. Height follows the favicon's 37:38 aspect ratio. Default 48. */
   size?: number;
-  /** Milliseconds per full turn of the helix. Default 1500. */
+  /** Milliseconds per full turn of the helix. Default 2000. */
   duration?: number;
-  /** Colors for the two strands. Defaults to `currentColor` for both. */
-  colors?: [string, string];
-  /** Show the base-pair rungs between strands. Default true. */
-  rungs?: boolean;
   /** Announced by screen readers. Default "Loading". */
   label?: string;
 }
 
-/** Phase offset per column, as a fraction of one full turn. */
-const phaseAt = (index: number) => index / (COLUMNS - 1);
+type Strand = 0 | 1;
 
-const delay = (fraction: number) =>
-  `calc(var(--dna-duration, 1500ms) * ${-Number(fraction.toFixed(4))})`;
+const round = (n: number) => Number(n.toFixed(2));
+
+/**
+ * Strand 0 (white) is at +sin, strand 1 (green) at -sin. Depth is the matching
+ * cosine: positive is toward the viewer. At phase 0 this reproduces the
+ * favicon, with white in front at the crossing.
+ */
+const strandOffset = (strand: Strand, y: number, phase: number) =>
+  (strand === 0 ? 1 : -1) * Math.sin(WAVE * (y - CENTER_Y) + phase);
+const strandDepth = (strand: Strand, y: number, phase: number) =>
+  (strand === 0 ? 1 : -1) * Math.cos(WAVE * (y - CENTER_Y) + phase);
+
+interface Frame {
+  back: [string, string];
+  front: [string, string];
+  rungs: { x1: number; x2: number; opacity: number }[][];
+}
+
+/** Splits one strand into stretches in front of and behind the axis. */
+function strandPaths(strand: Strand, phase: number) {
+  const paths = { front: '', back: '' };
+  const steps = Math.ceil((2 * HALF_HEIGHT) / SAMPLE_STEP);
+  let points: string[] = [];
+  let inFront: boolean | null = null;
+  for (let i = 0; i <= steps; i++) {
+    const y = CENTER_Y - HALF_HEIGHT + (2 * HALF_HEIGHT * i) / steps;
+    const point = `${round(CENTER_X + AMPLITUDE * strandOffset(strand, y, phase))} ${round(y)}`;
+    const nowInFront = strandDepth(strand, y, phase) >= 0;
+    if (inFront !== null && nowInFront !== inFront) {
+      // Close the stretch on this point and start the next one from it, so they join.
+      points.push(point);
+      paths[inFront ? 'front' : 'back'] += `M${points.join('L')}`;
+      points = [];
+    }
+    points.push(point);
+    inFront = nowInFront;
+  }
+  paths[inFront ? 'front' : 'back'] += `M${points.join('L')}`;
+  return paths;
+}
+
+function drawFrame(phase: number): Frame {
+  const strands = [strandPaths(0, phase), strandPaths(1, phase)];
+  return {
+    back: [strands[0].back, strands[1].back],
+    front: [strands[0].front, strands[1].front],
+    // Each rung is two halves; as in the favicon, the half on a strand's side takes the other
+    // strand's color. Rungs foreshorten as the strands swing in toward the axis, and fade out
+    // rather than dwindling to a dot.
+    rungs: RUNG_OFFSETS.map((offset) => {
+      const y = CENTER_Y + offset;
+      const whiteSide = Math.sign(strandOffset(0, y, phase)) || 1;
+      const half = RUNG_HALF * Math.abs(strandOffset(0, y, phase));
+      const opacity = round(Math.min(1, Math.max(0, (half - 0.7) / 0.7)));
+      const whiteEnd = round(CENTER_X + whiteSide * half);
+      const greenEnd = round(CENTER_X - whiteSide * half);
+      // [white half, green half]: the white half points at the green strand, and vice versa.
+      return [
+        { x1: CENTER_X, x2: greenEnd, opacity },
+        { x1: CENTER_X, x2: whiteEnd, opacity },
+      ];
+    }),
+  };
+}
+
+const REST_FRAME = drawFrame(0);
 
 export const DnaSpinner = React.forwardRef<SVGSVGElement, DnaSpinnerProps>(
-  function DnaSpinner(
-    {
-      size = 116,
-      duration = 1500,
-      colors = ['currentColor', 'currentColor'],
-      rungs = true,
-      label = 'Loading',
-      style,
-      ...rest
-    },
-    ref,
-  ) {
-    const columns = React.useMemo(
-      () =>
-        Array.from({ length: COLUMNS }, (_, i) => ({
-          x: X_START + i * X_STEP,
-          phase: phaseAt(i),
-        })),
-      [],
-    );
+  function DnaSpinner({ size = 48, duration = 2000, label = 'Loading', ...rest }, ref) {
+    const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+    const helixRef = React.useRef<SVGGElement>(null);
+
+    React.useEffect(() => {
+      const helix = helixRef.current;
+      if (!helix || reduceMotion) return;
+      const part = (name: string) => [...helix.querySelectorAll<SVGElement>(`[data-part="${name}"]`)];
+      const back = part('back');
+      const halos = part('halo');
+      const front = part('front');
+      const rungHalves = part('rung');
+
+      const apply = (frame: Frame) => {
+        frame.back.forEach((d, i) => back[i].setAttribute('d', d));
+        frame.front.forEach((d, i) => {
+          halos[i].setAttribute('d', d);
+          front[i].setAttribute('d', d);
+        });
+        frame.rungs.flat().forEach(({ x2, opacity }, i) => {
+          rungHalves[i].setAttribute('x2', String(x2));
+          rungHalves[i].setAttribute('stroke-opacity', String(opacity));
+        });
+      };
+
+      let frameId = 0;
+      const start = performance.now();
+      const tick = (now: number) => {
+        apply(drawFrame((((now - start) / duration) % 1) * 2 * Math.PI));
+        frameId = requestAnimationFrame(tick);
+      };
+      frameId = requestAnimationFrame(tick);
+      return () => {
+        cancelAnimationFrame(frameId);
+        // Settle back to the favicon pose rather than freezing mid-turn.
+        apply(REST_FRAME);
+      };
+    }, [duration, reduceMotion]);
+
+    const stroke = { strokeWidth: STROKE_WIDTH, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' } as const;
 
     return (
       <svg
@@ -120,44 +177,42 @@ export const DnaSpinner = React.forwardRef<SVGSVGElement, DnaSpinnerProps>(
         width={size}
         height={(size * VIEW_H) / VIEW_W}
         xmlns="http://www.w3.org/2000/svg"
-        style={{ '--dna-duration': `${duration}ms`, ...style } as React.CSSProperties}
         {...rest}
       >
-        <style>{STYLES}</style>
-        <g className="dna-group">
-          {rungs &&
-            columns.map(({ x, phase }) => (
-              <g key={`rung-${x}`} transform={`translate(${x} ${CENTER_Y})`}>
-                <line
-                  className="dna-rung"
-                  x1={0}
-                  y1={-AMPLITUDE}
-                  x2={0}
-                  y2={AMPLITUDE}
-                  stroke={colors[0]}
-                  strokeWidth={1.1}
-                  strokeLinecap="round"
-                  strokeOpacity={0.3}
-                  style={{ animationDelay: delay(phase) }}
-                />
-              </g>
-            ))}
-
-          {columns.map(({ x, phase }) => (
-            <g key={`node-${x}`} transform={`translate(${x} ${CENTER_Y})`}>
-              <circle
-                className="dna-node"
-                r={NODE_RADIUS}
-                fill={colors[0]}
-                style={{ animationDelay: delay(phase) }}
+        <circle cx={CENTER_X} cy={CENTER_Y} r={17.5} fill={colors.brandNavy} />
+        <circle cx={CENTER_X} cy={CENTER_Y} r={17.8} stroke={colors.white} {...stroke} />
+        <g ref={helixRef} transform={`rotate(${TILT_DEGREES} ${CENTER_X} ${CENTER_Y})`}>
+          {REST_FRAME.back.map((d, i) => (
+            <path key={i} data-part="back" d={d} stroke={STRAND_COLORS[i]} strokeOpacity={BACK_OPACITY} {...stroke} />
+          ))}
+          {REST_FRAME.rungs.map((halves, r) =>
+            halves.map(({ x1, x2, opacity }, i) => (
+              <line
+                key={`${r}-${i}`}
+                data-part="rung"
+                x1={x1}
+                y1={CENTER_Y + RUNG_OFFSETS[r]}
+                x2={x2}
+                y2={CENTER_Y + RUNG_OFFSETS[r]}
+                stroke={STRAND_COLORS[i]}
+                strokeOpacity={opacity}
+                {...stroke}
               />
-              <circle
-                className="dna-node"
-                r={NODE_RADIUS}
-                fill={colors[1]}
-                style={{ animationDelay: delay(phase + 0.5) }}
-              />
-            </g>
+            )),
+          )}
+          {REST_FRAME.front.map((d, i) => (
+            <path
+              key={i}
+              data-part="halo"
+              d={d}
+              stroke={colors.brandNavy}
+              {...stroke}
+              strokeWidth={HALO_WIDTH}
+              strokeLinecap="butt"
+            />
+          ))}
+          {REST_FRAME.front.map((d, i) => (
+            <path key={i} data-part="front" d={d} stroke={STRAND_COLORS[i]} {...stroke} />
           ))}
         </g>
       </svg>

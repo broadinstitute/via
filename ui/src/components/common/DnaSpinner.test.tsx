@@ -1,17 +1,38 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import DnaSpinner from "./DnaSpinner";
 
+const preferReducedMotion = (reduce: boolean) =>
+  vi.spyOn(window, "matchMedia").mockImplementation(
+    (query: string) =>
+      ({
+        matches: reduce && query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }) as unknown as MediaQueryList,
+  );
+
 describe("DnaSpinner", () => {
-  it("includes a reduced-motion rule that fully stops spinner animation", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("animates the helix by default", () => {
+    preferReducedMotion(false);
+    const requestFrame = vi.spyOn(window, "requestAnimationFrame").mockReturnValue(1);
+
     render(<DnaSpinner />);
 
-    const css = screen.getByRole("status", { name: "Loading" }).querySelector("style")?.textContent ?? "";
+    expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
+    expect(requestFrame).toHaveBeenCalled();
+  });
 
-    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
-    expect(css).toContain(".dna-node,");
-    expect(css).toContain(".dna-rung { animation-play-state: paused; }");
-    expect(css).not.toContain(".dna-group { animation:");
-    expect(css).not.toContain("@keyframes dna-breathe");
+  it("holds the favicon pose without animating when the user prefers reduced motion", () => {
+    preferReducedMotion(true);
+    const requestFrame = vi.spyOn(window, "requestAnimationFrame").mockReturnValue(1);
+
+    const { container } = render(<DnaSpinner />);
+
+    expect(requestFrame).not.toHaveBeenCalled();
+    expect(container.querySelector('[data-part="front"]')?.getAttribute("d")).toBeTruthy();
   });
 });

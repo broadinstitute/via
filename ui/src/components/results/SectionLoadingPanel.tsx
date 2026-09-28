@@ -35,8 +35,7 @@ export default function SectionLoadingPanel({
         // footprint as the panel it stands in for.
         style={{ ...styles.body, minHeight }}
       >
-        {/* Both strands inherit `color` through the component's currentColor default. */}
-        <DnaSpinner colors={[colors.textSecondary, colors.textAccent]} size={72} rungs={false} duration={2000}/>
+        <DnaSpinner size={56} />
         <span>{message}</span>
       </div>
     </ResultsPanel>

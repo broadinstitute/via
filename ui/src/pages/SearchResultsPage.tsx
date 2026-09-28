@@ -161,7 +161,7 @@ export default function SearchResultsPage() {
             alignItems: "stretch",
           }}
         >
-          {results && revealed.cohort ? (
+          {!results && revealed.cohort ? (
             <CohortVariantsPanel rows={results.cohortVariants} />
           ) : (
             <SectionLoadingPanel

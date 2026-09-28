@@ -22,6 +22,10 @@ const colors = {
   textWarning: "#854f0b",
   textDanger: "#a32d2d",
 
+  // Brand, from the favicon's helix
+  brandNavy: "#074770",
+  brandGreen: "#5cc88d",
+
   // Call-to-action
   accentOrange: "#e8834e",
   accentOrangeHover: "#d9723d",
