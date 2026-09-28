@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { AnnotatedCohortVariant, CohortVariantRow } from "../../types/results";
 import CohortVariantsPanel from "./CohortVariantsPanel";
@@ -59,5 +59,21 @@ describe("CohortVariantsPanel", () => {
     expect(screen.getByText("Not observed in gnomAD")).toBeInTheDocument();
     expect(screen.queryByText("Not observed in All of Us")).not.toBeInTheDocument();
     expect(screen.getByText("BRCA1")).toBeInTheDocument();
+  });
+
+  it("points a variant that isn't in All of Us to gnomAD and ClinVar when expanded", () => {
+    render(<CohortVariantsPanel rows={[NOT_IN_AOU]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand row for more detail" }));
+
+    expect(screen.getByText(/This variant may still be in gnomAD or ClinVar/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Look up in gnomAD ↗" })).toHaveAttribute(
+      "href",
+      "https://gnomad.broadinstitute.org/variant/7-55181378-G-A",
+    );
+    expect(screen.getByRole("link", { name: "Look up in ClinVar ↗" })).toHaveAttribute(
+      "href",
+      "https://www.ncbi.nlm.nih.gov/clinvar/?term=7-55181378-G-A",
+    );
   });
 });

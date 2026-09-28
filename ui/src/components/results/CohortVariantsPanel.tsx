@@ -11,11 +11,12 @@ import colors, { sourceTints } from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
+import { clinvarSearchUrl, gnomadVariantUrl } from "../../utils/externalLinks";
 import { formatAcAn, formatAf } from "../../utils/format";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
 import InfoLabel from "../common/InfoLabel";
-import { ChevronRightIcon } from "../icons";
+import { ChevronRightIcon, SearchOffIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import MoreBelowCue from "./MoreBelowCue";
@@ -165,11 +166,48 @@ const styles = {
   detailPopulations: {
     overflowX: "auto",
   },
-  detailPlaceholder: {
-    padding: "12px 14px",
+  // The expanded view of a variant that isn't in All of Us: what's missing, and why.
+  detailEmpty: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 12,
+    padding: "14px 16px",
+  },
+  detailEmptyIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    background: colors.surface0,
+    border: `1px solid ${colors.border}`,
     color: colors.textMuted,
+  },
+  detailEmptyTitle: {
+    margin: "0 0 3px",
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: 600,
+  },
+  detailEmptyText: {
+    maxWidth: 560,
+    margin: 0,
+    color: colors.textSecondary,
     fontSize: 12,
-    fontStyle: "italic",
+    lineHeight: 1.5,
+  },
+  detailEmptyLinks: {
+    display: "flex",
+    gap: 14,
+    marginTop: 8,
+  },
+  detailEmptyLink: {
+    color: colors.textAccent,
+    fontSize: 12,
+    fontWeight: 600,
+    textDecoration: "none",
   },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -624,7 +662,38 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                             </div>
                           ) : (
                             <div style={{ ...styles.detailPanel, gridTemplateColumns: "1fr" }}>
-                              <div style={styles.detailPlaceholder}>No data available for this variant.</div>
+                              <div style={styles.detailEmpty}>
+                                <span style={styles.detailEmptyIcon} aria-hidden="true">
+                                  <SearchOffIcon size={16} />
+                                </span>
+                                <div>
+                                  <p style={styles.detailEmptyTitle}>Not observed in All of Us</p>
+                                  {/* Careful to say VIA doesn't show these, not that they don't exist: the
+                                      variant can be in gnomAD or ClinVar, just not brought in when All of Us
+                                      doesn't have it. */}
+                                  <p style={styles.detailEmptyText}>
+                                    VIA only shows annotations and frequencies for variants found in All of Us, so
+                                    there's nothing to show here. This variant may still be in gnomAD or ClinVar.
+                                  </p>
+                                  <div style={styles.detailEmptyLinks}>
+                                    {[
+                                      { label: "Look up in gnomAD ↗", href: gnomadVariantUrl(row.original.variant) },
+                                      { label: "Look up in ClinVar ↗", href: clinvarSearchUrl(row.original.variant) },
+                                    ].map(({ label, href }) => (
+                                      <a
+                                        key={href}
+                                        style={styles.detailEmptyLink}
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(event) => event.stopPropagation()}
+                                      >
+                                        {label}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           )}
                         </td>
