@@ -93,7 +93,8 @@ const styles = {
   },
   recordsTitle: {
     ...Style.elements.eyebrow,
-    marginBottom: 4,
+    paddingBottom: 4,
+    textAlign: "left",
   },
   records: {
     width: "100%",
@@ -263,8 +264,15 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
       )}
 
       <div>
-        <div style={styles.recordsTitle}>Records ({clinvarSubmissions.length})</div>
         <table style={styles.records}>
+          <caption style={styles.recordsTitle}>Records ({clinvarSubmissions.length})</caption>
+          <thead style={Style.elements.visuallyHidden}>
+            <tr>
+              <th scope="col">Record</th>
+              <th scope="col">Classification</th>
+              <th scope="col">Review status</th>
+            </tr>
+          </thead>
           <tbody>
             {visibleSubmissions.map((submission) => (
               <tr key={submission.id}>
