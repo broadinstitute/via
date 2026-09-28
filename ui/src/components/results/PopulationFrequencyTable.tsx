@@ -376,6 +376,12 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
             <td key={index} style={{ ...sourceCellStyle(source, false), ...styles.bottomSpacer }} />
           ))}
         </tr>
+        <tr aria-hidden="true">
+          <td style={styles.bottomSpacer} />
+          {(["aou", "aou", "gnomad", "gnomad"] as const).map((source, index) => (
+            <td key={index} style={{ ...sourceCellStyle(source, false), ...styles.bottomSpacer }} />
+          ))}
+        </tr>
       </tbody>
     </table>
   );
