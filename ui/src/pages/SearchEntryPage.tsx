@@ -14,6 +14,7 @@ import VariantsStep from "../components/VariantsStep";
 import { SearchIcon } from "../components/icons";
 import Footer from "../components/results/Footer";
 import TopBar from "../components/results/TopBar";
+import { isSubmitShortcut, SUBMIT_SHORTCUT_LABEL } from "../utils/submitShortcut";
 import {
   EXAMPLE_VARIANTS,
   overLimitMessage,
@@ -22,10 +23,6 @@ import {
   VARIANTS_LIMIT,
   variantEntryStatus,
 } from "../utils/variants";
-
-/** For the keyboard hint: ⌘ on Apple platforms, Ctrl elsewhere. */
-const SUBMIT_SHORTCUT =
-  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ Enter" : "Ctrl Enter";
 
 const styles = {
   // Pulled up over the hero's bottom padding so the search card overlaps the photo.
@@ -119,7 +116,15 @@ export default function SearchEntryPage() {
         subtitle="Rule candidate variants in or out by comparing them against All of Us's full participant cohort — no coding required."
       />
       <main style={styles.main}>
-        <section style={styles.card} aria-label="Search">
+        <section
+          style={styles.card}
+          aria-label="Search"
+          onKeyDown={(event) => {
+            if (!isSubmitShortcut(event)) return;
+            event.preventDefault();
+            if (canSearch) handleSearch();
+          }}
+        >
           <div style={styles.cardBody}>
             <SearchSteps>
               <VariantsStep
@@ -128,7 +133,6 @@ export default function SearchEntryPage() {
                 limit={VARIANTS_LIMIT}
                 minHeight={180}
                 appearance="plain"
-                onSubmit={canSearch ? handleSearch : undefined}
                 onUseExample={() => setVariants(EXAMPLE_VARIANTS.join("\n"))}
               />
               <PhenotypeStep
@@ -166,7 +170,7 @@ export default function SearchEntryPage() {
                     {variantCount} variant{variantCount === 1 ? "" : "s"} ready
                   </span>
                   {conditionConceptId !== null && ` · filtered by ${condition}`}
-                  <span style={styles.shortcut}>{SUBMIT_SHORTCUT} to search</span>
+                  <span style={styles.shortcut}>{SUBMIT_SHORTCUT_LABEL} to search</span>
                 </>
               )}
             </p>

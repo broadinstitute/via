@@ -170,6 +170,36 @@ describe("SearchEntryPage", () => {
     expect(screen.queryByTestId("location")).not.toBeInTheDocument();
   });
 
+  it("searches with Ctrl+Enter from the phenotype field too", async () => {
+    stubApi([], "");
+    renderPage();
+    fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), { target: { value: "8-11708582-C-T" } });
+
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter", ctrlKey: true });
+
+    expect(await screen.findByTestId("location")).toHaveTextContent("/results?variants=8-11708582-C-T");
+  });
+
+  it("lets Ctrl+Enter on a highlighted condition pick it rather than search, then searches with it", async () => {
+    stubApi([TETRALOGY], "tetralogy");
+    renderPage();
+    fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), { target: { value: "8-11708582-C-T" } });
+    const combobox = screen.getByRole("combobox");
+    fireEvent.focus(combobox);
+    fireEvent.change(combobox, { target: { value: "tetralogy" } });
+    await screen.findByRole("option", { name: /Tetralogy of Fallot/ });
+    fireEvent.keyDown(combobox, { key: "ArrowDown" });
+
+    fireEvent.keyDown(combobox, { key: "Enter", ctrlKey: true });
+    expect(screen.queryByTestId("location")).not.toBeInTheDocument();
+    expect(combobox).toHaveValue("Tetralogy of Fallot");
+
+    fireEvent.keyDown(combobox, { key: "Enter", ctrlKey: true });
+    expect(await screen.findByTestId("location")).toHaveTextContent(
+      "/results?variants=8-11708582-C-T&conditionConceptId=9000010",
+    );
+  });
+
   it("hides recent searches until there are some, then re-runs one with a click", async () => {
     stubApi([], "");
     renderPage();

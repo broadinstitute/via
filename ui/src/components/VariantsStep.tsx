@@ -60,8 +60,6 @@ interface VariantsStepProps {
   minHeight: number;
   /** See StepPanel. */
   appearance?: StepPanelAppearance;
-  /** Ctrl/⌘+Enter in the textarea. Callers only pass it through when a search is allowed. */
-  onSubmit?: () => void;
   /** Shows a "Try an example" link while the field is empty. */
   onUseExample?: () => void;
 }
@@ -73,7 +71,6 @@ export default function VariantsStep({
   limit,
   minHeight,
   appearance,
-  onSubmit,
   onUseExample,
 }: VariantsStepProps) {
   const { focused, focusProps } = useFocus();
@@ -86,13 +83,6 @@ export default function VariantsStep({
         aria-label="Candidate variants"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          // Plain Enter is a new line, since the field takes one variant per line.
-          if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && onSubmit) {
-            event.preventDefault();
-            onSubmit();
-          }
-        }}
         placeholder={"8-11708582-C-T\n8-11708590-G-GAA\n8-11708598-T-C"}
         style={{ ...styles.input, minHeight, ...(focused ? Style.inputs.focused : undefined) }}
         {...focusProps}

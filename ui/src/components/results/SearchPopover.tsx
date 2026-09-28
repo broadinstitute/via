@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import colors, { alpha } from "../../libs/colors";
 import * as Style from "../../libs/style";
 import type { ConditionConcept } from "../../api/conditions";
+import { isSubmitShortcut } from "../../utils/submitShortcut";
 import { overLimitMessage, variantEntryStatus } from "../../utils/variants";
 import Clickable from "../common/Clickable";
 import { SearchIcon } from "../icons";
@@ -136,7 +137,18 @@ export default function SearchPopover({
   return (
     <div style={{ display: open ? "block" : "none" }}>
       <div style={styles.backdrop} onClick={onCancel} aria-hidden="true" data-testid="searchPopoverBackdrop" />
-      <div ref={popoverRef} role="dialog" aria-modal="true" aria-label="Edit search" style={styles.popover}>
+      <div
+        ref={popoverRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit search"
+        style={styles.popover}
+        onKeyDown={(event) => {
+          if (!isSubmitShortcut(event)) return;
+          event.preventDefault();
+          if (canSearch) onSearch();
+        }}
+      >
         <SearchSteps>
           <VariantsStep
             value={variantsText}
@@ -144,7 +156,6 @@ export default function SearchPopover({
             limit={variantsLimit}
             minHeight={120}
             appearance="plain"
-            onSubmit={canSearch ? onSearch : undefined}
           />
           <PhenotypeStep
             id="editSearchCondition"

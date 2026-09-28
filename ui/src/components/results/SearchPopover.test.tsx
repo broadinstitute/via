@@ -85,6 +85,14 @@ describe("SearchPopover", () => {
     expect(empty.onSearch).not.toHaveBeenCalled();
   });
 
+  it("searches with Ctrl/⌘+Enter from the phenotype field too", () => {
+    const { onSearch } = renderPopover({ variantsText: "8-11708582-C-T" });
+
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter", metaKey: true });
+
+    expect(onSearch).toHaveBeenCalledTimes(1);
+  });
+
   it("is hidden while closed", () => {
     renderPopover({ open: false });
 
