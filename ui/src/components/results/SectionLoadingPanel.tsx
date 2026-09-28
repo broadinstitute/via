@@ -5,6 +5,7 @@ import ResultsPanel from "./ResultsPanel";
 
 const styles = {
   body: {
+    flex: 1,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
