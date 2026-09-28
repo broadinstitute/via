@@ -129,8 +129,21 @@ const styles = {
     color: colors.textMuted,
     cursor: "help",
   },
+  // An expanded row and its detail read as one unit: they share the detail's fill, the rule
+  // between them is dropped, and one accent bar runs down the left of both.
+  expandedCell: {
+    borderBottom: "1px solid transparent",
+  },
+  expandedRowFill: {
+    background: colors.surface1,
+  },
+  expandedBar: {
+    boxShadow: `inset 3px 0 0 ${colors.textAccent}`,
+  },
   detailRow: {
     background: colors.surface1,
+    // Tucked up under its row, with the room below it instead, before the next row.
+    padding: "0 12px 12px 13px",
     // Wrapping is re-enabled here: the expanded panel holds prose, not table values.
     whiteSpace: "normal",
   },
@@ -260,7 +273,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                     size={12}
                     strokeWidth={2.5}
                     className="transition-transform"
-                    style={isExpanded ? { transform: "rotate(90deg)" } : undefined}
+                    style={isExpanded ? { transform: "rotate(90deg)", color: colors.textAccent } : undefined}
                   />
                 </Clickable>
               );
@@ -524,6 +537,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                   isMissingFromGnomad(row.original) ? GNOMAD_MISSING_GROUP : null,
                 ].filter((group) => group !== null);
                 const hovered = hoveredRow === row.id;
+                const expanded = expandedVariants.has(row.original.variant);
                 return (
                   <Fragment key={row.id}>
                     <tr
@@ -532,11 +546,13 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                       onClick={() => toggleExpanded(row.original.variant)}
                       {...rowHoverProps(row.id)}
                     >
-                      {row.getVisibleCells().map((cell) => {
+                      {row.getVisibleCells().map((cell, index) => {
                         const source = sourceOf(cell.column.id);
                         const cellStyle: CSSProperties = {
                           ...Style.table.bodyCell,
-                          background: cellBackground(source, hovered),
+                          ...(expanded ? styles.expandedCell : undefined),
+                          background: cellBackground(source, hovered) ?? (expanded ? styles.expandedRowFill.background : undefined),
+                          ...(expanded && index === 0 ? styles.expandedBar : undefined),
                         };
                         const group = missingGroups.find((candidate) =>
                           candidate.columnIds.has(cell.column.id),
@@ -556,15 +572,11 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                         );
                       })}
                     </tr>
-                    {expandedVariants.has(row.original.variant) && (
+                    {expanded && (
                       <tr id={`variant-detail-${row.original.variant}`}>
-                        {/* Padding is the standard body-cell padding rather than the roomier
-                            "0 16px 14px" the old stylesheet asked for: that rule lost the cascade
-                            to a higher-specificity one, so the compact spacing here is what has
-                            always rendered. */}
                         <td
                           colSpan={row.getVisibleCells().length}
-                          style={{ ...Style.table.bodyCell, ...styles.detailRow }}
+                          style={{ ...Style.table.bodyCell, ...styles.detailRow, ...styles.expandedBar }}
                         >
                           {row.original.annotated ? (
                             <div style={styles.detailPanel}>
