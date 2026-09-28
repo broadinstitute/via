@@ -71,13 +71,29 @@ export function clinvarSubmissionShortCode(classification: string | null): strin
   return CLINVAR_SUBMISSION_DISPLAY[classification]?.shortCode ?? classification;
 }
 
+// Record classifications long enough to crowd a narrow list, shortened to the terms clinicians
+// already use; the rest read fine in full.
+const CLINVAR_SUBMISSION_LABELS: Record<string, string> = {
+  "Uncertain significance": "VUS",
+  "Conflicting interpretations": "Conflicting",
+};
+
+/** A record's classification, shortened where the full wording is long. */
+export function clinvarSubmissionLabel(classification: string | null): string {
+  if (classification === null) return "Not provided";
+  return CLINVAR_SUBMISSION_LABELS[classification] ?? classification;
+}
+
 export function clinvarSubmissionColor(classification: string | null): string {
   if (classification === null) return colors.textMuted;
   return CLINVAR_SUBMISSION_DISPLAY[classification]?.color ?? colors.textMuted;
 }
 
-/** e.g. "2★ multiple submitters, no conflicts". */
-export function clinvarReviewWords(stars: number, hasConflicts: boolean, _submissionCount: number): string {
+/** ClinVar's highest review status: a practice guideline. */
+export const CLINVAR_MAX_STARS = 4;
+
+/** e.g. "criteria provided, multiple submitters, no conflicts", for a star rating shown separately. */
+export function clinvarReviewDescription(stars: number, hasConflicts: boolean): string {
   const descriptions: Record<number, string> = {
     0: "no assertion criteria provided",
     1: hasConflicts ? "criteria provided, conflicting classifications" : "criteria provided, single submitter",
@@ -85,5 +101,10 @@ export function clinvarReviewWords(stars: number, hasConflicts: boolean, _submis
     3: "reviewed by expert panel",
     4: "practice guideline",
   };
-  return `${stars}★ ${descriptions[stars] ?? "unknown review status"}`;
+  return descriptions[stars] ?? "unknown review status";
+}
+
+/** e.g. "2★ multiple submitters, no conflicts". */
+export function clinvarReviewWords(stars: number, hasConflicts: boolean, _submissionCount: number): string {
+  return `${stars}★ ${clinvarReviewDescription(stars, hasConflicts)}`;
 }

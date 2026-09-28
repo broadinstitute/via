@@ -4,6 +4,7 @@ import {
   CLINVAR_BADGE_CONFIG,
   clinvarReviewWords,
   clinvarSubmissionColor,
+  clinvarSubmissionLabel,
   clinvarSubmissionShortCode,
 } from "./clinvar";
 
@@ -83,5 +84,12 @@ describe("clinvar utils", () => {
 
   it("falls back to an unknown review status for out-of-range star counts", () => {
     expect(clinvarReviewWords(9, false, 1)).toBe("9★ unknown review status");
+  });
+
+  it("shortens only the record classifications too long for a narrow list", () => {
+    expect(clinvarSubmissionLabel("Uncertain significance")).toBe("VUS");
+    expect(clinvarSubmissionLabel("Conflicting interpretations")).toBe("Conflicting");
+    expect(clinvarSubmissionLabel("Likely pathogenic")).toBe("Likely pathogenic");
+    expect(clinvarSubmissionLabel(null)).toBe("Not provided");
   });
 });

@@ -61,9 +61,12 @@ describe("ClinvarExpanderDetail", () => {
   it("renders the ClinVar summary, badge, updated date, and visible submissions", () => {
     render(<ClinvarExpanderDetail variant={makeVariant()} />);
 
-    expect(screen.getByText("Pathogenic")).toBeInTheDocument();
-    expect(screen.getByText("2★ criteria provided, multiple submitters, no conflicts")).toBeInTheDocument();
+    expect(screen.getAllByText("Pathogenic")[0]).toBeInTheDocument();
+    expect(screen.getByText("criteria provided, multiple submitters, no conflicts")).toBeInTheDocument();
+    expect(screen.getAllByRole("img", { name: "2 of 4 stars" }).length).toBeGreaterThan(0);
     expect(screen.getByText("Condition A")).toBeInTheDocument();
+    expect(screen.getByText("Condition B")).toBeInTheDocument();
+    expect(screen.getByText("Records (5)")).toBeInTheDocument();
     expect(screen.getByText("14 Feb 2024")).toBeInTheDocument();
     expect(screen.getByText(/RCV000001/)).toBeInTheDocument();
     expect(screen.getByText(/RCV000004/)).toBeInTheDocument();
@@ -80,20 +83,30 @@ describe("ClinvarExpanderDetail", () => {
     expect(screen.getByText("No consensus classification")).toBeInTheDocument();
   });
 
-  it("expands additional conditions when the disclosure is clicked", () => {
-    render(<ClinvarExpanderDetail variant={makeVariant()} />);
+  it("lists conditions one per line, expanding past the first two when the disclosure is clicked", () => {
+    render(
+      <ClinvarExpanderDetail variant={makeVariant({ clinvarSubmissions: makeVariant().clinvarSubmissions.slice(0, 2) })} />,
+    );
+    expect(screen.queryByText("Condition C")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole("button", { name: "+2 more" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "+1 more" }));
 
-    expect(screen.getByText(/Condition A, Condition B, Condition C/)).toBeInTheDocument();
+    expect(screen.getByText("Condition C")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "+1 more" })).not.toBeInTheDocument();
   });
 
   it("expands additional submissions when the disclosure is clicked", () => {
-    render(<ClinvarExpanderDetail variant={makeVariant()} />);
+    render(<ClinvarExpanderDetail variant={makeVariant({ clinvarConditions: ["Condition A"] })} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /\+\s*1\s*more/ }));
+    fireEvent.click(screen.getByRole("button", { name: "+1 more" }));
 
     expect(screen.getByText(/RCV000005/)).toBeInTheDocument();
+  });
+
+  it("shortens long record classifications, keeping the full wording as a tooltip", () => {
+    render(<ClinvarExpanderDetail variant={makeVariant()} />);
+
+    expect(screen.getByText("VUS")).toHaveAttribute("title", "Uncertain significance");
   });
 
   it("omits the ClinVar link when no URL is available", () => {
