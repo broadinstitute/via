@@ -13,6 +13,7 @@ import * as Style from "../../libs/style";
 import type { FilteredVariantRow } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
+import InfoTooltip from "../common/InfoTooltip";
 import CopyButton from "./CopyButton";
 import MoreBelowCue from "./MoreBelowCue";
 import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
@@ -180,9 +181,7 @@ export default function ParticipantMatchedVariantsPanel({
           header: () => (
             <>
               Cohort AC{" "}
-              <span style={Style.elements.tooltipIcon} title="Allele count among phenotype-matched participants.">
-                i
-              </span>
+              <InfoTooltip text="Allele count among phenotype-matched participants." />
             </>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAc : <NotAvailable />),
@@ -193,9 +192,7 @@ export default function ParticipantMatchedVariantsPanel({
           header: () => (
             <>
               Cohort AN{" "}
-              <span style={Style.elements.tooltipIcon} title="Allele number among phenotype-matched participants.">
-                i
-              </span>
+              <InfoTooltip text="Allele number among phenotype-matched participants." />
             </>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAn : <NotAvailable />),
@@ -206,9 +203,7 @@ export default function ParticipantMatchedVariantsPanel({
           header: () => (
             <>
               Cohort AF{" "}
-              <span style={Style.elements.tooltipIcon} title="Allele frequency among phenotype-matched participants.">
-                i
-              </span>
+              <InfoTooltip text="Allele frequency among phenotype-matched participants." />
             </>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAf.toFixed(4) : <NotAvailable />),
@@ -231,12 +226,7 @@ export default function ParticipantMatchedVariantsPanel({
           header: () => (
             <>
               ClinVar P/LP in trans{" "}
-              <span
-                style={Style.elements.tooltipIcon}
-                title="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans."
-              >
-                i
-              </span>
+              <InfoTooltip text="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans with this variant." />
             </>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.clinvarPlpInTrans : <NotAvailable />),
@@ -247,12 +237,7 @@ export default function ParticipantMatchedVariantsPanel({
           header: () => (
             <>
               AF Ratio{" "}
-              <span
-                style={Style.elements.tooltipIcon}
-                title="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF."
-              >
-                i
-              </span>
+              <InfoTooltip text="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF." />
             </>
           ),
           cell: ({ row }) => {

@@ -13,6 +13,7 @@ import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
 import { formatAcAn, formatAf } from "../../utils/format";
 import Clickable from "../common/Clickable";
+import InfoTooltip from "../common/InfoTooltip";
 import { ChevronRightIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
@@ -291,12 +292,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         header: () => (
           <>
             All of Us <span style={styles.groupQualifier}>— max subpopulation</span>{" "}
-            <span
-              style={Style.elements.tooltipIcon}
-              title="Values below reflect the AoU subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire cohort."
-            >
-              i
-            </span>
+            <InfoTooltip
+              text={
+                "Values below reflect the All of Us subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire All of Us cohort.\n\n" +
+                "To see the allele frequency for the entire cohort, expand the row."
+              }
+            />
           </>
         ),
         enableSorting: false,
@@ -341,12 +342,11 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
         header: () => (
           <>
             gnomAD <span style={styles.groupQualifier}>— max subpopulation</span>{" "}
-            <span
-              style={Style.elements.tooltipIcon}
-              title="Values below reflect the gnomAD subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire gnomAD population. Data shown is from gnomAD v3.1.2 and may differ from the current release."
-            >
-              i
-            </span>
+            <InfoTooltip
+                text={
+                  "Values below reflect the gnomAD subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire gnomAD cohort.\n\n" +
+                  "To see the allele frequency for the entire cohort, expand the row."
+            } />
           </>
         ),
         enableSorting: false,

@@ -7,6 +7,7 @@ export { default as ChevronRightIcon } from "./ChevronRightIcon";
 export { default as CloseIcon } from "./CloseIcon";
 export { default as CopyIcon } from "./CopyIcon";
 export { default as GearIcon } from "./GearIcon";
+export { default as InfoIcon } from "./InfoIcon";
 export { default as LightbulbIcon } from "./LightbulbIcon";
 export { default as PencilIcon } from "./PencilIcon";
 export { default as PlusIcon } from "./PlusIcon";
