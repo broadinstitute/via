@@ -14,17 +14,13 @@ import type { FilteredVariantRow } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
 import InfoLabel from "../common/InfoLabel";
+import { UserIcon } from "../icons";
 import CopyButton from "./CopyButton";
 import MoreBelowCue from "./MoreBelowCue";
 import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
-import ResultsPanel from "./ResultsPanel";
+import ResultsPanel, { ScopeChip } from "./ResultsPanel";
 
 const styles = {
-  nCount: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: 500,
-  },
   actions: {
     display: "flex",
     alignItems: "center",
@@ -293,7 +289,7 @@ export default function ParticipantMatchedVariantsPanel({
   if (!hasPhenotypeFilter) {
     const { message, buttonLabel } = phenotypeUnavailableCopy(condition, "phenotype-matched participant data");
     return (
-      <ResultsPanel title="Candidate variants — phenotype-matched participants only">
+      <ResultsPanel title="Candidate variants" scope={<ScopeChip>Phenotype-matched participants</ScopeChip>}>
         <PhenotypeFilterRequired message={message} buttonLabel={buttonLabel} onAddPhenotypeFilter={onAddPhenotypeFilter} />
       </ResultsPanel>
     );
@@ -301,11 +297,15 @@ export default function ParticipantMatchedVariantsPanel({
 
   return (
     <ResultsPanel
-      title={
-        <>
-          Candidate variants — phenotype-matched participants only{" "}
-          <span style={styles.nCount}>(n = {participantCount})</span>
-        </>
+      title="Candidate variants"
+      scope={
+        <ScopeChip
+          tone="accent"
+          icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />}
+          title={`${participantCount.toLocaleString()} participants with ${condition}`}
+        >
+          {participantCount.toLocaleString()} with {condition}
+        </ScopeChip>
       }
       headerRight={
         <div style={styles.actions}>

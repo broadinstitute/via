@@ -18,7 +18,7 @@ describe("SectionLoadingPanel", () => {
 
   it("applies the requested content minHeight", () => {
     const { container } = render(<SectionLoadingPanel title="Candidate variants" minHeight={425} />);
-    const content = container.querySelector("h2")?.parentElement?.nextElementSibling as HTMLElement;
+    const content = container.querySelector('svg[role="status"]')?.parentElement as HTMLElement;
 
     expect(content).toHaveStyle({
       minHeight: "425px",

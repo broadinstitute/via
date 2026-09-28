@@ -20,13 +20,13 @@ import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import MoreBelowCue from "./MoreBelowCue";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
-import ResultsPanel from "./ResultsPanel";
+import ResultsPanel, { ScopeChip } from "./ResultsPanel";
 import SubpopBadge from "../elements/SubpopBadge";
 
 /**
  * The table's floor, shared with its loading placeholder so the swap doesn't resize the row.
- * Sized so this panel matches a loaded phenotype panel (477px with a one-line condition name):
- * any shorter and the phenotype panel stretches the row a few px taller the moment it loads.
+ * Sized so this panel is at least as tall as a loaded phenotype panel with a one-line condition
+ * name: any shorter and the phenotype panel stretches the row taller the moment it loads.
  */
 export const COHORT_TABLE_MIN_HEIGHT = 430;
 
@@ -468,7 +468,8 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
 
   return (
     <ResultsPanel
-      title="Candidate variants — all participants"
+      title="Candidate variants"
+      scope={<ScopeChip>All participants</ScopeChip>}
       headerRight={<span style={styles.sub}>Showing {rows.length} results</span>}
     >
       <div style={styles.tableWrap}>

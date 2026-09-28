@@ -8,6 +8,7 @@ import CohortVariantsPanel, { COHORT_TABLE_MIN_HEIGHT } from "../components/resu
 import Footer from "../components/results/Footer";
 import ParticipantMatchedVariantsPanel from "../components/results/ParticipantMatchedVariantsPanel";
 import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
+import { ScopeChip } from "../components/results/ResultsPanel";
 import SearchPopover from "../components/results/SearchPopover";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
@@ -175,7 +176,8 @@ export default function SearchResultsPage() {
             <CohortVariantsPanel rows={results.cohortVariants} />
           ) : (
             <SectionLoadingPanel
-              title="Candidate variants — all participants"
+              title="Candidate variants"
+              scope={<ScopeChip>All participants</ScopeChip>}
               message="Loading variants…"
               minHeight={COHORT_TABLE_MIN_HEIGHT}
             />
@@ -207,7 +209,8 @@ export default function SearchResultsPage() {
           />
         ) : (
           <SectionLoadingPanel
-            title="Candidate variants — phenotype-matched participants only"
+            title="Candidate variants"
+            scope={<ScopeChip>Phenotype-matched participants</ScopeChip>}
             message="Loading variants…"
             minHeight={346}
           />
