@@ -43,8 +43,10 @@ const colors = {
 
   white: "#ffffff",
   black: "#000000",
-  /** Darkens the hero photo enough for white text to stay legible over it. */
-  heroScrim: "#0f1432",
+  /** The hero's navy at its top edge, deepening into textPrimary below. */
+  heroDeep: "#1a1c4d",
+  /** The teal glow in the hero's bottom-left corner. */
+  heroGlowTeal: "#1a9a86",
 
   subpopEur: "#F9C854",
   subpopAfr: "#2078B4",
