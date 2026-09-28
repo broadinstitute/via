@@ -76,11 +76,16 @@ const styles = {
     gap: 4,
   },
   maxValueText: Style.elements.trimmedText,
+  // A filled pill rather than bare accent text, so the highest-frequency population stands out
+  // from the column at a glance. Trimmed like the value, so the padding alone sets its height.
   maxMarker: {
     ...Style.elements.trimmedText,
-    color: colors.textAccent,
-    fontSize: 9.5,
-    fontWeight: 600,
+    padding: "2px 5px",
+    borderRadius: 4,
+    background: colors.textAccent,
+    color: colors.white,
+    fontSize: 9,
+    fontWeight: 700,
     letterSpacing: "0.04em",
   },
 } as const satisfies Record<string, CSSProperties>;
@@ -137,7 +142,12 @@ function FrequencyCells({ af, ac, an, inVocabulary, isMax, source, hovered }: Fr
   // The max cell keeps its highlight ink even while hovered, but gives up its own fill to the
   // hover band so the row still reads as one.
   const valueStyle: CSSProperties = isMax
-    ? { ...cellStyle, background: hovered ? cellStyle.background : POPMAX_BACKGROUND, color: colors.textPrimary }
+    ? {
+        ...cellStyle,
+        background: hovered ? cellStyle.background : POPMAX_BACKGROUND,
+        color: colors.textPrimary,
+        fontWeight: 600,
+      }
     : cellStyle;
 
   return (
