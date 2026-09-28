@@ -12,6 +12,7 @@ import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
 import { formatAcAn, formatAf } from "../../utils/format";
+import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
 import InfoTooltip from "../common/InfoTooltip";
 import { ChevronRightIcon } from "../icons";
@@ -294,7 +295,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             All of Us <span style={styles.groupQualifier}>— max subpopulation</span>{" "}
             <InfoTooltip
               text={
-                "Values below reflect the All of Us subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire All of Us cohort.\n\n" +
+                `Values below reflect the All of Us subpopulation (${AOU_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire All of Us cohort.\n\n` +
                 "To see the allele frequency for the entire cohort, expand the row."
               }
             />
@@ -344,7 +345,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             gnomAD <span style={styles.groupQualifier}>— max subpopulation</span>{" "}
             <InfoTooltip
                 text={
-                  "Values below reflect the gnomAD subpopulation (EUR, AFR, AMR, EAS, SAS, MID, OTH) with the highest allele frequency for this variant, not the entire gnomAD cohort.\n\n" +
+                  `Values below reflect the gnomAD subpopulation (${GNOMAD_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire gnomAD cohort.\n\n` +
                   "To see the allele frequency for the entire cohort, expand the row."
             } />
           </>
