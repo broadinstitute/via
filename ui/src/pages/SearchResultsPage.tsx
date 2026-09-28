@@ -4,13 +4,15 @@ import { fetchProfile } from "../api/profile";
 import { fetchSearchResults, type SearchResults } from "../api/searchResults";
 import colors from "../libs/colors";
 import { useMediaQuery } from "../libs/hooks";
-import CohortVariantsPanel from "../components/results/CohortVariantsPanel";
+import CohortVariantsPanel, { COHORT_TABLE_MIN_HEIGHT } from "../components/results/CohortVariantsPanel";
 import Footer from "../components/results/Footer";
-import ParticipantMatchedVariantsPanel from "../components/results/ParticipantMatchedVariantsPanel";
+import ParticipantMatchedVariantsPanel, { MATCHED_TABLE_HEIGHT } from "../components/results/ParticipantMatchedVariantsPanel";
 import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
+import { ScopeChip } from "../components/results/ResultsPanel";
 import SearchPopover from "../components/results/SearchPopover";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
+import { UserIcon } from "../components/icons";
 import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
 
@@ -175,9 +177,10 @@ export default function SearchResultsPage() {
             <CohortVariantsPanel rows={results.cohortVariants} />
           ) : (
             <SectionLoadingPanel
-              title="Candidate variants — all participants"
+              title="Candidate variants"
+              scope={<ScopeChip>All participants</ScopeChip>}
               message="Loading variants…"
-              minHeight={425}
+              minHeight={COHORT_TABLE_MIN_HEIGHT}
             />
           )}
 
@@ -207,9 +210,18 @@ export default function SearchResultsPage() {
           />
         ) : (
           <SectionLoadingPanel
-            title="Candidate variants — phenotype-matched participants only"
+            title="Candidate variants"
+            scope={
+              conditionConceptIdKey ? (
+                <ScopeChip tone="accent" icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />} loading>
+                  Loading participant count
+                </ScopeChip>
+              ) : (
+                <ScopeChip>Phenotype-matched participants</ScopeChip>
+              )
+            }
             message="Loading variants…"
-            minHeight={346}
+            minHeight={MATCHED_TABLE_HEIGHT}
           />
         )}
 

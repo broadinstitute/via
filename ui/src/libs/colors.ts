@@ -79,7 +79,7 @@ export const sourceTints = {
 } as const;
 
 /** Marks the subpopulation with the highest allele frequency in the population table. */
-export const POPMAX_BACKGROUND = "#e8f1fa";
+export const POPMAX_BACKGROUND = "#dbe8f5";
 
 /** The same color at partial opacity -- e.g. alpha(colors.textPrimary, 0.14) for a panel shadow. */
 export function alpha(hex: string, opacity: number): string {

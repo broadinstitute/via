@@ -33,7 +33,6 @@ const styles = {
     ...Style.table.base,
     borderCollapse: "collapse",
   },
-  // Tighter than the cohort table's cells: this one is nested inside an expanded row of it.
   cell: {
     padding: "1px 10px",
     textAlign: "left",
@@ -41,28 +40,47 @@ const styles = {
   populationHeader: {
     color: colors.textSecondary,
     fontWeight: 600,
+    verticalAlign: "bottom",
   },
-  // inline-flex on a span nested in the td, not the td itself -- display: flex directly on a td
-  // overrides its table-cell display, which fights the table's own row-height/vertical-align
-  // handling and throws off spacing versus the plain <td> cells next to it.
+  groupHeader: {
+    paddingTop: 11,
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.2,
+    textAlign: "center",
+  },
   populationLabel: {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
+    verticalAlign: "top",
   },
   allPopulationsLabel: {
     color: colors.textMuted,
+  },
+  bottomSpacer: {
+    height: 12,
+    padding: 0,
   },
   sourceLink: {
     color: "inherit",
     fontWeight: 600,
     textDecoration: "none",
   },
+  maxValue: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+  },
+  maxValueText: Style.elements.trimmedText,
   maxMarker: {
-    marginLeft: 4,
-    color: colors.textAccent,
-    fontSize: 9.5,
-    fontWeight: 600,
+    ...Style.elements.trimmedText,
+    padding: "2px 5px",
+    borderRadius: 4,
+    background: colors.brandNavy,
+    color: colors.white,
+    fontSize: 9,
+    fontWeight: 700,
     letterSpacing: "0.04em",
   },
 } as const satisfies Record<string, CSSProperties>;
@@ -119,14 +137,25 @@ function FrequencyCells({ af, ac, an, inVocabulary, isMax, source, hovered }: Fr
   // The max cell keeps its highlight ink even while hovered, but gives up its own fill to the
   // hover band so the row still reads as one.
   const valueStyle: CSSProperties = isMax
-    ? { ...cellStyle, background: hovered ? cellStyle.background : POPMAX_BACKGROUND, color: colors.textPrimary }
+    ? {
+        ...cellStyle,
+        background: hovered ? cellStyle.background : POPMAX_BACKGROUND,
+        color: colors.textPrimary,
+        fontWeight: 600,
+      }
     : cellStyle;
 
   return (
     <>
       <td style={valueStyle}>
-        {formatAf(af)}
-        {isMax && <span style={styles.maxMarker}>MAX</span>}
+        {isMax ? (
+          <span style={styles.maxValue}>
+            <span style={styles.maxValueText}>{formatAf(af)}</span>
+            <span style={styles.maxMarker}>MAX</span>
+          </span>
+        ) : (
+          formatAf(af)
+        )}
       </td>
       <td style={valueStyle}>{formatAcAn(ac, an)}</td>
     </>
@@ -150,6 +179,10 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
     return { ...sourceCellStyle(source, false), fontWeight: 600 };
   }
 
+  function groupHeaderStyle(source: Source): CSSProperties {
+    return { ...sourceCellStyle(source, false), ...styles.groupHeader };
+  }
+
   function labelCellStyle(hovered: boolean): CSSProperties {
     return { ...styles.cell, ...(hovered ? { background: colors.surface1 } : undefined) };
   }
@@ -158,11 +191,14 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
     <table style={styles.table}>
       <thead>
         <tr>
-          <th style={{ ...styles.cell, ...styles.populationHeader }}>Population</th>
-          <th style={headerStyle("aou")}>AoU AF</th>
-          <th style={headerStyle("aou")}>AoU AC/AN</th>
-          <th style={headerStyle("gnomad")}>
-            gnomAD AF{" "}
+          <th rowSpan={2} style={{ ...styles.cell, ...styles.populationHeader }}>
+            Population
+          </th>
+          <th colSpan={2} style={groupHeaderStyle("aou")}>
+            All of Us
+          </th>
+          <th colSpan={2} style={groupHeaderStyle("gnomad")}>
+            gnomAD{" "}
             {variant.gnomadUrl && (
               <a
                 style={{ ...styles.sourceLink, ...(linkHovered ? { color: colors.textAccent } : undefined) }}
@@ -178,7 +214,12 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
               </a>
             )}
           </th>
-          <th style={headerStyle("gnomad")}>gnomAD AC/AN</th>
+        </tr>
+        <tr>
+          <th style={headerStyle("aou")}>AF</th>
+          <th style={headerStyle("aou")}>AC/AN</th>
+          <th style={headerStyle("gnomad")}>AF</th>
+          <th style={headerStyle("gnomad")}>AC/AN</th>
         </tr>
       </thead>
       <tbody>
@@ -240,6 +281,12 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
             source="gnomad"
             hovered={hoveredRow === ALL_POPULATIONS_ROW}
           />
+        </tr>
+        <tr aria-hidden="true">
+          <td style={styles.bottomSpacer} />
+          {(["aou", "aou", "gnomad", "gnomad"] as const).map((source, index) => (
+            <td key={index} style={{ ...sourceCellStyle(source, false), ...styles.bottomSpacer }} />
+          ))}
         </tr>
       </tbody>
     </table>

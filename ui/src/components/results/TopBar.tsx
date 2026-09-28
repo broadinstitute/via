@@ -49,24 +49,35 @@ const styles = {
   },
   // Links home on every page. On the results page it's the way to a new search, in place of the
   // back arrow it replaced: the same destination, read as "home" rather than "previous page".
+  // The padding gives the hover fill room around the mark and name, and the negative margin takes
+  // it back out of the layout, so the brand sits where it would without it.
   brand: {
     display: "inline-flex",
     alignItems: "center",
     flexShrink: 0,
     gap: 7,
+    margin: "-4px -6px",
+    padding: "4px 6px",
+    borderRadius: 6,
     color: colors.textPrimary,
     fontSize: 14,
     fontWeight: 800,
     letterSpacing: 0.3,
     textDecoration: "none",
   },
+  /** Matches the gear's (Style.buttons.iconHover). */
   brandHover: {
-    color: colors.textAccent,
+    ...Style.buttons.iconHover,
   },
-  /** On the results page, the rule between the brand and the search box. */
+  /**
+   * On the results page, the rule between the brand and the search box. Its own element, not a
+   * border on the brand, so the brand's hover fill doesn't run up against it.
+   */
   brandDivider: {
-    paddingRight: 16,
-    borderRight: `1px solid ${colors.border}`,
+    flexShrink: 0,
+    width: 1,
+    height: 22,
+    background: colors.border,
   },
   brandMark: {
     display: "block",
@@ -188,7 +199,6 @@ const styles = {
 const compactStyles = {
   topbar: { padding: "0 12px" },
   leading: { gap: 10, marginRight: 10 },
-  brandDivider: { paddingRight: 10 },
   searchBox: { gap: 8 },
   searchTerms: { gap: 8 },
   userDivider: { margin: "0 4px" },
@@ -241,7 +251,6 @@ export default function TopBar({
           to="/"
           style={{
             ...styles.brand,
-            ...(onModifySearch ? { ...styles.brandDivider, ...compactStyle("brandDivider") } : undefined),
             ...(brandHovered ? styles.brandHover : undefined),
           }}
           aria-label="VIA home, new search"
@@ -250,6 +259,7 @@ export default function TopBar({
           <img src="/favicon.svg" alt="" width={22} height={22} style={styles.brandMark} />
           VIA
         </Link>
+        {onModifySearch && <span style={styles.brandDivider} aria-hidden="true" />}
         {onModifySearch && (
           <div style={styles.searchAnchor}>
             <Clickable

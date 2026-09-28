@@ -14,14 +14,21 @@ import type { ClinVarSignificance, CohortVariantRow } from "../../types/results"
 import { formatAcAn, formatAf } from "../../utils/format";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
-import InfoTooltip from "../common/InfoTooltip";
+import InfoLabel from "../common/InfoLabel";
 import { ChevronRightIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import MoreBelowCue from "./MoreBelowCue";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
-import ResultsPanel from "./ResultsPanel";
+import ResultsPanel, { ScopeChip } from "./ResultsPanel";
 import SubpopBadge from "../elements/SubpopBadge";
+
+/**
+ * The table's floor, shared with its loading placeholder so the swap doesn't resize the row.
+ * Sized so this panel is at least as tall as a loaded phenotype panel with a one-line condition
+ * name: any shorter and the phenotype panel stretches the row taller the moment it loads.
+ */
+export const COHORT_TABLE_MIN_HEIGHT = 431;
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
 const PLOF_RANK = { HC: 0, LC: 1, none: 2 } as const;
@@ -52,7 +59,7 @@ const styles = {
   tableWrap: {
     position: "relative",
     flex: 1,
-    minHeight: 425,
+    minHeight: COHORT_TABLE_MIN_HEIGHT,
   },
   tableScroll: {
     ...Style.table.scroller,
@@ -122,8 +129,21 @@ const styles = {
     color: colors.textMuted,
     cursor: "help",
   },
+  // An expanded row and its detail read as one unit: they share the detail's fill, the rule
+  // between them is dropped, and one accent bar runs down the left of both.
+  expandedCell: {
+    borderBottom: "1px solid transparent",
+  },
+  expandedRowFill: {
+    background: colors.surface1,
+  },
+  expandedBar: {
+    boxShadow: `inset 3px 0 0 ${colors.textAccent}`,
+  },
   detailRow: {
     background: colors.surface1,
+    // Tucked up under its row, with the room below it instead, before the next row.
+    padding: "0 12px 12px 13px",
     // Wrapping is re-enabled here: the expanded panel holds prose, not table values.
     whiteSpace: "normal",
   },
@@ -253,7 +273,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                     size={12}
                     strokeWidth={2.5}
                     className="transition-transform"
-                    style={isExpanded ? { transform: "rotate(90deg)" } : undefined}
+                    style={isExpanded ? { transform: "rotate(90deg)", color: colors.textAccent } : undefined}
                   />
                 </Clickable>
               );
@@ -269,6 +289,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             cell: ({ row }) => (row.original.annotated ? row.original.gene : <NotAvailable />),
             sortUndefined: "last",
           }),
+          columnHelper.accessor((row) => (row.annotated ? row.consequence : undefined), {
+            id: "consequence",
+            header: "Consequence",
+            cell: ({ row }) => (row.original.annotated ? row.original.consequence : <NotAvailable />),
+            sortUndefined: "last",
+          }),
           columnHelper.accessor((row) => (row.annotated ? row.proteinChange : undefined), {
             id: "proteinChange",
             header: "Protein ∆",
@@ -280,26 +306,19 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
               ),
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => (row.annotated ? row.consequence : undefined), {
-            id: "consequence",
-            header: "Consequence",
-            cell: ({ row }) => (row.original.annotated ? row.original.consequence : <NotAvailable />),
-            sortUndefined: "last",
-          }),
         ]),
       }),
       columnHelper.group({
         id: "aou",
         header: () => (
-          <>
-            All of Us <span style={styles.groupQualifier}>— max subpopulation</span>{" "}
-            <InfoTooltip
-              text={
-                `Values below reflect the All of Us subpopulation (${AOU_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire All of Us cohort.\n\n` +
-                "To see the allele frequency for the entire cohort, expand the row."
-              }
-            />
-          </>
+          <InfoLabel
+            tooltip={
+              `Values below reflect the All of Us subpopulation (${AOU_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire All of Us cohort.\n\n` +
+              "To see the allele frequency for the entire cohort, expand the row."
+            }
+          >
+            All of Us <span style={styles.groupQualifier}>— max subpopulation</span>
+          </InfoLabel>
         ),
         enableSorting: false,
         columns: columnHelper.columns([
@@ -341,14 +360,14 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
       columnHelper.group({
         id: "gnomad",
         header: () => (
-          <>
-            gnomAD <span style={styles.groupQualifier}>— max subpopulation</span>{" "}
-            <InfoTooltip
-                text={
-                  `Values below reflect the gnomAD subpopulation (${GNOMAD_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire gnomAD cohort.\n\n` +
-                  "To see the allele frequency for the entire cohort, expand the row."
-            } />
-          </>
+          <InfoLabel
+            tooltip={
+              `Values below reflect the gnomAD subpopulation (${GNOMAD_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire gnomAD cohort.\n\n` +
+              "To see the allele frequency for the entire cohort, expand the row."
+            }
+          >
+            gnomAD <span style={styles.groupQualifier}>— max subpopulation</span>
+          </InfoLabel>
         ),
         enableSorting: false,
         columns: columnHelper.columns([
@@ -462,7 +481,8 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
 
   return (
     <ResultsPanel
-      title="Candidate variants — all participants"
+      title="Candidate variants"
+      scope={<ScopeChip>All participants</ScopeChip>}
       headerRight={<span style={styles.sub}>Showing {rows.length} results</span>}
     >
       <div style={styles.tableWrap}>
@@ -517,6 +537,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                   isMissingFromGnomad(row.original) ? GNOMAD_MISSING_GROUP : null,
                 ].filter((group) => group !== null);
                 const hovered = hoveredRow === row.id;
+                const expanded = expandedVariants.has(row.original.variant);
                 return (
                   <Fragment key={row.id}>
                     <tr
@@ -525,11 +546,13 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                       onClick={() => toggleExpanded(row.original.variant)}
                       {...rowHoverProps(row.id)}
                     >
-                      {row.getVisibleCells().map((cell) => {
+                      {row.getVisibleCells().map((cell, index) => {
                         const source = sourceOf(cell.column.id);
                         const cellStyle: CSSProperties = {
                           ...Style.table.bodyCell,
-                          background: cellBackground(source, hovered),
+                          ...(expanded ? styles.expandedCell : undefined),
+                          background: cellBackground(source, hovered) ?? (expanded ? styles.expandedRowFill.background : undefined),
+                          ...(expanded && index === 0 ? styles.expandedBar : undefined),
                         };
                         const group = missingGroups.find((candidate) =>
                           candidate.columnIds.has(cell.column.id),
@@ -549,15 +572,11 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                         );
                       })}
                     </tr>
-                    {expandedVariants.has(row.original.variant) && (
+                    {expanded && (
                       <tr id={`variant-detail-${row.original.variant}`}>
-                        {/* Padding is the standard body-cell padding rather than the roomier
-                            "0 16px 14px" the old stylesheet asked for: that rule lost the cascade
-                            to a higher-specificity one, so the compact spacing here is what has
-                            always rendered. */}
                         <td
                           colSpan={row.getVisibleCells().length}
-                          style={{ ...Style.table.bodyCell, ...styles.detailRow }}
+                          style={{ ...Style.table.bodyCell, ...styles.detailRow, ...styles.expandedBar }}
                         >
                           {row.original.annotated ? (
                             <div style={styles.detailPanel}>

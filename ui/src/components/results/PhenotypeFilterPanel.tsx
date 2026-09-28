@@ -148,7 +148,13 @@ export default function PhenotypeFilterPanel({
     const { message, buttonLabel } = phenotypeUnavailableCopy("", "participant breakdowns");
     return (
       <ResultsPanel title="Phenotype filter">
-        <PhenotypeFilterRequired message={message} buttonLabel={buttonLabel} onAddPhenotypeFilter={onAddPhenotypeFilter} />
+        {/* Stretched to the variants table beside it anyway; this is its floor when stacked. */}
+        <PhenotypeFilterRequired
+          message={message}
+          buttonLabel={buttonLabel}
+          onAddPhenotypeFilter={onAddPhenotypeFilter}
+          minHeight={346}
+        />
       </ResultsPanel>
     );
   }

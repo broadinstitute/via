@@ -13,18 +13,21 @@ import * as Style from "../../libs/style";
 import type { FilteredVariantRow } from "../../types/results";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
-import InfoTooltip from "../common/InfoTooltip";
+import InfoLabel from "../common/InfoLabel";
+import { UserIcon } from "../icons";
 import CopyButton from "./CopyButton";
 import MoreBelowCue from "./MoreBelowCue";
 import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
-import ResultsPanel from "./ResultsPanel";
+import ResultsPanel, { ScopeChip } from "./ResultsPanel";
+
+/**
+ * Shows the same number of rows as the cohort table above at its floor. That table's
+ * COHORT_TABLE_MIN_HEIGHT (431px) less its two header rows (28 + 34px) leaves 369px of 33.25px
+ * rows; this one has a single 35.5px header row and 34px rows, so 35.5 + 369 × 34 / 33.25 ≈ 413.
+ */
+export const MATCHED_TABLE_HEIGHT = 413;
 
 const styles = {
-  nCount: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: 500,
-  },
   actions: {
     display: "flex",
     alignItems: "center",
@@ -38,9 +41,10 @@ const styles = {
   tableWrap: {
     position: "relative",
   },
+  // A fixed height, like the cohort table's floor, rather than shrinking to fit a few rows.
   tableScroll: {
     ...Style.table.scroller,
-    maxHeight: 346,
+    height: MATCHED_TABLE_HEIGHT,
   },
   table: {
     ...Style.table.base,
@@ -179,10 +183,9 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.cohortAc : undefined), {
           id: "cohortAc",
           header: () => (
-            <>
-              Cohort AC{" "}
-              <InfoTooltip text="Allele count among phenotype-matched participants." />
-            </>
+            <InfoLabel tooltip="Allele count among phenotype-matched participants.">
+              Cohort AC
+            </InfoLabel>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAc : <NotAvailable />),
           sortUndefined: "last",
@@ -190,10 +193,9 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.cohortAn : undefined), {
           id: "cohortAn",
           header: () => (
-            <>
-              Cohort AN{" "}
-              <InfoTooltip text="Allele number among phenotype-matched participants." />
-            </>
+            <InfoLabel tooltip="Allele number among phenotype-matched participants.">
+              Cohort AN
+            </InfoLabel>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAn : <NotAvailable />),
           sortUndefined: "last",
@@ -201,10 +203,9 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.cohortAf : undefined), {
           id: "cohortAf",
           header: () => (
-            <>
-              Cohort AF{" "}
-              <InfoTooltip text="Allele frequency among phenotype-matched participants." />
-            </>
+            <InfoLabel tooltip="Allele frequency among phenotype-matched participants.">
+              Cohort AF
+            </InfoLabel>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.cohortAf.toFixed(4) : <NotAvailable />),
           sortUndefined: "last",
@@ -224,10 +225,9 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.clinvarPlpInTrans : undefined), {
           id: "clinvarPlpInTrans",
           header: () => (
-            <>
-              ClinVar P/LP in trans{" "}
-              <InfoTooltip text="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans with this variant." />
-            </>
+            <InfoLabel tooltip="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans with this variant.">
+              ClinVar P/LP in trans
+            </InfoLabel>
           ),
           cell: ({ row }) => (row.original.hasStats ? row.original.clinvarPlpInTrans : <NotAvailable />),
           sortUndefined: "last",
@@ -235,10 +235,9 @@ export default function ParticipantMatchedVariantsPanel({
         columnHelper.accessor((row) => (row.hasStats ? row.afRatio : undefined), {
           id: "afRatio",
           header: () => (
-            <>
-              AF Ratio{" "}
-              <InfoTooltip text="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF." />
-            </>
+            <InfoLabel tooltip="Ratio of the phenotype-matched cohort AF to the AoU cohort-wide AF.">
+              AF Ratio
+            </InfoLabel>
           ),
           cell: ({ row }) => {
             if (!row.original.hasStats) return <NotAvailable />;
@@ -298,19 +297,28 @@ export default function ParticipantMatchedVariantsPanel({
   if (!hasPhenotypeFilter) {
     const { message, buttonLabel } = phenotypeUnavailableCopy(condition, "phenotype-matched participant data");
     return (
-      <ResultsPanel title="Candidate variants — phenotype-matched participants only">
-        <PhenotypeFilterRequired message={message} buttonLabel={buttonLabel} onAddPhenotypeFilter={onAddPhenotypeFilter} />
+      <ResultsPanel title="Candidate variants" scope={<ScopeChip>Phenotype-matched participants</ScopeChip>}>
+        <PhenotypeFilterRequired
+          message={message}
+          buttonLabel={buttonLabel}
+          onAddPhenotypeFilter={onAddPhenotypeFilter}
+          minHeight={MATCHED_TABLE_HEIGHT}
+        />
       </ResultsPanel>
     );
   }
 
   return (
     <ResultsPanel
-      title={
-        <>
-          Candidate variants — phenotype-matched participants only{" "}
-          <span style={styles.nCount}>(n = {participantCount})</span>
-        </>
+      title="Candidate variants"
+      scope={
+        <ScopeChip
+          tone="accent"
+          icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />}
+          title={`${participantCount.toLocaleString()} participants with ${condition}`}
+        >
+          {participantCount.toLocaleString()} with {condition}
+        </ScopeChip>
       }
       headerRight={
         <div style={styles.actions}>
