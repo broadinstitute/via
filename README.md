@@ -4,8 +4,7 @@ VIA helps clinicians rule candidate genetic variants in or out by comparing them
 
 This repo contains the app's frontend (ui/, TypeScript + React) and backend (api/, Java + Spring Boot), as well as the deployment configuration required to run the application in Verily Workbench (deploy/, startupscript/).
 
-
-<img width="3024" height="2152" alt="screencapture-localhost-5173-results-2026-09-15-17_05_23" src="https://github.com/user-attachments/assets/37bc8acf-650e-4509-a71e-bf3b6fe869c3" />
+<img width="3024" height="2236" alt="screencapture-localhost-5173-results-2026-09-28-15_47_26" src="https://github.com/user-attachments/assets/1640a79c-0ac4-44e8-9284-20798e6eb34d" />
 
 ## Structure
 
