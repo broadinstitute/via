@@ -7,6 +7,10 @@ Output is newline-delimited JSON (NDJSON), which is the correct format for
 loading into BigQuery when the schema contains REPEATED (ARRAY) fields.
 CSV cannot represent arrays.
 
+Most rows are random. The curated demo use cases' variants (see use_cases/) are appended to them:
+each is a random row with every column the app shows overwritten from its spec, so those
+variants look real while the columns nobody reads stay filled in.
+
 Usage:
     python3 data/synthetic/generators/generate_vat_synthetic.py
 
@@ -17,6 +21,9 @@ import argparse
 import json
 import os
 import random
+
+from use_cases import USE_CASES
+from use_cases.common import vat_fields
 
 # ---------------------------------------------------------------------------
 # Controlled vocabularies (realistic values, not real variant data)
@@ -375,6 +382,19 @@ def main():
 
     rows = [make_row() for _ in range(args.rows)]
 
+    # After the random rows, so adding a use case doesn't reshuffle them.
+    curated = [
+        {**make_row(), **vat_fields(variant)}
+        for case in USE_CASES
+        for variant in case.variants
+        if variant.aou is not None  # not in All of Us means not in the VAT
+    ]
+    random_vids = {r["vid"] for r in rows}
+    clashes = [r["vid"] for r in curated if r["vid"] in random_vids]
+    if clashes:
+        raise SystemExit(f"ERROR: curated variants collide with random rows: {clashes}")
+    rows += curated
+
     # Sort by contig/position so the output looks like a real variant table.
     contig_order = {c: i for i, c in enumerate(CONTIGS)}
     rows.sort(key=lambda r: (contig_order[r["contig"]], r["position"]))
@@ -403,7 +423,7 @@ def main():
         for r in rows:
             fh.write(json.dumps(r) + "\n")
 
-    print(f"Wrote {len(rows)} rows to {args.out}")
+    print(f"Wrote {len(rows)} rows to {args.out} ({len(curated)} from the use cases)")
 
 
 if __name__ == "__main__":

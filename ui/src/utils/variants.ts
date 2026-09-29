@@ -39,17 +39,3 @@ export function resultsPath(variants: string[], conditionConceptId: number | nul
   }
   return `/results?${params.toString()}`;
 }
-
-/**
- * "Try an example" on the entry page. These are from the synthetic dev dataset
- * (foxtrot_synthetic), chosen to show a spread of results -- different consequences, ClinVar
- * calls, and one not observed in All of Us. Swap for real-CDR variants before this ships against one.
- */
-export const EXAMPLE_VARIANTS = [
-  "3-4285715-T-A",
-  "18-143274802-C-A",
-  "X-173948058-A-C",
-  "2-122517541-C-G",
-  "16-76064540-CTAC-C",
-  "7-55181378-G-A",
-];

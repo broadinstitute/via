@@ -5,7 +5,9 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.broadinstitute.variantinterpretation.model.BreakdownSegment;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
@@ -24,6 +26,10 @@ import org.broadinstitute.variantinterpretation.model.FilteredVariant;
  * <p>The stats are derived from the variant's real (well, synthetic-VAT) cohort-wide AoU frequency
  * and seeded off its vid, so a given variant always comes back with the same numbers and its AF
  * ratio stays consistent with the frequency shown for it in the all-participants table.
+ *
+ * <p>For the demo use cases, curated counts (see PhenotypeFixtures) can stand in for the random
+ * ones; everything derived from them -- AN, AF, the zygosity split, the ratio, the breakdowns'
+ * colors and percents -- is still worked out here, the same way.
  */
 public final class MockPhenotypeData {
 
@@ -58,6 +64,9 @@ public final class MockPhenotypeData {
           new Weight("60–69", 215, "#2569A0"),
           new Weight("70+", 82, "#17456F"));
 
+  /** A use case's hand-picked counts for one variant among its matched participants. */
+  public record CuratedCounts(int cohortAc, int homozygotes, int plpInTrans) {}
+
   private MockPhenotypeData() {}
 
   /** Ancestry makeup of the matched participants. Counts sum to {@code participants}. */
@@ -68,6 +77,36 @@ public final class MockPhenotypeData {
   /** Age makeup of the same matched participants, so it sums to {@code participants} too. */
   public static List<BreakdownSegment> ageBreakdown(int participants) {
     return breakdown(AGE, participants);
+  }
+
+  /** A use case's own ancestry counts, in the usual group order and colors. */
+  public static List<BreakdownSegment> ancestryBreakdown(List<PhenotypeFixtures.Group> counts, int participants) {
+    return breakdown(ANCESTRY, counts, participants);
+  }
+
+  /** A use case's own age counts, in the usual group order and colors. */
+  public static List<BreakdownSegment> ageBreakdown(List<PhenotypeFixtures.Group> counts, int participants) {
+    return breakdown(AGE, counts, participants);
+  }
+
+  private static List<BreakdownSegment> breakdown(
+      List<Weight> groups, List<PhenotypeFixtures.Group> counts, int participants) {
+    Map<String, Integer> byLabel =
+        counts.stream().collect(Collectors.toMap(PhenotypeFixtures.Group::label, PhenotypeFixtures.Group::count));
+    if (!groups.stream().map(Weight::label).toList().containsAll(byLabel.keySet())) {
+      throw new IllegalArgumentException("Unknown breakdown groups in " + byLabel.keySet());
+    }
+    if (byLabel.values().stream().mapToInt(Integer::intValue).sum() != participants) {
+      throw new IllegalArgumentException("Breakdown " + byLabel + " doesn't sum to " + participants);
+    }
+    List<BreakdownSegment> segments = new ArrayList<>();
+    for (Weight group : groups) {
+      int count = byLabel.getOrDefault(group.label(), 0);
+      if (count > 0) {
+        segments.add(segment(group.label(), count, group.color(), participants));
+      }
+    }
+    return segments;
   }
 
   /**
@@ -128,17 +167,27 @@ public final class MockPhenotypeData {
    * case where inventing a phenotype-matched count would contradict what the other table shows.
    */
   public static List<FilteredVariant> filteredVariants(List<CohortVariant> cohortVariants, int participants) {
+    return filteredVariants(cohortVariants, participants, Map.of());
+  }
+
+  /**
+   * As above, but a variant with an entry in {@code curated} gets those counts instead of random
+   * ones -- the demo use cases' hand-picked numbers.
+   */
+  public static List<FilteredVariant> filteredVariants(
+      List<CohortVariant> cohortVariants, int participants, Map<String, CuratedCounts> curated) {
     if (participants <= 0) {
       throw new IllegalArgumentException("participants must be positive, got " + participants);
     }
     List<FilteredVariant> filtered = new ArrayList<>();
     for (CohortVariant cohortVariant : cohortVariants) {
-      filtered.add(filteredVariant(cohortVariant, participants));
+      filtered.add(filteredVariant(cohortVariant, participants, curated.get(cohortVariant.getVariant())));
     }
     return filtered;
   }
 
-  private static FilteredVariant filteredVariant(CohortVariant cohortVariant, int participants) {
+  private static FilteredVariant filteredVariant(
+      CohortVariant cohortVariant, int participants, CuratedCounts curated) {
     String variant = cohortVariant.getVariant();
     if (!Boolean.TRUE.equals(cohortVariant.getAnnotated())) {
       return withoutStats(variant, null, null);
@@ -152,6 +201,12 @@ public final class MockPhenotypeData {
     }
 
     int cohortAn = 2 * participants;
+    if (curated != null) {
+      if (curated.cohortAc() < 0 || curated.cohortAc() > cohortAn || 2 * curated.homozygotes() > curated.cohortAc()) {
+        throw new IllegalArgumentException("Curated counts " + curated + " for " + variant + " don't fit " + participants);
+      }
+      return withStats(cohortVariant, participants, curated.cohortAc(), curated.homozygotes(), curated.plpInTrans());
+    }
     Random random = seededRandom(variant);
     double enrichment = enrichment(random);
     double cohortAf = Math.min(aouAllAf.doubleValue() * enrichment, MAX_COHORT_AF);
@@ -172,20 +227,28 @@ public final class MockPhenotypeData {
     // high AC otherwise would; each extra homozygote carries two alleles on one participant.
     homozygotes = Math.max(homozygotes, cohortAc - participants);
     int heterozygotes = cohortAc - 2 * homozygotes;
+    int plpInTrans = plpInTrans(random, heterozygotes, isPathogenic(cohortVariant));
+    return withStats(cohortVariant, participants, cohortAc, homozygotes, plpInTrans);
+  }
 
+  // Shared by the random and curated paths, so both derive AN, AF and the ratio the same way.
+  private static FilteredVariant withStats(
+      CohortVariant cohortVariant, int participants, int cohortAc, int homozygotes, int plpInTrans) {
+    int cohortAn = 2 * participants;
+    double cohortAf = (double) cohortAc / cohortAn;
+    double aouAllAf = cohortVariant.getAouAllAf().orElseThrow().doubleValue();
     return new FilteredVariant()
-        .variant(variant)
-        .gene(gene)
-        .consequence(consequence)
+        .variant(cohortVariant.getVariant())
+        .gene(cohortVariant.getGene().orElse(null))
+        .consequence(cohortVariant.getConsequence().orElse(null))
         .hasStats(true)
         .cohortAc(cohortAc)
         .cohortAn(cohortAn)
         .cohortAf(BigDecimal.valueOf(cohortAf).setScale(6, RoundingMode.HALF_UP))
         .homozygotes(homozygotes)
-        .heterozygotes(heterozygotes)
-        .clinvarPlpInTrans(plpInTrans(random, heterozygotes, isPathogenic(cohortVariant)))
-        .afRatio(
-            BigDecimal.valueOf(cohortAf / aouAllAf.doubleValue()).setScale(2, RoundingMode.HALF_UP));
+        .heterozygotes(cohortAc - 2 * homozygotes)
+        .clinvarPlpInTrans(plpInTrans)
+        .afRatio(BigDecimal.valueOf(cohortAf / aouAllAf).setScale(2, RoundingMode.HALF_UP));
   }
 
   private static FilteredVariant withoutStats(String variant, String gene, String consequence) {

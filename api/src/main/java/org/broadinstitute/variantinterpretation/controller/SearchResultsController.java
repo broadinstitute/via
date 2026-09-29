@@ -1,9 +1,12 @@
 package org.broadinstitute.variantinterpretation.controller;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.broadinstitute.variantinterpretation.datasource.ConditionLookupService;
 import org.broadinstitute.variantinterpretation.datasource.MockPhenotypeData;
+import org.broadinstitute.variantinterpretation.datasource.PhenotypeFixtures;
 import org.broadinstitute.variantinterpretation.datasource.VatLookupService;
 import org.broadinstitute.variantinterpretation.api.SearchApi;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
@@ -21,10 +24,13 @@ public class SearchResultsController implements SearchApi {
 
   private final VatLookupService vatLookup;
   private final ConditionLookupService conditionLookup;
+  private final PhenotypeFixtures phenotypeFixtures;
 
-  public SearchResultsController(VatLookupService vatLookup, ConditionLookupService conditionLookup) {
+  public SearchResultsController(
+      VatLookupService vatLookup, ConditionLookupService conditionLookup, PhenotypeFixtures phenotypeFixtures) {
     this.vatLookup = vatLookup;
     this.conditionLookup = conditionLookup;
+    this.phenotypeFixtures = phenotypeFixtures;
   }
 
   // cohortVariants and conditionSearch are the parts of this response backed by real queries:
@@ -33,7 +39,8 @@ public class SearchResultsController implements SearchApi {
   // participant, ancestry or age data -- so the breakdowns and filteredVariants are still served
   // from MockPhenotypeData until a genotype-level data source exists. They're scaled to the
   // picked condition's real participant count, standing in for data about those participants,
-  // and left empty when it matched nobody.
+  // and left empty when it matched nobody. A demo use case's condition gets its own curated
+  // breakdowns and per-variant counts instead (PhenotypeFixtures).
   @Override
   public ResponseEntity<SearchResultsResponse> searchResults(
       List<String> variants, Long conditionConceptId) {
@@ -43,16 +50,29 @@ public class SearchResultsController implements SearchApi {
     // Null both when no condition was picked and when the picked concept wasn't found.
     Integer participants = conditionSearch == null ? null : conditionSearch.getParticipantCount().orElse(null);
     boolean phenotypeFiltered = participants != null && participants > 0;
-
-    return ResponseEntity.ok(
+    SearchResultsResponse response =
         new SearchResultsResponse()
             .searchSummary(searchSummary(requested))
             .conditionSearch(conditionSearch)
-            .ancestryBreakdown(phenotypeFiltered ? MockPhenotypeData.ancestryBreakdown(participants) : List.of())
-            .ageBreakdown(phenotypeFiltered ? MockPhenotypeData.ageBreakdown(participants) : List.of())
-            .cohortVariants(cohortVariants)
-            .filteredVariants(
-                phenotypeFiltered ? MockPhenotypeData.filteredVariants(cohortVariants, participants) : List.of()));
+            .cohortVariants(cohortVariants);
+    if (!phenotypeFiltered) {
+      return ResponseEntity.ok(response.ancestryBreakdown(List.of()).ageBreakdown(List.of()).filteredVariants(List.of()));
+    }
+
+    Optional<PhenotypeFixtures.UseCase> useCase = phenotypeFixtures.forCondition(conditionConceptId, participants);
+    Map<String, MockPhenotypeData.CuratedCounts> curated =
+        useCase.map(PhenotypeFixtures.UseCase::variants).orElse(Map.of());
+    return ResponseEntity.ok(
+        response
+            .ancestryBreakdown(
+                useCase
+                    .map(u -> MockPhenotypeData.ancestryBreakdown(u.ancestry(), participants))
+                    .orElseGet(() -> MockPhenotypeData.ancestryBreakdown(participants)))
+            .ageBreakdown(
+                useCase
+                    .map(u -> MockPhenotypeData.ageBreakdown(u.age(), participants))
+                    .orElseGet(() -> MockPhenotypeData.ageBreakdown(participants)))
+            .filteredVariants(MockPhenotypeData.filteredVariants(cohortVariants, participants, curated)));
   }
 
   // Trims, drops blanks, dedupes (keeping the first occurrence's position), and caps num

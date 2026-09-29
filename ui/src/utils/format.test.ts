@@ -17,6 +17,13 @@ describe("format utils", () => {
     expect(formatAf(0)).toBe("0.0000");
     expect(formatAf(0.123456)).toBe("0.1235");
     expect(formatAf(1)).toBe("1.0000");
+    expect(formatAf(0.0001)).toBe("0.0001");
+  });
+
+  it("shows rare-variant frequencies in scientific notation rather than rounding them to zero", () => {
+    expect(formatAf(0.0000123)).toBe("1.2e-5");
+    expect(formatAf(0.00004905)).toBe("4.9e-5");
+    expect(formatAf(0.00000207)).toBe("2.1e-6");
   });
 
   it("formats ISO dates in UTC as day month year", () => {

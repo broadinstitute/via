@@ -2,7 +2,7 @@ import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { recordRecentSearch } from "../utils/recentSearches";
-import { EXAMPLE_VARIANTS } from "../utils/variants";
+import { USE_CASES } from "../utils/useCases";
 import SearchEntryPage from "./SearchEntryPage";
 
 const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47 };
@@ -123,15 +123,42 @@ describe("SearchEntryPage", () => {
    * The backend counts exactly the concept that was picked, which is what makes a low- or
    * zero-estimate concept countable. Its name isn't sent: there's no free-text path to use it.
    */
-  it("fills in example variants from 'Try an example', which then steps aside", () => {
+  it("fills in a use case's variants and condition from 'Try an example', ready to search", async () => {
     stubApi([], "");
     renderPage();
+    const hcm = USE_CASES.find((useCase) => useCase.key === "hypertrophic_cardiomyopathy")!;
 
     fireEvent.click(screen.getByRole("button", { name: "Try an example" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Hypertrophic cardiomyopathy/ }));
 
-    expect(screen.getByPlaceholderText(/8-11708582-C-T/)).toHaveValue(EXAMPLE_VARIANTS.join("\n"));
-    expect(screen.getByText(`${EXAMPLE_VARIANTS.length} entered`)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/8-11708582-C-T/)).toHaveValue(hcm.variants.join("\n"));
+    expect(screen.getByText(`${hcm.variants.length} entered`)).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveValue("Hypertrophic cardiomyopathy");
+    // The menu steps aside once the field has variants in it.
     expect(screen.queryByRole("button", { name: "Try an example" })).not.toBeInTheDocument();
+
+    // Picked, not just typed: the search filters by it.
+    fireEvent.click(screen.getByRole("button", { name: /search/i }));
+    expect(await screen.findByTestId("location")).toHaveTextContent(
+      `/results?${hcm.variants.map((variant) => `variants=${variant}`).join("&")}&conditionConceptId=9000040`,
+    );
+  });
+
+  it("opens the example menu into its first item, and closes it on Escape", () => {
+    stubApi([], "");
+    renderPage();
+    const trigger = screen.getByRole("button", { name: "Try an example" });
+
+    fireEvent.click(trigger);
+    const items = screen.getAllByRole("menuitem");
+    expect(items).toHaveLength(USE_CASES.length);
+    expect(items[0]).toHaveFocus();
+    fireEvent.keyDown(items[0], { key: "ArrowDown" });
+    expect(items[1]).toHaveFocus();
+
+    fireEvent.keyDown(items[1], { key: "Escape" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 
   it("says in the footer what's needed to search, and what's ready", () => {
