@@ -21,8 +21,10 @@ GNOMAD_POPULATIONS = ["afr", "amr", "asj", "eas", "fin", "nfe", "sas", "oth"]
 # drop out at harder-to-sequence sites), so no two variants report identical denominators.
 AOU_AN = {"eur": 238_000, "afr": 104_000, "amr": 86_000, "oth": 38_000,
           "eas": 14_600, "sas": 6_800, "mid": 2_600}
-GNOMAD_AN = {"nfe": 64_600, "afr": 24_000, "amr": 17_600, "sas": 15_300,
-             "eas": 9_900, "fin": 10_800, "asj": 5_200, "oth": 4_600}
+# gnomAD's are v4 genomes', the dataset the use cases' real gnomAD counts come from. (Its exomes
+# are about ten times larger; the genomes are smaller than All of Us, as a demo would expect.)
+GNOMAD_AN = {"nfe": 67_950, "afr": 41_528, "amr": 15_292, "asj": 3_470,
+             "eas": 5_152, "fin": 10_578, "sas": 4_810, "oth": 2_114}
 
 ANCESTRY_LABELS = ["EUR", "AFR", "AMR", "OTH", "EAS", "SAS", "MID"]
 AGE_LABELS = ["18–29", "30–39", "40–49", "50–59", "60–69", "70+"]
@@ -50,7 +52,10 @@ VAT_CLASSIFICATIONS = {
     "Conflicting classifications of pathogenicity": ["Conflicting interpretations"],
 }
 
-VID = re.compile(r"^(\d{1,2}|X|Y)-\d+-[ACGT]-[ACGT]$")
+# SNVs and small indels, in VCF style: an indel carries the base before it on both alleles.
+VID = re.compile(r"^(\d{1,2}|X|Y)-\d+-[ACGT]+-[ACGT]+$")
+
+SPLICE_AI_KEYS = ("DS_AG", "DS_AL", "DS_DG", "DS_DL", "DP_AG", "DP_AL", "DP_DG", "DP_DL")
 
 
 @dataclass(frozen=True)
@@ -86,18 +91,24 @@ class Variant:
     transcript: str              # MANE Select, Ensembl ID
     mane: str                    # MANE Select, RefSeq ID
     hgvsc: str                   # on the MANE transcript, e.g. "c.1208G>A"
-    hgvsp: str                   # e.g. "p.Arg403Gln"
+    hgvsp: str | None            # e.g. "p.Arg403Gln"; None for an intronic variant
     consequence: tuple[str, ...]  # VEP terms, most severe first
-    exon: str                    # "13/40"
+    exon: str | None             # "13/40"; None for an intronic (e.g. splice-site) variant
     rsid: str | None
     clinvar: ClinVar | None
-    # Per population: an int is an allele count, a float an allele frequency. None means the
-    # variant isn't in that source at all -- for All of Us, that it's absent from the VAT.
+    # Per population: an int is an allele count, a float an allele frequency, an (AC, AN) pair
+    # both counts exactly (gnomAD's are real, from its API). None means the variant isn't in that
+    # source at all -- for All of Us, that it's absent from the VAT.
     aou: dict | None
     gnomad: dict | None
+    intron: str | None = None    # "5/34", for a variant in an intron instead of an exon
     revel: float | None = None
-    splice_ai: float = 0.02      # the headline (max) delta score
+    # SpliceAI as VEP's plugin reports it: DS_* delta scores (acceptor/donor gain/loss) and DP_*
+    # positions. None if it isn't scored.
+    splice_ai: dict | None = None
     lof: str | None = None       # LOFTEE: "HC", "LC" or None
+    lof_filter: tuple[str, ...] = ()
+    lof_flags: tuple[str, ...] = ()
     # Not in All of Us means no phenotype-matched stats either; otherwise these override the
     # backend's randomly generated ones.
     matched: Matched | None = None
@@ -139,7 +150,9 @@ def validate(case: UseCase) -> None:
     check(set(case.ancestry) <= set(ANCESTRY_LABELS), f"unknown ancestry labels {set(case.ancestry) - set(ANCESTRY_LABELS)}")
     check(set(case.age) <= set(AGE_LABELS), f"unknown age labels {set(case.age) - set(AGE_LABELS)}")
     for v in case.variants:
-        check(VID.match(v.vid) is not None, f"{v.vid}: not a chr-pos-ref-alt SNV")
+        check(VID.match(v.vid) is not None, f"{v.vid}: not a chr-pos-ref-alt SNV or indel")
+        check((v.exon is None) != (v.intron is None), f"{v.vid}: needs exactly one of exon and intron")
+        check(v.splice_ai is None or set(v.splice_ai) == set(SPLICE_AI_KEYS), f"{v.vid}: SpliceAI needs all of {SPLICE_AI_KEYS}")
         if v.clinvar:
             check(v.clinvar.classification in VAT_CLASSIFICATIONS, f"{v.vid}: unknown classification")
             check(v.clinvar.review_status in STARS, f"{v.vid}: unknown review status")
@@ -151,6 +164,8 @@ def validate(case: UseCase) -> None:
             continue
         check(set(v.aou) <= set(AOU_POPULATIONS), f"{v.vid}: unknown All of Us populations")
         check(any(value > 0 for value in v.aou.values()), f"{v.vid}: in All of Us with no carriers")
+        check(v.gnomad is None or any((value[0] if isinstance(value, tuple) else value) > 0 for value in v.gnomad.values()),
+              f"{v.vid}: in gnomAD with no carriers")
         if v.gnomad is not None:
             check(set(v.gnomad) <= set(GNOMAD_POPULATIONS), f"{v.vid}: unknown gnomAD populations")
         if v.matched:
@@ -175,7 +190,10 @@ def _frequency_block(vid, spec, populations, base_an, prefix, with_sc):
         an = int(base_an[pop] * rng.uniform(0.97, 1.0))
         an -= an % 2
         value = spec.get(pop, 0)
-        ac = value if isinstance(value, int) else round(value * an)
+        if isinstance(value, tuple):
+            ac, an = value
+        else:
+            ac = value if isinstance(value, int) else round(value * an)
         af = ac / an
         out[f"{prefix}_{pop}_ac"], out[f"{prefix}_{pop}_an"], out[f"{prefix}_{pop}_af"] = ac, an, round(af, 8)
         per_pop_af[pop] = af
@@ -217,17 +235,26 @@ def _clinvar_fields(clinvar: ClinVar | None) -> dict:
     }
 
 
+def _variant_type(ref: str, alt: str) -> str:
+    if len(ref) == len(alt) == 1:
+        return "SNV"
+    if len(alt) == 1 and ref[0] == alt:
+        return "deletion"
+    if len(ref) == 1 and alt[0] == ref:
+        return "insertion"
+    return "indel"
+
+
 def vat_fields(v: Variant) -> dict:
     """The VAT columns a curated variant sets. Everything else comes from the random row it overlays."""
     chrom, pos, ref, alt = v.vid.split("-")
-    rng = _rng(v.vid, "annotation")
     fields = {
         "vid": v.vid,
         "contig": f"chr{chrom}",
         "position": int(pos),
         "ref_allele": ref,
         "alt_allele": alt,
-        "variant_type": "SNV",
+        "variant_type": _variant_type(ref, alt),
         "genomic_location": f"chr{chrom}:{pos}",
         "gene_symbol": v.gene,
         "hgnc_symbol": v.gene,
@@ -241,21 +268,18 @@ def vat_fields(v: Variant) -> dict:
         "dna_change_in_transcript": v.hgvsc,
         "consequence": list(v.consequence),
         "exon_number": v.exon,
-        "intron_number": None,
+        "intron_number": v.intron,
         "dbsnp_rsid": [v.rsid] if v.rsid else [],
-        "revel": v.revel if "missense_variant" in v.consequence else None,
+        "revel": v.revel,
         "LoF": v.lof,
-        "LoF_filter": [],
-        "LoF_flags": [],
+        "LoF_filter": list(v.lof_filter),
+        "LoF_flags": list(v.lof_flags),
         "LoF_info": [],
     }
-    # SpliceAI: the headline score on donor loss (as for most exonic variants), small noise on
-    # the rest, all within 50 bp.
-    for site in ["acceptor", "donor"]:
-        for event in ["gain", "loss"]:
-            headline = site == "donor" and event == "loss"
-            fields[f"splice_ai_{site}_{event}_score"] = v.splice_ai if headline else round(rng.uniform(0, min(v.splice_ai, 0.02)), 4)
-            fields[f"splice_ai_{site}_{event}_distance"] = rng.randint(-50, 50)
+    for site, s in [("acceptor", "A"), ("donor", "D")]:
+        for event, e in [("gain", "G"), ("loss", "L")]:
+            fields[f"splice_ai_{site}_{event}_score"] = v.splice_ai[f"DS_{s}{e}"] if v.splice_ai else None
+            fields[f"splice_ai_{site}_{event}_distance"] = v.splice_ai[f"DP_{s}{e}"] if v.splice_ai else None
 
     fields.update(_frequency_block(v.vid, v.aou, AOU_POPULATIONS, AOU_AN, "gvs", with_sc=True))
     if v.gnomad is None:

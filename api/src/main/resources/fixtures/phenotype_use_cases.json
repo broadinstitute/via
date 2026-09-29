@@ -60,7 +60,7 @@
     ],
     "variants": {
       "5-173235011-G-A": {
-        "cohortAc": 2,
+        "cohortAc": 3,
         "homozygotes": 0,
         "plpInTrans": 0
       },
@@ -74,18 +74,8 @@
         "homozygotes": 0,
         "plpInTrans": 0
       },
-      "20-10652533-C-T": {
-        "cohortAc": 1,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
-      "22-19763273-T-A": {
-        "cohortAc": 1,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
       "8-105419192-A-G": {
-        "cohortAc": 1,
+        "cohortAc": 0,
         "homozygotes": 0,
         "plpInTrans": 0
       },
@@ -100,11 +90,6 @@
         "plpInTrans": 0
       },
       "8-11748997-G-A": {
-        "cohortAc": 1,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
-      "12-114401830-C-T": {
         "cohortAc": 1,
         "homozygotes": 0,
         "plpInTrans": 0
@@ -124,14 +109,29 @@
         "homozygotes": 0,
         "plpInTrans": 0
       },
-      "5-173235023-C-G": {
+      "9-136506781-C-T": {
         "cohortAc": 0,
         "homozygotes": 0,
         "plpInTrans": 0
       },
-      "9-136506781-C-T": {
-        "cohortAc": 0,
+      "5-173232760-CG-C": {
+        "cohortAc": 1,
         "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "20-10663962-C-T": {
+        "cohortAc": 1,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "12-114394817-G-T": {
+        "cohortAc": 1,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "20-10652589-G-A": {
+        "cohortAc": 41,
+        "homozygotes": 9,
         "plpInTrans": 0
       }
     }
@@ -201,16 +201,6 @@
         "homozygotes": 0,
         "plpInTrans": 0
       },
-      "14-23429005-G-A": {
-        "cohortAc": 2,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
-      "14-23425971-G-A": {
-        "cohortAc": 1,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
       "11-47342698-G-A": {
         "cohortAc": 6,
         "homozygotes": 0,
@@ -236,17 +226,7 @@
         "homozygotes": 0,
         "plpInTrans": 0
       },
-      "14-23425760-C-T": {
-        "cohortAc": 2,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
       "14-23426833-C-T": {
-        "cohortAc": 2,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
-      "11-47342719-G-A": {
         "cohortAc": 2,
         "homozygotes": 0,
         "plpInTrans": 0
@@ -269,6 +249,26 @@
       "11-47335928-C-T": {
         "cohortAc": 2,
         "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "11-47337728-C-T": {
+        "cohortAc": 2,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "11-47336013-T-C": {
+        "cohortAc": 3,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "11-47342867-CA-C": {
+        "cohortAc": 2,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "11-47347892-G-A": {
+        "cohortAc": 37,
+        "homozygotes": 2,
         "plpInTrans": 0
       }
     }
@@ -338,18 +338,8 @@
         "homozygotes": 0,
         "plpInTrans": 0
       },
-      "19-11105568-A-G": {
-        "cohortAc": 2,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
       "19-11120425-C-A": {
         "cohortAc": 3,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
-      "19-11105528-G-A": {
-        "cohortAc": 1,
         "homozygotes": 0,
         "plpInTrans": 0
       },
@@ -373,23 +363,13 @@
         "homozygotes": 0,
         "plpInTrans": 0
       },
-      "19-11113337-C-T": {
-        "cohortAc": 2,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
-      "19-11113743-G-A": {
-        "cohortAc": 1,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
       "19-11102774-G-A": {
         "cohortAc": 2,
         "homozygotes": 0,
         "plpInTrans": 0
       },
       "19-11123210-C-T": {
-        "cohortAc": 2,
+        "cohortAc": 7,
         "homozygotes": 0,
         "plpInTrans": 0
       },
@@ -406,6 +386,26 @@
       "2-21006196-G-A": {
         "cohortAc": 2,
         "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "19-11089616-G-A": {
+        "cohortAc": 2,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "19-11105540-TC-T": {
+        "cohortAc": 2,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "19-11120413-C-A": {
+        "cohortAc": 3,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "19-11120205-T-C": {
+        "cohortAc": 309,
+        "homozygotes": 61,
         "plpInTrans": 0
       }
     }
@@ -480,17 +480,7 @@
         "homozygotes": 0,
         "plpInTrans": 0
       },
-      "11-2570719-G-A": {
-        "cohortAc": 1,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
       "7-150951711-G-A": {
-        "cohortAc": 1,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
-      "7-150951793-G-A": {
         "cohortAc": 1,
         "homozygotes": 0,
         "plpInTrans": 0
@@ -501,8 +491,8 @@
         "plpInTrans": 0
       },
       "3-38603929-T-C": {
-        "cohortAc": 62,
-        "homozygotes": 7,
+        "cohortAc": 71,
+        "homozygotes": 10,
         "plpInTrans": 0
       },
       "21-34449382-C-T": {
@@ -515,34 +505,44 @@
         "homozygotes": 0,
         "plpInTrans": 0
       },
-      "11-2778015-G-A": {
-        "cohortAc": 1,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
-      "11-2778024-G-A": {
-        "cohortAc": 1,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
-      "7-150951511-C-T": {
-        "cohortAc": 1,
-        "homozygotes": 0,
-        "plpInTrans": 0
-      },
       "3-38551504-C-T": {
         "cohortAc": 1,
         "homozygotes": 0,
         "plpInTrans": 0
       },
       "7-150948446-T-G": {
-        "cohortAc": 38,
-        "homozygotes": 3,
+        "cohortAc": 60,
+        "homozygotes": 7,
         "plpInTrans": 0
       },
       "3-38579416-G-T": {
-        "cohortAc": 5,
+        "cohortAc": 4,
         "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "11-2570714-G-A": {
+        "cohortAc": 2,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "11-2661960-G-T": {
+        "cohortAc": 2,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "7-150948465-AG-A": {
+        "cohortAc": 1,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "11-2778034-CAA-C": {
+        "cohortAc": 1,
+        "homozygotes": 0,
+        "plpInTrans": 0
+      },
+      "7-150952515-G-A": {
+        "cohortAc": 74,
+        "homozygotes": 10,
         "plpInTrans": 0
       }
     }

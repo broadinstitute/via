@@ -97,7 +97,7 @@ example** menu fills in.
 
 | Use case | Condition (concept, participants) | Variants |
 |---|---|---|
-| Tetralogy of Fallot | 9000010, 49 (the fixture above) | NKX2-5, GATA4, GATA6, TBX1, TBX5, JAG1, ZFPM2, FLT4, NOTCH1 |
+| Tetralogy of Fallot | 9000010, 49 (the fixture above) | NKX2-5, GATA4, GATA6, TBX5, JAG1, FLT4, NOTCH1, ZFPM2 |
 | Hypertrophic cardiomyopathy | 9000040, 214 | MYH7, MYBPC3, TNNT2, TNNI3, TPM1, ACTC1 |
 | Familial hypercholesterolemia | 9000050, 391 | LDLR, APOB, PCSK9 |
 | Long QT syndrome | 9000060, 131 | KCNQ1, KCNH2, SCN5A, KCNE1 |
@@ -105,15 +105,21 @@ example** menu fills in.
 Each lives in its own file under `generators/use_cases/`, as plain Python data in the types
 from `use_cases/common.py`.
 
-**The variants are real.** Their GRCh38 positions, alleles, MANE Select transcripts, HGVS and
-ClinVar records (classification, review status, RCVs, conditions) were checked against ClinVar
-and Ensembl VEP when the use cases were written, so the gnomAD and ClinVar links open the right
-pages. Per-RCV review status isn't recorded; each RCV gets the variant's overall stars.
+**The variants are real, and so is most of what's said about them.** Their GRCh38 positions,
+alleles, MANE Select transcripts, HGVS and ClinVar records (classification, review status, RCVs,
+conditions) were checked against ClinVar and Ensembl VEP; their SpliceAI, REVEL and LOFTEE
+(pLOF) calls are VEP's own, from its plugins; and their gnomAD counts are gnomAD v4
+genomes', per population, from its API -- so the gnomAD and ClinVar links open pages that agree with the app.
+Per-RCV review status isn't recorded; each RCV gets the variant's overall stars.
 
-**Everything about the cohort is synthetic**: All of Us and gnomAD allele counts, who among the
-matched participants carries what, and their ancestry and age. Those are chosen per use case to
-show off the app: a few strongly enriched pathogenic variants, a common benign variant at
-background, a VUS or two, a variant missing from gnomAD, and one missing from All of Us.
+Each use case mixes classes -- missense, nonsense, frameshift, splice donor/acceptor, synonymous
+-- and frequencies, from ultra-rare pathogenic variants to common benign ones.
+
+**Everything about the All of Us cohort is synthetic**: its allele counts, who among the matched
+participants carries what, and their ancestry and age. A common variant's All of Us frequencies
+are drawn from its gnomAD ones; a rare variant's counts are set by hand. Those are chosen per use
+case to show off the app: strongly enriched rare pathogenic variants, common variants at
+background, depleted protective variants, a VUS or two, and one variant missing from All of Us.
 
 The use cases feed all three generators:
 
