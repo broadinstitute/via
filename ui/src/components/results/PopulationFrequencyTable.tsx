@@ -157,7 +157,7 @@ function FrequencyCells({ af, ac, an, covered, populationLabel, isMax, source, h
         style={{ ...cellStyle, ...styles.notCovered, background: hatched(String(cellStyle.background)) }}
         title={`${SOURCE_NAME[source]} doesn't report a ${populationLabel} population.`}
       >
-        Not covered
+        Not an inferred ancestry category
       </td>
     );
   }
@@ -291,9 +291,9 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
         </tr>
         <tr>
           <th style={headerStyle("aou")}>AF</th>
-          <th style={headerStyle("aou")}>AC/AN</th>
+          <th style={headerStyle("aou")}>AC / AN</th>
           <th style={headerStyle("gnomad")}>AF</th>
-          <th style={headerStyle("gnomad")}>AC/AN</th>
+          <th style={headerStyle("gnomad")}>AC / AN</th>
         </tr>
       </thead>
       <tbody>

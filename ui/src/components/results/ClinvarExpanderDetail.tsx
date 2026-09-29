@@ -263,41 +263,43 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
         </dl>
       )}
 
-      <div>
-        <table style={styles.records}>
-          <caption style={styles.recordsTitle}>Records ({clinvarSubmissions.length})</caption>
-          <thead style={Style.elements.visuallyHidden}>
-            <tr>
-              <th scope="col">Record</th>
-              <th scope="col">Classification</th>
-              <th scope="col">Review status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleSubmissions.map((submission) => (
-              <tr key={submission.id}>
-                <td style={{ ...styles.recordCell, ...styles.recordId }}>{submission.id}</td>
-                <td
-                  style={{
-                    ...styles.recordCell,
-                    ...styles.recordClassification,
-                    color: clinvarSubmissionColor(submission.classification),
-                  }}
-                  title={submission.classification ?? undefined}
-                >
-                  {clinvarSubmissionLabel(submission.classification)}
-                </td>
-                <td style={{ ...styles.recordCell, ...styles.recordStars }}>
-                  {submission.stars !== null && <Stars count={submission.stars} />}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {hiddenSubmissionCount > 0 && (
-          <MoreButton count={hiddenSubmissionCount} onClick={() => setShowAllSubmissions(true)} />
-        )}
-      </div>
+      {/*Hiding these records for now. The VAT appears to support them but we don't want to overcommit*/}
+
+      {/*<div>*/}
+      {/*  <table style={styles.records}>*/}
+      {/*    <caption style={styles.recordsTitle}>Records ({clinvarSubmissions.length})</caption>*/}
+      {/*    <thead style={Style.elements.visuallyHidden}>*/}
+      {/*      <tr>*/}
+      {/*        <th scope="col">Record</th>*/}
+      {/*        <th scope="col">Classification</th>*/}
+      {/*        <th scope="col">Review status</th>*/}
+      {/*      </tr>*/}
+      {/*    </thead>*/}
+      {/*    <tbody>*/}
+      {/*      {visibleSubmissions.map((submission) => (*/}
+      {/*        <tr key={submission.id}>*/}
+      {/*          <td style={{ ...styles.recordCell, ...styles.recordId }}>{submission.id}</td>*/}
+      {/*          <td*/}
+      {/*            style={{*/}
+      {/*              ...styles.recordCell,*/}
+      {/*              ...styles.recordClassification,*/}
+      {/*              color: clinvarSubmissionColor(submission.classification),*/}
+      {/*            }}*/}
+      {/*            title={submission.classification ?? undefined}*/}
+      {/*          >*/}
+      {/*            {clinvarSubmissionLabel(submission.classification)}*/}
+      {/*          </td>*/}
+      {/*          <td style={{ ...styles.recordCell, ...styles.recordStars }}>*/}
+      {/*            {submission.stars !== null && <Stars count={submission.stars} />}*/}
+      {/*          </td>*/}
+      {/*        </tr>*/}
+      {/*      ))}*/}
+      {/*    </tbody>*/}
+      {/*  </table>*/}
+      {/*  {hiddenSubmissionCount > 0 && (*/}
+      {/*    <MoreButton count={hiddenSubmissionCount} onClick={() => setShowAllSubmissions(true)} />*/}
+      {/*  )}*/}
+      {/*</div>*/}
     </div>
   );
 }

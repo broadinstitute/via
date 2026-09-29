@@ -129,7 +129,7 @@ export default function SearchEntryPage() {
         title="Variant Interpretation"
         subtitle={
           <>
-            Rule candidate variants in or out by comparing them against <AllOfUs />'s full participant
+            Rule candidate variants in or out by comparing them against the full <AllOfUs /> participant
             cohort — no coding required.
           </>
         }
