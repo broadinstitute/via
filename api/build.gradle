@@ -21,7 +21,7 @@ repositories {
 }
 
 dependencies {
-  implementation platform('com.google.cloud:libraries-bom:26.88.1')
+  implementation platform('com.google.cloud:libraries-bom:26.89.0')
 
   implementation 'org.springframework.boot:spring-boot-starter-web'
   implementation 'org.springframework.boot:spring-boot-starter-validation'
