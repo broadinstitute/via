@@ -6,9 +6,7 @@ import * as Style from "../../libs/style";
 import type { AnnotatedCohortVariant } from "../../types/results";
 import {
   CLINVAR_MAX_STARS,
-  clinvarReviewDescription,
-  clinvarSubmissionColor,
-  clinvarSubmissionLabel,
+  clinvarReviewDescription
 } from "../../utils/clinvar";
 import { formatDate } from "../../utils/format";
 import Clickable from "../common/Clickable";
@@ -176,7 +174,7 @@ interface ClinvarExpanderDetailProps {
 
 export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetailProps) {
   const [showAllConditions, setShowAllConditions] = useState(false);
-  const [showAllSubmissions, setShowAllSubmissions] = useState(false);
+  const [showAllSubmissions, _] = useState(false);
   const { hovered: linkHovered, hoverProps: linkHoverProps } = useHover();
 
   const {
@@ -219,7 +217,7 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
   const visibleConditions = showAllConditions ? clinvarConditions : clinvarConditions.slice(0, MAX_VISIBLE_CONDITIONS);
   const hiddenConditionCount = clinvarConditions.length - visibleConditions.length;
   const visibleSubmissions = showAllSubmissions ? clinvarSubmissions : clinvarSubmissions.slice(0, MAX_VISIBLE_SUBMISSIONS);
-  const hiddenSubmissionCount = clinvarSubmissions.length - visibleSubmissions.length;
+  // const hiddenSubmissionCount = clinvarSubmissions.length - visibleSubmissions.length;
 
   return (
     <div style={styles.container}>
