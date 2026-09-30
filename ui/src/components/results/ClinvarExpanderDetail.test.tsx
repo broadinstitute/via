@@ -58,7 +58,7 @@ describe("ClinvarExpanderDetail", () => {
     expect(screen.getByText("No ClinVar submissions for this variant.")).toBeInTheDocument();
   });
 
-  it("renders the ClinVar summary, badge, updated date, and visible submissions", () => {
+  it("renders the ClinVar summary, badge, conditions and updated date", () => {
     render(<ClinvarExpanderDetail variant={makeVariant()} />);
 
     expect(screen.getAllByText("Pathogenic")[0]).toBeInTheDocument();
@@ -66,11 +66,10 @@ describe("ClinvarExpanderDetail", () => {
     expect(screen.getAllByRole("img", { name: "2 of 4 stars" }).length).toBeGreaterThan(0);
     expect(screen.getByText("Condition A")).toBeInTheDocument();
     expect(screen.getByText("Condition B")).toBeInTheDocument();
-    expect(screen.getByText("Records (5)")).toBeInTheDocument();
     expect(screen.getByText("14 Feb 2024")).toBeInTheDocument();
-    expect(screen.getByText(/RCV000001/)).toBeInTheDocument();
-    expect(screen.getByText(/RCV000004/)).toBeInTheDocument();
-    expect(screen.queryByText(/RCV000005/)).not.toBeInTheDocument();
+    // The individual records are hidden for now; see ClinvarExpanderDetail.
+    expect(screen.queryByText(/Records/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/RCV000001/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open in ClinVar ↗" })).toHaveAttribute(
       "href",
       "https://www.ncbi.nlm.nih.gov/clinvar/variation/12345/",
@@ -95,7 +94,8 @@ describe("ClinvarExpanderDetail", () => {
     expect(screen.queryByRole("button", { name: "+1 more" })).not.toBeInTheDocument();
   });
 
-  it("expands additional submissions when the disclosure is clicked", () => {
+  // Skipped while ClinvarExpanderDetail's records list is hidden; turn back on with it.
+  it.skip("expands additional submissions when the disclosure is clicked", () => {
     render(<ClinvarExpanderDetail variant={makeVariant({ clinvarConditions: ["Condition A"] })} />);
 
     fireEvent.click(screen.getByRole("button", { name: "+1 more" }));
@@ -103,7 +103,8 @@ describe("ClinvarExpanderDetail", () => {
     expect(screen.getByText(/RCV000005/)).toBeInTheDocument();
   });
 
-  it("shortens long record classifications, keeping the full wording as a tooltip", () => {
+  // Skipped while ClinvarExpanderDetail's records list is hidden; turn back on with it.
+  it.skip("shortens long record classifications, keeping the full wording as a tooltip", () => {
     render(<ClinvarExpanderDetail variant={makeVariant()} />);
 
     expect(screen.getByText("VUS")).toHaveAttribute("title", "Uncertain significance");

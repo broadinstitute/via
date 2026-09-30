@@ -59,7 +59,7 @@ describe("PopulationFrequencyTable", () => {
   it("marks a population the source doesn't report as not covered, naming it in the tooltip", () => {
     render(<PopulationFrequencyTable variant={makeVariant()} />);
 
-    const notCovered = screen.getAllByText("Not covered");
+    const notCovered = screen.getAllByText("Not an inferred ancestry category");
     // ASJ, FIN and NFE for All of Us.
     expect(notCovered).toHaveLength(3);
     expect(notCovered.map((cell) => cell.getAttribute("title"))).toContain(

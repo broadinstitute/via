@@ -143,12 +143,28 @@ would render as contradictory numbers.
 
 ### Adding a use case
 
-1. Pick real variants and check each against ClinVar and Ensembl VEP: position, alleles, MANE
-   transcript, HGVS, consequence, ClinVar record.
-2. Write `use_cases/<name>.py` with a `CASE`, following an existing one, and add it to
-   `USE_CASES` in `use_cases/__init__.py`. Give a new condition an unused concept ID
-   (9000070 and up).
+`generators/curate_use_case_variant.py` does the lookups. Give it variants, as GRCh38
+`chr-pos-ref-alt` IDs or `GENE:CHANGE` (ClinVar's one-letter protein change), and it prints a
+`Variant(...)` spec for each with its ClinVar record, VEP annotation (MANE Select consequence,
+HGVS, SpliceAI, REVEL, LOFTEE) and gnomAD v4 genome counts filled in. For a common variant it also
+drafts the All of Us frequencies from gnomAD's, and with `--participants N` the matched carriers;
+for a rare one those are left as `TODO`s to set by hand.
+
+```
+python3 data/synthetic/generators/curate_use_case_variant.py MYH7:R403Q 19-11105540-TC-T
+python3 data/synthetic/generators/curate_use_case_variant.py 19-11120205-T-C --participants 391
+```
+
+1. Run it on the variants you want, and review what it prints.
+2. Write `use_cases/<name>.py` with a `CASE`, following an existing one, pasting the specs in and
+   settling the `TODO`s; add it to `USE_CASES` in `use_cases/__init__.py`. Give a new condition
+   an unused concept ID (9000070 and up).
 3. Rerun all three generators, reload the tables (below), and commit the two fixtures.
+
+`--verify` re-checks every variant already in the use cases against the live sources and lists
+anything that has drifted since -- a reclassified ClinVar record, new gnomAD counts. It needs
+network access, and takes a few minutes: ClinVar allows 3 requests a second (10 with
+`NCBI_API_KEY` set) and gnomAD about one.
 
 ## Regenerating and loading
 
