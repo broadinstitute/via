@@ -12,7 +12,7 @@ import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
 import { clinvarSearchUrl, gnomadVariantUrl } from "../../utils/externalLinks";
-import { formatAcAn, formatAf } from "../../utils/format";
+import { exactAf, formatAcAn, formatAf } from "../../utils/format";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
@@ -416,7 +416,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             header: "AF",
             cell: ({ row }) =>
               row.original.annotated && row.original.aouAf !== null ? (
-                formatAf(row.original.aouAf)
+                <span title={exactAf(row.original.aouAf)}>{formatAf(row.original.aouAf)}</span>
               ) : (
                 <NotAvailable />
               ),
@@ -465,7 +465,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             header: "AF",
             cell: ({ row }) =>
               row.original.annotated && row.original.gnomadAf !== null ? (
-                formatAf(row.original.gnomadAf)
+                <span title={exactAf(row.original.gnomadAf)}>{formatAf(row.original.gnomadAf)}</span>
               ) : (
                 <NotAvailable />
               ),

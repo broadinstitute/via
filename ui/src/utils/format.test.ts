@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAcAn, formatAf, formatDate, formatInt } from "./format";
+import { exactAf, formatAcAn, formatAf, formatDate, formatInt } from "./format";
 
 describe("format utils", () => {
   it("formats integers with en-US grouping", () => {
@@ -17,6 +17,21 @@ describe("format utils", () => {
     expect(formatAf(0)).toBe("0.0000");
     expect(formatAf(0.123456)).toBe("0.1235");
     expect(formatAf(1)).toBe("1.0000");
+    expect(formatAf(0.0001)).toBe("0.0001");
+  });
+
+  it("shows a rare-variant frequency as below 0.0001 rather than rounding it to zero", () => {
+    expect(formatAf(0.0000123)).toBe("< 0.0001");
+    expect(formatAf(0.0000043)).toBe("< 0.0001");
+    expect(formatAf(0.0001)).toBe("0.0001");
+  });
+
+  it("gives the exact figure behind an abbreviated frequency, and nothing otherwise", () => {
+    expect(exactAf(0.0000123)).toBe("0.000012");
+    expect(exactAf(0.0000043)).toBe("0.0000043");
+    expect(exactAf(0.00000207)).toBe("0.0000021");
+    expect(exactAf(0.0123)).toBeUndefined();
+    expect(exactAf(0)).toBeUndefined();
   });
 
   it("formats ISO dates in UTC as day month year", () => {

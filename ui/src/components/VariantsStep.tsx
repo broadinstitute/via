@@ -1,8 +1,9 @@
 import type { CSSProperties } from "react";
-import colors from "../libs/colors";
-import { useFocus, useHover } from "../libs/hooks";
+import { useFocus } from "../libs/hooks";
 import * as Style from "../libs/style";
+import type { UseCase } from "../utils/useCases";
 import { variantEntryStatus } from "../utils/variants";
+import ExampleMenu from "./ExampleMenu";
 import FieldHint from "./FieldHint";
 import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
@@ -23,19 +24,6 @@ const styles = {
     alignItems: "baseline",
     justifyContent: "space-between",
     gap: 12,
-  },
-  exampleLink: {
-    flexShrink: 0,
-    padding: 0,
-    border: "none",
-    background: "none",
-    color: colors.textAccent,
-    fontSize: 11.5,
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  exampleLinkHover: {
-    textDecoration: "underline",
   },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -60,8 +48,9 @@ interface VariantsStepProps {
   minHeight: number;
   /** See StepPanel. */
   appearance?: StepPanelAppearance;
-  /** Shows a "Try an example" link while the field is empty. */
-  onUseExample?: () => void;
+  /** Offers these in a "Try an example" menu while the field is empty. */
+  examples?: UseCase[];
+  onUseExample?: (example: UseCase) => void;
 }
 
 /** Step 1 of a search: the candidate-variants textarea, with its count and limit. */
@@ -71,10 +60,10 @@ export default function VariantsStep({
   limit,
   minHeight,
   appearance,
+  examples = [],
   onUseExample,
 }: VariantsStepProps) {
   const { focused, focusProps } = useFocus();
-  const { hovered: exampleHovered, hoverProps: exampleHoverProps } = useHover();
   const { count } = variantEntryStatus(value, limit);
 
   return (
@@ -90,15 +79,8 @@ export default function VariantsStep({
       <div style={styles.hintRow}>
         {/* Short enough to share a line with "Try an example"; the placeholder shows the format. */}
         <FieldHint>One variant per line, as chr-pos-ref-alt.</FieldHint>
-        {onUseExample && !value.trim() && (
-          <button
-            type="button"
-            style={{ ...styles.exampleLink, ...(exampleHovered ? styles.exampleLinkHover : undefined) }}
-            onClick={onUseExample}
-            {...exampleHoverProps}
-          >
-            Try an example
-          </button>
+        {onUseExample && examples.length > 0 && !value.trim() && (
+          <ExampleMenu examples={examples} onPick={onUseExample} />
         )}
       </div>
     </StepPanel>

@@ -21,6 +21,8 @@ import os
 import random
 from datetime import date, timedelta
 
+from use_cases import USE_CASES
+
 # Small subset of concept IDs
 CONGENITAL_HEART_DISEASE = 9000001
 TETRALOGY_OF_FALLOT = 9000010
@@ -149,6 +151,27 @@ T2DM_POOL = range(1000, 5001)   # disjoint from the ranges above
 T2DM_N = 1200
 T2DM_RENAL_N = 180              # subset of the T2DM persons
 
+# ---------------------------------------------------------------------------
+# Demo use cases (use_cases/)
+# ---------------------------------------------------------------------------
+# Each use case's condition that isn't already defined above gets a standalone concept, with its
+# own disjoint block of participants so its count is exact. Kept out of every hierarchy, so the
+# counts documented above don't move.
+USE_CASE_PERSON_BLOCK = 10_000   # participants start at 20000, 30000, ...
+USE_CASE_PATH_PARENT = "441840.134057"  # a made-up "disorder of cardiovascular system" group
+
+# Separate from CONCEPTS, and written after everything else in each table, so the rows above keep
+# their ids.
+USE_CASE_CONCEPTS = []
+for _i, _case in enumerate([c for c in USE_CASES if c.condition.generate], start=2):
+    _c = _case.condition
+    USE_CASE_CONCEPTS.append((_c.concept_id, _c.name, _c.est_count, f"use case: {_case.key}"))
+    if _c.synonyms:
+        SYNONYMS[_c.concept_id] = list(_c.synonyms)
+    PATHS[_c.concept_id] = [f"{USE_CASE_PATH_PARENT}.{_c.concept_id}"]
+    _start = _i * USE_CASE_PERSON_BLOCK
+    PERSON_RANGES[_c.concept_id] = range(_start, _start + _c.participants)
+
 FIRST_DATE = date(2015, 1, 1)
 LAST_DATE = date(2024, 12, 31)
 
@@ -171,32 +194,36 @@ def build_cb_criteria():
     rows = []
     next_id = 1
 
-    for concept_id, name, est_count, _role in CONCEPTS:
-        is_leaf = concept_id not in ANCESTOR_EDGES
-        for path in PATHS[concept_id]:
-            rows.append({
-                "id": next_id,
-                "parent_id": int(path.split(".")[-2]) if "." in path else None,
-                "domain_id": "CONDITION",   # UPPERCASE here, mixed case in `concept`
-                "is_standard": 1,
-                "type": "SNOMED",
-                "subtype": None,
-                "concept_id": concept_id,
-                "code": f"{concept_id % 1000000}00{concept_id % 7}",
-                "name": name,
-                "value": None,
-                "est_count": est_count,
-                "is_group": 0 if is_leaf else 1,
-                "is_selectable": 1,
-                "has_hierarchy": 1,
-                "has_ancestor_data": 0,
-                "path": path,
-                "synonyms": " | ".join(SYNONYMS.get(concept_id, [])) or None,
-                "item_count": est_count,
-                "rollup_count": est_count,
-                "full_text": full_text(concept_id, name),
-            })
-            next_id += 1
+    def concept_rows(concepts):
+        nonlocal next_id
+        for concept_id, name, est_count, _role in concepts:
+            is_leaf = concept_id not in ANCESTOR_EDGES
+            for path in PATHS[concept_id]:
+                rows.append({
+                    "id": next_id,
+                    "parent_id": int(path.split(".")[-2]) if "." in path else None,
+                    "domain_id": "CONDITION",   # UPPERCASE here, mixed case in `concept`
+                    "is_standard": 1,
+                    "type": "SNOMED",
+                    "subtype": None,
+                    "concept_id": concept_id,
+                    "code": f"{concept_id % 1000000}00{concept_id % 7}",
+                    "name": name,
+                    "value": None,
+                    "est_count": est_count,
+                    "is_group": 0 if is_leaf else 1,
+                    "is_selectable": 1,
+                    "has_hierarchy": 1,
+                    "has_ancestor_data": 0,
+                    "path": path,
+                    "synonyms": " | ".join(SYNONYMS.get(concept_id, [])) or None,
+                    "item_count": est_count,
+                    "rollup_count": est_count,
+                    "full_text": full_text(concept_id, name),
+                })
+                next_id += 1
+
+    concept_rows(CONCEPTS)
 
     # Group/header row: no concept_id. Its full_text deliberately matches the
     # fallot searches, so the `concept_id IS NOT NULL` filter is the only thing
@@ -223,7 +250,9 @@ def build_cb_criteria():
         "rollup_count": None,
         "full_text": "fallot tetralogy and related anomalies",
     })
+    next_id += 1
 
+    concept_rows(USE_CASE_CONCEPTS)
     rows.sort(key=lambda r: r["id"])
     return rows
 
@@ -231,7 +260,7 @@ def build_cb_criteria():
 def build_concept_ancestor():
     """Self-rows at level 0 for every concept, plus the declared edges."""
     rows = []
-    for concept_id, _name, _count, _role in CONCEPTS:
+    for concept_id, _name, _count, _role in CONCEPTS + USE_CASE_CONCEPTS:
         rows.append({
             "ancestor_concept_id": concept_id,
             "descendant_concept_id": concept_id,

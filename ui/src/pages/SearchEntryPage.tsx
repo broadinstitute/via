@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchProfile } from "../api/profile";
+import type { ConditionConcept } from "../api/conditions";
 import colors from "../libs/colors";
 import * as Style from "../libs/style";
 import Clickable from "../components/common/Clickable";
@@ -17,13 +18,13 @@ import Footer from "../components/results/Footer";
 import TopBar from "../components/results/TopBar";
 import { isSubmitShortcut, SUBMIT_SHORTCUT_LABEL } from "../utils/submitShortcut";
 import {
-  EXAMPLE_VARIANTS,
   overLimitMessage,
   parseVariantsText,
   resultsPath,
   VARIANTS_LIMIT,
   variantEntryStatus,
 } from "../utils/variants";
+import { USE_CASES, type UseCase } from "../utils/useCases";
 
 const styles = {
   // Pulled up over the hero's bottom padding so the search card overlaps the photo.
@@ -93,6 +94,10 @@ export default function SearchEntryPage() {
   // re-resolving the name -- which matters for concepts the text path would skip, e.g. ones
   // with a zero participant estimate.
   const [conditionConceptId, setConditionConceptId] = useState<number | null>(null);
+  // Set by an example search: its condition, shown as already picked. The phenotype field reads
+  // this only when it mounts, so the key remounts it to take a new one.
+  const [pickedCondition, setPickedCondition] = useState<ConditionConcept | null>(null);
+  const [phenotypeKey, setPhenotypeKey] = useState(0);
   const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
@@ -102,6 +107,14 @@ export default function SearchEntryPage() {
   }, []);
 
   const { count: variantCount, overLimit, canSearch } = variantEntryStatus(variants, VARIANTS_LIMIT);
+
+  function fillExample(example: UseCase) {
+    setVariants(example.variants.join("\n"));
+    setCondition(example.condition.name);
+    setConditionConceptId(example.condition.conceptId);
+    setPickedCondition(example.condition);
+    setPhenotypeKey((key) => key + 1);
+  }
 
   function handleSearch() {
     // Only a picked concept filters: text typed without picking from the list is ignored, the
@@ -116,7 +129,7 @@ export default function SearchEntryPage() {
         title="Variant Interpretation"
         subtitle={
           <>
-            Rule candidate variants in or out by comparing them against <AllOfUs />'s full participant
+            Rule candidate variants in or out by comparing them against the full <AllOfUs /> participant
             cohort — no coding required.
           </>
         }
@@ -139,11 +152,14 @@ export default function SearchEntryPage() {
                 limit={VARIANTS_LIMIT}
                 minHeight={180}
                 appearance="plain"
-                onUseExample={() => setVariants(EXAMPLE_VARIANTS.join("\n"))}
+                examples={USE_CASES}
+                onUseExample={fillExample}
               />
               <PhenotypeStep
+                key={phenotypeKey}
                 id="condition"
                 value={condition}
+                initialSelection={pickedCondition}
                 // Relies on ConditionSearchField calling onChange before onSelect when a concept
                 // is picked: this clears the id for a plain edit, and the onSelect below puts it
                 // back for a pick. Typed-but-unpicked text therefore carries no id, and so

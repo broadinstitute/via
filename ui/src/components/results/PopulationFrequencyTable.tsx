@@ -3,7 +3,7 @@ import colors, { alpha, POPMAX_BACKGROUND, sourceTints } from "../../libs/colors
 import { useHover, useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { AnnotatedCohortVariant, GnomadSubpopCode, PopulationFrequency, SubpopCode } from "../../types/results";
-import { formatAcAn, formatAf } from "../../utils/format";
+import { exactAf, formatAcAn, formatAf } from "../../utils/format";
 import { SUBPOP_COLOR, SUBPOP_LABEL } from "../../utils/subpopulations";
 import AllOfUs from "../common/AllOfUs";
 
@@ -157,7 +157,7 @@ function FrequencyCells({ af, ac, an, covered, populationLabel, isMax, source, h
         style={{ ...cellStyle, ...styles.notCovered, background: hatched(String(cellStyle.background)) }}
         title={`${SOURCE_NAME[source]} doesn't report a ${populationLabel} population.`}
       >
-        Not covered
+        Not an inferred ancestry category
       </td>
     );
   }
@@ -206,11 +206,13 @@ function FrequencyCells({ af, ac, an, covered, populationLabel, isMax, source, h
       <td style={valueStyle}>
         {isMax ? (
           <span style={styles.maxValue}>
-            <span style={styles.maxValueText}>{formatAf(af)}</span>
+            <span style={styles.maxValueText} title={exactAf(af)}>
+              {formatAf(af)}
+            </span>
             <span style={styles.maxMarker}>MAX</span>
           </span>
         ) : (
-          formatAf(af)
+          <span title={exactAf(af)}>{formatAf(af)}</span>
         )}
       </td>
       <td style={valueStyle}>{formatAcAn(ac, an)}</td>
@@ -289,9 +291,9 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
         </tr>
         <tr>
           <th style={headerStyle("aou")}>AF</th>
-          <th style={headerStyle("aou")}>AC/AN</th>
+          <th style={headerStyle("aou")}>AC / AN</th>
           <th style={headerStyle("gnomad")}>AF</th>
-          <th style={headerStyle("gnomad")}>AC/AN</th>
+          <th style={headerStyle("gnomad")}>AC / AN</th>
         </tr>
       </thead>
       <tbody>

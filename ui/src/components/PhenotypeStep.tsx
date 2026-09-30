@@ -40,8 +40,8 @@ export default function PhenotypeStep({
         placeholder="e.g. tetralogy of fallot"
       />
       <FieldHint>
-        Start typing a condition and pick one from the list. Matched against{" "}
-        <AllOfUs />'s condition vocabulary.
+        Start typing a condition and pick one from the list. Matched against the{" "}
+        <AllOfUs /> condition vocabulary.
       </FieldHint>
       {children}
     </StepPanel>

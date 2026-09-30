@@ -6,9 +6,7 @@ import * as Style from "../../libs/style";
 import type { AnnotatedCohortVariant } from "../../types/results";
 import {
   CLINVAR_MAX_STARS,
-  clinvarReviewDescription,
-  clinvarSubmissionColor,
-  clinvarSubmissionLabel,
+  clinvarReviewDescription
 } from "../../utils/clinvar";
 import { formatDate } from "../../utils/format";
 import Clickable from "../common/Clickable";
@@ -16,7 +14,8 @@ import ClinvarBadge from "../elements/ClinvarBadge";
 
 // Past these, the rest collapse behind a "+N more" button.
 const MAX_VISIBLE_CONDITIONS = 2;
-const MAX_VISIBLE_SUBMISSIONS = 4;
+// With the records list below, hidden for now.
+// const MAX_VISIBLE_SUBMISSIONS = 4;
 
 // Laid out as a stack of labelled blocks -- the consensus classification, then its details as
 // label/value rows, then the individual records as an aligned list -- rather than one wrapping
@@ -176,7 +175,8 @@ interface ClinvarExpanderDetailProps {
 
 export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetailProps) {
   const [showAllConditions, setShowAllConditions] = useState(false);
-  const [showAllSubmissions, setShowAllSubmissions] = useState(false);
+  // With the records list below, hidden for now.
+  // const [showAllSubmissions, setShowAllSubmissions] = useState(false);
   const { hovered: linkHovered, hoverProps: linkHoverProps } = useHover();
 
   const {
@@ -218,8 +218,8 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
 
   const visibleConditions = showAllConditions ? clinvarConditions : clinvarConditions.slice(0, MAX_VISIBLE_CONDITIONS);
   const hiddenConditionCount = clinvarConditions.length - visibleConditions.length;
-  const visibleSubmissions = showAllSubmissions ? clinvarSubmissions : clinvarSubmissions.slice(0, MAX_VISIBLE_SUBMISSIONS);
-  const hiddenSubmissionCount = clinvarSubmissions.length - visibleSubmissions.length;
+  // const visibleSubmissions = showAllSubmissions ? clinvarSubmissions : clinvarSubmissions.slice(0, MAX_VISIBLE_SUBMISSIONS);
+  // const hiddenSubmissionCount = clinvarSubmissions.length - visibleSubmissions.length;
 
   return (
     <div style={styles.container}>
@@ -263,41 +263,43 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
         </dl>
       )}
 
-      <div>
-        <table style={styles.records}>
-          <caption style={styles.recordsTitle}>Records ({clinvarSubmissions.length})</caption>
-          <thead style={Style.elements.visuallyHidden}>
-            <tr>
-              <th scope="col">Record</th>
-              <th scope="col">Classification</th>
-              <th scope="col">Review status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleSubmissions.map((submission) => (
-              <tr key={submission.id}>
-                <td style={{ ...styles.recordCell, ...styles.recordId }}>{submission.id}</td>
-                <td
-                  style={{
-                    ...styles.recordCell,
-                    ...styles.recordClassification,
-                    color: clinvarSubmissionColor(submission.classification),
-                  }}
-                  title={submission.classification ?? undefined}
-                >
-                  {clinvarSubmissionLabel(submission.classification)}
-                </td>
-                <td style={{ ...styles.recordCell, ...styles.recordStars }}>
-                  {submission.stars !== null && <Stars count={submission.stars} />}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {hiddenSubmissionCount > 0 && (
-          <MoreButton count={hiddenSubmissionCount} onClick={() => setShowAllSubmissions(true)} />
-        )}
-      </div>
+      {/*Hiding these records for now. The VAT appears to support them but we don't want to overcommit*/}
+
+      {/*<div>*/}
+      {/*  <table style={styles.records}>*/}
+      {/*    <caption style={styles.recordsTitle}>Records ({clinvarSubmissions.length})</caption>*/}
+      {/*    <thead style={Style.elements.visuallyHidden}>*/}
+      {/*      <tr>*/}
+      {/*        <th scope="col">Record</th>*/}
+      {/*        <th scope="col">Classification</th>*/}
+      {/*        <th scope="col">Review status</th>*/}
+      {/*      </tr>*/}
+      {/*    </thead>*/}
+      {/*    <tbody>*/}
+      {/*      {visibleSubmissions.map((submission) => (*/}
+      {/*        <tr key={submission.id}>*/}
+      {/*          <td style={{ ...styles.recordCell, ...styles.recordId }}>{submission.id}</td>*/}
+      {/*          <td*/}
+      {/*            style={{*/}
+      {/*              ...styles.recordCell,*/}
+      {/*              ...styles.recordClassification,*/}
+      {/*              color: clinvarSubmissionColor(submission.classification),*/}
+      {/*            }}*/}
+      {/*            title={submission.classification ?? undefined}*/}
+      {/*          >*/}
+      {/*            {clinvarSubmissionLabel(submission.classification)}*/}
+      {/*          </td>*/}
+      {/*          <td style={{ ...styles.recordCell, ...styles.recordStars }}>*/}
+      {/*            {submission.stars !== null && <Stars count={submission.stars} />}*/}
+      {/*          </td>*/}
+      {/*        </tr>*/}
+      {/*      ))}*/}
+      {/*    </tbody>*/}
+      {/*  </table>*/}
+      {/*  {hiddenSubmissionCount > 0 && (*/}
+      {/*    <MoreButton count={hiddenSubmissionCount} onClick={() => setShowAllSubmissions(true)} />*/}
+      {/*  )}*/}
+      {/*</div>*/}
     </div>
   );
 }
