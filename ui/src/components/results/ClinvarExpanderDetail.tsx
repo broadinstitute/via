@@ -14,7 +14,8 @@ import ClinvarBadge from "../elements/ClinvarBadge";
 
 // Past these, the rest collapse behind a "+N more" button.
 const MAX_VISIBLE_CONDITIONS = 2;
-const MAX_VISIBLE_SUBMISSIONS = 4;
+// With the records list below, hidden for now.
+// const MAX_VISIBLE_SUBMISSIONS = 4;
 
 // Laid out as a stack of labelled blocks -- the consensus classification, then its details as
 // label/value rows, then the individual records as an aligned list -- rather than one wrapping
@@ -174,7 +175,8 @@ interface ClinvarExpanderDetailProps {
 
 export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetailProps) {
   const [showAllConditions, setShowAllConditions] = useState(false);
-  const [showAllSubmissions, _] = useState(false);
+  // With the records list below, hidden for now.
+  // const [showAllSubmissions, setShowAllSubmissions] = useState(false);
   const { hovered: linkHovered, hoverProps: linkHoverProps } = useHover();
 
   const {
