@@ -2,7 +2,7 @@
   {
     "key": "tetralogy_of_fallot",
     "title": "Tetralogy of Fallot",
-    "description": "Congenital heart disease genes, with two truncating variants enriched in affected participants.",
+    "description": "Congenital heart disease genes",
     "variants": [
       "5-173235011-G-A",
       "5-173233036-G-A",
@@ -30,7 +30,7 @@
   {
     "key": "hypertrophic_cardiomyopathy",
     "title": "Hypertrophic cardiomyopathy",
-    "description": "Sarcomere genes, including the classic expert-panel MYH7 and MYBPC3 variants.",
+    "description": "Sarcomere genes",
     "variants": [
       "14-23429278-C-T",
       "11-47342698-G-A",
@@ -58,7 +58,7 @@
   {
     "key": "familial_hypercholesterolemia",
     "title": "Familial hypercholesterolemia",
-    "description": "LDLR, APOB and PCSK9, including a protective PCSK9 variant depleted in affected participants.",
+    "description": "LDLR, APOB and PCSK9",
     "variants": [
       "19-11116928-G-A",
       "19-11120425-C-A",
@@ -86,7 +86,7 @@
   {
     "key": "long_qt_syndrome",
     "title": "Long QT syndrome",
-    "description": "Cardiac ion channel genes, with a Finnish founder variant and a very common benign SCN5A variant.",
+    "description": "Cardiac ion channel genes",
     "variants": [
       "11-2583535-C-T",
       "11-2778009-G-A",

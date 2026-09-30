@@ -18,7 +18,7 @@ from .common import ClinVar, Condition, Matched, UseCase, Variant
 CASE = UseCase(
     key="familial_hypercholesterolemia",
     title="Familial hypercholesterolemia",
-    description="LDLR, APOB and PCSK9, including a protective PCSK9 variant depleted in affected participants.",
+    description="LDLR, APOB and PCSK9",
     condition=Condition(concept_id=9000050, name="Familial hypercholesterolemia", est_count=386, participants=391, synonyms=('fh', 'familial hypercholesterolaemia', 'heterozygous familial hypercholesterolemia')),
     ancestry={"EUR": 204, "AFR": 74, "AMR": 62, "OTH": 26, "EAS": 12, "SAS": 9, "MID": 4},
     age={"18–29": 14, "30–39": 38, "40–49": 72, "50–59": 104, "60–69": 98, "70+": 65},

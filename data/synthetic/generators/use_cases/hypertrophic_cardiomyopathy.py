@@ -20,7 +20,7 @@ from .common import ClinVar, Condition, Matched, UseCase, Variant
 CASE = UseCase(
     key="hypertrophic_cardiomyopathy",
     title="Hypertrophic cardiomyopathy",
-    description="Sarcomere genes, including the classic expert-panel MYH7 and MYBPC3 variants.",
+    description="Sarcomere genes",
     condition=Condition(concept_id=9000040, name="Hypertrophic cardiomyopathy", est_count=212, participants=214, synonyms=('hcm', 'hocm', 'hypertrophic obstructive cardiomyopathy')),
     ancestry={"EUR": 118, "AFR": 38, "AMR": 30, "OTH": 16, "EAS": 6, "SAS": 4, "MID": 2},
     age={"18–29": 12, "30–39": 24, "40–49": 38, "50–59": 52, "60–69": 54, "70+": 34},

@@ -20,7 +20,7 @@ from .common import ClinVar, Condition, Matched, UseCase, Variant
 CASE = UseCase(
     key="long_qt_syndrome",
     title="Long QT syndrome",
-    description="Cardiac ion channel genes, with a Finnish founder variant and a very common benign SCN5A variant.",
+    description="Cardiac ion channel genes",
     condition=Condition(concept_id=9000060, name="Long QT syndrome", est_count=128, participants=131, synonyms=('lqts', 'romano-ward syndrome', 'congenital long qt syndrome')),
     ancestry={"EUR": 68, "AFR": 27, "AMR": 20, "OTH": 9, "EAS": 4, "SAS": 2, "MID": 1},
     age={"18–29": 26, "30–39": 29, "40–49": 27, "50–59": 23, "60–69": 17, "70+": 9},

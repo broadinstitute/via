@@ -20,7 +20,7 @@ from .common import ClinVar, Condition, Matched, UseCase, Variant
 CASE = UseCase(
     key="tetralogy_of_fallot",
     title="Tetralogy of Fallot",
-    description="Congenital heart disease genes, with two truncating variants enriched in affected participants.",
+    description="Congenital heart disease genes",
     condition=Condition(concept_id=9000010, name="Tetralogy of Fallot", est_count=47, participants=49, generate=False),
     ancestry={"EUR": 22, "AFR": 9, "AMR": 10, "OTH": 4, "EAS": 2, "SAS": 1, "MID": 1},
     age={"18–29": 14, "30–39": 13, "40–49": 10, "50–59": 7, "60–69": 4, "70+": 1},
