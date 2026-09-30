@@ -216,7 +216,7 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
 
   const visibleConditions = showAllConditions ? clinvarConditions : clinvarConditions.slice(0, MAX_VISIBLE_CONDITIONS);
   const hiddenConditionCount = clinvarConditions.length - visibleConditions.length;
-  const visibleSubmissions = showAllSubmissions ? clinvarSubmissions : clinvarSubmissions.slice(0, MAX_VISIBLE_SUBMISSIONS);
+  // const visibleSubmissions = showAllSubmissions ? clinvarSubmissions : clinvarSubmissions.slice(0, MAX_VISIBLE_SUBMISSIONS);
   // const hiddenSubmissionCount = clinvarSubmissions.length - visibleSubmissions.length;
 
   return (
