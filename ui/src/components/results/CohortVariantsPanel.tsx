@@ -11,13 +11,15 @@ import colors, { sourceTints } from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow } from "../../types/results";
+import { useDataViewOptions } from "../../utils/dataViewOptions";
+import { columnVisibilityFor } from "../../utils/hideableColumns";
 import { clinvarSearchUrl, gnomadVariantUrl } from "../../utils/externalLinks";
 import { exactAf, formatAcAn, formatAf } from "../../utils/format";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
-import { ChevronRightIcon, EyeOffIcon } from "../icons";
+import { ChevronDownIcon, EyeOffIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import MoreBelowCue from "./MoreBelowCue";
@@ -67,6 +69,15 @@ const styles = {
     ...Style.table.scroller,
     position: "absolute",
     inset: 0,
+  },
+  // "Show all rows" (settings > Data view): the table sits in normal flow at its full height, so
+  // the page scrolls instead of the table. Overflow stays auto for the horizontal axis.
+  tableWrapShowAll: {
+    position: "relative",
+    flex: 1,
+  },
+  tableScrollShowAll: {
+    ...Style.table.scroller,
   },
   // separate (not collapse): under collapse, a sticky <th>'s border is painted via the table's
   // shared-grid-line model rather than as part of the cell's own box, and that desyncs from the
@@ -231,7 +242,6 @@ function sourceOf(columnId: string): Source | null {
 
 interface MissingGroup {
   columnIds: Set<string>;
-  mergedIntoColumnId: string;
   message: ReactNode;
   /** Tooltip on the merged cell. */
   title?: string;
@@ -239,7 +249,6 @@ interface MissingGroup {
 
 const AOU_MISSING_GROUP: MissingGroup = {
   columnIds: SOURCE_COLUMN_IDS.aou,
-  mergedIntoColumnId: "aouSubpop",
   message: (
     <>
       Not observed in <AllOfUs />
@@ -249,7 +258,6 @@ const AOU_MISSING_GROUP: MissingGroup = {
 
 const GNOMAD_MISSING_GROUP: MissingGroup = {
   columnIds: SOURCE_COLUMN_IDS.gnomad,
-  mergedIntoColumnId: "gnomadSubpop",
   message: "Not observed in gnomAD",
 };
 
@@ -268,7 +276,6 @@ const UNANNOTATED_GROUP: MissingGroup = {
     "spliceAi",
     "plof",
   ]),
-  mergedIntoColumnId: "gene",
   message: (
     <>
       Not observed in <AllOfUs />
@@ -302,6 +309,8 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
   const { hoveredKey: hoveredRow, hoverProps: rowHoverProps } = useHoveredKey<string>();
   const { hoveredKey: hoveredHeader, hoverProps: headerHoverProps } = useHoveredKey<string>();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { showAllRows, hiddenColumns } = useDataViewOptions();
+  const columnVisibility = useMemo(() => columnVisibilityFor("cohort", hiddenColumns), [hiddenColumns]);
 
   function toggleExpanded(variant: string) {
     setExpandedVariants((current) => {
@@ -344,11 +353,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                   aria-controls={`variant-detail-${row.original.variant}`}
                   aria-label={isExpanded ? "Collapse row for more detail" : "Expand row for more detail"}
                 >
-                  <ChevronRightIcon
-                    size={12}
+                  {/* Points down toward where the detail opens; flips up while it's open. */}
+                  <ChevronDownIcon
+                    size={14}
                     strokeWidth={2.5}
                     className="transition-transform"
-                    style={isExpanded ? { transform: "rotate(90deg)", color: colors.textAccent } : undefined}
+                    style={isExpanded ? { transform: "rotate(180deg)", color: colors.textAccent } : undefined}
                   />
                 </Clickable>
               );
@@ -544,7 +554,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
   const table = useReactTable({
     data: rows,
     columns,
-    state: { sorting },
+    state: { sorting, columnVisibility },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -563,8 +573,8 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
       scope={<ScopeChip>All participants</ScopeChip>}
       headerRight={<span style={styles.sub}>Showing {rows.length} results</span>}
     >
-      <div style={styles.tableWrap}>
-        <div ref={scrollRef} style={styles.tableScroll}>
+      <div style={showAllRows ? styles.tableWrapShowAll : styles.tableWrap}>
+        <div ref={scrollRef} style={showAllRows ? styles.tableScrollShowAll : styles.tableScroll}>
           <table style={styles.table}>
             <thead>
               {table.getHeaderGroups().map((headerGroup, depth) => {
@@ -626,7 +636,9 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                       onClick={() => toggleExpanded(row.original.variant)}
                       {...rowHoverProps(row.id)}
                     >
-                      {row.getVisibleCells().map((cell, index) => {
+                      {/* A missing group's message spans only its columns that are still shown
+                          (settings > Data view can hide some), from the first of them. */}
+                      {row.getVisibleCells().map((cell, index, visibleCells) => {
                         const source = sourceOf(cell.column.id);
                         const cellStyle: CSSProperties = {
                           ...Style.table.bodyCell,
@@ -638,11 +650,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
                           candidate.columnIds.has(cell.column.id),
                         );
                         if (group) {
-                          if (cell.column.id !== group.mergedIntoColumnId) return null;
+                          const groupCells = visibleCells.filter((candidate) => group.columnIds.has(candidate.column.id));
+                          if (cell.id !== groupCells[0].id) return null;
                           return (
                             <td
                               key={cell.id}
-                              colSpan={group.columnIds.size}
+                              colSpan={groupCells.length}
                               style={{ ...cellStyle, ...styles.sourceMissing }}
                               title={group.title}
                             >
@@ -719,7 +732,7 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
             </tbody>
           </table>
         </div>
-        <MoreBelowCue scrollRef={scrollRef} rowSelector="[data-variant-row]" />
+        {!showAllRows && <MoreBelowCue scrollRef={scrollRef} rowSelector="[data-variant-row]" />}
       </div>
     </ResultsPanel>
   );

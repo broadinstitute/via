@@ -48,6 +48,15 @@ describe("SettingsDialog", () => {
     expect(fetch).not.toHaveBeenCalledWith("/api/status");
   });
 
+  it("switches to the data view panel, which needs no request", async () => {
+    render(<SettingsDialog onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Data view" }));
+
+    expect(screen.getByRole("button", { name: "Data view" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("switch", { name: "Show all rows" })).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalledWith("/api/status");
+  });
+
   it("switches to the system status panel and lists every checked table", async () => {
     render(<SettingsDialog onClose={vi.fn()} />);
     openStatusPanel();

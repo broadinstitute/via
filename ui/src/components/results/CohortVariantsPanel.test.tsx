@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { AnnotatedCohortVariant, CohortVariantRow } from "../../types/results";
+import { resetDataViewOptionsForTests, setDataViewOptions } from "../../utils/dataViewOptions";
 import CohortVariantsPanel from "./CohortVariantsPanel";
 
 /** A cell by its full text, which can span elements (the italic program name). */
@@ -45,7 +46,21 @@ const IN_AOU_ONLY: AnnotatedCohortVariant = {
 const NOT_IN_AOU: CohortVariantRow = { annotated: false, variant: "7-55181378-G-A" };
 
 describe("CohortVariantsPanel", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    window.localStorage.clear();
+    resetDataViewOptionsForTests();
+  });
+
+  it("leaves hidden columns out, including a whole source group, and spans merged cells over what's left", () => {
+    setDataViewOptions({ hiddenColumns: ["cohort.gnomad", "cohort.gene"] });
+    render(<CohortVariantsPanel rows={[NOT_IN_AOU]} />);
+
+    expect(screen.queryByText("gnomAD")).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Gene" })).not.toBeInTheDocument();
+    // Twelve spanned columns, less gnomAD's three and Gene.
+    expect(screen.getByText(cellWithText("Not observed in All of Us"))).toHaveAttribute("colspan", "8");
+  });
 
   it("spans a variant that isn't in All of Us with one message, not a claim about gnomAD", () => {
     render(<CohortVariantsPanel rows={[NOT_IN_AOU]} />);

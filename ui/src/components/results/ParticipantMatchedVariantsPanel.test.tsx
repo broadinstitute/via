@@ -1,7 +1,8 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FilteredVariantRow } from "../../types/results";
-import ParticipantMatchedVariantsPanel from "./ParticipantMatchedVariantsPanel";
+import { resetDataViewOptionsForTests, setDataViewOptions } from "../../utils/dataViewOptions";
+import ParticipantMatchedVariantsPanel, { MATCHED_TABLE_HEIGHT } from "./ParticipantMatchedVariantsPanel";
 
 /** A cell by its full text, which can span elements (the italic program name). */
 const cellWithText = (text: string) => (_: string, element: Element | null) =>
@@ -34,7 +35,30 @@ function renderPanel(rows: FilteredVariantRow[]) {
 }
 
 describe("ParticipantMatchedVariantsPanel", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    window.localStorage.clear();
+    resetDataViewOptionsForTests();
+  });
+
+  it("leaves hidden columns out and spans the not-observed message over the remaining stat columns", () => {
+    setDataViewOptions({ hiddenColumns: ["matched.afRatio", "matched.homozygotes"] });
+    renderPanel([OBSERVED, { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false }]);
+
+    expect(screen.queryByRole("columnheader", { name: "Homozygotes" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Heterozygotes" })).toBeInTheDocument();
+    // Nine spanned columns, less the two hidden stats.
+    expect(screen.getByText(cellWithText("Not observed in All of Us"))).toHaveAttribute("colspan", "7");
+  });
+
+  it("caps the table's height by default, and lets it grow with the Show all rows option", () => {
+    renderPanel([OBSERVED]);
+    const scroller = () => screen.getByRole("table").parentElement!;
+    expect(scroller()).toHaveStyle({ height: `${MATCHED_TABLE_HEIGHT}px` });
+
+    act(() => setDataViewOptions({ showAllRows: true }));
+    expect(scroller()).not.toHaveStyle({ height: `${MATCHED_TABLE_HEIGHT}px` });
+  });
 
   it("replaces an unobserved variant's empty cells with one message, keeping its ID and controls", () => {
     renderPanel([OBSERVED, { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false }]);

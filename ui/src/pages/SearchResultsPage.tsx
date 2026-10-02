@@ -13,6 +13,7 @@ import SearchResultsError from "../components/results/SearchResultsError";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar, { TOP_BAR_HEIGHT } from "../components/results/TopBar";
 import { UserIcon } from "../components/icons";
+import { useDataViewOptions } from "../utils/dataViewOptions";
 import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
 
@@ -45,6 +46,7 @@ export default function SearchResultsPage() {
   const [drawerKey, setDrawerKey] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
   const isNarrow = useMediaQuery(NARROW_LAYOUT_QUERY);
+  const { showAllRows } = useDataViewOptions();
 
   useEffect(() => {
     fetchProfile()
@@ -187,7 +189,9 @@ export default function SearchResultsPage() {
             display: "grid",
             gridTemplateColumns: isNarrow ? "1fr" : "1fr 300px",
             gap: 16,
-            alignItems: "stretch",
+            // Normally the two panels share a height. With every row shown, the variants table
+            // can run for screens, and the phenotype panel shouldn't stretch to match.
+            alignItems: showAllRows ? "start" : "stretch",
           }}
         >
           {results && revealed.cohort ? (

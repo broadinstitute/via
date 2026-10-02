@@ -6,11 +6,13 @@ import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
 import { CloseIcon } from "../icons";
 import DataSourcesPanel from "./DataSourcesPanel";
+import DataViewPanel from "./DataViewPanel";
 import SystemStatusPanel from "./SystemStatusPanel";
 
 /** Each settings panel: a nav entry and what it shows. Add new panels here. */
 const PANELS: { id: string; label: string; render: () => ReactNode }[] = [
   { id: "sources", label: "Data sources", render: () => <DataSourcesPanel /> },
+  { id: "view", label: "Data view", render: () => <DataViewPanel /> },
   { id: "status", label: "System status", render: () => <SystemStatusPanel /> },
 ];
 

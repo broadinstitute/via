@@ -11,6 +11,8 @@ import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { FilteredVariantRow } from "../../types/results";
+import { useDataViewOptions } from "../../utils/dataViewOptions";
+import { columnVisibilityFor } from "../../utils/hideableColumns";
 import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
@@ -73,6 +75,11 @@ const styles = {
   tableScroll: {
     ...Style.table.scroller,
     height: MATCHED_TABLE_HEIGHT,
+  },
+  // "Show all rows" (settings > Data view): no height cap, so every row is laid out and the page
+  // scrolls instead. Overflow stays auto for the horizontal axis.
+  tableScrollShowAll: {
+    ...Style.table.scroller,
   },
   table: {
     ...Style.table.base,
@@ -161,6 +168,8 @@ export default function ParticipantMatchedVariantsPanel({
   );
   const [sorting, setSorting] = useState<SortingState>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { showAllRows, hiddenColumns } = useDataViewOptions();
+  const columnVisibility = useMemo(() => columnVisibilityFor("matched", hiddenColumns), [hiddenColumns]);
   const { hoveredKey: hoveredRow, hoverProps: rowHoverProps } = useHoveredKey<string>();
   const { hoveredKey: hoveredHeader, hoverProps: headerHoverProps } = useHoveredKey<string>();
 
@@ -296,7 +305,7 @@ export default function ParticipantMatchedVariantsPanel({
   const table = useReactTable({
     data: rows,
     columns,
-    state: { rowSelection, sorting },
+    state: { rowSelection, sorting, columnVisibility },
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     getRowId: (row) => row.variant,
@@ -368,7 +377,7 @@ export default function ParticipantMatchedVariantsPanel({
       }
     >
       <div style={styles.tableWrap}>
-        <div ref={scrollRef} style={styles.tableScroll}>
+        <div ref={scrollRef} style={showAllRows ? styles.tableScrollShowAll : styles.tableScroll}>
           <table style={styles.table}>
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -410,14 +419,15 @@ export default function ParticipantMatchedVariantsPanel({
                   ...(hoveredRow === row.id ? { background: colors.surface1 } : undefined),
                 };
                 const merged = row.original.hasStats ? null : notObservedColumnIds(row.original);
-                const firstMergedId = merged && row.getVisibleCells().find((cell) => merged.has(cell.column.id))?.id;
+                // Only the merged columns still shown (settings > Data view can hide some) are spanned.
+                const mergedCells = merged ? row.getVisibleCells().filter((cell) => merged.has(cell.column.id)) : [];
                 return (
                   <tr key={row.id} data-variant-row {...rowHoverProps(row.id)}>
                     {row.getVisibleCells().map((cell) => {
                       if (merged?.has(cell.column.id)) {
-                        if (cell.id !== firstMergedId) return null;
+                        if (cell.id !== mergedCells[0]?.id) return null;
                         return (
-                          <td key={cell.id} colSpan={merged.size} style={{ ...cellStyle, ...styles.notObserved }}>
+                          <td key={cell.id} colSpan={mergedCells.length} style={{ ...cellStyle, ...styles.notObserved }}>
                             Not observed in <AllOfUs />
                           </td>
                         );
@@ -434,7 +444,7 @@ export default function ParticipantMatchedVariantsPanel({
             </tbody>
           </table>
         </div>
-        <MoreBelowCue scrollRef={scrollRef} rowSelector="[data-variant-row]" />
+        {!showAllRows && <MoreBelowCue scrollRef={scrollRef} rowSelector="[data-variant-row]" />}
       </div>
     </ResultsPanel>
   );
