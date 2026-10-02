@@ -6,7 +6,10 @@ import { PlusIcon } from "../icons";
 import PhenotypeFilterIllustration, { type PhenotypeFilterIllustrationVariant } from "./PhenotypeFilterIllustration";
 
 const styles = {
+  // flex: 1 so this fills whatever height the panel has -- it's stretched to the variants table
+  // beside it -- and the centering below is relative to that, not to the content's own height.
   body: {
+    flex: 1,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
