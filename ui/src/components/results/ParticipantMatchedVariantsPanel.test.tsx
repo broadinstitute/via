@@ -21,7 +21,7 @@ const OBSERVED: FilteredVariantRow = {
   afRatio: 1.5,
 };
 
-function renderPanel(rows: FilteredVariantRow[], onQuickReview?: () => void) {
+function renderPanel(rows: FilteredVariantRow[], onQuickReview?: (variant: string) => void) {
   render(
     <ParticipantMatchedVariantsPanel
       rows={rows}
@@ -57,11 +57,11 @@ describe("ParticipantMatchedVariantsPanel", () => {
     expect(screen.getByText("Nonsense")).toBeInTheDocument();
   });
 
-  it("offers Quick review from its header when a handler is given", () => {
+  it("opens Quick review on a row's variant from its row controls", () => {
     const onQuickReview = vi.fn();
     renderPanel([OBSERVED], onQuickReview);
 
-    fireEvent.click(screen.getByRole("button", { name: "Quick review" }));
-    expect(onQuickReview).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: `Quick review ${OBSERVED.variant}` }));
+    expect(onQuickReview).toHaveBeenCalledWith(OBSERVED.variant);
   });
 });

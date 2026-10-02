@@ -21,6 +21,7 @@ import { ChevronRightIcon, EyeOffIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import MoreBelowCue from "./MoreBelowCue";
+import QuickReviewButton from "./QuickReviewButton";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel, { ScopeChip } from "./ResultsPanel";
 import SubpopBadge from "../elements/SubpopBadge";
@@ -50,6 +51,11 @@ type Source = "aou" | "gnomad";
 const GROUP_HEADER_HEIGHT = 28;
 
 const styles = {
+  headerActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+  },
   sub: {
     fontSize: 11,
     color: colors.textMuted,
@@ -294,9 +300,11 @@ function isMissingFromGnomad(row: CohortVariantRow): boolean {
 
 interface CohortVariantsPanelProps {
   rows: CohortVariantRow[];
+  /** Opens Quick review; offered only once a phenotype filter gives it something to compare with. */
+  onQuickReview?: () => void;
 }
 
-export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) {
+export default function CohortVariantsPanel({ rows, onQuickReview }: CohortVariantsPanelProps) {
   const [expandedVariants, setExpandedVariants] = useState<Set<string>>(new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
   const { hoveredKey: hoveredRow, hoverProps: rowHoverProps } = useHoveredKey<string>();
@@ -561,7 +569,12 @@ export default function CohortVariantsPanel({ rows }: CohortVariantsPanelProps) 
     <ResultsPanel
       title="Candidate variants"
       scope={<ScopeChip>All participants</ScopeChip>}
-      headerRight={<span style={styles.sub}>Showing {rows.length} results</span>}
+      headerRight={
+        <span style={styles.headerActions}>
+          <span style={styles.sub}>Showing {rows.length} results</span>
+          {onQuickReview && <QuickReviewButton onClick={onQuickReview} />}
+        </span>
+      }
     >
       <div style={styles.tableWrap}>
         <div ref={scrollRef} style={styles.tableScroll}>

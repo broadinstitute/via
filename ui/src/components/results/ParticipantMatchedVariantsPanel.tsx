@@ -15,7 +15,7 @@ import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
-import { UserIcon } from "../icons";
+import { CompareIcon, UserIcon } from "../icons";
 import CopyButton from "./CopyButton";
 import MoreBelowCue from "./MoreBelowCue";
 import PhenotypeFilterRequired from "./PhenotypeFilterRequired";
@@ -51,6 +51,11 @@ function notObservedColumnIds(row: FilteredVariantRow): Set<string> {
 }
 
 const styles = {
+  rowActions: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 2,
+  },
   notObserved: {
     color: colors.textMuted,
     fontStyle: "italic",
@@ -147,8 +152,8 @@ interface ParticipantMatchedVariantsPanelProps {
   /** Names the picked condition in the empty state; empty when none was picked. */
   condition: string;
   onAddPhenotypeFilter: () => void;
-  /** Opens Quick review, the head-to-head comparison with the cohort-wide table. */
-  onQuickReview?: () => void;
+  /** Opens Quick review on the given variant. */
+  onQuickReview?: (variant: string) => void;
 }
 
 export default function ParticipantMatchedVariantsPanel({
@@ -288,12 +293,25 @@ export default function ParticipantMatchedVariantsPanel({
           id: "copy",
           header: "",
           cell: ({ row }) => (
-            <CopyButton getText={() => rowToTsvValues(row.original).join("\t")} label="Copy row" />
+            <span style={styles.rowActions}>
+              <CopyButton getText={() => rowToTsvValues(row.original).join("\t")} label="Copy row" />
+              {onQuickReview && (
+                <Clickable
+                  style={Style.buttons.icon}
+                  hoverStyle={Style.buttons.iconHover}
+                  onClick={() => onQuickReview(row.original.variant)}
+                  aria-label={`Quick review ${row.original.variant}`}
+                  title="Open Quick review on this variant"
+                >
+                  <CompareIcon size={14} strokeWidth={2.2} aria-hidden="true" />
+                </Clickable>
+              )}
+            </span>
           ),
           enableSorting: false,
         }),
       ]),
-    [columnHelper],
+    [columnHelper, onQuickReview],
   );
 
   const table = useReactTable({
@@ -362,16 +380,6 @@ export default function ParticipantMatchedVariantsPanel({
           <span style={styles.selectedCount}>
             {selectedCount} of {rows.length} included
           </span>
-          {onQuickReview && (
-            <Clickable
-              style={Style.buttons.accent}
-              hoverStyle={Style.buttons.accentHover}
-              onClick={onQuickReview}
-              title="Compare each variant's phenotype-matched frequency with the cohort-wide one"
-            >
-              Quick review
-            </Clickable>
-          )}
           <Clickable style={Style.buttons.primary} hoverStyle={Style.buttons.primaryHover} onClick={handleExport}>
             Export TSV
           </Clickable>

@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AnnotatedCohortVariant, CohortVariantRow } from "../../types/results";
 import CohortVariantsPanel from "./CohortVariantsPanel";
 
@@ -79,5 +79,16 @@ describe("CohortVariantsPanel", () => {
       "href",
       "https://www.ncbi.nlm.nih.gov/clinvar/?term=7-55181378-G-A",
     );
+  });
+
+  it("offers Quick review from its header only when a handler is given", () => {
+    const onQuickReview = vi.fn();
+    render(<CohortVariantsPanel rows={[NOT_IN_AOU]} />);
+    expect(screen.queryByRole("button", { name: "Quick review" })).not.toBeInTheDocument();
+    cleanup();
+
+    render(<CohortVariantsPanel rows={[NOT_IN_AOU]} onQuickReview={onQuickReview} />);
+    fireEvent.click(screen.getByRole("button", { name: "Quick review" }));
+    expect(onQuickReview).toHaveBeenCalledTimes(1);
   });
 });

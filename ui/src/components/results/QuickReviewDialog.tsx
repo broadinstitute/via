@@ -6,9 +6,9 @@ import * as Style from "../../libs/style";
 import type { BreakdownSegment, CohortVariantRow, FilteredVariantRow } from "../../types/results";
 import { buildComparisonRows, formatRatio, sortByEnrichment } from "../../utils/comparison";
 import Clickable from "../common/Clickable";
-import { ArrowLeftIcon, ArrowRightIcon, CloseIcon, UserIcon } from "../icons";
+import AllOfUs from "../common/AllOfUs";
+import { ArrowLeftIcon, ArrowRightIcon, CloseIcon } from "../icons";
 import QuickReviewDetail, { ENRICHMENT_RATIO_THRESHOLD, verdictTone } from "./QuickReviewDetail";
-import { ScopeChip } from "./ResultsPanel";
 
 const styles = {
   scrim: {
@@ -16,32 +16,53 @@ const styles = {
     inset: 0,
     zIndex: 100,
     display: "flex",
-    alignItems: "center",
+    alignItems: "stretch",
     justifyContent: "center",
-    padding: 16,
+    padding: 12,
     background: alpha(colors.textPrimary, 0.35),
   },
+  // Takes the whole window, less a margin that keeps it reading as an overlay: a review is a mode
+  // the interpreter steps through, not a popup, and the height is what lets the detail breathe
+  // without scrolling.
   dialog: {
     ...Style.elements.panel,
     display: "flex",
     flexDirection: "column",
-    width: 1040,
-    maxWidth: "100%",
-    height: "calc(100vh - 32px)",
-    maxHeight: 760,
+    width: "100%",
+    maxWidth: 1480,
     boxShadow: Style.shadows.raised,
     outline: "none",
   },
   header: {
     ...Style.elements.panelHeader,
     justifyContent: "space-between",
-    gap: 12,
+    gap: 16,
+    padding: "12px 18px",
   },
+  // Title over a one-line subtitle that names the two sides, in the same order as the head-to-head
+  // table's columns: the matched participants, then the cohort they're measured against.
   heading: {
     display: "flex",
-    alignItems: "center",
-    gap: 10,
+    flexDirection: "column",
+    gap: 2,
     minWidth: 0,
+  },
+  subtitle: {
+    margin: 0,
+    fontSize: 12,
+    color: colors.textSecondary,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  subtitleStrong: {
+    color: colors.textBody,
+    fontWeight: 600,
+  },
+  subtitleVs: {
+    margin: "0 6px",
+    color: colors.textMuted,
+    fontStyle: "italic",
   },
   headerRight: {
     display: "flex",
@@ -63,9 +84,11 @@ const styles = {
     background: colors.border,
   },
   title: {
+    margin: 0,
     color: colors.textPrimary,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 700,
+    letterSpacing: -0.1,
   },
   body: {
     display: "flex",
@@ -75,7 +98,7 @@ const styles = {
   rail: {
     display: "flex",
     flexDirection: "column",
-    width: 250,
+    width: 260,
     flexShrink: 0,
     background: colors.surface1,
     borderRight: `1px solid ${colors.border}`,
@@ -138,8 +161,10 @@ const styles = {
   detail: {
     flex: 1,
     minWidth: 0,
-    padding: "18px 22px",
+    padding: "22px 28px 26px",
+    // Only a very short window scrolls the detail; the layout is sized to fit a laptop screen.
     overflowY: "auto",
+    scrollbarWidth: "thin",
   },
   legendItem: {
     display: "inline-flex",
@@ -229,14 +254,18 @@ export default function QuickReviewDialog({
             <h2 id="quickReviewTitle" style={styles.title}>
               Quick review
             </h2>
-            <ScopeChip
-              tone="accent"
-              icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />}
-              title={`${participantCount.toLocaleString()} participants with ${condition}`}
+            <p
+              style={styles.subtitle}
+              title={`${participantCount.toLocaleString()} participants with ${condition}, compared with the whole All of Us cohort`}
             >
-              {participantCount.toLocaleString()} with {condition}
-            </ScopeChip>
-            <ScopeChip>vs. all participants</ScopeChip>
+              <span style={styles.subtitleStrong}>
+                {participantCount.toLocaleString()} participants with {condition}
+              </span>
+              <span style={styles.subtitleVs}>vs</span>
+              <span style={styles.subtitleStrong}>
+                the <AllOfUs /> cohort
+              </span>
+            </p>
           </div>
           <div style={styles.headerRight}>
             <Clickable
@@ -320,6 +349,9 @@ export default function QuickReviewDialog({
               </span>
               <span style={styles.legendItem}>
                 <span style={Style.colorDot(colors.textSecondary, 8)} /> Similar
+              </span>
+              <span style={styles.legendItem}>
+                <span style={Style.colorDot(colors.textMuted, 8)} /> Inconclusive, too few alleles
               </span>
               <span style={{ ...styles.legendItem, marginTop: 3 }}>
                 <kbd style={styles.kbd}>←</kbd> <kbd style={styles.kbd}>→</kbd> step · <kbd style={styles.kbd}>Esc</kbd> close

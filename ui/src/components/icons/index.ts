@@ -5,6 +5,7 @@ export { default as CheckIcon } from "./CheckIcon";
 export { default as ChevronDownIcon } from "./ChevronDownIcon";
 export { default as ChevronRightIcon } from "./ChevronRightIcon";
 export { default as CloseIcon } from "./CloseIcon";
+export { default as CompareIcon } from "./CompareIcon";
 export { default as CopyIcon } from "./CopyIcon";
 export { default as EyeOffIcon } from "./EyeOffIcon";
 export { default as GearIcon } from "./GearIcon";

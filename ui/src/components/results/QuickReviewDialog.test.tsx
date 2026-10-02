@@ -121,7 +121,12 @@ describe("QuickReviewDialog", () => {
 
     const verdict = screen.getByRole("status");
     expect(verdict).toHaveTextContent(/^Enriched25\.7×/);
-    expect(verdict).toHaveTextContent("p < 0.001");
+    expect(verdict).not.toHaveTextContent("Fisher");
+    // The evidence sits in its own section, as labeled figures.
+    const evidence = screen.getByRole("region", { name: /^Evidence/ });
+    expect(evidence).toHaveTextContent("Fisher's exact p< 0.001below 0.05");
+    expect(evidence).toHaveTextContent(/95% CI for ratio.*excludes 1×/);
+    expect(evidence).toHaveTextContent("Matched alt alleles60.23 expected at cohort rate");
     expect(screen.getByText("LDLR")).toBeInTheDocument();
     expect(screen.getByText("6 / 200")).toBeInTheDocument();
     expect(screen.getByText("28 / 24,000")).toBeInTheDocument();
@@ -133,6 +138,9 @@ describe("QuickReviewDialog", () => {
     // The two cohorts line up row by row.
     expect(screen.getByRole("columnheader", { name: /Phenotype-matched\s*100 with Familial hypercholesterolemia/ })).toBeInTheDocument();
     expect(screen.getByRole("row", { name: /^Allele frequency/ })).toHaveTextContent("0.00120.0300");
+    // Only ancestry groups with a share of the cohort or a frequency are listed: EUR and AFR here, not AMR.
+    expect(screen.getByRole("row", { name: /^AFR/ })).toHaveTextContent("40% (40)0.012024 / 2,0000.0100");
+    expect(screen.queryByRole("row", { name: /^AMR/ })).not.toBeInTheDocument();
     expect(screen.getByText("1 of 3")).toBeInTheDocument();
   });
 

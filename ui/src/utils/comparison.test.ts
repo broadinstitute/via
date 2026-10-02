@@ -69,8 +69,10 @@ describe("computeEnrichment", () => {
     expect(result.direction).toBe("enriched");
     expect(result.pValue).toBeLessThan(0.001);
     expect(result.significant).toBe(true);
-    expect(result.ci[0]).toBeGreaterThan(1);
-    expect(result.ci[1]).toBeGreaterThan(result.ci[0]);
+    expect(result.ci![0]).toBeGreaterThan(1);
+    expect(result.ci![1]).toBeGreaterThan(result.ci![0]);
+    expect(result.matchedAc).toBe(6);
+    expect(result.expectedMatchedAc).toBeCloseTo(0.233, 2);
   });
 
   it("calls a much lower matched frequency depleted", () => {
@@ -95,11 +97,31 @@ describe("computeEnrichment", () => {
     expect(noisy.significant).toBe(false);
   });
 
+  it("treats no matched carriers as inconclusive when fewer than one was expected", () => {
+    // The case that first showed up: 0 of 262 against 3 of 481,436, where 0.002 were expected.
+    const result = computeEnrichment(0, 262, 3, 481436)!;
+    expect(result.direction).toBe("inconclusive");
+    expect(result.ratio).toBe(0);
+    expect(result.ci).toBeNull();
+    expect(result.expectedMatchedAc).toBeCloseTo(0.0016, 3);
+    // Rule of three: matched AF below 3/262, so the ratio could still be anything up to this.
+    expect(result.upperBound).toBeCloseTo(3 / 262 / (3 / 481436), 0);
+    expect(result.pValue).toBeCloseTo(1, 6);
+  });
+
+  it("calls no matched carriers depleted when several were expected and the test agrees", () => {
+    const result = computeEnrichment(0, 400, 6000, 24000)!;
+    expect(result.expectedMatchedAc).toBe(100);
+    expect(result.direction).toBe("depleted");
+    expect(result.significant).toBe(true);
+    expect(result.ci).toBeNull();
+  });
+
   it("handles zero counts without dividing by zero", () => {
     expect(computeEnrichment(0, 200, 0, 24000)!.ratio).toBe(1);
+    expect(computeEnrichment(0, 200, 0, 24000)!.direction).toBe("inconclusive");
     expect(computeEnrichment(3, 200, 0, 24000)!.ratio).toBe(Infinity);
-    expect(computeEnrichment(0, 200, 28, 24000)!.ratio).toBe(0);
-    expect(computeEnrichment(0, 200, 28, 24000)!.ci[0]).toBeGreaterThan(0);
+    expect(computeEnrichment(3, 200, 0, 24000)!.ci).toBeNull();
     expect(computeEnrichment(3, 0, 28, 24000)).toBeNull();
   });
 });
@@ -117,6 +139,13 @@ describe("fisherTwoSided", () => {
 });
 
 describe("buildComparisonRows / sortByEnrichment", () => {
+  it("ranks an inconclusive zero below a real signal, however extreme its ratio looks", () => {
+    const zero: AnnotatedCohortVariant = { ...ANNOTATED, variant: "7-150974917-G-A", aouAllAc: 3, aouAllAn: 481436 };
+    const zeroMatched: FilteredVariantRow = { ...MATCHED, variant: "7-150974917-G-A", cohortAc: 0, cohortAn: 262, cohortAf: 0, afRatio: 0 };
+    const sorted = sortByEnrichment(buildComparisonRows([zero, ANNOTATED], [zeroMatched, MATCHED]));
+    expect(sorted.map((row) => row.variant)).toEqual(["2-122517541-C-G", "7-150974917-G-A"]);
+  });
+
   it("joins the two tables by variant and ranks the strongest departure first", () => {
     const flat: AnnotatedCohortVariant = { ...ANNOTATED, variant: "1-100-A-T", aouAllAc: 300, aouAllAn: 20000 };
     const flatMatched: FilteredVariantRow = { ...MATCHED, variant: "1-100-A-T", cohortAc: 3, cohortAn: 200, cohortAf: 0.015, afRatio: 1 };

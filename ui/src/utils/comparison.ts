@@ -21,15 +21,27 @@ export const SIGNIFICANCE_LEVEL = 0.05;
 /** Below this many alternate alleles in the matched cohort the ratio is too noisy to lean on. */
 export const LOW_COUNT_THRESHOLD = 5;
 
-export type Direction = "enriched" | "depleted" | "similar";
+/**
+ * "inconclusive" is for a zero count that the data can't distinguish from chance: no matched
+ * carriers when fewer than one was expected anyway, or no cohort-wide carriers at all.
+ */
+export type Direction = "enriched" | "depleted" | "similar" | "inconclusive";
 
 export interface Enrichment {
   /** Matched AF over cohort-wide AF. Infinity when the cohort-wide AF is zero and the matched isn't. */
   ratio: number;
   matchedAf: number;
   cohortAf: number;
-  /** 95% confidence interval for the ratio (Katz log method, with a 0.5 continuity correction at zero counts). */
-  ci: [number, number];
+  /** Alternate alleles among matched participants, and how many the cohort-wide rate predicts. */
+  matchedAc: number;
+  expectedMatchedAc: number;
+  /**
+   * 95% confidence interval for the ratio (Katz log method). Null when either count is zero: the
+   * interval is then undefined, and `upperBound` stands in for it.
+   */
+  ci: [number, number] | null;
+  /** With no matched carriers, the largest ratio consistent with the data (rule of three); otherwise null. */
+  upperBound: number | null;
   /** Two-sided Fisher's exact test on matched vs the rest of the cohort. */
   pValue: number;
   direction: Direction;
@@ -64,12 +76,24 @@ export function buildComparisonRows(
   });
 }
 
-/** Strongest signal first: largest ratios, then smallest, with rows lacking a comparison last. */
+/**
+ * Strongest signal first: significant departures, then departures the counts can't back up, then
+ * similar frequencies, then inconclusive zeros, then rows with no comparison at all. Within a
+ * tier, the larger the departure from 1× the higher.
+ */
 export function sortByEnrichment(rows: ComparisonRow[]): ComparisonRow[] {
   return [...rows].sort((a, b) => {
-    if (!a.enrichment || !b.enrichment) return (a.enrichment ? 0 : 1) - (b.enrichment ? 0 : 1);
+    const tierDiff = tier(a.enrichment) - tier(b.enrichment);
+    if (tierDiff !== 0 || !a.enrichment || !b.enrichment) return tierDiff;
     return Math.abs(Math.log2(safeRatio(b.enrichment))) - Math.abs(Math.log2(safeRatio(a.enrichment)));
   });
+}
+
+function tier(e: Enrichment | null): number {
+  if (!e) return 4;
+  if (e.direction === "inconclusive") return 3;
+  if (e.direction === "similar") return 2;
+  return e.significant ? 0 : 1;
 }
 
 function safeRatio({ ratio }: Enrichment): number {
@@ -105,26 +129,47 @@ export function computeEnrichment(
     restAn = cohortAn;
   }
   const pValue = fisherTwoSided(matchedAc, matchedAn - matchedAc, restAc, restAn - restAc);
+  const significant = pValue < SIGNIFICANCE_LEVEL;
+  const expectedMatchedAc = matchedAn * cohortAf;
 
-  // Katz: log(ratio) ± 1.96 · sqrt(1/a − 1/n1 + 1/c − 1/n2), nudging zero counts to 0.5 so the
-  // interval is defined.
-  const a = matchedAc === 0 ? 0.5 : matchedAc;
-  const c = cohortAc === 0 ? 0.5 : cohortAc;
-  const logRatio = Math.log((a / matchedAn) / (c / cohortAn));
-  const se = Math.sqrt(1 / a - 1 / matchedAn + 1 / c - 1 / cohortAn);
-  const ci: [number, number] = [Math.exp(logRatio - 1.96 * se), Math.exp(logRatio + 1.96 * se)];
+  // Katz: log(ratio) ± 1.96 · sqrt(1/a − 1/n1 + 1/c − 1/n2). Undefined at a zero count -- a
+  // continuity correction there would just center the interval on an invented ratio.
+  let ci: [number, number] | null = null;
+  if (matchedAc > 0 && cohortAc > 0) {
+    const logRatio = Math.log(ratio);
+    const se = Math.sqrt(1 / matchedAc - 1 / matchedAn + 1 / cohortAc - 1 / cohortAn);
+    ci = [Math.exp(logRatio - 1.96 * se), Math.exp(logRatio + 1.96 * se)];
+  }
+  // No matched carriers: by the rule of three the matched AF is below 3/AN with ~95% confidence,
+  // which caps the ratio the data are still consistent with.
+  const upperBound = matchedAc === 0 && cohortAf > 0 ? 3 / matchedAn / cohortAf : null;
 
-  const direction: Direction =
-    ratio >= ENRICHMENT_RATIO_THRESHOLD ? "enriched" : ratio <= 1 / ENRICHMENT_RATIO_THRESHOLD ? "depleted" : "similar";
+  let direction: Direction;
+  if (matchedAc === 0) {
+    // Zero where fewer than one was expected says nothing; zero where several were expected and
+    // the test agrees is a real shortfall.
+    direction = expectedMatchedAc >= 1 && significant ? "depleted" : "inconclusive";
+  } else if (cohortAc === 0) {
+    direction = significant ? "enriched" : "inconclusive";
+  } else if (ratio >= ENRICHMENT_RATIO_THRESHOLD) {
+    direction = "enriched";
+  } else if (ratio <= 1 / ENRICHMENT_RATIO_THRESHOLD) {
+    direction = "depleted";
+  } else {
+    direction = "similar";
+  }
 
   return {
     ratio,
     matchedAf,
     cohortAf,
+    matchedAc,
+    expectedMatchedAc,
     ci,
+    upperBound,
     pValue,
     direction,
-    significant: pValue < SIGNIFICANCE_LEVEL,
+    significant,
     lowCount: matchedAc < LOW_COUNT_THRESHOLD,
   };
 }
@@ -234,4 +279,12 @@ export function formatRatio(ratio: number): string {
   if (!Number.isFinite(ratio)) return "> 100×";
   if (ratio >= 100) return "> 100×";
   return `${ratio.toFixed(1)}×`;
+}
+
+/** Expected counts for display: "0.002", "0.9", "12". */
+export function formatExpected(expected: number): string {
+  if (expected >= 10) return expected.toFixed(0);
+  if (expected >= 1) return expected.toFixed(1);
+  if (expected >= 0.01) return expected.toFixed(2);
+  return expected < 0.001 ? "< 0.001" : expected.toFixed(3);
 }

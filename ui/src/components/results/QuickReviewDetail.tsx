@@ -1,10 +1,12 @@
 import type { CSSProperties, ReactNode } from "react";
 import colors, { alpha, POPMAX_BACKGROUND } from "../../libs/colors";
+import { useMediaQuery } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
 import {
   ancestryContext,
   ENRICHMENT_RATIO_THRESHOLD,
+  formatExpected,
   formatPValue,
   formatRatio,
   largestMatchedAncestry,
@@ -19,12 +21,22 @@ import AllOfUs from "../common/AllOfUs";
 import InfoTooltip from "../common/InfoTooltip";
 import ClinvarBadge from "../elements/ClinvarBadge";
 
-// Every section shares one rhythm: an eyebrow title, then its content, 24px apart.
+// Below this the two tables no longer fit beside each other and stack instead.
+const STACKED_QUERY = "(max-width: 1000px)";
+
+// Every section shares one rhythm: an eyebrow title, then its content, 24px apart. The two tables
+// sit side by side so the whole view fits the window's height without scrolling.
 const styles = {
   root: {
     display: "flex",
     flexDirection: "column",
     gap: 24,
+  },
+  columns: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+    gap: 32,
+    alignItems: "start",
   },
   // Identity: the variant on the first line with its annotation badges, the gene line under it.
   identity: {
@@ -72,7 +84,7 @@ const styles = {
   section: {
     display: "flex",
     flexDirection: "column",
-    gap: 10,
+    gap: 12,
   },
   sectionTitle: {
     ...Style.elements.eyebrow,
@@ -85,7 +97,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: 6,
-    padding: "12px 16px",
+    padding: "14px 18px",
     borderRadius: Style.radius,
     border: "1px solid",
   },
@@ -104,20 +116,35 @@ const styles = {
     fontSize: 17,
     fontWeight: 700,
   },
+  // Evidence: a row of stat tiles, each a label over a figure over a one-word reading of it.
   evidence: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+    gap: 10,
+  },
+  tile: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 3,
+    padding: "10px 12px",
+    border: `1px solid ${colors.border}`,
+    borderRadius: Style.radius,
+    background: colors.surface1,
+  },
+  tileValue: {
+    ...Style.elements.mono,
+    fontSize: 15,
+    fontWeight: 700,
+    color: colors.textPrimary,
+  },
+  tileNote: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  cautions: {
     display: "flex",
     flexWrap: "wrap",
-    alignItems: "center",
     gap: 8,
-    marginLeft: "auto",
-  },
-  stat: {
-    ...Style.elements.mono,
-    padding: "2px 8px",
-    borderRadius: 999,
-    background: alpha(colors.white, 0.6),
-    fontSize: 11.5,
-    fontWeight: 600,
   },
   caution: {
     padding: "2px 8px",
@@ -140,33 +167,39 @@ const styles = {
     tableLayout: "fixed",
   },
   th: {
-    padding: "8px 12px",
+    padding: "7px 10px",
     background: colors.surface1,
     borderBottom: `1px solid ${colors.border}`,
     color: colors.textSecondary,
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: 600,
     textAlign: "left",
     verticalAlign: "bottom",
+    whiteSpace: "nowrap",
   },
   thScope: {
     display: "block",
-    marginTop: 2,
+    marginTop: 1,
     fontWeight: 500,
+    fontSize: 10.5,
     color: colors.textMuted,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   td: {
-    padding: "7px 12px",
+    padding: "6px 10px",
     borderBottom: `1px solid ${colors.border}`,
     verticalAlign: "middle",
   },
   metric: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: 11.5,
+    whiteSpace: "nowrap",
   },
   value: {
     ...Style.elements.mono,
-    fontSize: 12.5,
+    fontSize: 11.5,
     color: colors.textBody,
   },
   valueStrong: {
@@ -175,8 +208,8 @@ const styles = {
     color: colors.textPrimary,
   },
   bar: {
-    marginTop: 5,
-    height: 6,
+    marginTop: 4,
+    height: 5,
     borderRadius: 3,
     background: colors.surface0,
     overflow: "hidden",
@@ -196,7 +229,7 @@ const styles = {
     display: "inline-block",
     height: 6,
     borderRadius: 3,
-    marginRight: 8,
+    marginRight: 6,
     verticalAlign: "middle",
     background: colors.textAccent,
   },
@@ -226,6 +259,7 @@ const VERDICT_TONE: Record<Direction, { ink: string; fill: string; word: string 
   enriched: { ink: colors.textDanger, fill: colors.bgDanger, word: "Enriched" },
   depleted: { ink: colors.textAccent, fill: colors.bgAccent, word: "Depleted" },
   similar: { ink: colors.textSecondary, fill: colors.surface1, word: "Similar frequency" },
+  inconclusive: { ink: colors.textMuted, fill: colors.surface1, word: "Inconclusive" },
 };
 
 /** Ink and fill for a comparison's verdict; exported so the rail's dot agrees with the strip. */
@@ -245,9 +279,15 @@ interface QuickReviewDetailProps {
 export default function QuickReviewDetail({ row, condition, participantCount, ancestryBreakdown }: QuickReviewDetailProps) {
   const { cohort, matched, enrichment } = row;
   const tone = verdictTone(enrichment);
-  const ancestry = ancestryContext(cohort, ancestryBreakdown);
-  const popmax = ancestry.find((r) => r.isAouPopmax) ?? null;
-  const largest = largestMatchedAncestry(ancestry);
+  const allAncestry = ancestryContext(cohort, ancestryBreakdown);
+  // A group with no matched participants and no frequency in either source would be a row of
+  // dashes, so it's left out; the ones that remain are the ones that bear on the verdict.
+  const ancestry = allAncestry.filter(
+    (r) => r.isAouPopmax || r.matchedCount !== null || r.aouAf !== null || r.gnomadAf !== null,
+  );
+  const popmax = allAncestry.find((r) => r.isAouPopmax) ?? null;
+  const largest = largestMatchedAncestry(allAncestry);
+  const stacked = useMediaQuery(STACKED_QUERY);
 
   return (
     <div style={styles.root}>
@@ -291,34 +331,68 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
         >
           <div style={styles.verdictLine}>
             <span style={styles.verdictWord}>{tone.word}</span>
-            {enrichment && <span style={styles.verdictRatio}>{formatRatio(enrichment.ratio)}</span>}
-            {enrichment && (
-              <span style={styles.evidence}>
-                <span style={styles.stat} title="Two-sided Fisher's exact test, matched participants against the rest of the cohort">
-                  p {formatPValue(enrichment.pValue).startsWith("<") ? "" : "= "}
-                  {formatPValue(enrichment.pValue)}
-                </span>
-                <span style={styles.stat} title="95% confidence interval for the ratio">
-                  95% CI {formatRatio(enrichment.ci[0])} – {formatRatio(enrichment.ci[1])}
-                </span>
-                {!enrichment.significant && enrichment.direction !== "similar" && (
-                  <span style={styles.caution}>Not significant</span>
-                )}
-                {enrichment.lowCount && (
-                  <span
-                    style={styles.caution}
-                    title={`Fewer than ${LOW_COUNT_THRESHOLD} alternate alleles among matched participants`}
-                  >
-                    Low count
-                  </span>
-                )}
-              </span>
+            {enrichment && enrichment.direction !== "inconclusive" && (
+              <span style={styles.verdictRatio}>{formatRatio(enrichment.ratio)}</span>
             )}
           </div>
           <p style={{ ...styles.verdictSentence, margin: 0 }}>{verdictSentence(row, condition)}</p>
         </div>
       </section>
 
+      {enrichment && (
+        <section style={styles.section} aria-labelledby="quickReviewEvidence">
+          <SectionTitle
+            id="quickReviewEvidence"
+            tooltip="What stands behind the verdict. The test compares matched participants with the rest of the cohort; the interval is for the frequency ratio. Fifty candidates means fifty tests, so a p-value near 0.05 is weak on its own."
+          >
+            Evidence
+          </SectionTitle>
+          <div style={styles.evidence}>
+            <StatTile
+              label="Fisher's exact p"
+              value={formatPValue(enrichment.pValue)}
+              note={enrichment.significant ? "below 0.05" : "not below 0.05"}
+            />
+            {enrichment.ci ? (
+              <StatTile
+                label="95% CI for ratio"
+                value={`${formatRatio(enrichment.ci[0])} – ${formatRatio(enrichment.ci[1])}`}
+                note={enrichment.ci[0] > 1 ? "excludes 1×" : enrichment.ci[1] < 1 ? "excludes 1×" : "includes 1×"}
+              />
+            ) : enrichment.upperBound !== null ? (
+              <StatTile
+                label="Ratio upper bound"
+                value={`≤ ${formatRatio(enrichment.upperBound)}`}
+                note="rule of three, no carriers"
+              />
+            ) : (
+              <StatTile label="95% CI for ratio" value="—" note="undefined at zero" />
+            )}
+            <StatTile
+              label="Matched alt alleles"
+              value={formatInt(enrichment.matchedAc)}
+              note={`${formatExpected(enrichment.expectedMatchedAc)} expected at cohort rate`}
+            />
+          </div>
+          {(enrichment.lowCount || (!enrichment.significant && enrichment.direction !== "similar")) && (
+            <div style={styles.cautions}>
+              {!enrichment.significant && enrichment.direction !== "similar" && (
+                <span style={styles.caution}>Not statistically significant</span>
+              )}
+              {enrichment.lowCount && (
+                <span
+                  style={styles.caution}
+                  title={`Fewer than ${LOW_COUNT_THRESHOLD} alternate alleles among matched participants`}
+                >
+                  Low count
+                </span>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      <div style={stacked ? undefined : styles.columns}>
       <section style={styles.section} aria-labelledby="quickReviewHeadToHead">
         <SectionTitle
           id="quickReviewHeadToHead"
@@ -329,9 +403,9 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
         {cohort ? (
           <table style={styles.table}>
             <colgroup>
-              <col style={{ width: "32%" }} />
               <col style={{ width: "34%" }} />
-              <col style={{ width: "34%" }} />
+              <col style={{ width: "33%" }} />
+              <col style={{ width: "33%" }} />
             </colgroup>
             <thead>
               <tr>
@@ -370,7 +444,7 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
                 right={matched ? formatAcAn(matched.cohortAc, matched.cohortAn) : null}
               />
               <CompareRow
-                metric="Homozygous / heterozygous"
+                metric="Hom / het"
                 left={null}
                 right={matched ? `${formatInt(matched.homozygotes)} / ${formatInt(matched.heterozygotes)}` : null}
               />
@@ -380,7 +454,7 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
                 right={matched ? formatInt(matched.clinvarPlpInTrans) : null}
               />
               <CompareRow
-                metric="Highest subpopulation"
+                metric="Highest ancestry"
                 left={
                   popmax ? (
                     <span style={styles.populationLabel}>
@@ -427,16 +501,16 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
             )}
             <table style={styles.table}>
               <colgroup>
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "31%" }} />
                 <col style={{ width: "16%" }} />
-                <col style={{ width: "32%" }} />
-                <col style={{ width: "17%" }} />
-                <col style={{ width: "19%" }} />
+                <col style={{ width: "22%" }} />
                 <col style={{ width: "16%" }} />
               </colgroup>
               <thead>
                 <tr>
                   <th style={styles.th}>Ancestry</th>
-                  <th style={styles.th}>Share of matched cohort</th>
+                  <th style={styles.th}>Share of matched</th>
                   <th style={styles.th}>
                     <AllOfUs /> AF
                   </th>
@@ -458,7 +532,7 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
                     <td style={styles.td}>
                       {r.matchedPercent !== null && r.matchedCount !== null ? (
                         <span style={styles.value}>
-                          <span style={{ ...styles.shareBar, width: Math.max(2, r.matchedPercent * 1.2) }} aria-hidden="true" />
+                          <span style={{ ...styles.shareBar, width: Math.max(2, r.matchedPercent * 0.6) }} aria-hidden="true" />
                           {Math.round(r.matchedPercent)}% ({formatInt(r.matchedCount)})
                         </span>
                       ) : (
@@ -466,7 +540,11 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
                       )}
                     </td>
                     <td style={styles.td} title={r.aouAf !== null ? exactAf(r.aouAf) : undefined}>
-                      {r.aouAf !== null ? <span style={styles.value}>{formatAf(r.aouAf)}</span> : <NotAvailable />}
+                      {r.aouAf !== null ? (
+                        <span style={styles.value}>{formatAf(r.aouAf)}</span>
+                      ) : (
+                        <NotAvailable />
+                      )}
                     </td>
                     <td style={styles.td}>
                       {r.aouAc !== null && r.aouAn !== null ? (
@@ -476,7 +554,11 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
                       )}
                     </td>
                     <td style={styles.td} title={r.gnomadAf !== null ? exactAf(r.gnomadAf) : undefined}>
-                      {r.gnomadAf !== null ? <span style={styles.value}>{formatAf(r.gnomadAf)}</span> : <NotAvailable />}
+                      {r.gnomadAf !== null ? (
+                        <span style={styles.value}>{formatAf(r.gnomadAf)}</span>
+                      ) : (
+                        <NotAvailable />
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -492,6 +574,7 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
           <div style={styles.empty}>No population frequencies for this variant.</div>
         )}
       </section>
+      </div>
     </div>
   );
 }
@@ -502,6 +585,23 @@ function verdictSentence(row: ComparisonRow, condition: string): ReactNode {
   if (!cohort) return "This variant has no cohort-wide frequency, so there is nothing to compare against.";
   if (!matched) return "No phenotype-matched statistics exist for this variant yet.";
   if (!enrichment) return "Cohort-wide allele counts are missing for this variant.";
+  if (enrichment.matchedAc === 0) {
+    const expected = formatExpected(enrichment.expectedMatchedAc);
+    return enrichment.direction === "depleted" ? (
+      <>
+        No participants with {condition} carry this allele, where about {expected} carriers were expected at the
+        cohort-wide rate.
+      </>
+    ) : (
+      <>
+        No participants with {condition} carry this allele, but only {expected} were expected at the cohort-wide
+        rate, so this says nothing either way.
+      </>
+    );
+  }
+  if (enrichment.direction === "inconclusive") {
+    return <>Nobody in the whole cohort carries this allele outside the matched participants, and the counts are too small to call.</>;
+  }
   switch (enrichment.direction) {
     case "enriched":
       return (
@@ -520,6 +620,16 @@ function verdictSentence(row: ComparisonRow, condition: string): ReactNode {
     default:
       return <>Participants with {condition} carry this allele about as often as the cohort overall.</>;
   }
+}
+
+function StatTile({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <div style={styles.tile}>
+      <span style={Style.elements.eyebrow}>{label}</span>
+      <span style={styles.tileValue}>{value}</span>
+      <span style={styles.tileNote}>{note}</span>
+    </div>
+  );
 }
 
 function SectionTitle({ id, children, tooltip }: { id: string; children: ReactNode; tooltip?: string }) {

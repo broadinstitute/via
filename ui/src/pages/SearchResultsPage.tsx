@@ -34,7 +34,8 @@ export default function SearchResultsPage() {
   const [error, setError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<RevealedSections>(NOT_REVEALED);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [quickReviewOpen, setQuickReviewOpen] = useState(false);
+  // Open with a variant to land on it; open without one to land on the strongest signal.
+  const [quickReview, setQuickReview] = useState<{ variant?: string } | null>(null);
   const [drawerVariants, setDrawerVariants] = useState("");
   const [drawerCondition, setDrawerCondition] = useState("");
   // The concept behind drawerCondition while it's still a pick; cleared by any edit, as on the
@@ -126,6 +127,9 @@ export default function SearchResultsPage() {
     setDrawerOpen(false);
   }
 
+  // Mirrors the matched panel's own notion of "filtered": there are participants to compare with.
+  const hasPhenotypeFilter = (results?.ancestryBreakdown.length ?? 0) > 0;
+
   if (error) {
     return (
       <p style={{ padding: "32px 20px", textAlign: "center", color: colors.textSecondary, fontSize: 13 }}>
@@ -176,7 +180,10 @@ export default function SearchResultsPage() {
           }}
         >
           {results && revealed.cohort ? (
-            <CohortVariantsPanel rows={results.cohortVariants} />
+            <CohortVariantsPanel
+              rows={results.cohortVariants}
+              onQuickReview={hasPhenotypeFilter ? () => setQuickReview({}) : undefined}
+            />
           ) : (
             <SectionLoadingPanel
               title="Candidate variants"
@@ -209,7 +216,7 @@ export default function SearchResultsPage() {
                 : ""
             }
             onAddPhenotypeFilter={() => setDrawerOpen(true)}
-            onQuickReview={() => setQuickReviewOpen(true)}
+            onQuickReview={hasPhenotypeFilter ? (variant) => setQuickReview({ variant }) : undefined}
           />
         ) : (
           <SectionLoadingPanel
@@ -231,14 +238,15 @@ export default function SearchResultsPage() {
         <Footer />
       </main>
 
-      {quickReviewOpen && results && results.conditionSearch && (
+      {quickReview && results && results.conditionSearch && (
         <QuickReviewDialog
+          initialVariant={quickReview.variant}
           cohortVariants={results.cohortVariants}
           filteredVariants={results.filteredVariants}
           condition={results.conditionSearch.concept?.name ?? `concept ${results.conditionSearch.conceptId}`}
           participantCount={results.conditionSearch.participantCount ?? 0}
           ancestryBreakdown={results.ancestryBreakdown}
-          onClose={() => setQuickReviewOpen(false)}
+          onClose={() => setQuickReview(null)}
         />
       )}
     </>
