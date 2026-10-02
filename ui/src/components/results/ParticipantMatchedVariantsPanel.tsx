@@ -147,6 +147,8 @@ interface ParticipantMatchedVariantsPanelProps {
   /** Names the picked condition in the empty state; empty when none was picked. */
   condition: string;
   onAddPhenotypeFilter: () => void;
+  /** Opens Quick review, the head-to-head comparison with the cohort-wide table. */
+  onQuickReview?: () => void;
 }
 
 export default function ParticipantMatchedVariantsPanel({
@@ -155,6 +157,7 @@ export default function ParticipantMatchedVariantsPanel({
   hasPhenotypeFilter,
   condition,
   onAddPhenotypeFilter,
+  onQuickReview,
 }: ParticipantMatchedVariantsPanelProps) {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>(() =>
     Object.fromEntries(rows.map((row) => [row.variant, true])),
@@ -359,6 +362,16 @@ export default function ParticipantMatchedVariantsPanel({
           <span style={styles.selectedCount}>
             {selectedCount} of {rows.length} included
           </span>
+          {onQuickReview && (
+            <Clickable
+              style={Style.buttons.accent}
+              hoverStyle={Style.buttons.accentHover}
+              onClick={onQuickReview}
+              title="Compare each variant's phenotype-matched frequency with the cohort-wide one"
+            >
+              Quick review
+            </Clickable>
+          )}
           <Clickable style={Style.buttons.primary} hoverStyle={Style.buttons.primaryHover} onClick={handleExport}>
             Export TSV
           </Clickable>

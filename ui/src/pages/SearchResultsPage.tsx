@@ -8,6 +8,7 @@ import CohortVariantsPanel, { COHORT_TABLE_MIN_HEIGHT } from "../components/resu
 import Footer from "../components/results/Footer";
 import ParticipantMatchedVariantsPanel, { MATCHED_TABLE_HEIGHT } from "../components/results/ParticipantMatchedVariantsPanel";
 import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
+import QuickReviewDialog from "../components/results/QuickReviewDialog";
 import { ScopeChip } from "../components/results/ResultsPanel";
 import SearchPopover from "../components/results/SearchPopover";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
@@ -33,6 +34,7 @@ export default function SearchResultsPage() {
   const [error, setError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<RevealedSections>(NOT_REVEALED);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [quickReviewOpen, setQuickReviewOpen] = useState(false);
   const [drawerVariants, setDrawerVariants] = useState("");
   const [drawerCondition, setDrawerCondition] = useState("");
   // The concept behind drawerCondition while it's still a pick; cleared by any edit, as on the
@@ -207,6 +209,7 @@ export default function SearchResultsPage() {
                 : ""
             }
             onAddPhenotypeFilter={() => setDrawerOpen(true)}
+            onQuickReview={() => setQuickReviewOpen(true)}
           />
         ) : (
           <SectionLoadingPanel
@@ -227,6 +230,17 @@ export default function SearchResultsPage() {
 
         <Footer />
       </main>
+
+      {quickReviewOpen && results && results.conditionSearch && (
+        <QuickReviewDialog
+          cohortVariants={results.cohortVariants}
+          filteredVariants={results.filteredVariants}
+          condition={results.conditionSearch.concept?.name ?? `concept ${results.conditionSearch.conceptId}`}
+          participantCount={results.conditionSearch.participantCount ?? 0}
+          ancestryBreakdown={results.ancestryBreakdown}
+          onClose={() => setQuickReviewOpen(false)}
+        />
+      )}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FilteredVariantRow } from "../../types/results";
 import ParticipantMatchedVariantsPanel from "./ParticipantMatchedVariantsPanel";
@@ -21,7 +21,7 @@ const OBSERVED: FilteredVariantRow = {
   afRatio: 1.5,
 };
 
-function renderPanel(rows: FilteredVariantRow[]) {
+function renderPanel(rows: FilteredVariantRow[], onQuickReview?: () => void) {
   render(
     <ParticipantMatchedVariantsPanel
       rows={rows}
@@ -29,6 +29,7 @@ function renderPanel(rows: FilteredVariantRow[]) {
       hasPhenotypeFilter
       condition="Tetralogy of Fallot"
       onAddPhenotypeFilter={vi.fn()}
+      onQuickReview={onQuickReview}
     />,
   );
 }
@@ -54,5 +55,13 @@ describe("ParticipantMatchedVariantsPanel", () => {
     expect(screen.getByText(cellWithText("Not observed in All of Us"))).toHaveAttribute("colspan", "7");
     expect(screen.getByText("MYH7")).toBeInTheDocument();
     expect(screen.getByText("Nonsense")).toBeInTheDocument();
+  });
+
+  it("offers Quick review from its header when a handler is given", () => {
+    const onQuickReview = vi.fn();
+    renderPanel([OBSERVED], onQuickReview);
+
+    fireEvent.click(screen.getByRole("button", { name: "Quick review" }));
+    expect(onQuickReview).toHaveBeenCalledTimes(1);
   });
 });
