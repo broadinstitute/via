@@ -189,7 +189,7 @@ async function fetchAndParse(url: string): Promise<SearchResults> {
     new Promise((resolve) => setTimeout(resolve, MIN_LOAD_TIME_MS)),
   ]);
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+    throw new Error(await describeFailure(response));
   }
   const raw: RawSearchResultsResponse = await response.json();
   return {
@@ -200,4 +200,23 @@ async function fetchAndParse(url: string): Promise<SearchResults> {
     cohortVariants: raw.cohortVariants.map(toCohortVariantRow),
     filteredVariants: raw.filteredVariants.map(toFilteredVariantRow),
   };
+}
+
+// Spring's default error body carries a reason phrase ("Internal Server Error") and, when the
+// server is configured to include it, a message; fold whichever are there into the thrown error
+// so the error page has more than a bare status code to show.
+async function describeFailure(response: Response): Promise<string> {
+  let message = `The server responded with status ${response.status}`;
+  try {
+    const body: { error?: unknown; message?: unknown } = await response.json();
+    if (typeof body.error === "string" && body.error) {
+      message += ` (${body.error})`;
+    }
+    if (typeof body.message === "string" && body.message) {
+      message += `: ${body.message}`;
+    }
+  } catch {
+    // Not a JSON body; the status alone will have to do.
+  }
+  return message;
 }

@@ -145,14 +145,16 @@ export default function PhenotypeFilterPanel({
   const [activeTab, setActiveTab] = useState<BreakdownTab>("ancestry");
 
   if (!conditionSearch) {
-    const { message, buttonLabel } = phenotypeUnavailableCopy("", "participant breakdowns");
+    const { title, message, buttonLabel } = phenotypeUnavailableCopy("", "participant breakdowns");
     return (
       <ResultsPanel title="Phenotype filter">
         {/* Stretched to the variants table beside it anyway; this is its floor when stacked. */}
         <PhenotypeFilterRequired
+          title={title}
           message={message}
           buttonLabel={buttonLabel}
           onAddPhenotypeFilter={onAddPhenotypeFilter}
+          illustration="breakdown"
           minHeight={346}
         />
       </ResultsPanel>

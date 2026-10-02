@@ -7,11 +7,13 @@
 export function phenotypeUnavailableCopy(condition: string, subject: string) {
   if (!condition) {
     return {
-      message: `No phenotype specified — add a phenotype filter to see ${subject}.`,
+      title: "No phenotype filter",
+      message: `Add a phenotype filter to see ${subject}.`,
       buttonLabel: "Add phenotype filter",
     };
   }
   return {
+    title: "No phenotype data yet",
     message: `No phenotype data available yet for ${condition}.`,
     buttonLabel: "Modify phenotype filter",
   };

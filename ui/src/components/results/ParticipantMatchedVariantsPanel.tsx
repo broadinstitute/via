@@ -329,13 +329,15 @@ export default function ParticipantMatchedVariantsPanel({
   }
 
   if (!hasPhenotypeFilter) {
-    const { message, buttonLabel } = phenotypeUnavailableCopy(condition, "phenotype-matched participant data");
+    const { title, message, buttonLabel } = phenotypeUnavailableCopy(condition, "phenotype-matched participant data");
     return (
       <ResultsPanel title="Candidate variants" scope={<ScopeChip>Phenotype-matched participants</ScopeChip>}>
         <PhenotypeFilterRequired
+          title={title}
           message={message}
           buttonLabel={buttonLabel}
           onAddPhenotypeFilter={onAddPhenotypeFilter}
+          illustration="table"
           minHeight={MATCHED_TABLE_HEIGHT}
         />
       </ResultsPanel>

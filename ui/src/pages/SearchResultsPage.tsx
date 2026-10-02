@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetchProfile } from "../api/profile";
 import { fetchSearchResults, type SearchResults } from "../api/searchResults";
-import colors from "../libs/colors";
 import { useMediaQuery } from "../libs/hooks";
 import CohortVariantsPanel, { COHORT_TABLE_MIN_HEIGHT } from "../components/results/CohortVariantsPanel";
 import Footer from "../components/results/Footer";
@@ -10,8 +9,9 @@ import ParticipantMatchedVariantsPanel, { MATCHED_TABLE_HEIGHT } from "../compon
 import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
 import { ScopeChip } from "../components/results/ResultsPanel";
 import SearchPopover from "../components/results/SearchPopover";
+import SearchResultsError from "../components/results/SearchResultsError";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
-import TopBar from "../components/results/TopBar";
+import TopBar, { TOP_BAR_HEIGHT } from "../components/results/TopBar";
 import { UserIcon } from "../components/icons";
 import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
@@ -31,6 +31,8 @@ export default function SearchResultsPage() {
   const [userEmail, setUserEmail] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bumped by the error page's "Try again", so a failed search re-runs without a URL change.
+  const [attempt, setAttempt] = useState(0);
   const [revealed, setRevealed] = useState<RevealedSections>(NOT_REVEALED);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariants, setDrawerVariants] = useState("");
@@ -59,7 +61,7 @@ export default function SearchResultsPage() {
 
   // Re-runs whenever the URL's search criteria change -- both the initial load (e.g. arriving
   // from SearchEntryPage with ?variants=...) and an edit-search re-search (which updates the URL rather
-  // than fetching directly) go through this one path.
+  // than fetching directly) go through this one path -- and on a retry after a failure.
   useEffect(() => {
     setResults(null);
     setError(null);
@@ -79,7 +81,7 @@ export default function SearchResultsPage() {
       })
       .catch((err: Error) => setError(err.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variantsKey, conditionConceptIdKey]);
+  }, [variantsKey, conditionConceptIdKey, attempt]);
 
   // Once data arrives, reveal each section in quick, slightly jittered succession
   // rather than all at once, so the page doesn't feel like it's snapping into place.
@@ -125,10 +127,25 @@ export default function SearchResultsPage() {
   }
 
   if (error) {
+    // The bar stays so the user can still get home and open settings, but without its search
+    // box: there's no loaded search for the edit popover to start from.
     return (
-      <p style={{ padding: "32px 20px", textAlign: "center", color: colors.textSecondary, fontSize: 13 }}>
-        Failed to load search results: {error}
-      </p>
+      <>
+        <TopBar userEmail={userEmail} />
+        <main
+          style={{
+            // Fills the window below the bar so the footer sits at the bottom, as on a loaded page.
+            minHeight: `calc(100vh - ${TOP_BAR_HEIGHT}px)`,
+            padding: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
+          <SearchResultsError message={error} onRetry={() => setAttempt((count) => count + 1)} />
+          <Footer style={{ marginTop: "auto" }} />
+        </main>
+      </>
     );
   }
 

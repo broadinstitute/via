@@ -1,4 +1,5 @@
 export type { IconProps } from "./Icon";
+export { default as AlertIcon } from "./AlertIcon";
 export { default as ArrowLeftIcon } from "./ArrowLeftIcon";
 export { default as ArrowRightIcon } from "./ArrowRightIcon";
 export { default as CheckIcon } from "./CheckIcon";
