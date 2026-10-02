@@ -43,6 +43,25 @@ const styles = {
     gap: 10,
     minWidth: 0,
   },
+  headerRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  position: {
+    ...Style.elements.mono,
+    minWidth: 52,
+    textAlign: "center",
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  headerDivider: {
+    width: 1,
+    height: 18,
+    margin: "0 4px",
+    background: colors.border,
+  },
   title: {
     color: colors.textPrimary,
     fontSize: 14,
@@ -65,6 +84,15 @@ const styles = {
     padding: "10px 12px 6px",
     fontSize: 11,
     lineHeight: 1.45,
+    color: colors.textMuted,
+  },
+  railFooter: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 5,
+    padding: "8px 12px 10px",
+    borderTop: `1px solid ${colors.border}`,
+    fontSize: 11,
     color: colors.textMuted,
   },
   railList: {
@@ -112,29 +140,6 @@ const styles = {
     minWidth: 0,
     padding: "18px 22px",
     overflowY: "auto",
-  },
-  footer: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    padding: "10px 14px",
-    background: colors.surface1,
-    borderTop: `1px solid ${colors.border}`,
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  stepper: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  legend: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "4px 12px",
-    fontSize: 11,
-    color: colors.textMuted,
   },
   legendItem: {
     display: "inline-flex",
@@ -233,22 +238,49 @@ export default function QuickReviewDialog({
             </ScopeChip>
             <ScopeChip>vs. all participants</ScopeChip>
           </div>
-          <Clickable
-            style={Style.buttons.icon}
-            hoverStyle={Style.buttons.iconHover}
-            onClick={onClose}
-            aria-label="Close quick review"
-            title="Close"
-          >
-            <CloseIcon size={14} strokeWidth={2.5} />
-          </Clickable>
+          <div style={styles.headerRight}>
+            <Clickable
+              style={Style.buttons.icon}
+              hoverStyle={Style.buttons.iconHover}
+              disabledStyle={Style.buttons.disabled}
+              onClick={() => setIndex((i) => Math.max(0, i - 1))}
+              disabled={index <= 0}
+              aria-label="Previous variant"
+              title="Previous variant (←)"
+            >
+              <ArrowLeftIcon size={14} strokeWidth={2.5} aria-hidden="true" />
+            </Clickable>
+            <span style={styles.position} aria-live="polite">
+              {rows.length === 0 ? "0 of 0" : `${index + 1} of ${rows.length}`}
+            </span>
+            <Clickable
+              style={Style.buttons.icon}
+              hoverStyle={Style.buttons.iconHover}
+              disabledStyle={Style.buttons.disabled}
+              onClick={() => setIndex((i) => Math.min(rows.length - 1, i + 1))}
+              disabled={index >= rows.length - 1}
+              aria-label="Next variant"
+              title="Next variant (→)"
+            >
+              <ArrowRightIcon size={14} strokeWidth={2.5} aria-hidden="true" />
+            </Clickable>
+            <span style={styles.headerDivider} aria-hidden="true" />
+            <Clickable
+              style={Style.buttons.icon}
+              hoverStyle={Style.buttons.iconHover}
+              onClick={onClose}
+              aria-label="Close quick review"
+              title="Close (Esc)"
+            >
+              <CloseIcon size={14} strokeWidth={2.5} />
+            </Clickable>
+          </div>
         </div>
 
         <div style={styles.body}>
           <nav style={styles.rail} aria-label="Candidate variants, strongest signal first">
             <p style={styles.railIntro}>
-              {rows.length} candidate{rows.length === 1 ? "" : "s"}, ranked by how far the matched frequency departs from
-              cohort-wide.
+              {rows.length} candidate{rows.length === 1 ? "" : "s"}, strongest departure from cohort-wide first.
             </p>
             <ol style={styles.railList}>
               {rows.map((row, i) => {
@@ -279,9 +311,23 @@ export default function QuickReviewDialog({
                 );
               })}
             </ol>
+            <div style={styles.railFooter}>
+              <span style={styles.legendItem}>
+                <span style={Style.colorDot(colors.textDanger, 8)} /> Enriched, ≥ {ENRICHMENT_RATIO_THRESHOLD}× cohort-wide
+              </span>
+              <span style={styles.legendItem}>
+                <span style={Style.colorDot(colors.textAccent, 8)} /> Depleted, ≤ {1 / ENRICHMENT_RATIO_THRESHOLD}×
+              </span>
+              <span style={styles.legendItem}>
+                <span style={Style.colorDot(colors.textSecondary, 8)} /> Similar
+              </span>
+              <span style={{ ...styles.legendItem, marginTop: 3 }}>
+                <kbd style={styles.kbd}>←</kbd> <kbd style={styles.kbd}>→</kbd> step · <kbd style={styles.kbd}>Esc</kbd> close
+              </span>
+            </div>
           </nav>
 
-          <section style={styles.detail} aria-live="polite">
+          <section style={styles.detail}>
             {selected ? (
               <QuickReviewDetail
                 key={selected.variant}
@@ -296,49 +342,6 @@ export default function QuickReviewDialog({
           </section>
         </div>
 
-        <div style={styles.footer}>
-          <div style={styles.legend}>
-            <span style={styles.legendItem}>
-              <span style={Style.colorDot(colors.textDanger, 8)} /> Enriched ≥ {ENRICHMENT_RATIO_THRESHOLD}×
-            </span>
-            <span style={styles.legendItem}>
-              <span style={Style.colorDot(colors.textAccent, 8)} /> Depleted ≤ {1 / ENRICHMENT_RATIO_THRESHOLD}×
-            </span>
-            <span style={styles.legendItem}>
-              <span style={Style.colorDot(colors.textSecondary, 8)} /> Similar
-            </span>
-            <span style={styles.legendItem}>
-              <kbd style={styles.kbd}>←</kbd> <kbd style={styles.kbd}>→</kbd> step · <kbd style={styles.kbd}>Esc</kbd> close
-            </span>
-          </div>
-          <div style={styles.stepper}>
-            <Clickable
-              style={Style.buttons.accent}
-              hoverStyle={Style.buttons.accentHover}
-              disabledStyle={Style.buttons.disabled}
-              onClick={() => setIndex((i) => Math.max(0, i - 1))}
-              disabled={index <= 0}
-              aria-label="Previous variant"
-            >
-              <ArrowLeftIcon size={12} strokeWidth={2.5} aria-hidden="true" />
-              Previous
-            </Clickable>
-            <span>
-              {rows.length === 0 ? "0 of 0" : `${index + 1} of ${rows.length}`}
-            </span>
-            <Clickable
-              style={Style.buttons.accent}
-              hoverStyle={Style.buttons.accentHover}
-              disabledStyle={Style.buttons.disabled}
-              onClick={() => setIndex((i) => Math.min(rows.length - 1, i + 1))}
-              disabled={index >= rows.length - 1}
-              aria-label="Next variant"
-            >
-              Next
-              <ArrowRightIcon size={12} strokeWidth={2.5} aria-hidden="true" />
-            </Clickable>
-          </div>
-        </div>
       </div>
     </div>
   );

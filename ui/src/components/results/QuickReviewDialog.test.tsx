@@ -130,6 +130,9 @@ describe("QuickReviewDialog", () => {
     expect(screen.getByText(/most frequent in African\/African American participants/)).toHaveTextContent(
       /The matched cohort is 60% European, where its frequency is 0\.0004\./,
     );
+    // The two cohorts line up row by row.
+    expect(screen.getByRole("columnheader", { name: /Phenotype-matched\s*100 with Familial hypercholesterolemia/ })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: /^Allele frequency/ })).toHaveTextContent("0.00120.0300");
     expect(screen.getByText("1 of 3")).toBeInTheDocument();
   });
 
