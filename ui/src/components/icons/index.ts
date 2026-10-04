@@ -14,4 +14,5 @@ export { default as LightbulbIcon } from "./LightbulbIcon";
 export { default as PencilIcon } from "./PencilIcon";
 export { default as PlusIcon } from "./PlusIcon";
 export { default as SearchIcon } from "./SearchIcon";
+export { default as TableIcon } from "./TableIcon";
 export { default as UserIcon } from "./UserIcon";

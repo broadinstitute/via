@@ -1,76 +1,58 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import colors from "../../libs/colors";
+import colors, { alpha } from "../../libs/colors";
 import ClinvarBadge from "./ClinvarBadge";
 
 describe("ClinvarBadge", () => {
-  it("renders the short ClinVar label in split mode", () => {
-    render(<ClinvarBadge significance="Pathogenic" />);
-
+  it("shows the short code in split mode and the full classification in tag mode", () => {
+    const { unmount } = render(<ClinvarBadge significance="Pathogenic" />);
     expect(screen.getByText("P")).toBeInTheDocument();
     expect(screen.queryByText("Pathogenic")).not.toBeInTheDocument();
-  });
+    unmount();
 
-  it("renders the star rating in split mode when stars are provided", () => {
-    render(<ClinvarBadge significance="VUS" stars={3} />);
-
-    expect(screen.getByText("3★")).toBeInTheDocument();
-  });
-
-  it("omits the star rating in split mode when stars are null", () => {
-    const { container } = render(<ClinvarBadge significance="Benign" stars={null} />);
-
-    expect(screen.queryByText("★")).not.toBeInTheDocument();
-    expect(container.textContent).toBe("B");
-  });
-
-  it("renders the full significance label in tag mode", () => {
     render(<ClinvarBadge significance="Likely pathogenic" mode="tag" />);
-
     expect(screen.getByText("Likely pathogenic")).toBeInTheDocument();
     expect(screen.queryByText("LP")).not.toBeInTheDocument();
   });
 
-  it("uses a solid border for definitive tag badges", () => {
-    render(<ClinvarBadge significance="Benign" mode="tag" />);
+  it("appends the review stars when given, and leaves them out when null", () => {
+    const { container, unmount } = render(<ClinvarBadge significance="VUS" stars={3} />);
+    expect(screen.getByText("3★")).toBeInTheDocument();
+    expect(screen.getByText("3★")).toHaveStyle({ color: colors.textSecondary });
+    expect(container.firstChild).toHaveAttribute("title", "ClinVar: VUS, 3 of 4 review stars");
+    unmount();
 
-    expect(screen.getByText("Benign")).toHaveStyle({
-      border: `1px solid ${colors.textSuccess}`,
-      padding: "1px 6px",
-    });
+    const { container: plain } = render(<ClinvarBadge significance="Benign" stars={null} />);
+    expect(screen.queryByText(/★/)).not.toBeInTheDocument();
+    expect(plain.textContent).toBe("B");
+    expect(plain.firstChild).toHaveAttribute("title", "ClinVar: Benign");
   });
 
-  it("uses a dashed border for likely tag badges", () => {
-    render(<ClinvarBadge significance="Likely benign" mode="tag" />);
-
-    expect(screen.getByText("Likely benign")).toHaveStyle({
-      border: `1px dashed ${colors.textSuccess}`,
-      padding: "2px 7px",
-    });
-  });
-
-  it("uses the configured warning colors for VUS split badges", () => {
+  it("is a tinted pill in the classification's colour, one width for every split badge", () => {
     const { container } = render(<ClinvarBadge significance="VUS" stars={2} />);
-    const badge = container.firstChild as HTMLElement;
-    const [label, stars] = badge.children;
-
-    expect(label).toHaveTextContent("VUS");
-    expect(label).toHaveStyle({
+    expect(container.firstChild).toHaveStyle({
       background: colors.bgWarning,
       color: colors.textWarning,
+      border: `1px solid ${alpha(colors.textWarning, 0.35)}`,
+      borderRadius: "999px",
+      width: "82px",
     });
-    expect(stars).toHaveTextContent("2★");
-    expect(stars).toHaveStyle({
-      borderLeft: `1px solid ${colors.textWarning}`,
-      color: colors.textSecondary,
-    });
+    // The code sits in a fixed slot, so the divider and stars land at the same x in every row.
+    expect(screen.getByText("VUS")).toHaveStyle({ width: "24px" });
+
+    const { container: tag } = render(<ClinvarBadge significance="VUS" mode="tag" />);
+    expect(tag.firstChild).not.toHaveStyle({ width: "82px" });
   });
 
-  it("uses a dashed outer border for likely split badges", () => {
-    const { container } = render(<ClinvarBadge significance="Likely pathogenic" stars={1} />);
+  it("marks a definitive call with a filled dot and a likely call with a hollow one", () => {
+    const { container, unmount } = render(<ClinvarBadge significance="Benign" />);
+    expect(container.querySelector('[aria-hidden="true"]')).toHaveStyle({ background: colors.textSuccess });
+    unmount();
 
-    expect(container.firstChild).toHaveStyle({
-      border: `1px dashed ${colors.textDanger}`,
+    const { container: likely } = render(<ClinvarBadge significance="Likely benign" />);
+    expect(likely.querySelector('[aria-hidden="true"]')).toHaveStyle({
+      border: `1.5px solid ${colors.textSuccess}`,
+      background: "transparent",
     });
   });
 });

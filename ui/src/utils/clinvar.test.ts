@@ -14,36 +14,31 @@ describe("clinvar utils", () => {
       shortLabel: "P",
       ink: colors.textDanger,
       fill: colors.bgDanger,
-      borderStyle: "solid",
-      tagPadding: "1px 6px",
+      definitive: true,
     });
     expect(CLINVAR_BADGE_CONFIG["Likely pathogenic"]).toEqual({
       shortLabel: "LP",
       ink: colors.textDanger,
       fill: colors.bgDanger,
-      borderStyle: "dashed",
-      tagPadding: "2px 7px",
+      definitive: false,
     });
     expect(CLINVAR_BADGE_CONFIG.VUS).toEqual({
       shortLabel: "VUS",
       ink: colors.textWarning,
       fill: colors.bgWarning,
-      borderStyle: "solid",
-      tagPadding: "2px 7px",
+      definitive: true,
     });
     expect(CLINVAR_BADGE_CONFIG["Likely benign"]).toEqual({
       shortLabel: "LB",
       ink: colors.textSuccess,
       fill: colors.bgSuccess,
-      borderStyle: "dashed",
-      tagPadding: "2px 7px",
+      definitive: false,
     });
     expect(CLINVAR_BADGE_CONFIG.Benign).toEqual({
       shortLabel: "B",
       ink: colors.textSuccess,
       fill: colors.bgSuccess,
-      borderStyle: "solid",
-      tagPadding: "1px 6px",
+      definitive: true,
     });
   });
 

@@ -1,0 +1,1031 @@
+import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { flexRender, type SortingState } from "@tanstack/react-table";
+import {
+  getCoreRowModel,
+  getSortedRowModel,
+  legacyCreateColumnHelper as createColumnHelper,
+  useLegacyTable as useReactTable,
+} from "@tanstack/react-table/legacy";
+import colors, { alpha, sourceTints } from "../../libs/colors";
+import { useHoveredKey } from "../../libs/hooks";
+import * as Style from "../../libs/style";
+import type { ClinVarSignificance, CohortVariantRow, FilteredVariantRow } from "../../types/results";
+import { clinvarSearchUrl, gnomadVariantUrl } from "../../utils/externalLinks";
+import { exactAf, formatAcAn, formatAf } from "../../utils/format";
+import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
+import Clickable from "../common/Clickable";
+import AllOfUs from "../common/AllOfUs";
+import InfoLabel from "../common/InfoLabel";
+import { ChevronRightIcon, CompareIcon, EyeOffIcon, UserIcon } from "../icons";
+import ClinvarBadge from "../elements/ClinvarBadge";
+import SubpopBadge from "../elements/SubpopBadge";
+import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
+import PopulationFrequencyTable from "./PopulationFrequencyTable";
+import ResultsPanel, { ScopeChip } from "./ResultsPanel";
+
+/** The loading placeholder's height, roughly what a dozen rows of the loaded table take. */
+export const VARIANTS_TABLE_MIN_HEIGHT = 431;
+
+/**
+ * One row per candidate variant: the cohort-wide annotation and frequencies from the VAT, and
+ * beside them, when a phenotype filter is on, the statistics among the matched participants.
+ * The two used to be separate tables, one above the other, and a variant appeared in both.
+ */
+export interface MergedVariantRow {
+  variant: string;
+  cohort: CohortVariantRow;
+  /** The matched-participant statistics for this variant; undefined when the search had no phenotype. */
+  matched: FilteredVariantRow | undefined;
+}
+
+export function mergeVariantRows(cohortVariants: CohortVariantRow[], filteredVariants: FilteredVariantRow[]): MergedVariantRow[] {
+  const matchedByVariant = new Map(filteredVariants.map((row) => [row.variant, row]));
+  return cohortVariants.map((cohort) => ({ variant: cohort.variant, cohort, matched: matchedByVariant.get(cohort.variant) }));
+}
+
+// Lower rank = sorts first (ascending) = more clinically concerning.
+const PLOF_RANK = { HC: 0, LC: 1, none: 2 } as const;
+
+const CLINVAR_SEVERITY_RANK: Record<ClinVarSignificance, number> = {
+  Pathogenic: 0,
+  "Likely pathogenic": 1,
+  VUS: 2,
+  "Likely benign": 3,
+  Benign: 4,
+};
+
+type Tint = keyof typeof sourceTints;
+
+// Height of the sticky group-header row, which the column-header row below has to sit exactly
+// under. Fixed (rather than implied by padding/font-size) so there's no sub-pixel gap between them.
+const GROUP_HEADER_HEIGHT = 28;
+
+/**
+ * The columns that stay put while the rest scroll sideways: a row's identity. Their group header
+ * ("pinned") spans exactly these, so it can pin as one cell; Protein ∆ sits in a group of its own
+ * just after.
+ */
+const PINNED_COLUMN_IDS = ["expand", "variant", "gene", "consequence"] as const;
+const PINNED_GROUP_ID = "pinned";
+const LAST_PINNED_COLUMN_ID = PINNED_COLUMN_IDS[PINNED_COLUMN_IDS.length - 1];
+
+const styles = {
+  headerRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+  },
+  sub: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  tableWrap: {
+    position: "relative",
+  },
+  // Every row is laid out and the page scrolls; only the horizontal axis scrolls here, since the
+  // merged table is wider than a laptop window.
+  tableScroll: {
+    ...Style.table.scroller,
+  },
+  // separate (not collapse): under collapse, a sticky <th>'s border is painted via the table's
+  // shared-grid-line model rather than as part of the cell's own box, and that desyncs from the
+  // cell during scroll. borderSpacing: 0 keeps cells touching like collapse did.
+  table: {
+    ...Style.table.base,
+    borderCollapse: "separate",
+    borderSpacing: 0,
+  },
+  headerCell: {
+    ...Style.table.headerCell,
+    // boxShadow instead of borderBottom: with two stacked sticky header rows, a plain border can
+    // render as a gap at the boundary between them.
+    boxShadow: `inset 0 -1px 0 0 ${colors.border}`,
+  },
+  groupHeaderCell: {
+    height: GROUP_HEADER_HEIGHT,
+    top: 0,
+    // Above the column-header row, which scrolls up underneath it.
+    zIndex: 2,
+    padding: "0 10px",
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.2,
+    textAlign: "center",
+  },
+  columnHeaderCell: {
+    top: GROUP_HEADER_HEIGHT,
+  },
+  // Pinned cells sit above the scrolling ones; pinned header cells above everything.
+  pinnedCell: {
+    position: "sticky",
+    zIndex: 1,
+  },
+  pinnedHeaderCell: {
+    zIndex: 3,
+  },
+  pinnedGroupHeaderCell: {
+    zIndex: 4,
+  },
+  // The seam where pinned meets scrolling: a hairline and a soft shadow that reads as depth. The
+  // header version keeps the header's own bottom hairline, which is also drawn as an inset shadow.
+  lastPinned: {
+    boxShadow: `inset -1px 0 0 ${colors.border}, 6px 0 8px -6px ${alpha(colors.textPrimary, 0.14)}`,
+  },
+  lastPinnedHeader: {
+    boxShadow: `inset -1px 0 0 ${colors.border}, inset 0 -1px 0 0 ${colors.border}, 6px 0 8px -6px ${alpha(colors.textPrimary, 0.14)}`,
+  },
+  groupQualifier: {
+    color: colors.textSecondary,
+    fontWeight: 500,
+  },
+  matchedGroupHeader: {
+    color: colors.textPrimary,
+  },
+  dataRow: {
+    cursor: "pointer",
+  },
+  sourceMissing: {
+    textAlign: "center",
+  },
+  cellNa: {
+    color: colors.textMuted,
+    fontStyle: "italic",
+  },
+  plofBadge: {
+    display: "inline-block",
+    width: 28,
+    textAlign: "center",
+    padding: "0 4px",
+    border: `1px solid ${colors.borderStrong}`,
+    borderRadius: 4,
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: 600,
+  },
+  plofHc: {
+    borderColor: colors.textPrimary,
+    color: colors.textPrimary,
+    fontWeight: 700,
+  },
+  plofNa: {
+    color: colors.textMuted,
+    cursor: "help",
+  },
+  // An expanded row and its detail read as one unit: they share the detail's fill, the rule
+  // between them is dropped, and one accent bar runs down the left of both.
+  expandedCell: {
+    borderBottom: "1px solid transparent",
+  },
+  expandedRowFill: {
+    background: colors.surface1,
+  },
+  expandedBar: {
+    boxShadow: `inset 3px 0 0 ${colors.textAccent}`,
+  },
+  detailRow: {
+    background: colors.surface1,
+    padding: "0 12px 12px 13px",
+    whiteSpace: "normal",
+  },
+  detailPanel: {
+    display: "grid",
+    gridTemplateColumns: "318px 1fr",
+    background: colors.surface2,
+    border: `1px solid ${colors.border}`,
+    borderRadius: Style.radius,
+    overflow: "hidden",
+  },
+  detailClinvar: {
+    padding: "12px 14px",
+    borderRight: `1px solid ${colors.border}`,
+  },
+  detailPopulations: {
+    overflowX: "auto",
+  },
+  detailEmpty: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 12,
+    padding: "14px 16px",
+  },
+  detailEmptyIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    background: colors.surface0,
+    border: `1px solid ${colors.border}`,
+    color: colors.textMuted,
+  },
+  detailEmptyTitle: {
+    margin: "0 0 3px",
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: 600,
+  },
+  detailEmptyText: {
+    maxWidth: 560,
+    margin: 0,
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 1.5,
+  },
+  detailEmptyLinks: {
+    display: "flex",
+    gap: 14,
+    marginTop: 8,
+  },
+  detailEmptyLink: {
+    color: colors.textAccent,
+    fontSize: 12,
+    fontWeight: 600,
+    textDecoration: "none",
+  },
+} as const satisfies Record<string, CSSProperties>;
+
+const AOU_COLUMN_IDS = ["aouSubpop", "aouAf", "aouAcAn"] as const;
+const GNOMAD_COLUMN_IDS = ["gnomadSubpop", "gnomadAf", "gnomadAcAn"] as const;
+const ANNOTATION_COLUMN_IDS = ["clinvar", "spliceAi", "plof"] as const;
+// The AF ratio isn't a column: Review states it with the interval behind it, which a bare ratio
+// in a cell can't.
+const MATCHED_COLUMN_IDS = ["matchedAcAn", "matchedAf", "matchedHomHet", "clinvarPlpInTrans"] as const;
+
+const TINT_COLUMN_IDS: Record<Tint, Set<string>> = {
+  aou: new Set(AOU_COLUMN_IDS),
+  gnomad: new Set(GNOMAD_COLUMN_IDS),
+  matched: new Set(MATCHED_COLUMN_IDS),
+};
+
+/**
+ * Which column group a column belongs to, and therefore which tint it gets. Only leaf columns
+ * have these ids -- a group-row header cell carries its group's id, so the tint band starts at
+ * the column-header row below it.
+ */
+function tintOf(columnId: string): Tint | null {
+  if (TINT_COLUMN_IDS.aou.has(columnId)) return "aou";
+  if (TINT_COLUMN_IDS.gnomad.has(columnId)) return "gnomad";
+  if (TINT_COLUMN_IDS.matched.has(columnId)) return "matched";
+  return null;
+}
+
+/**
+ * A run of columns a variant has nothing for, drawn as one cell with a message rather than a row
+ * of bare dashes. The cell spans whichever of the group's columns are currently shown, from the
+ * first of them.
+ */
+interface MissingGroup {
+  columnIds: Set<string>;
+  message: ReactNode;
+  /** Tooltip on the merged cell. */
+  title?: string;
+}
+
+const NOT_IN_AOU = (
+  <>
+    Not observed in <AllOfUs />
+  </>
+);
+
+const AOU_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.aou, message: NOT_IN_AOU };
+const GNOMAD_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.gnomad, message: "Not observed in gnomAD" };
+/** No matched-participant statistics for a variant All of Us does have. */
+const MATCHED_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.matched, message: NOT_IN_AOU };
+
+// Everything after the Variant column. A variant that isn't in All of Us has no VAT row, so it
+// has no annotations, no gnomAD data and no matched statistics either -- not because gnomAD lacks
+// it, but because the VAT only covers variants All of Us has seen. One message across the row
+// says so, rather than a "not observed in gnomAD" that may not be true.
+const UNANNOTATED_GROUP: MissingGroup = {
+  columnIds: new Set([
+    "gene",
+    "consequence",
+    "proteinChange",
+    ...AOU_COLUMN_IDS,
+    ...GNOMAD_COLUMN_IDS,
+    ...MATCHED_COLUMN_IDS,
+    ...ANNOTATION_COLUMN_IDS,
+  ]),
+  message: NOT_IN_AOU,
+  title:
+    "Annotations and gnomAD frequencies come from the All of Us variant annotation table, which only includes variants observed in All of Us.",
+};
+
+/** No value for this cell — the variant isn't present in the source behind it. */
+function NotAvailable() {
+  return <span style={Style.elements.notAvailable}>—</span>;
+}
+
+function matchedStats(row: MergedVariantRow) {
+  return row.matched?.hasStats ? row.matched : null;
+}
+
+/** Every column's value for one row, in table order, for the TSV export. */
+function rowToTsvValues(row: MergedVariantRow): string[] {
+  const { cohort } = row;
+  const stats = matchedStats(row);
+  const na = "n/a";
+  const cohortValues = cohort.annotated
+    ? [
+        cohort.gene,
+        cohort.consequence,
+        cohort.proteinChange,
+        cohort.aouSubpopulation ?? na,
+        cohort.aouAf !== null ? cohort.aouAf.toFixed(6) : na,
+        cohort.aouAc !== null ? String(cohort.aouAc) : na,
+        cohort.aouAn !== null ? String(cohort.aouAn) : na,
+        cohort.gnomadSubpopulation ?? na,
+        cohort.gnomadAf !== null ? cohort.gnomadAf.toFixed(6) : na,
+        cohort.gnomadAc !== null ? String(cohort.gnomadAc) : na,
+        cohort.gnomadAn !== null ? String(cohort.gnomadAn) : na,
+      ]
+    : Array(11).fill(na);
+  const annotationValues = cohort.annotated
+    ? [
+        cohort.clinvarSignificance ?? na,
+        cohort.clinvarStars !== null ? String(cohort.clinvarStars) : na,
+        String(cohort.spliceAi),
+        cohort.plof ?? na,
+      ]
+    : Array(4).fill(na);
+  const matchedValues = stats
+    ? [
+        String(stats.cohortAc),
+        String(stats.cohortAn),
+        stats.cohortAf.toFixed(4),
+        String(stats.homozygotes),
+        String(stats.heterozygotes),
+        String(stats.clinvarPlpInTrans),
+        `${stats.afRatio.toFixed(1)}x`,
+      ]
+    : Array(7).fill(na);
+  return [row.variant, ...cohortValues, ...matchedValues, ...annotationValues];
+}
+
+const TSV_HEADER = [
+  "variant",
+  "gene",
+  "consequence",
+  "protein_change",
+  "aou_max_subpop",
+  "aou_max_subpop_af",
+  "aou_max_subpop_ac",
+  "aou_max_subpop_an",
+  "gnomad_max_subpop",
+  "gnomad_max_subpop_af",
+  "gnomad_max_subpop_ac",
+  "gnomad_max_subpop_an",
+  "filtered_ac",
+  "filtered_an",
+  "filtered_af",
+  "n_homalt",
+  "n_het",
+  "clinvar_plp_in_trans",
+  "af_ratio",
+  "clinvar_significance",
+  "clinvar_stars",
+  "spliceai",
+  "plof",
+];
+
+function downloadTsv(filename: string, contents: string) {
+  const blob = new Blob([contents], { type: "text/tab-separated-values" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+interface VariantsPanelProps {
+  cohortVariants: CohortVariantRow[];
+  filteredVariants: FilteredVariantRow[];
+  /** Whether a phenotype filter matched anyone; without one the matched column group is left out. */
+  hasPhenotypeFilter: boolean;
+  participantCount: number;
+  /** The picked condition's name, for the scope chip and group header; empty when none was picked. */
+  condition: string;
+  /** Opens Review on the given variant. */
+  onQuickReview?: (variant: string) => void;
+}
+
+export default function VariantsPanel({
+  cohortVariants,
+  filteredVariants,
+  hasPhenotypeFilter,
+  participantCount,
+  condition,
+  onQuickReview,
+}: VariantsPanelProps) {
+  const rows = useMemo(() => mergeVariantRows(cohortVariants, filteredVariants), [cohortVariants, filteredVariants]);
+  const [expandedVariants, setExpandedVariants] = useState<Set<string>>(new Set());
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const { hoveredKey: hoveredRow, hoverProps: rowHoverProps } = useHoveredKey<string>();
+  const { hoveredKey: hoveredHeader, hoverProps: headerHoverProps } = useHoveredKey<string>();
+
+  function toggleExpanded(variant: string) {
+    setExpandedVariants((current) => {
+      const next = new Set(current);
+      if (next.has(variant)) {
+        next.delete(variant);
+      } else {
+        next.add(variant);
+      }
+      return next;
+    });
+  }
+
+  const columnHelper = useMemo(() => createColumnHelper<MergedVariantRow>(), []);
+
+  const columns = useMemo(
+    () => [
+      columnHelper.group({
+        id: PINNED_GROUP_ID,
+        header: "",
+        enableSorting: false,
+        columns: columnHelper.columns([
+          columnHelper.display({
+            id: "expand",
+            header: "",
+            enableSorting: false,
+            cell: ({ row }) => {
+              const isExpanded = expandedVariants.has(row.original.variant);
+              return (
+                <Clickable
+                  style={Style.buttons.icon}
+                  hoverStyle={Style.buttons.iconHover}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleExpanded(row.original.variant);
+                  }}
+                  aria-expanded={isExpanded}
+                  aria-controls={`variant-detail-${row.original.variant}`}
+                  aria-label={isExpanded ? "Collapse row for more detail" : "Expand row for more detail"}
+                >
+                  <ChevronRightIcon
+                    size={12}
+                    strokeWidth={2.5}
+                    className="transition-transform"
+                    style={isExpanded ? { transform: "rotate(90deg)", color: colors.textAccent } : undefined}
+                  />
+                </Clickable>
+              );
+            },
+          }),
+          columnHelper.accessor("variant", {
+            header: "Variant",
+            cell: (info) => <span style={Style.elements.mono}>{info.getValue()}</span>,
+          }),
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gene : undefined), {
+            id: "gene",
+            header: "Gene",
+            cell: ({ row }) => (row.original.cohort.annotated ? row.original.cohort.gene : <NotAvailable />),
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.consequence : undefined), {
+            id: "consequence",
+            header: "Consequence",
+            cell: ({ row }) => (row.original.cohort.annotated ? row.original.cohort.consequence : <NotAvailable />),
+            sortUndefined: "last",
+          }),
+        ]),
+      }),
+      columnHelper.group({
+        id: "protein",
+        header: "",
+        enableSorting: false,
+        columns: columnHelper.columns([
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.proteinChange : undefined), {
+            id: "proteinChange",
+            header: "Protein ∆",
+            cell: ({ row }) =>
+              row.original.cohort.annotated ? (
+                <span style={Style.elements.mono}>{row.original.cohort.proteinChange}</span>
+              ) : (
+                <NotAvailable />
+              ),
+            sortUndefined: "last",
+          }),
+        ]),
+      }),
+      columnHelper.group({
+        id: "aou",
+        header: () => (
+          <InfoLabel
+            tooltip={
+              <>
+                Values below reflect the <AllOfUs /> subpopulation ({AOU_SUBPOP_CODES.join(", ")}) with the
+                highest allele frequency for this variant, not the entire <AllOfUs /> cohort.
+                {"\n\n"}To see the allele frequency for the entire cohort, expand the row.
+              </>
+            }
+          >
+            <AllOfUs /> <span style={styles.groupQualifier}>— max subpopulation</span>
+          </InfoLabel>
+        ),
+        enableSorting: false,
+        columns: columnHelper.columns([
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.aouSubpopulation ?? undefined : undefined), {
+            id: "aouSubpop",
+            header: "",
+            cell: ({ row }) =>
+              row.original.cohort.annotated && row.original.cohort.aouSubpopulation ? (
+                <SubpopBadge subpopulation={row.original.cohort.aouSubpopulation} />
+              ) : (
+                <NotAvailable />
+              ),
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.aouAf ?? undefined : undefined), {
+            id: "aouAf",
+            header: "AF",
+            cell: ({ row }) => {
+              const { cohort } = row.original;
+              return cohort.annotated && cohort.aouAf !== null ? (
+                <span title={exactAf(cohort.aouAf)}>{formatAf(cohort.aouAf)}</span>
+              ) : (
+                <NotAvailable />
+              );
+            },
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.aouAc ?? undefined : undefined), {
+            id: "aouAcAn",
+            header: "AC / AN",
+            cell: ({ row }) => {
+              const { cohort } = row.original;
+              return cohort.annotated && cohort.aouAc !== null && cohort.aouAn !== null ? (
+                formatAcAn(cohort.aouAc, cohort.aouAn)
+              ) : (
+                <NotAvailable />
+              );
+            },
+            sortUndefined: "last",
+          }),
+        ]),
+      }),
+      columnHelper.group({
+        id: "gnomad",
+        header: () => (
+          <InfoLabel
+            tooltip={
+              `Values below reflect the gnomAD subpopulation (${GNOMAD_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire gnomAD cohort.\n\n` +
+              "To see the allele frequency for the entire cohort, expand the row."
+            }
+          >
+            gnomAD <span style={styles.groupQualifier}>— max subpopulation</span>
+          </InfoLabel>
+        ),
+        enableSorting: false,
+        columns: columnHelper.columns([
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gnomadSubpopulation ?? undefined : undefined), {
+            id: "gnomadSubpop",
+            header: "",
+            cell: ({ row }) =>
+              row.original.cohort.annotated && row.original.cohort.gnomadSubpopulation ? (
+                <SubpopBadge subpopulation={row.original.cohort.gnomadSubpopulation} />
+              ) : (
+                <NotAvailable />
+              ),
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gnomadAf ?? undefined : undefined), {
+            id: "gnomadAf",
+            header: "AF",
+            cell: ({ row }) => {
+              const { cohort } = row.original;
+              return cohort.annotated && cohort.gnomadAf !== null ? (
+                <span title={exactAf(cohort.gnomadAf)}>{formatAf(cohort.gnomadAf)}</span>
+              ) : (
+                <NotAvailable />
+              );
+            },
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gnomadAc ?? undefined : undefined), {
+            id: "gnomadAcAn",
+            header: "AC / AN",
+            cell: ({ row }) => {
+              const { cohort } = row.original;
+              return cohort.annotated && cohort.gnomadAc !== null && cohort.gnomadAn !== null ? (
+                formatAcAn(cohort.gnomadAc, cohort.gnomadAn)
+              ) : (
+                <NotAvailable />
+              );
+            },
+            sortUndefined: "last",
+          }),
+        ]),
+      }),
+      columnHelper.group({
+        id: "matched",
+        header: () => (
+          <span style={styles.matchedGroupHeader}>
+            <InfoLabel tooltip="Statistics among the participants matched by the phenotype filter, beside the cohort-wide figures to their left.">
+              Phenotype-matched{" "}
+              <span style={styles.groupQualifier}>
+                — {participantCount.toLocaleString()} with {condition}
+              </span>
+            </InfoLabel>
+          </span>
+        ),
+        enableSorting: false,
+        columns: columnHelper.columns([
+          columnHelper.accessor((row) => matchedStats(row)?.cohortAc, {
+            id: "matchedAcAn",
+            header: () => (
+              <InfoLabel tooltip="Allele count over allele number among phenotype-matched participants. Sorts by allele count.">
+                AC / AN
+              </InfoLabel>
+            ),
+            cell: ({ row }) => {
+              const stats = matchedStats(row.original);
+              return stats ? formatAcAn(stats.cohortAc, stats.cohortAn) : <NotAvailable />;
+            },
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => matchedStats(row)?.cohortAf, {
+            id: "matchedAf",
+            header: () => <InfoLabel tooltip="Allele frequency among phenotype-matched participants.">AF</InfoLabel>,
+            cell: ({ row }) => {
+              const stats = matchedStats(row.original);
+              return stats ? <span title={exactAf(stats.cohortAf)}>{formatAf(stats.cohortAf)}</span> : <NotAvailable />;
+            },
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => matchedStats(row)?.homozygotes, {
+            id: "matchedHomHet",
+            header: () => (
+              <InfoLabel tooltip="Homozygous over heterozygous carriers among phenotype-matched participants. Sorts by homozygotes.">
+                Hom / het
+              </InfoLabel>
+            ),
+            cell: ({ row }) => {
+              const stats = matchedStats(row.original);
+              return stats ? `${stats.homozygotes} / ${stats.heterozygotes}` : <NotAvailable />;
+            },
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => matchedStats(row)?.clinvarPlpInTrans, {
+            id: "clinvarPlpInTrans",
+            header: () => (
+              <InfoLabel tooltip="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans with this variant.">
+                P/LP in trans
+              </InfoLabel>
+            ),
+            cell: ({ row }) => matchedStats(row.original)?.clinvarPlpInTrans ?? <NotAvailable />,
+            sortUndefined: "last",
+          }),
+        ]),
+      }),
+      columnHelper.group({
+        id: "annotations",
+        header: "",
+        enableSorting: false,
+        columns: columnHelper.columns([
+          columnHelper.accessor(
+            (row) =>
+              row.cohort.annotated && row.cohort.clinvarSignificance
+                ? CLINVAR_SEVERITY_RANK[row.cohort.clinvarSignificance]
+                : undefined,
+            {
+              id: "clinvar",
+              header: "ClinVar",
+              cell: ({ row }) => {
+                const { cohort } = row.original;
+                if (!cohort.annotated || !cohort.clinvarSignificance) return <NotAvailable />;
+                return <ClinvarBadge significance={cohort.clinvarSignificance} stars={cohort.clinvarStars} />;
+              },
+              sortUndefined: "last",
+            },
+          ),
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.spliceAi : undefined), {
+            id: "spliceAi",
+            header: "SpliceAI",
+            cell: ({ row }) => (row.original.cohort.annotated ? row.original.cohort.spliceAi : <NotAvailable />),
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => (row.cohort.annotated ? PLOF_RANK[row.cohort.plof ?? "none"] : undefined), {
+            id: "plof",
+            header: "pLOF",
+            cell: ({ row }) => {
+              const { cohort } = row.original;
+              if (!cohort.annotated) return <NotAvailable />;
+              if (cohort.plof === null) {
+                return (
+                  <span style={styles.plofNa} title="LOFTEE does not score this consequence type">
+                    —
+                  </span>
+                );
+              }
+              return (
+                <span style={{ ...styles.plofBadge, ...(cohort.plof === "HC" ? styles.plofHc : undefined) }}>
+                  {cohort.plof}
+                </span>
+              );
+            },
+            sortUndefined: "last",
+          }),
+        ]),
+      }),
+      columnHelper.group({
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        columns: columnHelper.columns([
+          columnHelper.display({
+            id: "review",
+            header: "",
+            enableSorting: false,
+            cell: ({ row }) =>
+              onQuickReview ? (
+                <Clickable
+                  style={Style.buttons.icon}
+                  hoverStyle={Style.buttons.iconHover}
+                  onClick={(event) => {
+                    // The row itself toggles expansion on click; this shouldn't.
+                    event.stopPropagation();
+                    onQuickReview(row.original.variant);
+                  }}
+                  aria-label={`Review ${row.original.variant}`}
+                  title="Open Review on this variant"
+                >
+                  <CompareIcon size={14} strokeWidth={2.2} aria-hidden="true" />
+                </Clickable>
+              ) : null,
+          }),
+        ]),
+      }),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [columnHelper, expandedVariants, onQuickReview, participantCount, condition],
+  );
+
+  // Without a phenotype filter there is nothing on the matched side, so the whole group is left
+  // out rather than drawn as seven columns of dashes.
+  // Each pinned column sticks at the left edge plus the widths of the pinned columns before it.
+  // Widths come from the rendered header cells, re-read whenever the table's shape could change.
+  const tableRef = useRef<HTMLTableElement>(null);
+  const [pinnedOffsets, setPinnedOffsets] = useState<Record<string, number>>({});
+  useLayoutEffect(() => {
+    const measure = () => {
+      const offsets: Record<string, number> = {};
+      let left = 0;
+      for (const id of PINNED_COLUMN_IDS) {
+        offsets[id] = left;
+        // The fractional width, not offsetWidth's rounded one: summing rounded widths leaves each
+        // cell a fraction short of its neighbour, a hairline slit the scrolling content shows through.
+        left += tableRef.current?.querySelector<HTMLElement>(`th[data-column-id="${id}"]`)?.getBoundingClientRect().width ?? 0;
+      }
+      setPinnedOffsets((current) =>
+        PINNED_COLUMN_IDS.every((id) => current[id] === offsets[id]) ? current : offsets,
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [rows, hasPhenotypeFilter, sorting]);
+
+  const pinnedIds = new Set<string>(PINNED_COLUMN_IDS);
+  /** Sticky positioning for a pinned column's cell, or nothing for the rest. */
+  function pinnedStyle(columnId: string): CSSProperties | undefined {
+    if (columnId === PINNED_GROUP_ID) return { ...styles.pinnedCell, ...styles.pinnedGroupHeaderCell, left: 0 };
+    if (!pinnedIds.has(columnId)) return undefined;
+    return {
+      ...styles.pinnedCell,
+      left: pinnedOffsets[columnId] ?? 0,
+      ...(columnId === LAST_PINNED_COLUMN_ID ? styles.lastPinned : undefined),
+    };
+  }
+
+  const columnVisibility = useMemo(
+    () => Object.fromEntries(MATCHED_COLUMN_IDS.map((id) => [id, hasPhenotypeFilter])),
+    [hasPhenotypeFilter],
+  );
+
+  const table = useReactTable({
+    data: rows,
+    columns,
+    state: { sorting, columnVisibility },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getRowId: (row) => row.variant,
+  });
+
+  function handleExport() {
+    const lines = rows.map((row) => rowToTsvValues(row).join("\t"));
+    downloadTsv("variant_results.tsv", [TSV_HEADER.join("\t"), ...lines].join("\n") + "\n");
+  }
+
+  /** The tint a cell carries, which deepens into a band across whichever row is hovered. */
+  function cellBackground(tint: Tint | null, hovered: boolean): string | undefined {
+    if (tint) return hovered ? sourceTints[tint].hover : sourceTints[tint].strong;
+    return hovered ? colors.surface1 : undefined;
+  }
+
+  return (
+    <ResultsPanel
+      title="Candidate variants"
+      scope={
+        <>
+          <ScopeChip>All participants</ScopeChip>
+          {hasPhenotypeFilter && (
+            <ScopeChip
+              tone="accent"
+              icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />}
+              title={`${participantCount.toLocaleString()} participants with ${condition}`}
+            >
+              {participantCount.toLocaleString()} with {condition}
+            </ScopeChip>
+          )}
+        </>
+      }
+      headerRight={
+        <div style={styles.headerRight}>
+          <span style={styles.sub}>Showing {rows.length} results</span>
+          <Clickable style={Style.buttons.primary} hoverStyle={Style.buttons.primaryHover} onClick={handleExport}>
+            Export TSV
+          </Clickable>
+        </div>
+      }
+    >
+      <div style={styles.tableWrap}>
+        <div style={styles.tableScroll}>
+          <table ref={tableRef} style={styles.table}>
+            <thead>
+              {table.getHeaderGroups().map((headerGroup, depth) => {
+                const isGroupRow = depth === 0;
+                return (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      // A group header cell carries its group's id, which is also a tint name for
+                      // the three tinted groups, so the band starts in the group row.
+                      const tint = tintOf(header.column.id) ?? (header.column.id in sourceTints ? (header.column.id as Tint) : null);
+                      const sortable = header.column.getCanSort();
+                      const sortDirection = header.column.getIsSorted();
+                      return (
+                        <th
+                          key={header.id}
+                          colSpan={header.colSpan}
+                          data-column-id={header.column.id}
+                          style={{
+                            ...styles.headerCell,
+                            ...(isGroupRow ? styles.groupHeaderCell : styles.columnHeaderCell),
+                            background: cellBackground(tint, false) ?? styles.headerCell.background,
+                            ...(sortable ? Style.table.sortable : undefined),
+                            ...(sortable && hoveredHeader === header.id ? Style.table.sortableHover : undefined),
+                            ...pinnedStyle(header.column.id),
+                            ...(pinnedIds.has(header.column.id) ? styles.pinnedHeaderCell : undefined),
+                            ...(header.column.id === PINNED_GROUP_ID || header.column.id === LAST_PINNED_COLUMN_ID
+                              ? styles.lastPinnedHeader
+                              : undefined),
+                          }}
+                          onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
+                          {...(sortable ? headerHoverProps(header.id) : undefined)}
+                        >
+                          {header.isPlaceholder ? null : (
+                            <>
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {sortable && (
+                                <span style={Style.table.sortIndicator}>
+                                  {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => {
+                const { cohort } = row.original;
+                // A source with no data for this variant collapses its whole column group into one
+                // "not observed" cell, rather than a row of bare dashes.
+                const missingGroups: MissingGroup[] = !cohort.annotated
+                  ? [UNANNOTATED_GROUP]
+                  : [
+                      cohort.aouSubpopulation === null ? AOU_MISSING_GROUP : null,
+                      cohort.gnomadSubpopulation === null ? GNOMAD_MISSING_GROUP : null,
+                      hasPhenotypeFilter && !matchedStats(row.original) ? MATCHED_MISSING_GROUP : null,
+                    ].filter((group) => group !== null);
+                const hovered = hoveredRow === row.id;
+                const expanded = expandedVariants.has(row.original.variant);
+                const visibleCells = row.getVisibleCells();
+                return (
+                  <Fragment key={row.id}>
+                    <tr
+                      data-variant-row
+                      style={styles.dataRow}
+                      onClick={() => toggleExpanded(row.original.variant)}
+                      {...rowHoverProps(row.id)}
+                    >
+                      {visibleCells.map((cell, index) => {
+                        const tint = tintOf(cell.column.id);
+                        const pinned = pinnedIds.has(cell.column.id);
+                        const cellStyle: CSSProperties = {
+                          ...Style.table.bodyCell,
+                          ...(expanded ? styles.expandedCell : undefined),
+                          background:
+                            cellBackground(tint, hovered) ??
+                            (expanded ? styles.expandedRowFill.background : pinned ? colors.surface2 : undefined),
+                          ...(expanded && index === 0 ? styles.expandedBar : undefined),
+                        };
+                        const group = missingGroups.find((candidate) => candidate.columnIds.has(cell.column.id));
+                        if (group) {
+                          const groupCells = visibleCells.filter((candidate) => group.columnIds.has(candidate.column.id));
+                          if (cell.id !== groupCells[0].id) return null;
+                          const spansPastPinned = groupCells.some((candidate) => !pinnedIds.has(candidate.column.id));
+                          return (
+                            <td
+                              key={cell.id}
+                              colSpan={groupCells.length}
+                              style={{
+                                ...cellStyle,
+                                ...styles.sourceMissing,
+                                ...(spansPastPinned ? undefined : pinnedStyle(cell.column.id)),
+                              }}
+                              title={group.title}
+                            >
+                              <span style={styles.cellNa}>{group.message}</span>
+                            </td>
+                          );
+                        }
+                        return (
+                          <td key={cell.id} style={{ ...cellStyle, ...pinnedStyle(cell.column.id) }}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {expanded && (
+                      <tr id={`variant-detail-${row.original.variant}`}>
+                        <td
+                          colSpan={visibleCells.length}
+                          style={{ ...Style.table.bodyCell, ...styles.detailRow, ...styles.expandedBar }}
+                        >
+                          {cohort.annotated ? (
+                            <div style={styles.detailPanel}>
+                              <div style={styles.detailClinvar}>
+                                <ClinvarExpanderDetail variant={cohort} />
+                              </div>
+                              <div style={styles.detailPopulations}>
+                                <PopulationFrequencyTable variant={cohort} />
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ ...styles.detailPanel, gridTemplateColumns: "1fr" }}>
+                              <div style={styles.detailEmpty}>
+                                <span style={styles.detailEmptyIcon} aria-hidden="true">
+                                  <EyeOffIcon size={16} />
+                                </span>
+                                <div>
+                                  <p style={styles.detailEmptyTitle}>
+                                    Not observed in <AllOfUs />
+                                  </p>
+                                  <p style={styles.detailEmptyText}>
+                                    VIA only shows annotations and frequencies for variants found in <AllOfUs />,
+                                    so there's nothing to show here. This variant may still be in gnomAD or ClinVar.
+                                  </p>
+                                  <div style={styles.detailEmptyLinks}>
+                                    {[
+                                      { label: "Look up in gnomAD ↗", href: gnomadVariantUrl(row.original.variant) },
+                                      { label: "Look up in ClinVar ↗", href: clinvarSearchUrl(row.original.variant) },
+                                    ].map(({ label, href }) => (
+                                      <a
+                                        key={href}
+                                        style={styles.detailEmptyLink}
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(event) => event.stopPropagation()}
+                                      >
+                                        {label}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </ResultsPanel>
+  );
+}

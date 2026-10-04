@@ -76,6 +76,8 @@ export default colors;
 export const sourceTints = {
   aou: { strong: "#ebf3fa", soft: "#f7fafd", hover: "#e3edf6" },
   gnomad: { strong: "#f1f0ec", soft: "#fafbfb", hover: "#e9e8e3" },
+  /** The phenotype-matched column group in the merged table: the accent's own tint, a step deeper than aou's. */
+  matched: { strong: "#e4edf3", soft: "#f0f5f9", hover: "#d9e6ef" },
 } as const;
 
 /** Marks the subpopulation with the highest allele frequency in the population table. */

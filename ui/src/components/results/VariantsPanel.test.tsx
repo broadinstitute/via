@@ -1,0 +1,185 @@
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AnnotatedCohortVariant, CohortVariantRow, FilteredVariantRow } from "../../types/results";
+import VariantsPanel, { mergeVariantRows } from "./VariantsPanel";
+
+/** A cell by its full text, which can span elements (the italic program name). */
+const cellWithText = (text: string) => (_: string, element: Element | null) =>
+  element?.tagName === "TD" && element.textContent === text;
+
+// In All of Us, but not in gnomAD.
+const IN_AOU_ONLY: AnnotatedCohortVariant = {
+  annotated: true,
+  variant: "2-122517541-C-G",
+  gene: "LDLR",
+  consequence: "Missense",
+  proteinChange: "p.Arg123Gly",
+  aouSubpopulation: "AFR",
+  aouAf: 0.012,
+  aouAc: 24,
+  aouAn: 2000,
+  aouPopulations: [{ population: "AFR", af: 0.012, ac: 24, an: 2000 }],
+  aouAllAf: 0.0012,
+  aouAllAc: 28,
+  aouAllAn: 24000,
+  gnomadSubpopulation: null,
+  gnomadAf: null,
+  gnomadAc: null,
+  gnomadAn: null,
+  gnomadUrl: null,
+  gnomadPopulations: [],
+  gnomadAllAf: null,
+  gnomadAllAc: null,
+  gnomadAllAn: null,
+  clinvarSignificance: "Pathogenic",
+  clinvarUrl: null,
+  clinvarStars: 2,
+  clinvarHasConflicts: false,
+  clinvarConditions: [],
+  clinvarLastUpdated: null,
+  clinvarSubmissions: [],
+  spliceAi: 0.042,
+  plof: null,
+};
+
+const NOT_IN_AOU: CohortVariantRow = { annotated: false, variant: "7-55181378-G-A" };
+
+const MATCHED: FilteredVariantRow = {
+  variant: "2-122517541-C-G",
+  gene: "LDLR",
+  consequence: "Missense",
+  hasStats: true,
+  cohortAc: 2,
+  cohortAn: 98,
+  cohortAf: 0.0204,
+  homozygotes: 0,
+  heterozygotes: 2,
+  clinvarPlpInTrans: 0,
+  afRatio: 1.5,
+};
+
+const NOT_MATCHED: FilteredVariantRow = { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false };
+
+function renderPanel(
+  cohortVariants: CohortVariantRow[],
+  filteredVariants: FilteredVariantRow[],
+  props: Partial<React.ComponentProps<typeof VariantsPanel>> = {},
+) {
+  render(
+    <VariantsPanel
+      cohortVariants={cohortVariants}
+      filteredVariants={filteredVariants}
+      hasPhenotypeFilter={filteredVariants.length > 0}
+      participantCount={49}
+      condition="Tetralogy of Fallot"
+      {...props}
+    />,
+  );
+}
+
+describe("mergeVariantRows", () => {
+  it("joins the matched statistics onto each cohort row by variant, keeping the candidate order", () => {
+    const rows = mergeVariantRows([NOT_IN_AOU, IN_AOU_ONLY], [MATCHED]);
+    expect(rows.map((row) => row.variant)).toEqual(["7-55181378-G-A", "2-122517541-C-G"]);
+    expect(rows[0].matched).toBeUndefined();
+    expect(rows[1].matched).toBe(MATCHED);
+  });
+});
+
+describe("VariantsPanel", () => {
+  afterEach(cleanup);
+
+  it("puts the cohort-wide and matched figures for a variant in one row, annotations last", () => {
+    renderPanel([IN_AOU_ONLY], [MATCHED]);
+
+    const headers = screen.getAllByRole("columnheader").map((th) => th.textContent?.trim());
+    expect(headers.indexOf("ClinVar")).toBeGreaterThan(headers.findIndex((h) => h?.startsWith("P/LP in trans")));
+
+    const row = screen.getByText("2-122517541-C-G").closest("tr")!;
+    expect(row).toHaveTextContent("LDLR");
+    expect(row).toHaveTextContent("24 / 2,000");
+    expect(row).toHaveTextContent("Not observed in gnomAD");
+    expect(row).toHaveTextContent("2 / 98");
+    expect(row).toHaveTextContent("0.0204");
+    expect(row).toHaveTextContent("0 / 2");
+    expect(screen.queryByRole("columnheader", { name: /AF ratio/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /Phenotype-matched/ })).toHaveTextContent("49 with Tetralogy of Fallot");
+    expect(screen.getByText("49 with Tetralogy of Fallot", { selector: "span" })).toBeInTheDocument();
+  });
+
+  it("leaves the matched column group out when there is no phenotype filter", () => {
+    renderPanel([IN_AOU_ONLY], []);
+
+    expect(screen.queryByRole("columnheader", { name: /Phenotype-matched/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /Hom \/ het/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Gene" })).toBeInTheDocument();
+    // Five identity cells, three All of Us, one merged gnomAD cell, three annotations, the Review
+    // control: no dashes standing in for the absent group.
+    const row = screen.getByText("2-122517541-C-G").closest("tr")!;
+    expect(within(row).getAllByRole("cell")).toHaveLength(13);
+  });
+
+  it("spans a variant that isn't in All of Us with one message across every data column", () => {
+    renderPanel([NOT_IN_AOU], [NOT_MATCHED]);
+
+    const message = screen.getByText(cellWithText("Not observed in All of Us"));
+    // Gene through pLOF: three identity, six source, four matched, three annotation.
+    expect(message).toHaveAttribute("colspan", "16");
+    expect(message.getAttribute("title")).toMatch(/only includes variants observed in All of Us/);
+    expect(screen.queryByText("Not observed in gnomAD")).not.toBeInTheDocument();
+    // The row keeps its expand control.
+    const row = message.closest("tr")!;
+    expect(within(row).getByRole("button", { name: "Expand row for more detail" })).toBeInTheDocument();
+  });
+
+  it("merges only the matched columns when All of Us has the variant but no matched statistics", () => {
+    renderPanel([IN_AOU_ONLY], [{ ...NOT_MATCHED, variant: "2-122517541-C-G", gene: "LDLR", consequence: "Missense" }]);
+
+    const messages = screen.getAllByText(cellWithText("Not observed in All of Us"));
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toHaveAttribute("colspan", "4");
+    expect(screen.getByText("LDLR")).toBeInTheDocument();
+    expect(screen.getByText("24 / 2,000")).toBeInTheDocument();
+  });
+
+  it("points a variant that isn't in All of Us to gnomAD and ClinVar when expanded", () => {
+    renderPanel([NOT_IN_AOU], []);
+    fireEvent.click(screen.getByRole("button", { name: "Expand row for more detail" }));
+
+    expect(screen.getByRole("link", { name: "Look up in gnomAD ↗" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("7-55181378-G-A"),
+    );
+    expect(screen.getByRole("link", { name: "Look up in ClinVar ↗" })).toHaveAttribute(
+      "href",
+      "https://www.ncbi.nlm.nih.gov/clinvar/?term=7-55181378-G-A",
+    );
+  });
+
+  it("opens Review on a row's variant from its control, and offers no control without a handler", () => {
+    const onQuickReview = vi.fn();
+    renderPanel([IN_AOU_ONLY], [MATCHED], { onQuickReview });
+    fireEvent.click(screen.getByRole("button", { name: "Review 2-122517541-C-G" }));
+    expect(onQuickReview).toHaveBeenCalledWith("2-122517541-C-G");
+    cleanup();
+
+    renderPanel([IN_AOU_ONLY], [MATCHED]);
+    expect(screen.queryByRole("button", { name: /^Review/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("pins the expand, Variant, Gene and Consequence columns while the rest scroll", () => {
+    renderPanel([IN_AOU_ONLY], [MATCHED]);
+
+    const row = screen.getByText("2-122517541-C-G").closest("tr")!;
+    const cells = within(row).getAllByRole("cell");
+    cells.slice(0, 4).forEach((cell) => expect(cell).toHaveStyle({ position: "sticky" }));
+    expect(cells[4]).not.toHaveStyle({ position: "sticky" });
+    expect(screen.getByRole("columnheader", { name: "Variant" })).toHaveStyle({ position: "sticky" });
+
+    // A "not observed" cell that spans past the pinned columns scrolls with the rest.
+    cleanup();
+    renderPanel([NOT_IN_AOU], []);
+    expect(screen.getByText(cellWithText("Not observed in All of Us"))).not.toHaveStyle({ left: "0px" });
+  });
+});

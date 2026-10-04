@@ -34,6 +34,6 @@ describe("App", () => {
 
   it("renders the search results page at /results", () => {
     renderAt("/results");
-    expect(screen.getByRole("heading", { name: "Phenotype filter" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Candidate variants" }).length).toBeGreaterThan(0);
   });
 });

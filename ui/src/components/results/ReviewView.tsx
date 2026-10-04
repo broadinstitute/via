@@ -1,74 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import colors, { alpha } from "../../libs/colors";
+import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment, CohortVariantRow, FilteredVariantRow } from "../../types/results";
 import { buildComparisonRows, formatRatio, SIMILARITY_FOLD, sortByEnrichment } from "../../utils/comparison";
 import Clickable from "../common/Clickable";
-import AllOfUs from "../common/AllOfUs";
-import { ArrowLeftIcon, ArrowRightIcon, CloseIcon } from "../icons";
+import { ArrowLeftIcon, ArrowRightIcon, UserIcon } from "../icons";
 import QuickReviewDetail, { verdictTone } from "./QuickReviewDetail";
+import ResultsPanel, { ScopeChip } from "./ResultsPanel";
+
+// The rail's height follows the detail's: it's absolutely positioned inside its grid cell, so a
+// long candidate list scrolls within the rail instead of stretching the page.
+const RAIL_WIDTH = 260;
 
 const styles = {
-  scrim: {
-    position: "fixed",
-    inset: 0,
-    zIndex: 100,
-    display: "flex",
-    alignItems: "stretch",
-    justifyContent: "center",
-    padding: 12,
-    background: alpha(colors.textPrimary, 0.35),
-  },
-  // Takes the whole window, less a margin that keeps it reading as an overlay: a review is a mode
-  // the interpreter steps through, not a popup, and the height is what lets the detail breathe
-  // without scrolling.
-  dialog: {
-    ...Style.elements.panel,
-    display: "flex",
-    flexDirection: "column",
-    width: "100%",
-    maxWidth: 1480,
-    boxShadow: Style.shadows.raised,
-    outline: "none",
-  },
-  header: {
-    ...Style.elements.panelHeader,
-    justifyContent: "space-between",
-    gap: 16,
-    padding: "12px 18px",
-  },
-  // Title over a one-line subtitle that names the two sides, in the same order as the head-to-head
-  // table's columns: the matched participants, then the cohort they're measured against.
-  heading: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    minWidth: 0,
-  },
-  subtitle: {
-    margin: 0,
-    fontSize: 12,
-    color: colors.textSecondary,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  subtitleStrong: {
-    color: colors.textBody,
-    fontWeight: 600,
-  },
-  subtitleVs: {
-    margin: "0 6px",
-    color: colors.textMuted,
-    fontStyle: "italic",
-  },
-  headerRight: {
+  stepper: {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    flexShrink: 0,
   },
   position: {
     ...Style.elements.mono,
@@ -77,31 +27,21 @@ const styles = {
     fontSize: 12,
     color: colors.textSecondary,
   },
-  headerDivider: {
-    width: 1,
-    height: 18,
-    margin: "0 4px",
-    background: colors.border,
-  },
-  title: {
-    margin: 0,
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: 700,
-    letterSpacing: -0.1,
-  },
   body: {
-    display: "flex",
-    flex: 1,
-    minHeight: 0,
+    display: "grid",
+    gridTemplateColumns: `${RAIL_WIDTH}px minmax(0, 1fr)`,
+    minHeight: 520,
   },
-  rail: {
-    display: "flex",
-    flexDirection: "column",
-    width: 260,
-    flexShrink: 0,
+  railCell: {
+    position: "relative",
     background: colors.surface1,
     borderRight: `1px solid ${colors.border}`,
+  },
+  rail: {
+    position: "absolute",
+    inset: 0,
+    display: "flex",
+    flexDirection: "column",
   },
   railIntro: {
     padding: "10px 12px 6px",
@@ -173,12 +113,8 @@ const styles = {
     fontWeight: 700,
   },
   detail: {
-    flex: 1,
     minWidth: 0,
     padding: "22px 28px 26px",
-    // Only a very short window scrolls the detail; the layout is sized to fit a laptop screen.
-    overflowY: "auto",
-    scrollbarWidth: "thin",
   },
   legendItem: {
     display: "inline-flex",
@@ -194,47 +130,45 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
-interface QuickReviewDialogProps {
+interface ReviewViewProps {
   cohortVariants: CohortVariantRow[];
   filteredVariants: FilteredVariantRow[];
   condition: string;
   participantCount: number;
   ancestryBreakdown: BreakdownSegment[];
-  /** Which variant to open on; the strongest signal when omitted or unknown. */
+  /** Which variant to open on; the best-supported signal when omitted or unknown. */
   initialVariant?: string;
-  onClose: () => void;
 }
 
 /**
- * Review: the two cohorts head to head, one variant at a time. A rail on the left ranks the
- * candidates by how far their phenotype-matched frequency departs from the cohort-wide one; the
- * detail on the right states the verdict, the counts behind it, and how the matched cohort's
- * ancestry makeup bears on it. Arrow keys step through the rail, Escape closes.
+ * Review: the two cohorts head to head, one variant at a time, shown in place of the tables when
+ * the summary strip's switcher is on Review. A rail on the left ranks the candidates by how well
+ * the interval supports a departure from cohort-wide; the detail on the right states the verdict,
+ * the evidence behind it, and how the matched cohort's ancestry makeup bears on it. Arrow keys
+ * step through the rail.
  */
-export default function QuickReviewDialog({
+export default function ReviewView({
   cohortVariants,
   filteredVariants,
   condition,
   participantCount,
   ancestryBreakdown,
   initialVariant,
-  onClose,
-}: QuickReviewDialogProps) {
+}: ReviewViewProps) {
   const rows = useMemo(
     () => sortByEnrichment(buildComparisonRows(cohortVariants, filteredVariants, ancestryBreakdown)),
     [cohortVariants, filteredVariants, ancestryBreakdown],
   );
   const [index, setIndex] = useState(() => Math.max(0, rows.findIndex((row) => row.variant === initialVariant)));
   const { hoveredKey, hoverProps } = useHoveredKey<string>();
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLOListElement>(null);
   const selected = rows[index] ?? null;
-
-  useEffect(() => dialogRef.current?.focus(), []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-      else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      // Not while typing in a field, e.g. the edit-search popover.
+      if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
         event.preventDefault();
         setIndex((i) => Math.min(rows.length - 1, i + 1));
       } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
@@ -244,88 +178,69 @@ export default function QuickReviewDialog({
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, rows.length]);
+  }, [rows.length]);
 
   // Keep the selected rail entry in view as the arrow keys move through a long list.
   useEffect(() => {
-    dialogRef.current
+    railRef.current
       ?.querySelector<HTMLElement>(`[data-rail-index="${index}"]`)
       ?.scrollIntoView?.({ block: "nearest" });
   }, [index]);
 
-  return (
-    <div style={styles.scrim} onClick={(event) => event.target === event.currentTarget && onClose()}>
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="quickReviewTitle"
-        tabIndex={-1}
-        style={styles.dialog}
+  const stepper = (
+    <div style={styles.stepper}>
+      <Clickable
+        style={Style.buttons.icon}
+        hoverStyle={Style.buttons.iconHover}
+        disabledStyle={Style.buttons.disabled}
+        onClick={() => setIndex((i) => Math.max(0, i - 1))}
+        disabled={index <= 0}
+        aria-label="Previous variant"
+        title="Previous variant (←)"
       >
-        <div style={styles.header}>
-          <div style={styles.heading}>
-            <h2 id="quickReviewTitle" style={styles.title}>
-              Review
-            </h2>
-            <p
-              style={styles.subtitle}
-              title={`${participantCount.toLocaleString()} participants with ${condition}, compared with the whole All of Us cohort`}
-            >
-              <span style={styles.subtitleStrong}>
-                {participantCount.toLocaleString()} participants with {condition}
-              </span>
-              <span style={styles.subtitleVs}>vs</span>
-              <span style={styles.subtitleStrong}>
-                the <AllOfUs /> cohort
-              </span>
-            </p>
-          </div>
-          <div style={styles.headerRight}>
-            <Clickable
-              style={Style.buttons.icon}
-              hoverStyle={Style.buttons.iconHover}
-              disabledStyle={Style.buttons.disabled}
-              onClick={() => setIndex((i) => Math.max(0, i - 1))}
-              disabled={index <= 0}
-              aria-label="Previous variant"
-              title="Previous variant (←)"
-            >
-              <ArrowLeftIcon size={14} strokeWidth={2.5} aria-hidden="true" />
-            </Clickable>
-            <span style={styles.position} aria-live="polite">
-              {rows.length === 0 ? "0 of 0" : `${index + 1} of ${rows.length}`}
-            </span>
-            <Clickable
-              style={Style.buttons.icon}
-              hoverStyle={Style.buttons.iconHover}
-              disabledStyle={Style.buttons.disabled}
-              onClick={() => setIndex((i) => Math.min(rows.length - 1, i + 1))}
-              disabled={index >= rows.length - 1}
-              aria-label="Next variant"
-              title="Next variant (→)"
-            >
-              <ArrowRightIcon size={14} strokeWidth={2.5} aria-hidden="true" />
-            </Clickable>
-            <span style={styles.headerDivider} aria-hidden="true" />
-            <Clickable
-              style={Style.buttons.icon}
-              hoverStyle={Style.buttons.iconHover}
-              onClick={onClose}
-              aria-label="Close review"
-              title="Close (Esc)"
-            >
-              <CloseIcon size={14} strokeWidth={2.5} />
-            </Clickable>
-          </div>
-        </div>
+        <ArrowLeftIcon size={14} strokeWidth={2.5} aria-hidden="true" />
+      </Clickable>
+      <span style={styles.position} aria-live="polite">
+        {rows.length === 0 ? "0 of 0" : `${index + 1} of ${rows.length}`}
+      </span>
+      <Clickable
+        style={Style.buttons.icon}
+        hoverStyle={Style.buttons.iconHover}
+        disabledStyle={Style.buttons.disabled}
+        onClick={() => setIndex((i) => Math.min(rows.length - 1, i + 1))}
+        disabled={index >= rows.length - 1}
+        aria-label="Next variant"
+        title="Next variant (→)"
+      >
+        <ArrowRightIcon size={14} strokeWidth={2.5} aria-hidden="true" />
+      </Clickable>
+    </div>
+  );
 
-        <div style={styles.body}>
+  return (
+    <ResultsPanel
+      title="Review"
+      scope={
+        <>
+          <ScopeChip
+            tone="accent"
+            icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />}
+            title={`${participantCount.toLocaleString()} participants with ${condition}`}
+          >
+            {participantCount.toLocaleString()} with {condition}
+          </ScopeChip>
+          <ScopeChip>vs. all participants</ScopeChip>
+        </>
+      }
+      headerRight={stepper}
+    >
+      <div style={styles.body}>
+        <div style={styles.railCell}>
           <nav style={styles.rail} aria-label="Candidate variants, best-supported first">
             <p style={styles.railIntro}>
               {rows.length} candidate{rows.length === 1 ? "" : "s"}, best-supported departure from cohort-wide first.
             </p>
-            <ol style={styles.railList}>
+            <ol ref={railRef} style={styles.railList}>
               {rows.map((row, i) => {
                 const tone = verdictTone(row.enrichment);
                 return (
@@ -371,28 +286,27 @@ export default function QuickReviewDialog({
                 <span style={Style.colorDot(colors.textMuted, 8)} /> Inconclusive: too few alleles
               </span>
               <span style={{ ...styles.legendItem, marginTop: 3 }}>
-                <kbd style={styles.kbd}>←</kbd> <kbd style={styles.kbd}>→</kbd> step · <kbd style={styles.kbd}>Esc</kbd> close
+                <kbd style={styles.kbd}>←</kbd> <kbd style={styles.kbd}>→</kbd> step between variants
               </span>
             </div>
           </nav>
-
-          <section style={styles.detail}>
-            {selected ? (
-              <QuickReviewDetail
-                key={selected.variant}
-                row={selected}
-                condition={condition}
-                participantCount={participantCount}
-                ancestryBreakdown={ancestryBreakdown}
-                candidateCount={rows.length}
-              />
-            ) : (
-              <p style={{ color: colors.textSecondary }}>No candidate variants to review.</p>
-            )}
-          </section>
         </div>
 
+        <section style={styles.detail}>
+          {selected ? (
+            <QuickReviewDetail
+              key={selected.variant}
+              row={selected}
+              condition={condition}
+              participantCount={participantCount}
+              ancestryBreakdown={ancestryBreakdown}
+              candidateCount={rows.length}
+            />
+          ) : (
+            <p style={{ color: colors.textSecondary }}>No candidate variants to review.</p>
+          )}
+        </section>
       </div>
-    </div>
+    </ResultsPanel>
   );
 }

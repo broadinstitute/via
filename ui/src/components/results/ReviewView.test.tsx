@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { AnnotatedCohortVariant, CohortVariantRow, FilteredVariantRow } from "../../types/results";
-import QuickReviewDialog from "./QuickReviewDialog";
+import ReviewView from "./ReviewView";
 
 const ENRICHED: AnnotatedCohortVariant = {
   annotated: true,
@@ -88,28 +88,26 @@ const ANCESTRY = [
   { label: "AFR", count: 40, percent: 40, color: "#000" },
 ];
 
-function renderDialog(onClose = vi.fn(), initialVariant?: string) {
+function renderView(initialVariant?: string) {
   render(
-    <QuickReviewDialog
+    <ReviewView
       cohortVariants={[FLAT, ENRICHED, UNSEEN]}
       filteredVariants={MATCHED}
       condition="Familial hypercholesterolemia"
       participantCount={100}
       ancestryBreakdown={ANCESTRY}
       initialVariant={initialVariant}
-      onClose={onClose}
     />,
   );
-  return onClose;
 }
 
-describe("QuickReviewDialog", () => {
+describe("ReviewView", () => {
   afterEach(cleanup);
 
   it("opens on the best-supported signal with its verdict, evidence and the two tables", () => {
-    renderDialog();
+    renderView();
 
-    expect(screen.getByRole("dialog", { name: "Review" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Review" })).toBeInTheDocument();
     const rail = screen.getByRole("navigation", { name: /best-supported first/ });
     const items = within(rail).getAllByRole("button");
     // Gene over variant, the fold change on the right: the supported signal first, the
@@ -158,7 +156,7 @@ describe("QuickReviewDialog", () => {
   });
 
   it("steps through the rail with the buttons and arrow keys, and explains a variant with nothing to compare", () => {
-    renderDialog();
+    renderView();
 
     fireEvent.click(screen.getByRole("button", { name: "Next variant" }));
     expect(screen.getByText("2 of 3")).toBeInTheDocument();
@@ -179,21 +177,10 @@ describe("QuickReviewDialog", () => {
   });
 
   it("can open on a given variant, and jumps on a rail click", () => {
-    renderDialog(vi.fn(), "1-100-A-T");
+    renderView("1-100-A-T");
     expect(screen.getByText("2 of 3")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /2-122517541-C-G/ }));
     expect(screen.getByText("1 of 3")).toBeInTheDocument();
-  });
-
-  it("closes from the close button, Escape and the backdrop", () => {
-    const onClose = renderDialog();
-
-    fireEvent.click(screen.getByRole("button", { name: "Close review" }));
-    fireEvent.keyDown(document, { key: "Escape" });
-    fireEvent.click(screen.getByRole("dialog").parentElement!);
-    fireEvent.click(screen.getByRole("dialog"));
-
-    expect(onClose).toHaveBeenCalledTimes(3);
   });
 });

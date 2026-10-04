@@ -250,7 +250,7 @@ export const inputs = {
 } as const satisfies Record<string, CSSProperties>;
 
 // Both variant tables are built from these. Note that neither sets borderCollapse: the cohort
-// table needs `separate` for its two stacked sticky header rows (see CohortVariantsPanel), while
+// table needs `separate` for its two stacked sticky header rows (see VariantsPanel), while
 // the phenotype-matched table below it uses `collapse`.
 export const table = {
   base: {

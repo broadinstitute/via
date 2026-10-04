@@ -5,8 +5,8 @@ export interface ClinvarBadgeConfig {
   shortLabel: string;
   ink: string;
   fill: string;
-  borderStyle: "solid" | "dashed";
-  tagPadding: string;
+  /** Pathogenic and Benign, as opposed to their "likely" neighbours, which the badge marks with a hollow dot. */
+  definitive: boolean;
 }
 
 interface ClinvarSubmissionDisplay {
@@ -22,36 +22,31 @@ export const CLINVAR_BADGE_CONFIG: Record<ClinVarSignificance, ClinvarBadgeConfi
     shortLabel: "P",
     ink: colors.textDanger,
     fill: colors.bgDanger,
-    borderStyle: "solid",
-    tagPadding: "1px 6px",
+    definitive: true,
   },
   "Likely pathogenic": {
     shortLabel: "LP",
     ink: colors.textDanger,
     fill: colors.bgDanger,
-    borderStyle: "dashed",
-    tagPadding: "2px 7px",
+    definitive: false,
   },
   VUS: {
     shortLabel: "VUS",
     ink: colors.textWarning,
     fill: colors.bgWarning,
-    borderStyle: "solid",
-    tagPadding: "2px 7px",
+    definitive: true,
   },
   "Likely benign": {
     shortLabel: "LB",
     ink: colors.textSuccess,
     fill: colors.bgSuccess,
-    borderStyle: "dashed",
-    tagPadding: "2px 7px",
+    definitive: false,
   },
   Benign: {
     shortLabel: "B",
     ink: colors.textSuccess,
     fill: colors.bgSuccess,
-    borderStyle: "solid",
-    tagPadding: "1px 6px",
+    definitive: true,
   },
 };
 
