@@ -152,7 +152,7 @@ interface ParticipantMatchedVariantsPanelProps {
   /** Names the picked condition in the empty state; empty when none was picked. */
   condition: string;
   onAddPhenotypeFilter: () => void;
-  /** Opens Quick review on the given variant. */
+  /** Opens Review on the given variant. */
   onQuickReview?: (variant: string) => void;
 }
 
@@ -300,8 +300,8 @@ export default function ParticipantMatchedVariantsPanel({
                   style={Style.buttons.icon}
                   hoverStyle={Style.buttons.iconHover}
                   onClick={() => onQuickReview(row.original.variant)}
-                  aria-label={`Quick review ${row.original.variant}`}
-                  title="Open Quick review on this variant"
+                  aria-label={`Review ${row.original.variant}`}
+                  title="Open Review on this variant"
                 >
                   <CompareIcon size={14} strokeWidth={2.2} aria-hidden="true" />
                 </Clickable>

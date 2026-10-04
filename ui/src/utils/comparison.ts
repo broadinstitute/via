@@ -1,4 +1,4 @@
-// The arithmetic behind Quick review: for each candidate variant, how its frequency among the
+// The arithmetic behind Review: for each candidate variant, how its frequency among the
 // phenotype-matched participants compares with the whole All of Us cohort, and how the matched
 // cohort's ancestry makeup lines up with where the variant is most common.
 //
@@ -44,6 +44,12 @@ export interface Enrichment {
   upperBound: number | null;
   /** Two-sided Fisher's exact test on matched vs the rest of the cohort. */
   pValue: number;
+  /**
+   * Odds ratio from the same 2×2 table as the test (matched vs the rest of the cohort), with its
+   * Woolf 95% interval. The interval is null when any cell of the table is zero.
+   */
+  oddsRatio: number;
+  oddsRatioCi: [number, number] | null;
   direction: Direction;
   significant: boolean;
   /** Few alternate alleles among matched participants: shown as a caution alongside the verdict. */
@@ -128,8 +134,10 @@ export function computeEnrichment(
     restAc = cohortAc;
     restAn = cohortAn;
   }
-  const pValue = fisherTwoSided(matchedAc, matchedAn - matchedAc, restAc, restAn - restAc);
+  const [a, b, c, d] = [matchedAc, matchedAn - matchedAc, restAc, restAn - restAc];
+  const pValue = fisherTwoSided(a, b, c, d);
   const significant = pValue < SIGNIFICANCE_LEVEL;
+  const { oddsRatio, oddsRatioCi } = computeOddsRatio(a, b, c, d);
   const expectedMatchedAc = matchedAn * cohortAf;
 
   // Katz: log(ratio) ± 1.96 · sqrt(1/a − 1/n1 + 1/c − 1/n2). Undefined at a zero count -- a
@@ -168,10 +176,28 @@ export function computeEnrichment(
     ci,
     upperBound,
     pValue,
+    oddsRatio,
+    oddsRatioCi,
     direction,
     significant,
     lowCount: matchedAc < LOW_COUNT_THRESHOLD,
   };
+}
+
+/** Odds ratio of the table [[a, b], [c, d]] and its Woolf (log-method) 95% interval. */
+export function computeOddsRatio(
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+): { oddsRatio: number; oddsRatioCi: [number, number] | null } {
+  const numerator = a * d;
+  const denominator = b * c;
+  const oddsRatio = denominator === 0 ? (numerator === 0 ? 1 : Infinity) : numerator / denominator;
+  if (a === 0 || b === 0 || c === 0 || d === 0) return { oddsRatio, oddsRatioCi: null };
+  const se = Math.sqrt(1 / a + 1 / b + 1 / c + 1 / d);
+  const logOr = Math.log(oddsRatio);
+  return { oddsRatio, oddsRatioCi: [Math.exp(logOr - 1.96 * se), Math.exp(logOr + 1.96 * se)] };
 }
 
 // Lanczos approximation of ln Γ(x), accurate to ~1e-13 for the sizes here.

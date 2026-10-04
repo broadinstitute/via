@@ -57,11 +57,11 @@ describe("ParticipantMatchedVariantsPanel", () => {
     expect(screen.getByText("Nonsense")).toBeInTheDocument();
   });
 
-  it("opens Quick review on a row's variant from its row controls", () => {
+  it("opens Review on a row's variant from its row controls", () => {
     const onQuickReview = vi.fn();
     renderPanel([OBSERVED], onQuickReview);
 
-    fireEvent.click(screen.getByRole("button", { name: `Quick review ${OBSERVED.variant}` }));
+    fireEvent.click(screen.getByRole("button", { name: `Review ${OBSERVED.variant}` }));
     expect(onQuickReview).toHaveBeenCalledWith(OBSERVED.variant);
   });
 });

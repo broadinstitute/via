@@ -300,7 +300,7 @@ function isMissingFromGnomad(row: CohortVariantRow): boolean {
 
 interface CohortVariantsPanelProps {
   rows: CohortVariantRow[];
-  /** Opens Quick review; offered only once a phenotype filter gives it something to compare with. */
+  /** Opens Review; offered only once a phenotype filter gives it something to compare with. */
   onQuickReview?: () => void;
 }
 

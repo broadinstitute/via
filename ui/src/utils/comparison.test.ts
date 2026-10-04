@@ -4,6 +4,7 @@ import {
   ancestryContext,
   buildComparisonRows,
   computeEnrichment,
+  computeOddsRatio,
   fisherTwoSided,
   formatPValue,
   formatRatio,
@@ -73,6 +74,10 @@ describe("computeEnrichment", () => {
     expect(result.ci![1]).toBeGreaterThan(result.ci![0]);
     expect(result.matchedAc).toBe(6);
     expect(result.expectedMatchedAc).toBeCloseTo(0.233, 2);
+    // Rare variant: the odds ratio (against the rest of the cohort) sits just above the frequency ratio.
+    expect(result.oddsRatio).toBeGreaterThan(result.ratio);
+    expect(result.oddsRatio).toBeCloseTo(33.5, 0);
+    expect(result.oddsRatioCi![0]).toBeGreaterThan(1);
   });
 
   it("calls a much lower matched frequency depleted", () => {
@@ -123,6 +128,22 @@ describe("computeEnrichment", () => {
     expect(computeEnrichment(3, 200, 0, 24000)!.ratio).toBe(Infinity);
     expect(computeEnrichment(3, 200, 0, 24000)!.ci).toBeNull();
     expect(computeEnrichment(3, 0, 28, 24000)).toBeNull();
+  });
+});
+
+describe("computeOddsRatio", () => {
+  it("computes the odds ratio and its Woolf interval", () => {
+    const { oddsRatio, oddsRatioCi } = computeOddsRatio(10, 90, 20, 380);
+    // (10·380) / (90·20)
+    expect(oddsRatio).toBeCloseTo(2.11, 2);
+    expect(oddsRatioCi![0]).toBeCloseTo(0.96, 2);
+    expect(oddsRatioCi![1]).toBeCloseTo(4.67, 2);
+  });
+
+  it("leaves the interval undefined when a cell is zero", () => {
+    expect(computeOddsRatio(0, 100, 5, 495)).toEqual({ oddsRatio: 0, oddsRatioCi: null });
+    expect(computeOddsRatio(3, 97, 0, 500)).toEqual({ oddsRatio: Infinity, oddsRatioCi: null });
+    expect(computeOddsRatio(0, 100, 0, 500).oddsRatio).toBe(1);
   });
 });
 

@@ -9,7 +9,6 @@ import {
   formatExpected,
   formatPValue,
   formatRatio,
-  largestMatchedAncestry,
   LOW_COUNT_THRESHOLD,
   type ComparisonRow,
   type Direction,
@@ -18,6 +17,7 @@ import {
 import { exactAf, formatAcAn, formatAf, formatInt } from "../../utils/format";
 import { SUBPOP_COLOR, SUBPOP_LABEL } from "../../utils/subpopulations";
 import AllOfUs from "../common/AllOfUs";
+import InfoLabel from "../common/InfoLabel";
 import InfoTooltip from "../common/InfoTooltip";
 import ClinvarBadge from "../elements/ClinvarBadge";
 
@@ -32,6 +32,8 @@ const styles = {
     flexDirection: "column",
     gap: 24,
   },
+  // Each column is title then table, so the two tables' top edges line up; what follows a table
+  // (the ancestry reading) comes after, not between.
   columns: {
     display: "grid",
     gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
@@ -101,25 +103,32 @@ const styles = {
     borderRadius: Style.radius,
     border: "1px solid",
   },
+  // Fixed line heights, so the strip is the same height whether or not a ratio is shown (an
+  // inconclusive verdict has none) and whether the sentence runs to one line or two.
+  // Centered rather than baseline-aligned: the mono ratio's baseline sits lower in its line box
+  // than the sans word's, and aligning on it made the row a pixel or two taller when present.
   verdictLine: {
     display: "flex",
     flexWrap: "wrap",
-    alignItems: "baseline",
+    alignItems: "center",
     gap: "4px 12px",
+    height: 22,
   },
   verdictWord: {
     fontSize: 17,
     fontWeight: 700,
+    lineHeight: "22px",
   },
   verdictRatio: {
     ...Style.elements.mono,
     fontSize: 17,
     fontWeight: 700,
+    lineHeight: "22px",
   },
   // Evidence: a row of stat tiles, each a label over a figure over a one-word reading of it.
   evidence: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
     gap: 10,
   },
   tile: {
@@ -137,27 +146,37 @@ const styles = {
     fontWeight: 700,
     color: colors.textPrimary,
   },
+  tileFooter: {
+    display: "flex",
+    alignItems: "center",
+    height: 20,
+  },
   tileNote: {
     fontSize: 11,
     color: colors.textMuted,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
-  cautions: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
+  // A tile carrying a caution takes the warning tint, so the eye lands on it first.
+  tileCaution: {
+    background: colors.bgWarning,
+    borderColor: alpha(colors.textWarning, 0.35),
   },
   caution: {
-    padding: "2px 8px",
+    padding: "1px 7px",
     borderRadius: 999,
-    background: colors.bgWarning,
+    border: `1px solid ${alpha(colors.textWarning, 0.4)}`,
     color: colors.textWarning,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: 600,
     whiteSpace: "nowrap",
   },
   verdictSentence: {
     fontSize: 12.5,
-    lineHeight: 1.5,
+    lineHeight: "19px",
+    // Room for two lines, which the longer zero-count sentences need.
+    minHeight: 38,
     color: colors.textBody,
   },
   // Head to head and ancestry share one table treatment.
@@ -234,7 +253,7 @@ const styles = {
     background: colors.textAccent,
   },
   insight: {
-    margin: 0,
+    margin: "2px 0 0",
     fontSize: 12.5,
     lineHeight: 1.5,
     color: colors.textBody,
@@ -286,7 +305,6 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
     (r) => r.isAouPopmax || r.matchedCount !== null || r.aouAf !== null || r.gnomadAf !== null,
   );
   const popmax = allAncestry.find((r) => r.isAouPopmax) ?? null;
-  const largest = largestMatchedAncestry(allAncestry);
   const stacked = useMediaQuery(STACKED_QUERY);
 
   return (
@@ -343,7 +361,7 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
         <section style={styles.section} aria-labelledby="quickReviewEvidence">
           <SectionTitle
             id="quickReviewEvidence"
-            tooltip="What stands behind the verdict. The test compares matched participants with the rest of the cohort; the interval is for the frequency ratio. Fifty candidates means fifty tests, so a p-value near 0.05 is weak on its own."
+            tooltip="What stands behind the verdict. The test and the odds ratio compare matched participants with the rest of the cohort; the first interval is for the frequency ratio shown in the verdict. Fifty candidates means fifty tests, so a p-value near 0.05 is weak on its own."
           >
             Evidence
           </SectionTitle>
@@ -352,43 +370,76 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
               label="Fisher's exact p"
               value={formatPValue(enrichment.pValue)}
               note={enrichment.significant ? "below 0.05" : "not below 0.05"}
+              caution={
+                !enrichment.significant && enrichment.direction !== "similar" ? "Not statistically significant" : undefined
+              }
+              tooltip={
+                "The chance of seeing a split of alternate alleles between matched participants and the rest of the cohort at least this uneven, if the condition made no difference. " +
+                "Smaller is stronger evidence; below 0.05 is the usual bar. " +
+                "Exact rather than approximate, so it holds up at the small counts typical here. " +
+                "It is unadjusted: across many candidate variants, one in twenty will fall below 0.05 by chance."
+              }
             />
             {enrichment.ci ? (
               <StatTile
                 label="95% CI for ratio"
                 value={`${formatRatio(enrichment.ci[0])} – ${formatRatio(enrichment.ci[1])}`}
                 note={enrichment.ci[0] > 1 ? "excludes 1×" : enrichment.ci[1] < 1 ? "excludes 1×" : "includes 1×"}
+                tooltip={
+                  "The range the true frequency ratio (matched AF over cohort-wide AF, the figure in the verdict) plausibly lies in, given these counts. " +
+                  "If it excludes 1×, the two frequencies most likely differ; if it includes 1×, the data can't rule out no difference. " +
+                  "A wide interval means few alleles were counted."
+                }
               />
             ) : enrichment.upperBound !== null ? (
               <StatTile
                 label="Ratio upper bound"
                 value={`≤ ${formatRatio(enrichment.upperBound)}`}
                 note="rule of three, no carriers"
+                tooltip={
+                  "With no matched carriers there is no interval to give, only a ceiling: seeing zero in this many alleles means the matched frequency is very likely below 3 divided by that number (the rule of three). " +
+                  "Divided by the cohort-wide frequency, that is the largest ratio the data are still consistent with."
+                }
               />
             ) : (
-              <StatTile label="95% CI for ratio" value="—" note="undefined at zero" />
+              <StatTile
+                label="95% CI for ratio"
+                value="—"
+                note="undefined at zero"
+                tooltip="No one in the cohort carries this allele outside the matched participants, so there is no cohort-wide frequency to divide by and no interval to compute."
+              />
             )}
+            <StatTile
+              label="Odds ratio"
+              value={enrichment.direction === "inconclusive" && enrichment.matchedAc === 0 ? "—" : formatRatio(enrichment.oddsRatio)}
+              note={
+                enrichment.oddsRatioCi
+                  ? `95% CI ${formatRatio(enrichment.oddsRatioCi[0])} – ${formatRatio(enrichment.oddsRatioCi[1])}`
+                  : "matched vs rest of cohort; CI undefined at zero"
+              }
+              tooltip={
+                "The odds of carrying this allele among matched participants divided by the odds among everyone else in the cohort: the standard case–control effect size, and the one that pairs with Fisher's test. " +
+                "Above 1× means more common in the matched group. " +
+                "For a rare variant it is nearly the same as the frequency ratio in the verdict; for a common one it runs higher. " +
+                "The interval underneath is its 95% confidence range."
+              }
+            />
             <StatTile
               label="Matched alt alleles"
               value={formatInt(enrichment.matchedAc)}
               note={`${formatExpected(enrichment.expectedMatchedAc)} expected at cohort rate`}
+              caution={
+                enrichment.lowCount
+                  ? `Low count · ${formatExpected(enrichment.expectedMatchedAc)} expected`
+                  : undefined
+              }
+              tooltip={
+                "How many copies of this allele were actually seen among matched participants, against how many the cohort-wide frequency predicts for a group this size. " +
+                "The gap between the two is the signal; the size of the observed count is how much to trust it. " +
+                `Fewer than ${LOW_COUNT_THRESHOLD} observed is flagged as a low count.`
+              }
             />
           </div>
-          {(enrichment.lowCount || (!enrichment.significant && enrichment.direction !== "similar")) && (
-            <div style={styles.cautions}>
-              {!enrichment.significant && enrichment.direction !== "similar" && (
-                <span style={styles.caution}>Not statistically significant</span>
-              )}
-              {enrichment.lowCount && (
-                <span
-                  style={styles.caution}
-                  title={`Fewer than ${LOW_COUNT_THRESHOLD} alternate alleles among matched participants`}
-                >
-                  Low count
-                </span>
-              )}
-            </div>
-          )}
         </section>
       )}
 
@@ -487,18 +538,6 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
         </SectionTitle>
         {cohort ? (
           <>
-            {popmax && largest && (
-              <p style={styles.insight}>
-                Cohort-wide, this variant is most frequent in {SUBPOP_LABEL[popmax.population]} participants
-                {popmax.aouAf !== null && <> ({formatAf(popmax.aouAf)})</>}. The matched cohort is{" "}
-                {largest.matchedPercent !== null && <>{Math.round(largest.matchedPercent)}% </>}
-                {SUBPOP_LABEL[largest.population]}
-                {largest.population !== popmax.population && largest.aouAf !== null && (
-                  <>, where its frequency is {formatAf(largest.aouAf)}</>
-                )}
-                .
-              </p>
-            )}
             <table style={styles.table}>
               <colgroup>
                 <col style={{ width: "15%" }} />
@@ -564,11 +603,23 @@ export default function QuickReviewDetail({ row, condition, participantCount, an
                 ))}
               </tbody>
             </table>
-            {popmax && (
-              <p style={styles.footnote}>
-                Shaded row: the ancestry group with the highest <AllOfUs /> frequency for this variant.
-              </p>
-            )}
+            {/*{popmax && largest && (*/}
+            {/*  <p style={styles.insight}>*/}
+            {/*    Cohort-wide, this variant is most frequent in {SUBPOP_LABEL[popmax.population]} participants*/}
+            {/*    {popmax.aouAf !== null && <> ({formatAf(popmax.aouAf)})</>}. The matched cohort is{" "}*/}
+            {/*    {largest.matchedPercent !== null && <>{Math.round(largest.matchedPercent)}% </>}*/}
+            {/*    {SUBPOP_LABEL[largest.population]}*/}
+            {/*    {largest.population !== popmax.population && largest.aouAf !== null && (*/}
+            {/*      <>, where its frequency is {formatAf(largest.aouAf)}</>*/}
+            {/*    )}*/}
+            {/*    .*/}
+            {/*  </p>*/}
+            {/*)}*/}
+            {/*{popmax && (*/}
+            {/*  <p style={styles.footnote}>*/}
+            {/*    Shaded row: the ancestry group with the highest <AllOfUs /> frequency for this variant.*/}
+            {/*  </p>*/}
+            {/*)}*/}
           </>
         ) : (
           <div style={styles.empty}>No population frequencies for this variant.</div>
@@ -622,12 +673,27 @@ function verdictSentence(row: ComparisonRow, condition: string): ReactNode {
   }
 }
 
-function StatTile({ label, value, note }: { label: string; value: string; note: string }) {
+interface StatTileProps {
+  label: string;
+  value: string;
+  note: string;
+  /** What the figure is and how to read it, for the info icon beside the label. */
+  tooltip: string;
+  /** A warning about this figure, e.g. "Low count". Tints the tile and replaces the note. */
+  caution?: string;
+}
+
+function StatTile({ label, value, note, tooltip, caution }: StatTileProps) {
   return (
-    <div style={styles.tile}>
-      <span style={Style.elements.eyebrow}>{label}</span>
+    <div style={{ ...styles.tile, ...(caution ? styles.tileCaution : undefined) }}>
+      <span style={Style.elements.eyebrow}>
+        <InfoLabel tooltip={tooltip}>{label}</InfoLabel>
+      </span>
       <span style={styles.tileValue}>{value}</span>
-      <span style={styles.tileNote}>{note}</span>
+      {/* One fixed-height slot for either the note or the caution pill, so tiles stay level. */}
+      <span style={styles.tileFooter}>
+        {caution ? <span style={styles.caution}>{caution}</span> : <span style={styles.tileNote}>{note}</span>}
+      </span>
     </div>
   );
 }

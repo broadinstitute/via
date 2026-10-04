@@ -6,7 +6,7 @@ interface QuickReviewButtonProps {
   onClick: () => void;
 }
 
-/** The call to action for Quick review, the same in every panel header that offers it. */
+/** The call to action for Review, the same in every panel header that offers it. */
 export default function QuickReviewButton({ onClick }: QuickReviewButtonProps) {
   return (
     <Clickable
@@ -16,7 +16,7 @@ export default function QuickReviewButton({ onClick }: QuickReviewButtonProps) {
       title="Compare each variant's phenotype-matched frequency with the cohort-wide one, one variant at a time"
     >
       <CompareIcon size={14} strokeWidth={2.2} aria-hidden="true" />
-      Quick review
+      Review
     </Clickable>
   );
 }

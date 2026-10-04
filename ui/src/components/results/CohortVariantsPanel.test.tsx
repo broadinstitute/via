@@ -81,14 +81,14 @@ describe("CohortVariantsPanel", () => {
     );
   });
 
-  it("offers Quick review from its header only when a handler is given", () => {
+  it("offers Review from its header only when a handler is given", () => {
     const onQuickReview = vi.fn();
     render(<CohortVariantsPanel rows={[NOT_IN_AOU]} />);
-    expect(screen.queryByRole("button", { name: "Quick review" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
     cleanup();
 
     render(<CohortVariantsPanel rows={[NOT_IN_AOU]} onQuickReview={onQuickReview} />);
-    fireEvent.click(screen.getByRole("button", { name: "Quick review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
     expect(onQuickReview).toHaveBeenCalledTimes(1);
   });
 });

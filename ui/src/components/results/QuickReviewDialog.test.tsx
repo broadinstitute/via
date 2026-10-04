@@ -109,7 +109,7 @@ describe("QuickReviewDialog", () => {
   it("opens on the strongest signal with its verdict, counts and ancestry context", () => {
     renderDialog();
 
-    expect(screen.getByRole("dialog", { name: "Quick review" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Review" })).toBeInTheDocument();
     const rail = screen.getByRole("navigation", { name: /strongest signal first/ });
     const items = within(rail).getAllByRole("button");
     expect(items.map((item) => item.textContent)).toEqual([
@@ -124,17 +124,17 @@ describe("QuickReviewDialog", () => {
     expect(verdict).not.toHaveTextContent("Fisher");
     // The evidence sits in its own section, as labeled figures.
     const evidence = screen.getByRole("region", { name: /^Evidence/ });
-    expect(evidence).toHaveTextContent("Fisher's exact p< 0.001below 0.05");
-    expect(evidence).toHaveTextContent(/95% CI for ratio.*excludes 1×/);
-    expect(evidence).toHaveTextContent("Matched alt alleles60.23 expected at cohort rate");
+    expect(evidence).toHaveTextContent("< 0.001below 0.05");
+    expect(evidence).toHaveTextContent(/10\.8× – 61\.4×excludes 1×/);
+    expect(evidence).toHaveTextContent(/33\.4×95% CI 13\.4× – 83\.4×/);
+    expect(evidence).toHaveTextContent("60.23 expected at cohort rate");
+    // Each tile explains itself through an info icon.
+    const infoIcons = within(evidence).getAllByRole("button", { name: "More information" });
+    expect(infoIcons.length).toBeGreaterThanOrEqual(4);
     expect(screen.getByText("LDLR")).toBeInTheDocument();
     expect(screen.getByText("6 / 200")).toBeInTheDocument();
     expect(screen.getByText("28 / 24,000")).toBeInTheDocument();
     expect(screen.getByText("pLOF HC")).toBeInTheDocument();
-    // The insight pairs where the variant is common with who the matched cohort is.
-    expect(screen.getByText(/most frequent in African\/African American participants/)).toHaveTextContent(
-      /The matched cohort is 60% European, where its frequency is 0\.0004\./,
-    );
     // The two cohorts line up row by row.
     expect(screen.getByRole("columnheader", { name: /Phenotype-matched\s*100 with Familial hypercholesterolemia/ })).toBeInTheDocument();
     expect(screen.getByRole("row", { name: /^Allele frequency/ })).toHaveTextContent("0.00120.0300");
@@ -174,7 +174,7 @@ describe("QuickReviewDialog", () => {
   it("closes from the close button, Escape and the backdrop", () => {
     const onClose = renderDialog();
 
-    fireEvent.click(screen.getByRole("button", { name: "Close quick review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close review" }));
     fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByRole("dialog").parentElement!);
     fireEvent.click(screen.getByRole("dialog"));

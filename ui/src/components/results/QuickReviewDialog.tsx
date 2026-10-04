@@ -192,7 +192,7 @@ interface QuickReviewDialogProps {
 }
 
 /**
- * Quick review: the two cohorts head to head, one variant at a time. A rail on the left ranks the
+ * Review: the two cohorts head to head, one variant at a time. A rail on the left ranks the
  * candidates by how far their phenotype-matched frequency departs from the cohort-wide one; the
  * detail on the right states the verdict, the counts behind it, and how the matched cohort's
  * ancestry makeup bears on it. Arrow keys step through the rail, Escape closes.
@@ -252,7 +252,7 @@ export default function QuickReviewDialog({
         <div style={styles.header}>
           <div style={styles.heading}>
             <h2 id="quickReviewTitle" style={styles.title}>
-              Quick review
+              Review
             </h2>
             <p
               style={styles.subtitle}
@@ -298,7 +298,7 @@ export default function QuickReviewDialog({
               style={Style.buttons.icon}
               hoverStyle={Style.buttons.iconHover}
               onClick={onClose}
-              aria-label="Close quick review"
+              aria-label="Close review"
               title="Close (Esc)"
             >
               <CloseIcon size={14} strokeWidth={2.5} />
