@@ -4,11 +4,11 @@ import colors, { alpha } from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment, CohortVariantRow, FilteredVariantRow } from "../../types/results";
-import { buildComparisonRows, formatRatio, sortByEnrichment } from "../../utils/comparison";
+import { buildComparisonRows, formatRatio, SIMILARITY_FOLD, sortByEnrichment } from "../../utils/comparison";
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
 import { ArrowLeftIcon, ArrowRightIcon, CloseIcon } from "../icons";
-import QuickReviewDetail, { ENRICHMENT_RATIO_THRESHOLD, verdictTone } from "./QuickReviewDetail";
+import QuickReviewDetail, { verdictTone } from "./QuickReviewDetail";
 
 const styles = {
   scrim: {
@@ -144,14 +144,28 @@ const styles = {
   railItemSelected: {
     background: colors.bgAccent,
   },
-  railVariant: {
-    ...Style.elements.mono,
+  railText: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 1,
     flex: 1,
     minWidth: 0,
+  },
+  railGene: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: colors.textBody,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    color: colors.textBody,
+  },
+  railVariant: {
+    ...Style.elements.mono,
+    fontSize: 10.5,
+    color: colors.textSecondary,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
   railRatio: {
     ...Style.elements.mono,
@@ -207,8 +221,8 @@ export default function QuickReviewDialog({
   onClose,
 }: QuickReviewDialogProps) {
   const rows = useMemo(
-    () => sortByEnrichment(buildComparisonRows(cohortVariants, filteredVariants)),
-    [cohortVariants, filteredVariants],
+    () => sortByEnrichment(buildComparisonRows(cohortVariants, filteredVariants, ancestryBreakdown)),
+    [cohortVariants, filteredVariants, ancestryBreakdown],
   );
   const [index, setIndex] = useState(() => Math.max(0, rows.findIndex((row) => row.variant === initialVariant)));
   const { hoveredKey, hoverProps } = useHoveredKey<string>();
@@ -307,9 +321,9 @@ export default function QuickReviewDialog({
         </div>
 
         <div style={styles.body}>
-          <nav style={styles.rail} aria-label="Candidate variants, strongest signal first">
+          <nav style={styles.rail} aria-label="Candidate variants, best-supported first">
             <p style={styles.railIntro}>
-              {rows.length} candidate{rows.length === 1 ? "" : "s"}, strongest departure from cohort-wide first.
+              {rows.length} candidate{rows.length === 1 ? "" : "s"}, best-supported departure from cohort-wide first.
             </p>
             <ol style={styles.railList}>
               {rows.map((row, i) => {
@@ -329,10 +343,13 @@ export default function QuickReviewDialog({
                       }}
                     >
                       <span style={Style.colorDot(tone.ink, 8)} aria-hidden="true" />
-                      <span style={styles.railVariant} title={row.variant}>
-                        {row.variant}
+                      <span style={styles.railText}>
+                        {row.cohort && <span style={styles.railGene}>{row.cohort.gene}</span>}
+                        <span style={styles.railVariant} title={row.variant}>
+                          {row.variant}
+                        </span>
                       </span>
-                      <span style={{ ...styles.railRatio, color: tone.ink }}>
+                      <span style={{ ...styles.railRatio, color: tone.ink }} title={tone.word}>
                         {row.enrichment ? formatRatio(row.enrichment.ratio) : "—"}
                       </span>
                     </button>
@@ -342,16 +359,16 @@ export default function QuickReviewDialog({
             </ol>
             <div style={styles.railFooter}>
               <span style={styles.legendItem}>
-                <span style={Style.colorDot(colors.textDanger, 8)} /> Enriched, ≥ {ENRICHMENT_RATIO_THRESHOLD}× cohort-wide
+                <span style={Style.colorDot(colors.textDanger, 8)} /> Enriched: interval above 1
               </span>
               <span style={styles.legendItem}>
-                <span style={Style.colorDot(colors.textAccent, 8)} /> Depleted, ≤ {1 / ENRICHMENT_RATIO_THRESHOLD}×
+                <span style={Style.colorDot(colors.textAccent, 8)} /> Depleted: interval below 1
               </span>
               <span style={styles.legendItem}>
-                <span style={Style.colorDot(colors.textSecondary, 8)} /> Similar
+                <span style={Style.colorDot(colors.textSecondary, 8)} /> Similar: within {1 / SIMILARITY_FOLD}×–{SIMILARITY_FOLD}×
               </span>
               <span style={styles.legendItem}>
-                <span style={Style.colorDot(colors.textMuted, 8)} /> Inconclusive, too few alleles
+                <span style={Style.colorDot(colors.textMuted, 8)} /> Inconclusive: too few alleles
               </span>
               <span style={{ ...styles.legendItem, marginTop: 3 }}>
                 <kbd style={styles.kbd}>←</kbd> <kbd style={styles.kbd}>→</kbd> step · <kbd style={styles.kbd}>Esc</kbd> close
@@ -367,6 +384,7 @@ export default function QuickReviewDialog({
                 condition={condition}
                 participantCount={participantCount}
                 ancestryBreakdown={ancestryBreakdown}
+                candidateCount={rows.length}
               />
             ) : (
               <p style={{ color: colors.textSecondary }}>No candidate variants to review.</p>

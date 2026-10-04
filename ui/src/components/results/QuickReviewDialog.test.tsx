@@ -106,38 +106,51 @@ function renderDialog(onClose = vi.fn(), initialVariant?: string) {
 describe("QuickReviewDialog", () => {
   afterEach(cleanup);
 
-  it("opens on the strongest signal with its verdict, counts and ancestry context", () => {
+  it("opens on the best-supported signal with its verdict, evidence and the two tables", () => {
     renderDialog();
 
     expect(screen.getByRole("dialog", { name: "Review" })).toBeInTheDocument();
-    const rail = screen.getByRole("navigation", { name: /strongest signal first/ });
+    const rail = screen.getByRole("navigation", { name: /best-supported first/ });
     const items = within(rail).getAllByRole("button");
+    // Gene over variant, the fold change on the right: the supported signal first, the
+    // three-allele row (inconclusive under the interval rule) second, nothing to compare last.
     expect(items.map((item) => item.textContent)).toEqual([
-      "2-122517541-C-G25.7×",
-      "1-100-A-T1.0×",
+      "LDLR2-122517541-C-G26×",
+      "MYH71-100-A-T1×",
       "7-55181378-G-A—",
     ]);
     expect(items[0]).toHaveAttribute("aria-current", "true");
 
     const verdict = screen.getByRole("status");
-    expect(verdict).toHaveTextContent(/^Enriched25\.7×/);
-    expect(verdict).not.toHaveTextContent("Fisher");
-    // The evidence sits in its own section, as labeled figures.
+    expect(verdict).toHaveTextContent(/^Enriched26×/);
+    expect(verdict).toHaveTextContent(
+      "6 alleles observed among participants with Familial hypercholesterolemia, 0.23 expected at the cohort-wide rate: more than chance can explain.",
+    );
+
+    // Four tiles: p with its Bonferroni figure, the odds ratio with its interval, observed vs
+    // expected with the ancestry-adjusted expectation, and carriers.
     const evidence = screen.getByRole("region", { name: /^Evidence/ });
-    expect(evidence).toHaveTextContent("< 0.001below 0.05");
-    expect(evidence).toHaveTextContent(/10\.8× – 61\.4×excludes 1×/);
-    expect(evidence).toHaveTextContent(/33\.4×95% CI 13\.4× – 83\.4×/);
-    expect(evidence).toHaveTextContent("60.23 expected at cohort rate");
-    // Each tile explains itself through an info icon.
-    const infoIcons = within(evidence).getAllByRole("button", { name: "More information" });
-    expect(infoIcons.length).toBeGreaterThanOrEqual(4);
-    expect(screen.getByText("LDLR")).toBeInTheDocument();
-    expect(screen.getByText("6 / 200")).toBeInTheDocument();
-    expect(screen.getByText("28 / 24,000")).toBeInTheDocument();
-    expect(screen.getByText("pLOF HC")).toBeInTheDocument();
-    // The two cohorts line up row by row.
-    expect(screen.getByRole("columnheader", { name: /Phenotype-matched\s*100 with Familial hypercholesterolemia/ })).toBeInTheDocument();
-    expect(screen.getByRole("row", { name: /^Allele frequency/ })).toHaveTextContent("0.00120.0300");
+    expect(evidence).toHaveTextContent("< 0.001< 0.001 after Bonferroni, 3 tests");
+    expect(evidence).toHaveTextContent("3395% CI 13 – 83");
+    expect(evidence).toHaveTextContent("6 vs 0.231.0 expected adjusting for ancestry");
+    expect(evidence).toHaveTextContent("6 of 1000 hom · 6 het · 1 P/LP in trans");
+    // The section title and each of the four tiles explain themselves.
+    expect(within(evidence).getAllByRole("button", { name: "More information" })).toHaveLength(5);
+
+    // Identity badges are labelled, and pLOF shows even when LOFTEE scored it.
+    expect(screen.getAllByText("LDLR").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByTitle(/ClinVar classification/)).toHaveTextContent("ClinVar");
+    expect(screen.getByTitle(/LOFTEE loss-of-function call/)).toHaveTextContent("pLOFHC");
+
+    // Head to head is a true two-column comparison: every row has both values.
+    const headToHead = screen.getByRole("region", { name: /^Head to head/ });
+    expect(within(headToHead).queryByText("—")).not.toBeInTheDocument();
+    expect(within(headToHead).getByRole("row", { name: /^Participants/ })).toHaveTextContent("12,000100");
+    expect(within(headToHead).getByRole("row", { name: /^Allele frequency/ })).toHaveTextContent("0.00120.0300");
+    expect(within(headToHead).getByRole("row", { name: /^AC \/ AN/ })).toHaveTextContent("28 / 24,0006 / 200");
+    expect(within(headToHead).getByRole("row", { name: /^Highest ancestry/ })).toHaveTextContent("AFR0.0120EUR60% of matched");
+    expect(within(headToHead).queryByText(/gnomAD/)).not.toBeInTheDocument();
+
     // Only ancestry groups with a share of the cohort or a frequency are listed: EUR and AFR here, not AMR.
     expect(screen.getByRole("row", { name: /^AFR/ })).toHaveTextContent("40% (40)0.012024 / 2,0000.0100");
     expect(screen.queryByRole("row", { name: /^AMR/ })).not.toBeInTheDocument();
@@ -149,8 +162,10 @@ describe("QuickReviewDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Next variant" }));
     expect(screen.getByText("2 of 3")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(/^Similar frequency/);
-    expect(screen.getByText("MYH7")).toBeInTheDocument();
+    // Three alleles can't support a verdict, whatever the point estimate.
+    expect(screen.getByRole("status")).toHaveTextContent(/^Inconclusive/);
+    expect(screen.getByRole("status")).toHaveTextContent(/Too few alleles to say/);
+    expect(screen.getAllByText("MYH7").length).toBeGreaterThan(0);
 
     fireEvent.keyDown(document, { key: "ArrowRight" });
     expect(screen.getByText("3 of 3")).toBeInTheDocument();
@@ -167,7 +182,7 @@ describe("QuickReviewDialog", () => {
     renderDialog(vi.fn(), "1-100-A-T");
     expect(screen.getByText("2 of 3")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /^2-122517541-C-G/ }));
+    fireEvent.click(screen.getByRole("button", { name: /2-122517541-C-G/ }));
     expect(screen.getByText("1 of 3")).toBeInTheDocument();
   });
 

@@ -1,6 +1,11 @@
 // The arithmetic behind Review: for each candidate variant, how its frequency among the
-// phenotype-matched participants compares with the whole All of Us cohort, and how the matched
-// cohort's ancestry makeup lines up with where the variant is most common.
+// phenotype-matched participants compares with the rest of the All of Us cohort, and how the
+// matched cohort's ancestry makeup bears on what to expect.
+//
+// One decision rule drives everything the screen shows -- the verdict, the rail's colour and its
+// order: the 95% confidence interval of the odds ratio. A point estimate crossing a threshold is
+// never enough on its own, so a single allele against a near-zero cohort frequency reads as
+// inconclusive rather than as a hundredfold enrichment.
 //
 // Everything here is pure and takes the rows the results page already has; nothing is fetched.
 
@@ -15,45 +20,47 @@ import type {
 } from "../types/results";
 import { AOU_SUBPOP_CODES } from "./subpopulations";
 
-/** A ratio at or above this reads as enriched; at or below its inverse, depleted. Matches the table's AF Ratio flag. */
-export const ENRICHMENT_RATIO_THRESHOLD = 2;
+/** "Similar" means the interval rules out a difference this large in either direction. */
+export const SIMILARITY_FOLD = 2;
 export const SIGNIFICANCE_LEVEL = 0.05;
-/** Below this many alternate alleles in the matched cohort the ratio is too noisy to lean on. */
-export const LOW_COUNT_THRESHOLD = 5;
-
 /**
- * "inconclusive" is for a zero count that the data can't distinguish from chance: no matched
- * carriers when fewer than one was expected anyway, or no cohort-wide carriers at all.
+ * An enrichment call needs at least this many matched alternate alleles. Woolf's interval leans on
+ * a normal approximation that breaks down at one or two events, and one carrier against a
+ * near-zero cohort frequency is a recruitment accident away from zero -- the interval can sit
+ * above 1 while saying nothing a reviewer should act on.
  */
-export type Direction = "enriched" | "depleted" | "similar" | "inconclusive";
+export const MIN_ALLELES_FOR_ENRICHMENT = 3;
+
+export type Verdict = "enriched" | "depleted" | "similar" | "inconclusive";
 
 export interface Enrichment {
-  /** Matched AF over cohort-wide AF. Infinity when the cohort-wide AF is zero and the matched isn't. */
+  /** Matched AF over cohort-wide AF, the fold change shown in the verdict. Infinity when the cohort-wide AF is zero. */
   ratio: number;
   matchedAf: number;
   cohortAf: number;
-  /** Alternate alleles among matched participants, and how many the cohort-wide rate predicts. */
   matchedAc: number;
+  matchedAn: number;
+  /** Alternate alleles the cohort-wide rate predicts for a matched group this size. */
   expectedMatchedAc: number;
   /**
-   * 95% confidence interval for the ratio (Katz log method). Null when either count is zero: the
-   * interval is then undefined, and `upperBound` stands in for it.
+   * The same expectation weighted by the matched cohort's ancestry makeup (Σ matched alleles in
+   * each ancestry group × the variant's All of Us frequency in that group). Null without a breakdown.
    */
-  ci: [number, number] | null;
-  /** With no matched carriers, the largest ratio consistent with the data (rule of three); otherwise null. */
-  upperBound: number | null;
+  expectedAdjustedAc: number | null;
   /** Two-sided Fisher's exact test on matched vs the rest of the cohort. */
   pValue: number;
   /**
-   * Odds ratio from the same 2×2 table as the test (matched vs the rest of the cohort), with its
-   * Woolf 95% interval. The interval is null when any cell of the table is zero.
+   * Odds ratio from the same 2×2 table (matched vs the rest of the cohort) and its 95% interval:
+   * Woolf's log method, or at a zero cell the rule-of-three bound on the empty side. Null only when
+   * nobody anywhere carries the allele.
    */
   oddsRatio: number;
-  oddsRatioCi: [number, number] | null;
-  direction: Direction;
-  significant: boolean;
-  /** Few alternate alleles among matched participants: shown as a caution alongside the verdict. */
-  lowCount: boolean;
+  ci: [number, number] | null;
+  verdict: Verdict;
+  /** For an inconclusive verdict, which way the point estimate leans; a hint, not a finding. */
+  lean: "more" | "fewer" | null;
+  /** How far the interval sits from 1, in log units; zero unless the verdict is enriched or depleted. */
+  strength: number;
 }
 
 export interface ComparisonRow {
@@ -68,6 +75,7 @@ export interface ComparisonRow {
 export function buildComparisonRows(
   cohortVariants: CohortVariantRow[],
   filteredVariants: FilteredVariantRow[],
+  ancestryBreakdown: BreakdownSegment[] = [],
 ): ComparisonRow[] {
   const matchedByVariant = new Map(filteredVariants.map((row) => [row.variant, row]));
   return cohortVariants.map((row) => {
@@ -76,36 +84,37 @@ export function buildComparisonRows(
     const matched = filtered?.hasStats ? filtered : null;
     const enrichment =
       cohort && matched && cohort.aouAllAc !== null && cohort.aouAllAn !== null
-        ? computeEnrichment(matched.cohortAc, matched.cohortAn, cohort.aouAllAc, cohort.aouAllAn)
+        ? computeEnrichment(matched.cohortAc, matched.cohortAn, cohort.aouAllAc, cohort.aouAllAn, {
+            expectedAdjustedAc: ancestryAdjustedExpectation(cohort, ancestryBreakdown),
+          })
         : null;
     return { variant: row.variant, cohort, matched, enrichment };
   });
 }
 
 /**
- * Strongest signal first: significant departures, then departures the counts can't back up, then
- * similar frequencies, then inconclusive zeros, then rows with no comparison at all. Within a
- * tier, the larger the departure from 1× the higher.
+ * Most informative first: verdicts the interval supports, by how far it clears 1; then similar;
+ * then inconclusive; then rows with nothing to compare. Within a tier, the larger the gap between
+ * observed and expected alleles the higher, so a single-allele fluke never outranks a real signal.
  */
 export function sortByEnrichment(rows: ComparisonRow[]): ComparisonRow[] {
   return [...rows].sort((a, b) => {
     const tierDiff = tier(a.enrichment) - tier(b.enrichment);
     if (tierDiff !== 0 || !a.enrichment || !b.enrichment) return tierDiff;
-    return Math.abs(Math.log2(safeRatio(b.enrichment))) - Math.abs(Math.log2(safeRatio(a.enrichment)));
+    if (b.enrichment.strength !== a.enrichment.strength) return b.enrichment.strength - a.enrichment.strength;
+    return excess(b.enrichment) - excess(a.enrichment);
   });
 }
 
 function tier(e: Enrichment | null): number {
-  if (!e) return 4;
-  if (e.direction === "inconclusive") return 3;
-  if (e.direction === "similar") return 2;
-  return e.significant ? 0 : 1;
+  if (!e) return 3;
+  if (e.verdict === "inconclusive") return 2;
+  if (e.verdict === "similar") return 1;
+  return 0;
 }
 
-function safeRatio({ ratio }: Enrichment): number {
-  if (ratio === 0) return 1 / 1e6;
-  if (!Number.isFinite(ratio)) return 1e6;
-  return ratio;
+function excess(e: Enrichment): number {
+  return Math.abs(e.matchedAc - e.expectedMatchedAc);
 }
 
 /**
@@ -119,15 +128,16 @@ export function computeEnrichment(
   matchedAn: number,
   cohortAc: number,
   cohortAn: number,
+  extras: { expectedAdjustedAc?: number | null } = {},
 ): Enrichment | null {
   if (matchedAn <= 0 || cohortAn <= 0) return null;
   const matchedAf = matchedAc / matchedAn;
   const cohortAf = cohortAc / cohortAn;
   const ratio = cohortAf === 0 ? (matchedAf === 0 ? 1 : Infinity) : matchedAf / cohortAf;
 
-  // The matched participants are part of the cohort, so the exact test compares them with the
-  // rest of it. The mock phenotype data doesn't always respect that nesting; when it doesn't, the
-  // whole cohort stands in as the comparison group.
+  // The matched participants are part of the cohort, so the comparison group is the rest of it.
+  // The mock phenotype data doesn't always respect that nesting; when it doesn't, the whole cohort
+  // stands in.
   let restAc = cohortAc - matchedAc;
   let restAn = cohortAn - matchedAn;
   if (restAc < 0 || restAn <= 0 || restAn - restAc < 0) {
@@ -136,35 +146,26 @@ export function computeEnrichment(
   }
   const [a, b, c, d] = [matchedAc, matchedAn - matchedAc, restAc, restAn - restAc];
   const pValue = fisherTwoSided(a, b, c, d);
-  const significant = pValue < SIGNIFICANCE_LEVEL;
-  const { oddsRatio, oddsRatioCi } = computeOddsRatio(a, b, c, d);
-  const expectedMatchedAc = matchedAn * cohortAf;
+  const { oddsRatio, ci } = computeOddsRatio(a, b, c, d);
 
-  // Katz: log(ratio) ± 1.96 · sqrt(1/a − 1/n1 + 1/c − 1/n2). Undefined at a zero count -- a
-  // continuity correction there would just center the interval on an invented ratio.
-  let ci: [number, number] | null = null;
-  if (matchedAc > 0 && cohortAc > 0) {
-    const logRatio = Math.log(ratio);
-    const se = Math.sqrt(1 / matchedAc - 1 / matchedAn + 1 / cohortAc - 1 / cohortAn);
-    ci = [Math.exp(logRatio - 1.96 * se), Math.exp(logRatio + 1.96 * se)];
-  }
-  // No matched carriers: by the rule of three the matched AF is below 3/AN with ~95% confidence,
-  // which caps the ratio the data are still consistent with.
-  const upperBound = matchedAc === 0 && cohortAf > 0 ? 3 / matchedAn / cohortAf : null;
-
-  let direction: Direction;
-  if (matchedAc === 0) {
-    // Zero where fewer than one was expected says nothing; zero where several were expected and
-    // the test agrees is a real shortfall.
-    direction = expectedMatchedAc >= 1 && significant ? "depleted" : "inconclusive";
-  } else if (cohortAc === 0) {
-    direction = significant ? "enriched" : "inconclusive";
-  } else if (ratio >= ENRICHMENT_RATIO_THRESHOLD) {
-    direction = "enriched";
-  } else if (ratio <= 1 / ENRICHMENT_RATIO_THRESHOLD) {
-    direction = "depleted";
+  let verdict: Verdict;
+  let strength = 0;
+  if (!ci) {
+    verdict = "inconclusive";
+  } else if (ci[0] > 1) {
+    if (matchedAc >= MIN_ALLELES_FOR_ENRICHMENT) {
+      verdict = "enriched";
+      strength = Math.log(ci[0]);
+    } else {
+      verdict = "inconclusive";
+    }
+  } else if (ci[1] < 1) {
+    verdict = "depleted";
+    strength = Math.log(1 / ci[1]);
+  } else if (ci[0] >= 1 / SIMILARITY_FOLD && ci[1] <= SIMILARITY_FOLD) {
+    verdict = "similar";
   } else {
-    direction = "similar";
+    verdict = "inconclusive";
   }
 
   return {
@@ -172,32 +173,70 @@ export function computeEnrichment(
     matchedAf,
     cohortAf,
     matchedAc,
-    expectedMatchedAc,
-    ci,
-    upperBound,
+    matchedAn,
+    expectedMatchedAc: matchedAn * cohortAf,
+    expectedAdjustedAc: extras.expectedAdjustedAc ?? null,
     pValue,
     oddsRatio,
-    oddsRatioCi,
-    direction,
-    significant,
-    lowCount: matchedAc < LOW_COUNT_THRESHOLD,
+    ci,
+    verdict,
+    lean: verdict === "inconclusive" && oddsRatio !== 1 ? (oddsRatio > 1 ? "more" : "fewer") : null,
+    strength,
   };
 }
 
-/** Odds ratio of the table [[a, b], [c, d]] and its Woolf (log-method) 95% interval. */
+/**
+ * Odds ratio of the table [[a, b], [c, d]] with a 95% interval. Woolf's log method when every
+ * cell is filled. With no carriers on one side the odds ratio is 0 or infinite and Woolf is
+ * undefined, so the empty side gets the rule-of-three bound instead: zero events in n trials puts
+ * that rate below 3/n with ~95% confidence, which bounds the ratio on that side. With no carriers
+ * on either side there is nothing to say, and the interval is null.
+ */
 export function computeOddsRatio(
   a: number,
   b: number,
   c: number,
   d: number,
-): { oddsRatio: number; oddsRatioCi: [number, number] | null } {
-  const numerator = a * d;
-  const denominator = b * c;
-  const oddsRatio = denominator === 0 ? (numerator === 0 ? 1 : Infinity) : numerator / denominator;
-  if (a === 0 || b === 0 || c === 0 || d === 0) return { oddsRatio, oddsRatioCi: null };
+): { oddsRatio: number; ci: [number, number] | null } {
+  if (a === 0 && c === 0) return { oddsRatio: 1, ci: null };
+  if (b === 0 && d === 0) return { oddsRatio: 1, ci: null };
+  if (a === 0) {
+    // Matched rate < 3/(a+b); odds of the rest = c/d.
+    const matchedOddsBound = 3 / (a + b) / (1 - 3 / (a + b));
+    return { oddsRatio: 0, ci: [0, matchedOddsBound / (c / d)] };
+  }
+  if (c === 0) {
+    const restOddsBound = 3 / (c + d) / (1 - 3 / (c + d));
+    return { oddsRatio: Infinity, ci: [(a / b) / restOddsBound, Infinity] };
+  }
+  if (b === 0 || d === 0) {
+    // Everyone on one side carries it: the ratio is degenerate in the other direction.
+    const oddsRatio = b === 0 ? Infinity : 0;
+    return { oddsRatio, ci: null };
+  }
+  const oddsRatio = (a * d) / (b * c);
   const se = Math.sqrt(1 / a + 1 / b + 1 / c + 1 / d);
   const logOr = Math.log(oddsRatio);
-  return { oddsRatio, oddsRatioCi: [Math.exp(logOr - 1.96 * se), Math.exp(logOr + 1.96 * se)] };
+  return { oddsRatio, ci: [Math.exp(logOr - 1.96 * se), Math.exp(logOr + 1.96 * se)] };
+}
+
+/**
+ * How many matched alternate alleles the cohort-wide per-ancestry frequencies predict, given the
+ * matched cohort's ancestry makeup: Σ over groups of (matched participants × 2 alleles × the
+ * variant's All of Us frequency in that group). A group the variant isn't observed in
+ * contributes nothing. Null when the breakdown is empty.
+ */
+export function ancestryAdjustedExpectation(
+  cohort: AnnotatedCohortVariant,
+  ancestryBreakdown: BreakdownSegment[],
+): number | null {
+  if (ancestryBreakdown.length === 0) return null;
+  const afByPopulation = new Map(cohort.aouPopulations.map((p) => [p.population, p.af ?? 0]));
+  let expected = 0;
+  for (const segment of ancestryBreakdown) {
+    expected += segment.count * 2 * (afByPopulation.get(segment.label as SubpopCode) ?? 0);
+  }
+  return expected;
 }
 
 // Lanczos approximation of ln Γ(x), accurate to ~1e-13 for the sizes here.
@@ -294,20 +333,32 @@ export function largestMatchedAncestry(rows: AncestryContextRow[]): AncestryCont
   return best;
 }
 
-/** p-values for display: "< 0.001", "0.003", "0.42". */
+/** p-values for display: "< 0.001", "0.003", "0.42", "1.0". */
 export function formatPValue(p: number): string {
   if (p < 0.001) return "< 0.001";
+  if (p >= 0.995) return "1.0";
   return p.toFixed(p < 0.01 ? 3 : 2);
 }
 
-/** Ratios for display: "17.0×", "0.3×", "> 100×" for an effectively infinite one. */
-export function formatRatio(ratio: number): string {
-  if (!Number.isFinite(ratio)) return "> 100×";
-  if (ratio >= 100) return "> 100×";
-  return `${ratio.toFixed(1)}×`;
+/** A number to two significant figures, with thousands separators above 999: "0.083", "2.1", "26", "310", "1,800". */
+export function formatSig(value: number): string {
+  if (value === 0) return "0";
+  if (!Number.isFinite(value)) return "∞";
+  return Number(value.toPrecision(2)).toLocaleString("en-US", { maximumFractionDigits: 6 });
 }
 
-/** Expected counts for display: "0.002", "0.9", "12". */
+/** A fold change for display: "26×", "0.31×", "∞". Two significant figures, never truncated. */
+export function formatRatio(ratio: number): string {
+  if (!Number.isFinite(ratio)) return "∞";
+  return `${formatSig(ratio)}×`;
+}
+
+/** An interval for display: "13 – 83", "0 – 1,800", "120 – ∞". */
+export function formatInterval([low, high]: [number, number]): string {
+  return `${formatSig(low)} – ${formatSig(high)}`;
+}
+
+/** Expected counts for display: "< 0.001", "0.002", "0.23", "9.1", "120". */
 export function formatExpected(expected: number): string {
   if (expected >= 10) return expected.toFixed(0);
   if (expected >= 1) return expected.toFixed(1);
