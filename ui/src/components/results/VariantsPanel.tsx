@@ -17,7 +17,7 @@ import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulation
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
-import { ChevronRightIcon, CompareIcon, EyeOffIcon, UserIcon } from "../icons";
+import { ChevronRightIcon, CompareIcon, EyeOffIcon, GlobeIcon, UserIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import SubpopBadge from "../elements/SubpopBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
@@ -62,9 +62,16 @@ type Tint = keyof typeof sourceTints;
 const GROUP_HEADER_HEIGHT = 28;
 
 /**
+ * Every data row is this tall: the height a two-line cell gives it (two 15px lines, a 2px gap and
+ * the cell padding), so a row whose cells are all one line -- a variant that isn't in All of Us,
+ * say -- doesn't come out shorter than its neighbours.
+ */
+const BODY_ROW_HEIGHT = 46;
+
+/**
  * The columns that stay put while the rest scroll sideways: a row's identity. Their group header
- * ("pinned") spans exactly these, so it can pin as one cell; Protein ∆ sits in a group of its own
- * just after.
+ * ("pinned") spans exactly these, so it can pin as one cell. The protein change rides under the
+ * consequence in the last of them.
  */
 const PINNED_COLUMN_IDS = ["expand", "variant", "gene", "consequence"] as const;
 const PINNED_GROUP_ID = "pinned";
@@ -139,8 +146,59 @@ const styles = {
     color: colors.textSecondary,
     fontWeight: 500,
   },
+  // Within a source group the badge and the figures beside it read as one unit, so the gutter
+  // between them is closed up: the badge cell gives up its right padding, the figures their left.
+  badgeCell: {
+    paddingRight: 2,
+  },
+  figuresCell: {
+    paddingLeft: 6,
+  },
+  // The subpopulation columns' header: a globe in place of a word the column is too narrow for.
+  // vertical-align middle, not the default baseline: an icon-only inline box sits on the text
+  // baseline with its descender space empty beneath, which lifts it a few pixels above the words
+  // in the neighbouring headers.
+  subpopHeader: {
+    display: "inline-flex",
+    alignItems: "center",
+    verticalAlign: "middle",
+    color: colors.textSecondary,
+  },
+  // A two-line cell: the value that's compared across rows, then its supporting figure.
+  stack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+    lineHeight: 1.25,
+  },
+  stackSecondary: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  // The header stays one line, naming both lines of the cell beneath it.
+  stackHeaderSecondary: {
+    marginLeft: 4,
+    fontWeight: 500,
+    color: colors.textMuted,
+  },
   matchedGroupHeader: {
     color: colors.textPrimary,
+  },
+  // The group's name and the matched participant count on one centred line; the condition itself
+  // is in the strip.
+  matchedLabel: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  matchedCount: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 3,
+    color: colors.textSecondary,
+    fontWeight: 600,
+    fontVariantNumeric: "tabular-nums",
+    lineHeight: 1,
   },
   dataRow: {
     cursor: "pointer",
@@ -247,18 +305,30 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
-const AOU_COLUMN_IDS = ["aouSubpop", "aouAf", "aouAcAn"] as const;
-const GNOMAD_COLUMN_IDS = ["gnomadSubpop", "gnomadAf", "gnomadAcAn"] as const;
+// Each source's frequency and its counts share one two-line cell: AF on the first line, AC / AN
+// beneath in quieter ink. The frequency is what's compared across rows; the counts back it up.
+const AOU_COLUMN_IDS = ["aouSubpop", "aouFreq"] as const;
+const GNOMAD_COLUMN_IDS = ["gnomadSubpop", "gnomadFreq"] as const;
 const ANNOTATION_COLUMN_IDS = ["clinvar", "spliceAi", "plof"] as const;
 // The AF ratio isn't a column: Review states it with the interval behind it, which a bare ratio
 // in a cell can't.
-const MATCHED_COLUMN_IDS = ["matchedAcAn", "matchedAf", "matchedHomHet", "clinvarPlpInTrans"] as const;
+const MATCHED_COLUMN_IDS = ["matchedFreq", "homozygotes", "heterozygotes", "clinvarPlpInTrans"] as const;
 
 const TINT_COLUMN_IDS: Record<Tint, Set<string>> = {
   aou: new Set(AOU_COLUMN_IDS),
   gnomad: new Set(GNOMAD_COLUMN_IDS),
   matched: new Set(MATCHED_COLUMN_IDS),
 };
+
+const BADGE_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
+const FIGURES_COLUMN_IDS = new Set(["aouFreq", "gnomadFreq"]);
+
+/** Tighter inner padding for a badge cell and the figures cell beside it. */
+function gutterStyle(columnId: string): CSSProperties | undefined {
+  if (BADGE_COLUMN_IDS.has(columnId)) return styles.badgeCell;
+  if (FIGURES_COLUMN_IDS.has(columnId)) return styles.figuresCell;
+  return undefined;
+}
 
 /**
  * Which column group a column belongs to, and therefore which tint it gets. Only leaf columns
@@ -303,7 +373,6 @@ const UNANNOTATED_GROUP: MissingGroup = {
   columnIds: new Set([
     "gene",
     "consequence",
-    "proteinChange",
     ...AOU_COLUMN_IDS,
     ...GNOMAD_COLUMN_IDS,
     ...MATCHED_COLUMN_IDS,
@@ -317,6 +386,34 @@ const UNANNOTATED_GROUP: MissingGroup = {
 /** No value for this cell — the variant isn't present in the source behind it. */
 function NotAvailable() {
   return <span style={Style.elements.notAvailable}>—</span>;
+}
+
+/** The subpopulation column's header: the badge beneath says which group, so the header says only what kind of thing it is. */
+function SubpopHeader() {
+  return (
+    <span style={styles.subpopHeader} role="img" aria-label="Subpopulation" title="Subpopulation with the highest allele frequency">
+      <GlobeIcon size={14} strokeWidth={2} aria-hidden="true" />
+    </span>
+  );
+}
+
+/** A frequency over its allele counts, the cell every source group shares. */
+function FrequencyCell({ af, ac, an }: { af: number; ac: number; an: number }) {
+  return (
+    <span style={styles.stack}>
+      <span title={exactAf(af)}>{formatAf(af)}</span>
+      <span style={styles.stackSecondary}>{formatAcAn(ac, an)}</span>
+    </span>
+  );
+}
+
+function FrequencyHeader({ tooltip }: { tooltip?: ReactNode }) {
+  const label = (
+    <>
+      AF<span style={styles.stackHeaderSecondary}>· AC / AN</span>
+    </>
+  );
+  return tooltip ? <InfoLabel tooltip={tooltip}>{label}</InfoLabel> : <span>{label}</span>;
 }
 
 function matchedStats(row: MergedVariantRow) {
@@ -488,26 +585,19 @@ export default function VariantsPanel({
           }),
           columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.consequence : undefined), {
             id: "consequence",
+            // The protein notation beneath the consequence is self-describing, so the header names
+            // the sort key alone.
             header: "Consequence",
-            cell: ({ row }) => (row.original.cohort.annotated ? row.original.cohort.consequence : <NotAvailable />),
-            sortUndefined: "last",
-          }),
-        ]),
-      }),
-      columnHelper.group({
-        id: "protein",
-        header: "",
-        enableSorting: false,
-        columns: columnHelper.columns([
-          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.proteinChange : undefined), {
-            id: "proteinChange",
-            header: "Protein ∆",
-            cell: ({ row }) =>
-              row.original.cohort.annotated ? (
-                <span style={Style.elements.mono}>{row.original.cohort.proteinChange}</span>
-              ) : (
-                <NotAvailable />
-              ),
+            cell: ({ row }) => {
+              const { cohort } = row.original;
+              if (!cohort.annotated) return <NotAvailable />;
+              return (
+                <span style={styles.stack}>
+                  <span>{cohort.consequence}</span>
+                  <span style={{ ...styles.stackSecondary, ...Style.elements.mono, fontSize: 11 }}>{cohort.proteinChange}</span>
+                </span>
+              );
+            },
             sortUndefined: "last",
           }),
         ]),
@@ -531,7 +621,7 @@ export default function VariantsPanel({
         columns: columnHelper.columns([
           columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.aouSubpopulation ?? undefined : undefined), {
             id: "aouSubpop",
-            header: "",
+            header: () => <SubpopHeader />,
             cell: ({ row }) =>
               row.original.cohort.annotated && row.original.cohort.aouSubpopulation ? (
                 <SubpopBadge subpopulation={row.original.cohort.aouSubpopulation} />
@@ -541,25 +631,12 @@ export default function VariantsPanel({
             sortUndefined: "last",
           }),
           columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.aouAf ?? undefined : undefined), {
-            id: "aouAf",
-            header: "AF",
+            id: "aouFreq",
+            header: () => <FrequencyHeader />,
             cell: ({ row }) => {
               const { cohort } = row.original;
-              return cohort.annotated && cohort.aouAf !== null ? (
-                <span title={exactAf(cohort.aouAf)}>{formatAf(cohort.aouAf)}</span>
-              ) : (
-                <NotAvailable />
-              );
-            },
-            sortUndefined: "last",
-          }),
-          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.aouAc ?? undefined : undefined), {
-            id: "aouAcAn",
-            header: "AC / AN",
-            cell: ({ row }) => {
-              const { cohort } = row.original;
-              return cohort.annotated && cohort.aouAc !== null && cohort.aouAn !== null ? (
-                formatAcAn(cohort.aouAc, cohort.aouAn)
+              return cohort.annotated && cohort.aouAf !== null && cohort.aouAc !== null && cohort.aouAn !== null ? (
+                <FrequencyCell af={cohort.aouAf} ac={cohort.aouAc} an={cohort.aouAn} />
               ) : (
                 <NotAvailable />
               );
@@ -584,7 +661,7 @@ export default function VariantsPanel({
         columns: columnHelper.columns([
           columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gnomadSubpopulation ?? undefined : undefined), {
             id: "gnomadSubpop",
-            header: "",
+            header: () => <SubpopHeader />,
             cell: ({ row }) =>
               row.original.cohort.annotated && row.original.cohort.gnomadSubpopulation ? (
                 <SubpopBadge subpopulation={row.original.cohort.gnomadSubpopulation} />
@@ -594,25 +671,12 @@ export default function VariantsPanel({
             sortUndefined: "last",
           }),
           columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gnomadAf ?? undefined : undefined), {
-            id: "gnomadAf",
-            header: "AF",
+            id: "gnomadFreq",
+            header: () => <FrequencyHeader />,
             cell: ({ row }) => {
               const { cohort } = row.original;
-              return cohort.annotated && cohort.gnomadAf !== null ? (
-                <span title={exactAf(cohort.gnomadAf)}>{formatAf(cohort.gnomadAf)}</span>
-              ) : (
-                <NotAvailable />
-              );
-            },
-            sortUndefined: "last",
-          }),
-          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gnomadAc ?? undefined : undefined), {
-            id: "gnomadAcAn",
-            header: "AC / AN",
-            cell: ({ row }) => {
-              const { cohort } = row.original;
-              return cohort.annotated && cohort.gnomadAc !== null && cohort.gnomadAn !== null ? (
-                formatAcAn(cohort.gnomadAc, cohort.gnomadAn)
+              return cohort.annotated && cohort.gnomadAf !== null && cohort.gnomadAc !== null && cohort.gnomadAn !== null ? (
+                <FrequencyCell af={cohort.gnomadAf} ac={cohort.gnomadAc} an={cohort.gnomadAn} />
               ) : (
                 <NotAvailable />
               );
@@ -625,49 +689,40 @@ export default function VariantsPanel({
         id: "matched",
         header: () => (
           <span style={styles.matchedGroupHeader}>
-            <InfoLabel tooltip="Statistics among the participants matched by the phenotype filter, beside the cohort-wide figures to their left.">
-              Phenotype-matched{" "}
-              <span style={styles.groupQualifier}>
-                — {participantCount.toLocaleString()} with {condition}
+            <InfoLabel
+              tooltip={`Statistics among the ${participantCount.toLocaleString()} participants matched by the phenotype filter (${condition}), beside the cohort-wide figures to their left.`}
+            >
+              <span style={styles.matchedLabel}>
+                Phenotype-matched
+                <span style={styles.matchedCount}>
+                  <UserIcon size={11} strokeWidth={2.5} aria-hidden="true" />
+                  {participantCount.toLocaleString()}
+                </span>
               </span>
             </InfoLabel>
           </span>
         ),
         enableSorting: false,
         columns: columnHelper.columns([
-          columnHelper.accessor((row) => matchedStats(row)?.cohortAc, {
-            id: "matchedAcAn",
-            header: () => (
-              <InfoLabel tooltip="Allele count over allele number among phenotype-matched participants. Sorts by allele count.">
-                AC / AN
-              </InfoLabel>
-            ),
-            cell: ({ row }) => {
-              const stats = matchedStats(row.original);
-              return stats ? formatAcAn(stats.cohortAc, stats.cohortAn) : <NotAvailable />;
-            },
-            sortUndefined: "last",
-          }),
           columnHelper.accessor((row) => matchedStats(row)?.cohortAf, {
-            id: "matchedAf",
-            header: () => <InfoLabel tooltip="Allele frequency among phenotype-matched participants.">AF</InfoLabel>,
+            id: "matchedFreq",
+            header: () => <FrequencyHeader tooltip="Allele frequency among phenotype-matched participants, over the allele count and number behind it." />,
             cell: ({ row }) => {
               const stats = matchedStats(row.original);
-              return stats ? <span title={exactAf(stats.cohortAf)}>{formatAf(stats.cohortAf)}</span> : <NotAvailable />;
+              return stats ? <FrequencyCell af={stats.cohortAf} ac={stats.cohortAc} an={stats.cohortAn} /> : <NotAvailable />;
             },
             sortUndefined: "last",
           }),
           columnHelper.accessor((row) => matchedStats(row)?.homozygotes, {
-            id: "matchedHomHet",
-            header: () => (
-              <InfoLabel tooltip="Homozygous over heterozygous carriers among phenotype-matched participants. Sorts by homozygotes.">
-                Hom / het
-              </InfoLabel>
-            ),
-            cell: ({ row }) => {
-              const stats = matchedStats(row.original);
-              return stats ? `${stats.homozygotes} / ${stats.heterozygotes}` : <NotAvailable />;
-            },
+            id: "homozygotes",
+            header: () => <InfoLabel tooltip="Matched participants carrying two copies of this allele.">Hom</InfoLabel>,
+            cell: ({ row }) => matchedStats(row.original)?.homozygotes ?? <NotAvailable />,
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => matchedStats(row)?.heterozygotes, {
+            id: "heterozygotes",
+            header: () => <InfoLabel tooltip="Matched participants carrying one copy of this allele.">Het</InfoLabel>,
+            cell: ({ row }) => matchedStats(row.original)?.heterozygotes ?? <NotAvailable />,
             sortUndefined: "last",
           }),
           columnHelper.accessor((row) => matchedStats(row)?.clinvarPlpInTrans, {
@@ -876,6 +931,7 @@ export default function VariantsPanel({
                           style={{
                             ...styles.headerCell,
                             ...(isGroupRow ? styles.groupHeaderCell : styles.columnHeaderCell),
+                            ...gutterStyle(header.column.id),
                             background: cellBackground(tint, false) ?? styles.headerCell.background,
                             ...(sortable ? Style.table.sortable : undefined),
                             ...(sortable && hoveredHeader === header.id ? Style.table.sortableHover : undefined),
@@ -933,6 +989,8 @@ export default function VariantsPanel({
                         const pinned = pinnedIds.has(cell.column.id);
                         const cellStyle: CSSProperties = {
                           ...Style.table.bodyCell,
+                          height: BODY_ROW_HEIGHT,
+                          ...gutterStyle(cell.column.id),
                           ...(expanded ? styles.expandedCell : undefined),
                           background:
                             cellBackground(tint, hovered) ??

@@ -55,11 +55,13 @@ describe("PhenotypeSummaryStrip", () => {
     expect(screen.getByText("matched")).toBeInTheDocument();
     // Every block carries the same small label.
     expect(["Phenotype", "Participants", "Breakdown", "View"].map((label) => screen.getByText(label))).toHaveLength(4);
-    const legend = screen.getByLabelText("Ancestry breakdown");
-    expect(legend).toHaveTextContent("EUR67%AFR33%");
+    expect(screen.getByRole("img", { name: "Ancestry breakdown: EUR 67%, AFR 33%" })).toBeInTheDocument();
+    expect(screen.getByText("EUR")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /Age breakdown/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "Age" }));
-    expect(screen.getByLabelText("Age breakdown")).toHaveTextContent("40–49100%");
+    expect(screen.getByRole("img", { name: "Age breakdown: 40–49 100%" })).toBeInTheDocument();
+    expect(screen.getByText("40–49")).toBeInTheDocument();
   });
 
   it("switches views from its segmented control", () => {

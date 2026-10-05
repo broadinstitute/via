@@ -97,35 +97,47 @@ describe("VariantsPanel", () => {
 
     const row = screen.getByText("2-122517541-C-G").closest("tr")!;
     expect(row).toHaveTextContent("LDLR");
+    // The protein change rides under the consequence in one pinned cell.
+    expect(within(row).getByText("Missense").closest("td")).toHaveTextContent("Missensep.Arg123Gly");
     expect(row).toHaveTextContent("24 / 2,000");
     expect(row).toHaveTextContent("Not observed in gnomAD");
-    expect(row).toHaveTextContent("2 / 98");
-    expect(row).toHaveTextContent("0.0204");
-    expect(row).toHaveTextContent("0 / 2");
+    // The frequency sits over its counts in one cell.
+    const matchedFreq = within(row).getByText("0.0204").closest("td")!;
+    expect(matchedFreq).toHaveTextContent("0.02042 / 98");
+    expect(within(row).getByText("0.0120").closest("td")).toHaveTextContent("0.012024 / 2,000");
+    expect(screen.getAllByRole("columnheader", { name: "Subpopulation" })).toHaveLength(2);
+    expect(screen.getByRole("columnheader", { name: /^Hom/ })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /^Het/ })).toBeInTheDocument();
+    expect(row).not.toHaveTextContent("0 / 2");
     expect(screen.queryByRole("columnheader", { name: /AF ratio/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: /Phenotype-matched/ })).toHaveTextContent("49 with Tetralogy of Fallot");
+    // The visible label is the group's name and the count; the condition is left to the strip
+    // (and to the header's tooltip).
+    const matchedHeader = screen.getByRole("columnheader", { name: /^Phenotype-matched/ });
+    expect(matchedHeader).toHaveTextContent(/^Phenotype-matched\s*49/);
     expect(screen.getByText("49 with Tetralogy of Fallot", { selector: "span" })).toBeInTheDocument();
   });
 
   it("leaves the matched column group out when there is no phenotype filter", () => {
     renderPanel([IN_AOU_ONLY], []);
 
-    expect(screen.queryByRole("columnheader", { name: /Phenotype-matched/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: /Hom \/ het/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /^Phenotype-matched/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /^Hom/ })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Gene" })).toBeInTheDocument();
-    // Five identity cells, three All of Us, one merged gnomAD cell, three annotations, the Review
+    // Four identity cells, two All of Us, one merged gnomAD cell, three annotations, the Review
     // control: no dashes standing in for the absent group.
     const row = screen.getByText("2-122517541-C-G").closest("tr")!;
-    expect(within(row).getAllByRole("cell")).toHaveLength(13);
+    expect(within(row).getAllByRole("cell")).toHaveLength(11);
   });
 
   it("spans a variant that isn't in All of Us with one message across every data column", () => {
     renderPanel([NOT_IN_AOU], [NOT_MATCHED]);
 
     const message = screen.getByText(cellWithText("Not observed in All of Us"));
-    // Gene through pLOF: three identity, six source, four matched, three annotation.
-    expect(message).toHaveAttribute("colspan", "16");
+    // Gene through pLOF: two identity, four source, four matched, three annotation.
+    expect(message).toHaveAttribute("colspan", "13");
     expect(message.getAttribute("title")).toMatch(/only includes variants observed in All of Us/);
+    // One line of text, but the same row height as the two-line rows around it.
+    expect(message).toHaveStyle({ height: "46px" });
     expect(screen.queryByText("Not observed in gnomAD")).not.toBeInTheDocument();
     // The row keeps its expand control.
     const row = message.closest("tr")!;

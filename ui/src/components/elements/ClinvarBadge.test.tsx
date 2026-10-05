@@ -35,24 +35,12 @@ describe("ClinvarBadge", () => {
       color: colors.textWarning,
       border: `1px solid ${alpha(colors.textWarning, 0.35)}`,
       borderRadius: "999px",
-      width: "82px",
+      width: "68px",
     });
-    // The code sits in a fixed slot, so the divider and stars land at the same x in every row.
-    expect(screen.getByText("VUS")).toHaveStyle({ width: "24px" });
+    // The code is centered in a fixed slot, so the divider and stars land at the same x in every row.
+    expect(screen.getByText("VUS")).toHaveStyle({ width: "30px", textAlign: "center" });
 
     const { container: tag } = render(<ClinvarBadge significance="VUS" mode="tag" />);
-    expect(tag.firstChild).not.toHaveStyle({ width: "82px" });
-  });
-
-  it("marks a definitive call with a filled dot and a likely call with a hollow one", () => {
-    const { container, unmount } = render(<ClinvarBadge significance="Benign" />);
-    expect(container.querySelector('[aria-hidden="true"]')).toHaveStyle({ background: colors.textSuccess });
-    unmount();
-
-    const { container: likely } = render(<ClinvarBadge significance="Likely benign" />);
-    expect(likely.querySelector('[aria-hidden="true"]')).toHaveStyle({
-      border: `1.5px solid ${colors.textSuccess}`,
-      background: "transparent",
-    });
+    expect(tag.firstChild).not.toHaveStyle({ width: "68px" });
   });
 });

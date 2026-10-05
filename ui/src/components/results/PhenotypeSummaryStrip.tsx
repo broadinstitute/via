@@ -12,7 +12,6 @@ import BreakdownBar from "./BreakdownBar";
 import CopyButton from "./CopyButton";
 import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
 
-type BreakdownTab = "ancestry" | "age";
 
 // A full-width band under the top bar in place of the old side panel: what the phenotype filter
 // found, in one row, and the switch between the table and Review on the right. The table below
@@ -103,9 +102,7 @@ const styles = {
     fontSize: 12,
     color: colors.textSecondary,
   },
-  breakdownBlock: {
-    maxWidth: 620,
-  },
+  // The Ancestry/Age toggle in the label row, the same pill as the view switcher one size down.
   tabs: {
     display: "inline-flex",
     gap: 2,
@@ -149,6 +146,8 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
+type BreakdownTab = "ancestry" | "age";
+
 const TABS: { id: BreakdownTab; label: string }[] = [
   { id: "ancestry", label: "Ancestry" },
   { id: "age", label: "Age" },
@@ -175,7 +174,6 @@ export default function PhenotypeSummaryStrip({
   loading = false,
 }: PhenotypeSummaryStripProps) {
   const [activeTab, setActiveTab] = useState<BreakdownTab>("ancestry");
-
   const switcher = (
     <ViewSwitcher
       value={view}
@@ -250,7 +248,6 @@ export default function PhenotypeSummaryStrip({
   const concept = conditionSearch.concept;
   const participantCount = conditionSearch.participantCount ?? 0;
   const hasBreakdown = ancestryBreakdown.length > 0;
-  const segments = activeTab === "ancestry" ? ancestryBreakdown : ageBreakdown;
 
   return (
     <div style={styles.strip}>
@@ -295,7 +292,7 @@ export default function PhenotypeSummaryStrip({
         </div>
       </div>
 
-      <div style={{ ...styles.block, ...styles.blockDivided, ...styles.breakdownBlock }}>
+      <div style={{ ...styles.block, ...styles.blockDivided }}>
         <div style={styles.blockLabel}>
           <span style={styles.eyebrow}>Breakdown</span>
           {hasBreakdown && (
@@ -318,7 +315,11 @@ export default function PhenotypeSummaryStrip({
         <div style={{ ...styles.blockContent, alignItems: "stretch" }}>
           {hasBreakdown ? (
             // Keyed by tab so switching remounts the bar, replaying its entrance.
-            <BreakdownBar key={activeTab} segments={segments} label={activeTab === "ancestry" ? "Ancestry" : "Age"} />
+            <BreakdownBar
+              key={activeTab}
+              segments={activeTab === "ancestry" ? ancestryBreakdown : ageBreakdown}
+              label={activeTab === "ancestry" ? "Ancestry" : "Age"}
+            />
           ) : (
             <span style={styles.emptyMessage}>No participants to break down.</span>
           )}

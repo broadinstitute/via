@@ -5,20 +5,18 @@ import { CLINVAR_BADGE_CONFIG } from "../../utils/clinvar";
 
 // The same pill as SubpopBadge and ScopeChip -- rounded, a tinted fill, a soft border in the ink
 // at partial opacity -- so a ClinVar call sits beside an ancestry badge or a scope chip as one
-// family. A dot before the code is filled for a definitive call (P, B, VUS) and hollow for a
-// "likely" one (LP, LB); the review star count follows a hairline divider in the same ink.
+// family. The code (P, LP, VUS…) is centered in a fixed slot on the left; the review star count
+// follows a hairline divider in the same ink, so the divider and stars line up down a column.
 
-const DOT = 7;
 /** Split badges share one width, so a column of them lines up. */
-const SPLIT_WIDTH = 82;
-/** The code sits in a slot wide enough for "VUS", so the divider and stars fall at the same x in every row. */
-const SPLIT_CODE_WIDTH = 24;
+const SPLIT_WIDTH = 68;
+/** The code's slot, wide enough for "VUS" with a little air, with the code centered in it. */
+const SPLIT_CODE_WIDTH = 30;
 
 const styles = {
   badge: {
     display: "inline-flex",
     alignItems: "center",
-    gap: 6,
     padding: "2px 8px",
     borderRadius: 999,
     fontSize: 11,
@@ -29,20 +27,13 @@ const styles = {
   split: {
     boxSizing: "border-box",
     width: SPLIT_WIDTH,
-    padding: "2px 7px",
+    padding: "2px 7px 2px 4px",
   },
   splitCode: {
     width: SPLIT_CODE_WIDTH,
     flexShrink: 0,
+    textAlign: "center",
   },
-  dot: {
-    width: DOT,
-    height: DOT,
-    borderRadius: "50%",
-    flexShrink: 0,
-  },
-  // The review stars, in secondary ink after a hairline in the badge's own colour. The fixed code
-  // slot before them keeps the hairline in one place down a column.
   stars: {
     paddingLeft: 6,
     fontWeight: 500,
@@ -73,15 +64,6 @@ export default function ClinvarBadge({ significance, stars = null, mode = "split
       }}
       title={`ClinVar: ${significance}${stars !== null ? `, ${stars} of 4 review stars` : ""}`}
     >
-      <span
-        aria-hidden="true"
-        style={{
-          ...styles.dot,
-          ...(config.definitive
-            ? { background: config.ink }
-            : { border: `1.5px solid ${config.ink}`, background: "transparent", boxSizing: "border-box" }),
-        }}
-      />
       <span style={mode === "split" ? styles.splitCode : undefined}>{label}</span>
       {stars !== null && (
         <span style={{ ...styles.stars, borderLeft: `1px solid ${alpha(config.ink, 0.3)}` }}>{`${stars}★`}</span>
