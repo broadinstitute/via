@@ -8,35 +8,42 @@ export type ResultsView = "table" | "review";
 
 // The same pill the breakdown's Ancestry/Age toggle uses, one size up: the one control that
 // decides what the page shows beneath the summary strip.
+// The one control that decides what the page shows beneath the summary strip, so it carries more
+// weight than the small Ancestry/Age toggle: a taller pill, a stronger border, and the selected
+// option filled in the accent with white type rather than lifted on a shadow.
 const styles = {
   group: {
     display: "inline-flex",
-    gap: 2,
-    padding: 2,
+    gap: 3,
+    padding: 3,
     background: colors.surface1,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${colors.borderStrong}`,
     borderRadius: 999,
   },
   option: {
     display: "inline-flex",
     alignItems: "center",
-    gap: 6,
-    padding: "4px 12px",
+    gap: 7,
+    padding: "6px 16px",
     border: "none",
     borderRadius: 999,
     background: "none",
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: 600,
+    lineHeight: 1.2,
     whiteSpace: "nowrap",
     cursor: "pointer",
+    // No eased colour change: mid-fade, the option losing selection shows white text on a
+    // near-white fill for a few frames, which reads as a flicker.
   },
   optionHover: {
-    color: colors.textAccent,
+    background: colors.surface0,
+    color: colors.textPrimary,
   },
   optionSelected: {
-    background: colors.surface2,
-    color: colors.textAccent,
+    background: colors.textAccent,
+    color: colors.white,
     boxShadow: Style.shadows.pill,
   },
 } as const satisfies Record<string, CSSProperties>;
@@ -70,7 +77,7 @@ export default function ViewSwitcher({ value, onChange, reviewUnavailableReason 
             title={disabled ? reviewUnavailableReason : undefined}
             onClick={() => onChange(option)}
           >
-            <Icon size={13} strokeWidth={2.2} aria-hidden="true" />
+            <Icon size={15} strokeWidth={2.2} aria-hidden="true" />
             {label}
           </Clickable>
         );

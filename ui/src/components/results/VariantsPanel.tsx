@@ -109,9 +109,10 @@ const styles = {
     // render as a gap at the boundary between them.
     boxShadow: `inset 0 -1px 0 0 ${colors.border}`,
   },
+  // Two group rows sit above the column headers: the scope row (all participants vs matched),
+  // then the source row. Each is sticky at its own offset; see headerTop().
   groupHeaderCell: {
     height: GROUP_HEADER_HEIGHT,
-    top: 0,
     // Above the column-header row, which scrolls up underneath it.
     zIndex: 2,
     padding: "0 10px",
@@ -120,8 +121,12 @@ const styles = {
     letterSpacing: 0.2,
     textAlign: "center",
   },
-  columnHeaderCell: {
-    top: GROUP_HEADER_HEIGHT,
+  scopeHeader: {
+    color: colors.textSecondary,
+    fontWeight: 600,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+    fontSize: 10,
   },
   // Pinned cells sit above the scrolling ones; pinned header cells above everything.
   pinnedCell: {
@@ -184,13 +189,6 @@ const styles = {
   matchedGroupHeader: {
     color: colors.textPrimary,
   },
-  // The group's name and the matched participant count on one centred line; the condition itself
-  // is in the strip.
-  matchedLabel: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-  },
   matchedCount: {
     display: "inline-flex",
     alignItems: "center",
@@ -198,7 +196,16 @@ const styles = {
     color: colors.textSecondary,
     fontWeight: 600,
     fontVariantNumeric: "tabular-nums",
-    lineHeight: 1,
+    lineHeight: "15px",
+  },
+  matchedLabel: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    fontSize: 10,
+    lineHeight: "15px",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
   },
   dataRow: {
     cursor: "pointer",
@@ -328,6 +335,13 @@ function gutterStyle(columnId: string): CSSProperties | undefined {
   if (BADGE_COLUMN_IDS.has(columnId)) return styles.badgeCell;
   if (FIGURES_COLUMN_IDS.has(columnId)) return styles.figuresCell;
   return undefined;
+}
+
+/** The tint a group header cell takes from its id: the source groups' ids are tint names, and the matched scope is matched. */
+function headerTint(columnId: string): Tint | null {
+  if (columnId in sourceTints) return columnId as Tint;
+  if (columnId === "matchedScope") return "matched";
+  return null;
 }
 
 /**
@@ -603,6 +617,11 @@ export default function VariantsPanel({
         ]),
       }),
       columnHelper.group({
+        id: "allParticipants",
+        header: () => <span style={styles.scopeHeader}>All participants</span>,
+        enableSorting: false,
+        columns: [
+      columnHelper.group({
         id: "aou",
         header: () => (
           <InfoLabel
@@ -685,21 +704,32 @@ export default function VariantsPanel({
           }),
         ]),
       }),
+        ],
+      }),
       columnHelper.group({
-        id: "matched",
+        id: "matchedScope",
         header: () => (
           <span style={styles.matchedGroupHeader}>
             <InfoLabel
-              tooltip={`Statistics among the ${participantCount.toLocaleString()} participants matched by the phenotype filter (${condition}), beside the cohort-wide figures to their left.`}
+              tooltip={`Statistics among the ${participantCount.toLocaleString()} participants matched by the phenotype filter (${condition}), beside the figures for all participants to their left.`}
             >
               <span style={styles.matchedLabel}>
-                Phenotype-matched
+                Phenotype-matched participants
                 <span style={styles.matchedCount}>
                   <UserIcon size={11} strokeWidth={2.5} aria-hidden="true" />
                   {participantCount.toLocaleString()}
                 </span>
               </span>
             </InfoLabel>
+          </span>
+        ),
+        enableSorting: false,
+        columns: [
+      columnHelper.group({
+        id: "matched",
+        header: () => (
+          <span>
+            <AllOfUs />
           </span>
         ),
         enableSorting: false,
@@ -736,6 +766,8 @@ export default function VariantsPanel({
             sortUndefined: "last",
           }),
         ]),
+      }),
+        ],
       }),
       columnHelper.group({
         id: "annotations",
@@ -913,14 +945,15 @@ export default function VariantsPanel({
         <div style={styles.tableScroll}>
           <table ref={tableRef} style={styles.table}>
             <thead>
-              {table.getHeaderGroups().map((headerGroup, depth) => {
-                const isGroupRow = depth === 0;
+              {table.getHeaderGroups().map((headerGroup, depth, headerGroups) => {
+                const isGroupRow = depth < headerGroups.length - 1;
                 return (
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
-                      // A group header cell carries its group's id, which is also a tint name for
-                      // the three tinted groups, so the band starts in the group row.
-                      const tint = tintOf(header.column.id) ?? (header.column.id in sourceTints ? (header.column.id as Tint) : null);
+                      // A group header cell carries its group's id; the source groups' ids are
+                      // tint names, and the matched scope takes the matched tint, so each band
+                      // starts in its top-most header row.
+                      const tint = tintOf(header.column.id) ?? headerTint(header.column.id);
                       const sortable = header.column.getCanSort();
                       const sortDirection = header.column.getIsSorted();
                       return (
@@ -930,7 +963,8 @@ export default function VariantsPanel({
                           data-column-id={header.column.id}
                           style={{
                             ...styles.headerCell,
-                            ...(isGroupRow ? styles.groupHeaderCell : styles.columnHeaderCell),
+                            ...(isGroupRow ? styles.groupHeaderCell : undefined),
+                            top: depth * GROUP_HEADER_HEIGHT,
                             ...gutterStyle(header.column.id),
                             background: cellBackground(tint, false) ?? styles.headerCell.background,
                             ...(sortable ? Style.table.sortable : undefined),

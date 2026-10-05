@@ -112,8 +112,11 @@ describe("VariantsPanel", () => {
     expect(screen.queryByRole("columnheader", { name: /AF ratio/ })).not.toBeInTheDocument();
     // The visible label is the group's name and the count; the condition is left to the strip
     // (and to the header's tooltip).
-    const matchedHeader = screen.getByRole("columnheader", { name: /^Phenotype-matched/ });
-    expect(matchedHeader).toHaveTextContent(/^Phenotype-matched\s*49/);
+    // A scope row says which participants each side describes; the source row beneath names the sources.
+    expect(screen.getByRole("columnheader", { name: "All participants" })).toBeInTheDocument();
+    const matchedHeader = screen.getByRole("columnheader", { name: /^Phenotype-matched participants/ });
+    expect(matchedHeader).toHaveTextContent(/^Phenotype-matched participants\s*49/);
+    expect(screen.getAllByRole("columnheader", { name: "All of Us" }).length).toBeGreaterThan(0);
     expect(screen.getByText("49 with Tetralogy of Fallot", { selector: "span" })).toBeInTheDocument();
   });
 
@@ -121,6 +124,7 @@ describe("VariantsPanel", () => {
     renderPanel([IN_AOU_ONLY], []);
 
     expect(screen.queryByRole("columnheader", { name: /^Phenotype-matched/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "All participants" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /^Hom/ })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Gene" })).toBeInTheDocument();
     // Four identity cells, two All of Us, one merged gnomAD cell, three annotations, the Review
