@@ -153,16 +153,19 @@ const styles = {
   },
   // Within a source group the badge and the figures beside it read as one unit, so the gutter
   // between them is closed up: the badge cell gives up its right padding, the figures their left.
+  // Badges and the globe above them centred together, so the header icon sits over the badges.
   badgeCell: {
     paddingRight: 2,
+    textAlign: "center",
   },
   figuresCell: {
     paddingLeft: 6,
   },
   // The subpopulation columns' header: a globe in place of a word the column is too narrow for.
-  // vertical-align middle, not the default baseline: an icon-only inline box sits on the text
-  // baseline with its descender space empty beneath, which lifts it a few pixels above the words
-  // in the neighbouring headers.
+  // Centred over the badges beneath it (see badgeCell); a lone icon at the cell's left edge read
+  // as a missing word. vertical-align middle, not the default baseline: an icon-only inline box
+  // sits on the text baseline with its descender space empty beneath, which lifts it a few pixels
+  // above the words in the neighbouring headers.
   subpopHeader: {
     display: "inline-flex",
     alignItems: "center",
