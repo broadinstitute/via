@@ -369,7 +369,7 @@ export default function ReviewDetail({
               tooltip={
                 "The odds of carrying this allele among matched participants divided by the odds among everyone else in the cohort: the standard case–control effect size, and the one that pairs with Fisher's test. " +
                 "Above 1 means more common in the matched group. For a rare variant it is nearly the same as the fold change in the verdict; for a common one it runs higher. " +
-                "The 95% interval underneath is what decides the verdict. With no carriers on one side the interval's open end is bounded by the rule of three."
+                "The 95% interval underneath is what decides the verdict. With no carriers on one side, the interval's open end is the largest ratio still consistent with seeing none."
               }
             />
             <StatTile
@@ -423,6 +423,11 @@ export default function ReviewDetail({
                 </tr>
               </thead>
               <tbody>
+                {/* TODO: replace AN / 2 with a real cohort participant count from the API. AN counts
+                    called alleles, so halving it undercounts when calls are missing and is wrong for
+                    sex-chromosome variants. The proper source is a count of participants with genomes
+                    in the CDR (cb_search_person.has_whole_genome_variant), and the matched count
+                    beside it should be restricted to participants with genomes too. */}
                 <CompareRow
                   metric="Participants"
                   left={cohort.aouAllAn !== null ? formatInt(Math.round(cohort.aouAllAn / 2)) : null}

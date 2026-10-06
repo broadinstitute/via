@@ -15,6 +15,7 @@ import {
   largestMatchedAncestry,
   mergeVariantRows,
   sortByEnrichment,
+  zeroEventOddsBound,
 } from "./comparison";
 
 const ANNOTATED: AnnotatedCohortVariant = {
@@ -127,7 +128,7 @@ describe("computeEnrichment", () => {
     expect(three.verdict).toBe("enriched");
   });
 
-  it("bounds a zero count by the rule of three instead of inventing an interval", () => {
+  it("bounds a zero count by the exact zero-event bound instead of inventing an interval", () => {
     // 0 of 262 against 3 of 481,436, where 0.002 were expected: no information either way.
     const result = computeEnrichment(0, 262, 3, 481436)!;
     expect(result.verdict).toBe("inconclusive");
@@ -150,6 +151,25 @@ describe("computeEnrichment", () => {
     expect(only.ci![0]).toBeGreaterThan(1);
     expect(only.ci![1]).toBe(Infinity);
     expect(only.verdict).toBe("enriched");
+  });
+
+  it("calls a one-participant cohort with no carriers inconclusive, with a finite bound and a usable strength", () => {
+    // One participant contributes two alleles. The rule of three made this bound negative, which
+    // read as an interval below 1: a "depleted" call with a NaN strength that broke the rail's sort.
+    const one = computeEnrichment(0, 2, 5577, 479860)!;
+    expect(one.ci![0]).toBe(0);
+    expect(one.ci![1]).toBeGreaterThan(1);
+    expect(Number.isFinite(one.ci![1])).toBe(true);
+    expect(one.verdict).toBe("inconclusive");
+    expect(one.strength).toBe(0);
+    expect(one.lean).toBe("fewer");
+
+    // And it sorts like any other inconclusive row, below a supported signal.
+    const rows = buildComparisonRows(
+      [{ ...ANNOTATED, variant: "1-1-A-T", aouAllAc: 5577, aouAllAn: 479860 }, ANNOTATED],
+      [{ ...MATCHED, variant: "1-1-A-T", cohortAc: 0, cohortAn: 2, cohortAf: 0, homozygotes: 0, heterozygotes: 0 }, MATCHED],
+    );
+    expect(sortByEnrichment(rows).map((row) => row.variant)).toEqual(["2-122517541-C-G", "1-1-A-T"]);
   });
 
   it("has nothing to say when nobody carries the allele, and nothing to divide by without alleles", () => {
@@ -176,17 +196,38 @@ describe("computeOddsRatio", () => {
     expect(ci![1]).toBeCloseTo(4.67, 2);
   });
 
-  it("uses the rule of three on an empty side", () => {
+  it("bounds an empty side by the exact zero-event bound", () => {
     const none = computeOddsRatio(0, 100, 5, 495);
     expect(none.oddsRatio).toBe(0);
     expect(none.ci![0]).toBe(0);
-    // Matched odds < (3/100)/(1 − 3/100) ≈ 0.0309, over rest odds 5/495.
-    expect(none.ci![1]).toBeCloseTo(0.0309 / (5 / 495), 1);
+    // Matched rate < 1 − 0.05^(1/100) ≈ 0.0295, odds ≈ 0.0304, over the rest's odds 5/495.
+    expect(none.ci![1]).toBeCloseTo(zeroEventOddsBound(100) / (5 / 495), 6);
+    expect(none.ci![1]).toBeCloseTo(3.01, 2);
 
     const all = computeOddsRatio(3, 97, 0, 500);
     expect(all.oddsRatio).toBe(Infinity);
     expect(all.ci![1]).toBe(Infinity);
-    expect(all.ci![0]).toBeCloseTo((3 / 97) / (3 / 500 / (1 - 3 / 500)), 1);
+    expect(all.ci![0]).toBeCloseTo((3 / 97) / zeroEventOddsBound(500), 6);
+  });
+
+  it("keeps the bound finite and positive however few alleles the empty side has", () => {
+    // n = 1, 2 and 3 are where the rule of three reaches 1 and its odds go infinite or negative.
+    for (const n of [1, 2, 3, 4, 10]) {
+      const bound = zeroEventOddsBound(n);
+      expect(bound).toBeGreaterThan(0);
+      expect(Number.isFinite(bound)).toBe(true);
+    }
+    // One participant: rate < 1 − √0.05 ≈ 0.776, odds ≈ 3.47.
+    expect(zeroEventOddsBound(2)).toBeCloseTo(3.47, 2);
+    // Fewer alleles, a wider bound.
+    expect(zeroEventOddsBound(2)).toBeGreaterThan(zeroEventOddsBound(10));
+    // At large n it agrees with the rule of three.
+    expect(zeroEventOddsBound(10000)).toBeCloseTo(3 / 10000, 5);
+
+    // A tiny rest of the cohort with no carriers: the lower bound stays positive.
+    const tinyRest = computeOddsRatio(3, 97, 0, 2);
+    expect(tinyRest.ci![0]).toBeGreaterThan(0);
+    expect(tinyRest.ci![1]).toBe(Infinity);
   });
 
   it("leaves the interval undefined when neither side has carriers", () => {

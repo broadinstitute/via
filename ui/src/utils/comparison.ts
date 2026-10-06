@@ -50,7 +50,7 @@ export interface Enrichment {
   pValue: number;
   /**
    * Odds ratio from the same 2×2 table (matched vs the rest of the cohort) and its 95% interval:
-   * Woolf's log method, or at a zero cell the rule-of-three bound on the empty side. Null only when
+   * Woolf's log method, or at a zero cell the exact zero-event bound on the empty side. Null only when
    * nobody anywhere carries the allele.
    */
   oddsRatio: number;
@@ -207,11 +207,23 @@ export function computeEnrichment(
 }
 
 /**
+ * The highest odds a rate could have, at 95% confidence, when n trials saw no events: the exact
+ * one-sided binomial bound, rate < 1 − 0.05^(1/n), as odds. The rule of three (3/n) approximates
+ * the same bound, but only for large n; at n ≤ 3 it reaches 1 and the odds go infinite or negative.
+ * The exact form stays below 1 for every n, so a one-participant cohort (n = 2) gets a finite,
+ * wide bound rather than a negative one.
+ */
+export function zeroEventOddsBound(n: number): number {
+  const rate = 1 - 0.05 ** (1 / n);
+  return rate / (1 - rate);
+}
+
+/**
  * Odds ratio of the table [[a, b], [c, d]] with a 95% interval. Woolf's log method when every
  * cell is filled. With no carriers on one side the odds ratio is 0 or infinite and Woolf is
- * undefined, so the empty side gets the rule-of-three bound instead: zero events in n trials puts
- * that rate below 3/n with ~95% confidence, which bounds the ratio on that side. With no carriers
- * on either side there is nothing to say, and the interval is null.
+ * undefined, so the empty side's odds are bounded by zeroEventOddsBound instead, which bounds the
+ * ratio on that side. With no carriers on either side there is nothing to say, and the interval
+ * is null.
  */
 export function computeOddsRatio(
   a: number,
@@ -222,13 +234,11 @@ export function computeOddsRatio(
   if (a === 0 && c === 0) return { oddsRatio: 1, ci: null };
   if (b === 0 && d === 0) return { oddsRatio: 1, ci: null };
   if (a === 0) {
-    // Matched rate < 3/(a+b); odds of the rest = c/d.
-    const matchedOddsBound = 3 / (a + b) / (1 - 3 / (a + b));
-    return { oddsRatio: 0, ci: [0, matchedOddsBound / (c / d)] };
+    // The matched odds are below the zero-event bound; the rest's odds are c/d.
+    return { oddsRatio: 0, ci: [0, zeroEventOddsBound(b) / (c / d)] };
   }
   if (c === 0) {
-    const restOddsBound = 3 / (c + d) / (1 - 3 / (c + d));
-    return { oddsRatio: Infinity, ci: [(a / b) / restOddsBound, Infinity] };
+    return { oddsRatio: Infinity, ci: [(a / b) / zeroEventOddsBound(d), Infinity] };
   }
   if (b === 0 || d === 0) {
     // Everyone on one side carries it: the ratio is degenerate in the other direction.
