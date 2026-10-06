@@ -11,6 +11,7 @@ import colors, { alpha, sourceTints } from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow, FilteredVariantRow } from "../../types/results";
+import { mergeVariantRows, type MergedVariantRow } from "../../utils/comparison";
 import { clinvarSearchUrl, gnomadVariantUrl } from "../../utils/externalLinks";
 import { exactAf, formatAcAn, formatAf } from "../../utils/format";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
@@ -19,30 +20,14 @@ import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
 import { ChevronRightIcon, CompareIcon, EyeOffIcon, GlobeIcon, UserIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
+import NotAvailable from "../elements/NotAvailable";
 import SubpopBadge from "../elements/SubpopBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
-import ResultsPanel, { ScopeChip } from "./ResultsPanel";
+import ResultsPanel, { MatchedParticipantsChip, ScopeChip } from "./ResultsPanel";
 
 /** The loading placeholder's height, roughly what a dozen rows of the loaded table take. */
 export const VARIANTS_TABLE_MIN_HEIGHT = 431;
-
-/**
- * One row per candidate variant: the cohort-wide annotation and frequencies from the VAT, and
- * beside them, when a phenotype filter is on, the statistics among the matched participants.
- * The two used to be separate tables, one above the other, and a variant appeared in both.
- */
-export interface MergedVariantRow {
-  variant: string;
-  cohort: CohortVariantRow;
-  /** The matched-participant statistics for this variant; undefined when the search had no phenotype. */
-  matched: FilteredVariantRow | undefined;
-}
-
-export function mergeVariantRows(cohortVariants: CohortVariantRow[], filteredVariants: FilteredVariantRow[]): MergedVariantRow[] {
-  const matchedByVariant = new Map(filteredVariants.map((row) => [row.variant, row]));
-  return cohortVariants.map((cohort) => ({ variant: cohort.variant, cohort, matched: matchedByVariant.get(cohort.variant) }));
-}
 
 // Lower rank = sorts first (ascending) = more clinically concerning.
 const PLOF_RANK = { HC: 0, LC: 1, none: 2 } as const;
@@ -87,11 +72,8 @@ const styles = {
     fontSize: 11,
     color: colors.textMuted,
   },
-  tableWrap: {
-    position: "relative",
-  },
   // Every row is laid out and the page scrolls; only the horizontal axis scrolls here, since the
-  // merged table is wider than a laptop window.
+  // table is wider than a laptop window.
   tableScroll: {
     ...Style.table.scroller,
   },
@@ -110,7 +92,7 @@ const styles = {
     boxShadow: `inset 0 -1px 0 0 ${colors.border}`,
   },
   // Two group rows sit above the column headers: the scope row (all participants vs matched),
-  // then the source row. Each is sticky at its own offset; see headerTop().
+  // then the source row. Each row is sticky at its depth times this height.
   groupHeaderCell: {
     height: GROUP_HEADER_HEIGHT,
     // Above the column-header row, which scrolls up underneath it.
@@ -121,12 +103,21 @@ const styles = {
     letterSpacing: 0.2,
     textAlign: "center",
   },
+  // The scope row's labels, "All participants" and "Phenotype-matched participants": small caps,
+  // a step quieter than the source names beneath. The matched side is in primary ink with its count.
   scopeHeader: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
     color: colors.textSecondary,
+    fontSize: 10,
     fontWeight: 600,
+    lineHeight: "15px",
     letterSpacing: 0.3,
     textTransform: "uppercase",
-    fontSize: 10,
+  },
+  scopeHeaderMatched: {
+    color: colors.textPrimary,
   },
   // Pinned cells sit above the scrolling ones; pinned header cells above everything.
   pinnedCell: {
@@ -189,9 +180,6 @@ const styles = {
     fontWeight: 500,
     color: colors.textMuted,
   },
-  matchedGroupHeader: {
-    color: colors.textPrimary,
-  },
   matchedCount: {
     display: "inline-flex",
     alignItems: "center",
@@ -200,15 +188,6 @@ const styles = {
     fontWeight: 600,
     fontVariantNumeric: "tabular-nums",
     lineHeight: "15px",
-  },
-  matchedLabel: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: 10,
-    lineHeight: "15px",
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
   },
   dataRow: {
     cursor: "pointer",
@@ -400,11 +379,6 @@ const UNANNOTATED_GROUP: MissingGroup = {
     "Annotations and gnomAD frequencies come from the All of Us variant annotation table, which only includes variants observed in All of Us.",
 };
 
-/** No value for this cell — the variant isn't present in the source behind it. */
-function NotAvailable() {
-  return <span style={Style.elements.notAvailable}>—</span>;
-}
-
 /** The subpopulation column's header: the badge beneath says which group, so the header says only what kind of thing it is. */
 function SubpopHeader() {
   return (
@@ -433,14 +407,10 @@ function FrequencyHeader({ tooltip }: { tooltip?: ReactNode }) {
   return tooltip ? <InfoLabel tooltip={tooltip}>{label}</InfoLabel> : <span>{label}</span>;
 }
 
-function matchedStats(row: MergedVariantRow) {
-  return row.matched?.hasStats ? row.matched : null;
-}
-
 /** Every column's value for one row, in table order, for the TSV export. */
 function rowToTsvValues(row: MergedVariantRow): string[] {
   const { cohort } = row;
-  const stats = matchedStats(row);
+  const stats = row.matched;
   const na = "n/a";
   const cohortValues = cohort.annotated
     ? [
@@ -521,10 +491,10 @@ interface VariantsPanelProps {
   /** Whether a phenotype filter matched anyone; without one the matched column group is left out. */
   hasPhenotypeFilter: boolean;
   participantCount: number;
-  /** The picked condition's name, for the scope chip and group header; empty when none was picked. */
+  /** The picked condition's name, for the panel's scope chip and the matched header's tooltip; empty when none was picked. */
   condition: string;
   /** Opens Review on the given variant. */
-  onQuickReview?: (variant: string) => void;
+  onReview?: (variant: string) => void;
 }
 
 export default function VariantsPanel({
@@ -533,7 +503,7 @@ export default function VariantsPanel({
   hasPhenotypeFilter,
   participantCount,
   condition,
-  onQuickReview,
+  onReview,
 }: VariantsPanelProps) {
   const rows = useMemo(() => mergeVariantRows(cohortVariants, filteredVariants), [cohortVariants, filteredVariants]);
   const [expandedVariants, setExpandedVariants] = useState<Set<string>>(new Set());
@@ -712,60 +682,54 @@ export default function VariantsPanel({
       columnHelper.group({
         id: "matchedScope",
         header: () => (
-          <span style={styles.matchedGroupHeader}>
-            <InfoLabel
-              tooltip={`Statistics among the ${participantCount.toLocaleString()} participants matched by the phenotype filter (${condition}), beside the figures for all participants to their left.`}
-            >
-              <span style={styles.matchedLabel}>
-                Phenotype-matched participants
-                <span style={styles.matchedCount}>
-                  <UserIcon size={11} strokeWidth={2.5} aria-hidden="true" />
-                  {participantCount.toLocaleString()}
-                </span>
+          <InfoLabel
+            tooltip={`Statistics among the ${participantCount.toLocaleString()} participants matched by the phenotype filter (${condition}), beside the figures for all participants to their left.`}
+          >
+            <span style={{ ...styles.scopeHeader, ...styles.scopeHeaderMatched }}>
+              Phenotype-matched participants
+              <span style={styles.matchedCount}>
+                <UserIcon size={11} strokeWidth={2.5} aria-hidden="true" />
+                {participantCount.toLocaleString()}
               </span>
-            </InfoLabel>
-          </span>
+            </span>
+          </InfoLabel>
         ),
         enableSorting: false,
         columns: [
       columnHelper.group({
         id: "matched",
-        header: () => (
-          <span>
-            <AllOfUs />
-          </span>
-        ),
+        header: () => <AllOfUs />,
         enableSorting: false,
         columns: columnHelper.columns([
-          columnHelper.accessor((row) => matchedStats(row)?.cohortAf, {
+          columnHelper.accessor((row) => row.matched?.cohortAf, {
             id: "matchedFreq",
             header: () => <FrequencyHeader tooltip="Allele frequency among phenotype-matched participants, over the allele count and number behind it." />,
             cell: ({ row }) => {
-              const stats = matchedStats(row.original);
+              const stats = row.original.matched;
               return stats ? <FrequencyCell af={stats.cohortAf} ac={stats.cohortAc} an={stats.cohortAn} /> : <NotAvailable />;
             },
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => matchedStats(row)?.homozygotes, {
+          columnHelper.accessor((row) => row.matched?.homozygotes, {
             id: "homozygotes",
             header: () => <InfoLabel tooltip="Matched participants carrying two copies of this allele.">Hom</InfoLabel>,
-            cell: ({ row }) => matchedStats(row.original)?.homozygotes ?? <NotAvailable />,
+            cell: ({ row }) => row.original.matched?.homozygotes ?? <NotAvailable />,
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => matchedStats(row)?.heterozygotes, {
+          columnHelper.accessor((row) => row.matched?.heterozygotes, {
             id: "heterozygotes",
             header: () => <InfoLabel tooltip="Matched participants carrying one copy of this allele.">Het</InfoLabel>,
-            cell: ({ row }) => matchedStats(row.original)?.heterozygotes ?? <NotAvailable />,
+            cell: ({ row }) => row.original.matched?.heterozygotes ?? <NotAvailable />,
             sortUndefined: "last",
           }),
-          columnHelper.accessor((row) => matchedStats(row)?.clinvarPlpInTrans, {
+          columnHelper.accessor((row) => row.matched?.clinvarPlpInTrans, {
             id: "clinvarPlpInTrans",
             header: () => (
               <InfoLabel tooltip="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans with this variant.">
                 P/LP in trans
               </InfoLabel>
             ),
-            cell: ({ row }) => matchedStats(row.original)?.clinvarPlpInTrans ?? <NotAvailable />,
+            cell: ({ row }) => row.original.matched?.clinvarPlpInTrans ?? <NotAvailable />,
             sortUndefined: "last",
           }),
         ]),
@@ -832,14 +796,14 @@ export default function VariantsPanel({
             header: "",
             enableSorting: false,
             cell: ({ row }) =>
-              onQuickReview ? (
+              onReview ? (
                 <Clickable
                   style={Style.buttons.icon}
                   hoverStyle={Style.buttons.iconHover}
                   onClick={(event) => {
                     // The row itself toggles expansion on click; this shouldn't.
                     event.stopPropagation();
-                    onQuickReview(row.original.variant);
+                    onReview(row.original.variant);
                   }}
                   aria-label={`Review ${row.original.variant}`}
                   title="Open Review on this variant"
@@ -852,11 +816,9 @@ export default function VariantsPanel({
       }),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columnHelper, expandedVariants, onQuickReview, participantCount, condition],
+    [columnHelper, expandedVariants, onReview, participantCount, condition],
   );
 
-  // Without a phenotype filter there is nothing on the matched side, so the whole group is left
-  // out rather than drawn as seven columns of dashes.
   // Each pinned column sticks at the left edge plus the widths of the pinned columns before it.
   // Widths come from the rendered header cells, re-read whenever the table's shape could change.
   const tableRef = useRef<HTMLTableElement>(null);
@@ -892,6 +854,8 @@ export default function VariantsPanel({
     };
   }
 
+  // Without a phenotype filter there is nothing on the matched side, so the whole group is left
+  // out rather than drawn as a block of dashes.
   const columnVisibility = useMemo(
     () => Object.fromEntries(MATCHED_COLUMN_IDS.map((id) => [id, hasPhenotypeFilter])),
     [hasPhenotypeFilter],
@@ -924,15 +888,7 @@ export default function VariantsPanel({
       scope={
         <>
           <ScopeChip>All participants</ScopeChip>
-          {hasPhenotypeFilter && (
-            <ScopeChip
-              tone="accent"
-              icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />}
-              title={`${participantCount.toLocaleString()} participants with ${condition}`}
-            >
-              {participantCount.toLocaleString()} with {condition}
-            </ScopeChip>
-          )}
+          {hasPhenotypeFilter && <MatchedParticipantsChip participantCount={participantCount} condition={condition} />}
         </>
       }
       headerRight={
@@ -944,8 +900,7 @@ export default function VariantsPanel({
         </div>
       }
     >
-      <div style={styles.tableWrap}>
-        <div style={styles.tableScroll}>
+      <div style={styles.tableScroll}>
           <table ref={tableRef} style={styles.table}>
             <thead>
               {table.getHeaderGroups().map((headerGroup, depth, headerGroups) => {
@@ -1008,7 +963,7 @@ export default function VariantsPanel({
                   : [
                       cohort.aouSubpopulation === null ? AOU_MISSING_GROUP : null,
                       cohort.gnomadSubpopulation === null ? GNOMAD_MISSING_GROUP : null,
-                      hasPhenotypeFilter && !matchedStats(row.original) ? MATCHED_MISSING_GROUP : null,
+                      hasPhenotypeFilter && !row.original.matched ? MATCHED_MISSING_GROUP : null,
                     ].filter((group) => group !== null);
                 const hovered = hoveredRow === row.id;
                 const expanded = expandedVariants.has(row.original.variant);
@@ -1119,7 +1074,6 @@ export default function VariantsPanel({
               })}
             </tbody>
           </table>
-        </div>
       </div>
     </ResultsPanel>
   );

@@ -13,6 +13,7 @@ import {
   formatRatio,
   formatSig,
   largestMatchedAncestry,
+  mergeVariantRows,
   sortByEnrichment,
 } from "./comparison";
 
@@ -219,6 +220,20 @@ describe("ancestryAdjustedExpectation", () => {
   });
 });
 
+describe("mergeVariantRows", () => {
+  it("joins matched statistics onto each cohort row by variant, keeping the candidate order", () => {
+    const unseen = { annotated: false as const, variant: "7-55181378-G-A" };
+    const noStats: FilteredVariantRow = { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false };
+    const rows = mergeVariantRows([unseen, ANNOTATED], [MATCHED, noStats]);
+
+    expect(rows.map((row) => row.variant)).toEqual(["7-55181378-G-A", "2-122517541-C-G"]);
+    // A matched row without statistics counts as no match, so callers needn't check hasStats.
+    expect(rows[0].matched).toBeNull();
+    expect(rows[1].matched).toBe(MATCHED);
+    expect(mergeVariantRows([ANNOTATED], [])[0].matched).toBeNull();
+  });
+});
+
 describe("buildComparisonRows / sortByEnrichment", () => {
   it("ranks an inconclusive fluke below a supported signal, however extreme its ratio", () => {
     const fluke: AnnotatedCohortVariant = { ...ANNOTATED, variant: "7-150974917-G-A", aouAllAc: 3, aouAllAn: 481436 };
@@ -231,7 +246,7 @@ describe("buildComparisonRows / sortByEnrichment", () => {
     expect(sorted.map((row) => row.variant)).toEqual(["2-122517541-C-G", "7-150974917-G-A"]);
   });
 
-  it("joins the two tables by variant, passes the ancestry breakdown through, and orders by support", () => {
+  it("joins cohort-wide and matched rows by variant, passes the ancestry breakdown through, and orders by support", () => {
     const flat: AnnotatedCohortVariant = { ...ANNOTATED, variant: "1-100-A-T", aouAllAc: 300, aouAllAn: 20000 };
     const flatMatched: FilteredVariantRow = { ...MATCHED, variant: "1-100-A-T", cohortAc: 3, cohortAn: 200, cohortAf: 0.015, afRatio: 1 };
     const rows = buildComparisonRows(

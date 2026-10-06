@@ -4,7 +4,6 @@ import type { ConditionSearch } from "../../api/conditions";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
-import { phenotypeUnavailableCopy } from "../../utils/phenotype";
 import Clickable from "../common/Clickable";
 import InfoTooltip from "../common/InfoTooltip";
 import { PlusIcon } from "../icons";
@@ -12,14 +11,10 @@ import BreakdownBar from "./BreakdownBar";
 import CopyButton from "./CopyButton";
 import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
 
-
-// A full-width band under the top bar in place of the old side panel: what the phenotype filter
-// found, in one row, and the switch between the table and Review on the right. The table below
-// gets the whole width back.
-// A full-width band under the top bar in place of the old side panel. Four blocks with one
+// A full-width band between the top bar and the results. Four blocks with one
 // anatomy -- a small uppercase label over its content -- divided by hairlines the way the top bar
 // divides its parts: what the phenotype filter is, how many it matched, how they break down, and
-// which view is showing. The table below gets the whole width back.
+// which view is showing. Being a band rather than a side panel, it leaves the table the full width.
 const BLOCK_GAP = 20;
 
 const styles = {
@@ -72,7 +67,7 @@ const styles = {
     textOverflow: "ellipsis",
     maxWidth: 320,
   },
-  // Name over code, the way the old condition card stacked them.
+  // The condition's name over its OMOP code.
   conditionText: {
     display: "flex",
     flexDirection: "column",
@@ -161,6 +156,8 @@ interface PhenotypeSummaryStripProps {
   onAddPhenotypeFilter: () => void;
   view: ResultsView;
   onViewChange: (view: ResultsView) => void;
+  /** Whether Review has anything to compare: a phenotype filter that matched participants. */
+  canReview: boolean;
   loading?: boolean;
 }
 
@@ -171,6 +168,7 @@ export default function PhenotypeSummaryStrip({
   onAddPhenotypeFilter,
   view,
   onViewChange,
+  canReview,
   loading = false,
 }: PhenotypeSummaryStripProps) {
   const [activeTab, setActiveTab] = useState<BreakdownTab>("ancestry");
@@ -179,9 +177,7 @@ export default function PhenotypeSummaryStrip({
       value={view}
       onChange={onViewChange}
       reviewUnavailableReason={
-        ancestryBreakdown.length > 0
-          ? undefined
-          : "Review compares matched participants with the cohort, so it needs a phenotype filter."
+        canReview ? undefined : "Review compares matched participants with the cohort, so it needs a phenotype filter."
       }
     />
   );
@@ -196,7 +192,7 @@ export default function PhenotypeSummaryStrip({
 
   if (loading) {
     return (
-      <div style={{ ...styles.strip, gridTemplateColumns: "auto auto minmax(0, 1fr) auto" }} aria-busy="true">
+      <div style={styles.strip} aria-busy="true">
         {[220, 90, 320].map((width, index) => (
           <div key={index} style={{ ...styles.block, ...(index > 0 ? styles.blockDivided : undefined) }}>
             <div style={styles.blockLabel}>
@@ -220,7 +216,6 @@ export default function PhenotypeSummaryStrip({
   }
 
   if (!conditionSearch) {
-    const { message, buttonLabel } = phenotypeUnavailableCopy("", "participant breakdowns and Review");
     return (
       <div style={{ ...styles.strip, gridTemplateColumns: "minmax(0, 1fr) auto" }}>
         <div style={styles.block}>
@@ -229,14 +224,14 @@ export default function PhenotypeSummaryStrip({
           </div>
           <div style={{ ...styles.blockContent, gap: 16 }}>
             <span style={styles.emptyTitle}>No phenotype filter</span>
-            <span style={styles.emptyMessage}>{message}</span>
+            <span style={styles.emptyMessage}>Add a phenotype filter to see participant breakdowns and Review.</span>
             <Clickable
               style={{ ...Style.buttons.primary, padding: "6px 12px", fontSize: 12, fontWeight: 700 }}
               hoverStyle={Style.buttons.primaryHover}
               onClick={onAddPhenotypeFilter}
             >
               <PlusIcon size={12} strokeWidth={2.5} />
-              {buttonLabel}
+              Add phenotype filter
             </Clickable>
           </div>
         </div>

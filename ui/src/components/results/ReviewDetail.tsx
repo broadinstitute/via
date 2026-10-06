@@ -14,8 +14,6 @@ import {
   MIN_ALLELES_FOR_ENRICHMENT,
   SIMILARITY_FOLD,
   type ComparisonRow,
-  type Enrichment,
-  type Verdict,
 } from "../../utils/comparison";
 import { exactAf, formatAcAn, formatAf, formatInt } from "../../utils/format";
 import { SUBPOP_COLOR, SUBPOP_LABEL } from "../../utils/subpopulations";
@@ -23,6 +21,8 @@ import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
 import InfoTooltip from "../common/InfoTooltip";
 import ClinvarBadge from "../elements/ClinvarBadge";
+import NotAvailable from "../elements/NotAvailable";
+import { verdictTone } from "./verdictTone";
 
 // Below this the two tables no longer fit beside each other and stack instead.
 const STACKED_QUERY = "(max-width: 1000px)";
@@ -239,21 +239,7 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
-const VERDICT_TONE: Record<Verdict, { ink: string; fill: string; word: string }> = {
-  enriched: { ink: colors.textDanger, fill: colors.bgDanger, word: "Enriched" },
-  depleted: { ink: colors.textAccent, fill: colors.bgAccent, word: "Depleted" },
-  similar: { ink: colors.textSecondary, fill: colors.surface1, word: "Similar frequency" },
-  inconclusive: { ink: colors.textMuted, fill: colors.surface1, word: "Inconclusive" },
-};
-
-/** Ink and fill for a comparison's verdict; exported so the rail's dot agrees with the strip. */
-export function verdictTone(enrichment: Enrichment | null) {
-  return enrichment
-    ? VERDICT_TONE[enrichment.verdict]
-    : { ink: colors.textMuted, fill: colors.surface1, word: "No comparison" };
-}
-
-interface QuickReviewDetailProps {
+interface ReviewDetailProps {
   row: ComparisonRow;
   condition: string;
   participantCount: number;
@@ -262,13 +248,13 @@ interface QuickReviewDetailProps {
   candidateCount: number;
 }
 
-export default function QuickReviewDetail({
+export default function ReviewDetail({
   row,
   condition,
   participantCount,
   ancestryBreakdown,
   candidateCount,
-}: QuickReviewDetailProps) {
+}: ReviewDetailProps) {
   const { cohort, matched, enrichment } = row;
   const tone = verdictTone(enrichment);
   const allAncestry = ancestryContext(cohort, ancestryBreakdown);
@@ -325,9 +311,9 @@ export default function QuickReviewDetail({
         </div>
       </header>
 
-      <section style={styles.section} aria-labelledby="quickReviewVerdict">
+      <section style={styles.section} aria-labelledby="reviewVerdict">
         <SectionTitle
-          id="quickReviewVerdict"
+          id="reviewVerdict"
           tooltip={
             "Decided by the 95% confidence interval of the odds ratio, not by the point estimate. " +
             "Enriched: the whole interval is above 1. Depleted: the whole interval is below 1. " +
@@ -353,9 +339,9 @@ export default function QuickReviewDetail({
       </section>
 
       {enrichment && matched && (
-        <section style={styles.section} aria-labelledby="quickReviewEvidence">
+        <section style={styles.section} aria-labelledby="reviewEvidence">
           <SectionTitle
-            id="quickReviewEvidence"
+            id="reviewEvidence"
             tooltip="What stands behind the verdict. The test and the odds ratio compare matched participants with the rest of the cohort."
           >
             Evidence
@@ -415,10 +401,10 @@ export default function QuickReviewDetail({
       )}
 
       <div style={stacked ? undefined : styles.columns}>
-        <section style={styles.section} aria-labelledby="quickReviewHeadToHead">
+        <section style={styles.section} aria-labelledby="reviewHeadToHead">
           <SectionTitle
-            id="quickReviewHeadToHead"
-            tooltip="The same measures for both cohorts, side by side: the whole All of Us cohort and the phenotype-matched participants within it."
+            id="reviewHeadToHead"
+            tooltip="The same measures for both sides, as in the table: all All of Us participants, and the phenotype-matched participants among them."
           >
             Head to head
           </SectionTitle>
@@ -432,9 +418,7 @@ export default function QuickReviewDetail({
               <thead>
                 <tr>
                   <th style={styles.th}>Measure</th>
-                  <th style={styles.th}>
-                    <AllOfUs /> cohort-wide
-                  </th>
+                  <th style={styles.th}>All participants</th>
                   <th style={styles.th}>Phenotype-matched</th>
                 </tr>
               </thead>
@@ -484,9 +468,9 @@ export default function QuickReviewDetail({
           )}
         </section>
 
-        <section style={styles.section} aria-labelledby="quickReviewAncestry">
+        <section style={styles.section} aria-labelledby="reviewAncestry">
           <SectionTitle
-            id="quickReviewAncestry"
+            id="reviewAncestry"
             tooltip="Each All of Us ancestry group: how much of the phenotype-matched cohort it makes up, beside the variant's cohort-wide frequency within that group. gnomAD's figure is shown where it has the same group. The shaded row is where the variant is most frequent."
           >
             Ancestry context
@@ -648,8 +632,4 @@ function Frequency({ af }: { af: number }) {
       {formatAf(af)}
     </span>
   );
-}
-
-function NotAvailable() {
-  return <span style={Style.elements.notAvailable}>—</span>;
 }

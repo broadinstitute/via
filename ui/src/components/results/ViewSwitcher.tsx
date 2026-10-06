@@ -6,8 +6,6 @@ import { CompareIcon, TableIcon } from "../icons";
 
 export type ResultsView = "table" | "review";
 
-// The same pill the breakdown's Ancestry/Age toggle uses, one size up: the one control that
-// decides what the page shows beneath the summary strip.
 // The one control that decides what the page shows beneath the summary strip, so it carries more
 // weight than the small Ancestry/Age toggle: a taller pill, a stronger border, and the selected
 // option filled in the accent with white type rather than lifted on a shadow.

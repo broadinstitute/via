@@ -69,7 +69,7 @@ export default colors;
 /**
  * Background tints that mark which source a table's column group reports -- All of Us or gnomAD.
  *
- * `strong` is for the cohort table, where the tint separates two side-by-side column groups;
+ * `strong` is for the variants table, where the tint separates its side-by-side column groups;
  * `soft` is for the population table nested inside an expanded row, where the same distinction
  * only needs a hint. Both share one `hover` value so a hovered row reads as a single band.
  */

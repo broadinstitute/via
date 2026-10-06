@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AnnotatedCohortVariant, CohortVariantRow, FilteredVariantRow } from "../../types/results";
-import VariantsPanel, { mergeVariantRows } from "./VariantsPanel";
+import VariantsPanel from "./VariantsPanel";
 
 /** A cell by its full text, which can span elements (the italic program name). */
 const cellWithText = (text: string) => (_: string, element: Element | null) =>
@@ -76,15 +76,6 @@ function renderPanel(
     />,
   );
 }
-
-describe("mergeVariantRows", () => {
-  it("joins the matched statistics onto each cohort row by variant, keeping the candidate order", () => {
-    const rows = mergeVariantRows([NOT_IN_AOU, IN_AOU_ONLY], [MATCHED]);
-    expect(rows.map((row) => row.variant)).toEqual(["7-55181378-G-A", "2-122517541-C-G"]);
-    expect(rows[0].matched).toBeUndefined();
-    expect(rows[1].matched).toBe(MATCHED);
-  });
-});
 
 describe("VariantsPanel", () => {
   afterEach(cleanup);
@@ -173,10 +164,10 @@ describe("VariantsPanel", () => {
   });
 
   it("opens Review on a row's variant from its control, and offers no control without a handler", () => {
-    const onQuickReview = vi.fn();
-    renderPanel([IN_AOU_ONLY], [MATCHED], { onQuickReview });
+    const onReview = vi.fn();
+    renderPanel([IN_AOU_ONLY], [MATCHED], { onReview });
     fireEvent.click(screen.getByRole("button", { name: "Review 2-122517541-C-G" }));
-    expect(onQuickReview).toHaveBeenCalledWith("2-122517541-C-G");
+    expect(onReview).toHaveBeenCalledWith("2-122517541-C-G");
     cleanup();
 
     renderPanel([IN_AOU_ONLY], [MATCHED]);

@@ -6,13 +6,12 @@ import colors from "../libs/colors";
 import Footer from "../components/results/Footer";
 import PhenotypeSummaryStrip from "../components/results/PhenotypeSummaryStrip";
 import ReviewView from "../components/results/ReviewView";
-import { ScopeChip } from "../components/results/ResultsPanel";
+import { MatchedParticipantsChip, ScopeChip } from "../components/results/ResultsPanel";
 import SearchPopover from "../components/results/SearchPopover";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
 import VariantsPanel, { VARIANTS_TABLE_MIN_HEIGHT } from "../components/results/VariantsPanel";
 import type { ResultsView } from "../components/results/ViewSwitcher";
-import { UserIcon } from "../components/icons";
 import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
 
@@ -125,7 +124,8 @@ export default function SearchResultsPage() {
     setDrawerOpen(false);
   }
 
-  // Mirrors the matched panel's own notion of "filtered": there are participants to compare with.
+  // One rule for "there are matched participants to compare with": it shows the table's matched
+  // columns, enables Review in the strip, and offers each row's Review button.
   const hasPhenotypeFilter = (results?.ancestryBreakdown.length ?? 0) > 0;
   const conditionName = results?.conditionSearch
     ? (results.conditionSearch.concept?.name ?? `concept ${results.conditionSearch.conceptId}`)
@@ -175,7 +175,6 @@ export default function SearchResultsPage() {
         }
       />
 
-
       <main style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
         <PhenotypeSummaryStrip
           loading={!(results && revealed.phenotype)}
@@ -185,9 +184,10 @@ export default function SearchResultsPage() {
           onAddPhenotypeFilter={() => setDrawerOpen(true)}
           view={view}
           onViewChange={(next) => (next === "review" ? openReview() : setView("table"))}
+          canReview={hasPhenotypeFilter}
         />
 
-        {view === "review" && results && results.conditionSearch ? (
+        {view === "review" && results?.conditionSearch && hasPhenotypeFilter ? (
           <ReviewView
             initialVariant={reviewVariant}
             cohortVariants={results.cohortVariants}
@@ -205,7 +205,7 @@ export default function SearchResultsPage() {
                 hasPhenotypeFilter={hasPhenotypeFilter}
                 participantCount={results.conditionSearch?.participantCount ?? 0}
                 condition={conditionName}
-                onQuickReview={hasPhenotypeFilter ? openReview : undefined}
+                onReview={hasPhenotypeFilter ? openReview : undefined}
               />
             ) : (
               <SectionLoadingPanel
@@ -213,11 +213,7 @@ export default function SearchResultsPage() {
                 scope={
                   <>
                     <ScopeChip>All participants</ScopeChip>
-                    {conditionConceptIdKey && (
-                      <ScopeChip tone="accent" icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />} loading>
-                        Loading participant count
-                      </ScopeChip>
-                    )}
+                    {conditionConceptIdKey && <MatchedParticipantsChip participantCount={0} condition="" loading />}
                   </>
                 }
                 message="Loading variants…"
@@ -229,7 +225,6 @@ export default function SearchResultsPage() {
 
         <Footer />
       </main>
-
     </>
   );
 }

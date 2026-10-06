@@ -27,6 +27,7 @@ function renderStrip(props: Partial<React.ComponentProps<typeof PhenotypeSummary
       onAddPhenotypeFilter={onAddPhenotypeFilter}
       view="table"
       onViewChange={onViewChange}
+      canReview={(props.ancestryBreakdown?.length ?? 0) > 0}
       {...props}
     />,
   );
@@ -93,6 +94,7 @@ describe("PhenotypeSummaryStrip", () => {
         onAddPhenotypeFilter={vi.fn()}
         view="table"
         onViewChange={vi.fn()}
+        canReview={false}
       />,
     );
     expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();

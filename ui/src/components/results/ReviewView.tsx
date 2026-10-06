@@ -4,11 +4,12 @@ import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment, CohortVariantRow, FilteredVariantRow } from "../../types/results";
-import { buildComparisonRows, formatRatio, SIMILARITY_FOLD, sortByEnrichment } from "../../utils/comparison";
+import { buildComparisonRows, formatRatio, sortByEnrichment } from "../../utils/comparison";
 import Clickable from "../common/Clickable";
-import { ArrowLeftIcon, ArrowRightIcon, UserIcon } from "../icons";
-import QuickReviewDetail, { verdictTone } from "./QuickReviewDetail";
-import ResultsPanel, { ScopeChip } from "./ResultsPanel";
+import { ArrowLeftIcon, ArrowRightIcon } from "../icons";
+import ResultsPanel, { MatchedParticipantsChip, ScopeChip } from "./ResultsPanel";
+import ReviewDetail from "./ReviewDetail";
+import { VERDICT_TONE, verdictTone } from "./verdictTone";
 
 // The rail's height follows the detail's: it's absolutely positioned inside its grid cell, so a
 // long candidate list scrolls within the rail instead of stretching the page.
@@ -141,7 +142,7 @@ interface ReviewViewProps {
 }
 
 /**
- * Review: the two cohorts head to head, one variant at a time, shown in place of the tables when
+ * Review: the two cohorts head to head, one variant at a time, shown in place of the table when
  * the summary strip's switcher is on Review. A rail on the left ranks the candidates by how well
  * the interval supports a departure from cohort-wide; the detail on the right states the verdict,
  * the evidence behind it, and how the matched cohort's ancestry makeup bears on it. Arrow keys
@@ -222,13 +223,7 @@ export default function ReviewView({
       title="Review"
       scope={
         <>
-          <ScopeChip
-            tone="accent"
-            icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />}
-            title={`${participantCount.toLocaleString()} participants with ${condition}`}
-          >
-            {participantCount.toLocaleString()} with {condition}
-          </ScopeChip>
+          <MatchedParticipantsChip participantCount={participantCount} condition={condition} />
           <ScopeChip>vs. all participants</ScopeChip>
         </>
       }
@@ -273,18 +268,11 @@ export default function ReviewView({
               })}
             </ol>
             <div style={styles.railFooter}>
-              <span style={styles.legendItem}>
-                <span style={Style.colorDot(colors.textDanger, 8)} /> Enriched: interval above 1
-              </span>
-              <span style={styles.legendItem}>
-                <span style={Style.colorDot(colors.textAccent, 8)} /> Depleted: interval below 1
-              </span>
-              <span style={styles.legendItem}>
-                <span style={Style.colorDot(colors.textSecondary, 8)} /> Similar: within {1 / SIMILARITY_FOLD}×–{SIMILARITY_FOLD}×
-              </span>
-              <span style={styles.legendItem}>
-                <span style={Style.colorDot(colors.textMuted, 8)} /> Inconclusive: too few alleles
-              </span>
+              {Object.values(VERDICT_TONE).map((tone) => (
+                <span key={tone.word} style={styles.legendItem}>
+                  <span style={Style.colorDot(tone.ink, 8)} /> {tone.word}: {tone.rule}
+                </span>
+              ))}
               <span style={{ ...styles.legendItem, marginTop: 3 }}>
                 <kbd style={styles.kbd}>←</kbd> <kbd style={styles.kbd}>→</kbd> step between variants
               </span>
@@ -294,7 +282,7 @@ export default function ReviewView({
 
         <section style={styles.detail}>
           {selected ? (
-            <QuickReviewDetail
+            <ReviewDetail
               key={selected.variant}
               row={selected}
               condition={condition}

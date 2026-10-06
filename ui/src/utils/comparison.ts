@@ -22,7 +22,6 @@ import { AOU_SUBPOP_CODES } from "./subpopulations";
 
 /** "Similar" means the interval rules out a difference this large in either direction. */
 export const SIMILARITY_FOLD = 2;
-export const SIGNIFICANCE_LEVEL = 0.05;
 /**
  * An enrichment call needs at least this many matched alternate alleles. Woolf's interval leans on
  * a normal approximation that breaks down at one or two events, and one carrier against a
@@ -63,6 +62,31 @@ export interface Enrichment {
   strength: number;
 }
 
+/**
+ * One candidate variant with both sides of the comparison: its cohort-wide record from the VAT and,
+ * when a phenotype filter matched anyone, its statistics among the matched participants. The
+ * table and Review both start from these.
+ */
+export interface MergedVariantRow {
+  variant: string;
+  cohort: CohortVariantRow;
+  /** Null when the search had no phenotype, or the matched participants have no statistics for it. */
+  matched: FilteredVariantWithStats | null;
+}
+
+/** Joins the cohort-wide and matched rows by variant, keeping the candidate list's order. */
+export function mergeVariantRows(
+  cohortVariants: CohortVariantRow[],
+  filteredVariants: FilteredVariantRow[],
+): MergedVariantRow[] {
+  const matchedByVariant = new Map(filteredVariants.map((row) => [row.variant, row]));
+  return cohortVariants.map((cohort) => {
+    const filtered = matchedByVariant.get(cohort.variant);
+    return { variant: cohort.variant, cohort, matched: filtered?.hasStats ? filtered : null };
+  });
+}
+
+/** A merged row as Review reads it: annotated or nothing, and the comparison worked out. */
 export interface ComparisonRow {
   variant: string;
   cohort: AnnotatedCohortVariant | null;
@@ -71,24 +95,21 @@ export interface ComparisonRow {
   enrichment: Enrichment | null;
 }
 
-/** Joins the two tables' rows by variant, keeping the candidate list's order. */
+/** The merged rows with each one's enrichment computed, keeping the candidate list's order. */
 export function buildComparisonRows(
   cohortVariants: CohortVariantRow[],
   filteredVariants: FilteredVariantRow[],
   ancestryBreakdown: BreakdownSegment[] = [],
 ): ComparisonRow[] {
-  const matchedByVariant = new Map(filteredVariants.map((row) => [row.variant, row]));
-  return cohortVariants.map((row) => {
+  return mergeVariantRows(cohortVariants, filteredVariants).map(({ variant, cohort: row, matched }) => {
     const cohort = row.annotated ? row : null;
-    const filtered = matchedByVariant.get(row.variant);
-    const matched = filtered?.hasStats ? filtered : null;
     const enrichment =
       cohort && matched && cohort.aouAllAc !== null && cohort.aouAllAn !== null
         ? computeEnrichment(matched.cohortAc, matched.cohortAn, cohort.aouAllAc, cohort.aouAllAn, {
             expectedAdjustedAc: ancestryAdjustedExpectation(cohort, ancestryBreakdown),
           })
         : null;
-    return { variant: row.variant, cohort, matched, enrichment };
+    return { variant, cohort, matched, enrichment };
   });
 }
 

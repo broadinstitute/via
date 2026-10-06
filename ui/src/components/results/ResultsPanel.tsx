@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import colors, { alpha } from "../../libs/colors";
 import * as Style from "../../libs/style";
+import { UserIcon } from "../icons";
 
 /** Shared by the chip's text and its loading placeholder, which has to match its height. */
 const CHIP_LINE_HEIGHT = 1.2;
@@ -108,6 +109,31 @@ export function ScopeChip({ children, icon, tone = "neutral", title, loading = f
         <span style={styles.chipText}>{children}</span>
       )}
     </span>
+  );
+}
+
+interface MatchedParticipantsChipProps {
+  participantCount: number;
+  condition: string;
+  /** Pulses in place of the count while the search is still loading. */
+  loading?: boolean;
+}
+
+/** The accent chip naming the phenotype-matched participants: "391 with Familial hypercholesterolemia". */
+export function MatchedParticipantsChip({ participantCount, condition, loading = false }: MatchedParticipantsChipProps) {
+  const icon = <UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />;
+  if (loading) {
+    return (
+      <ScopeChip tone="accent" icon={icon} loading>
+        Loading participant count
+      </ScopeChip>
+    );
+  }
+  const count = participantCount.toLocaleString();
+  return (
+    <ScopeChip tone="accent" icon={icon} title={`${count} participants with ${condition}`}>
+      {count} with {condition}
+    </ScopeChip>
   );
 }
 

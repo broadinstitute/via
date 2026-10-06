@@ -104,7 +104,7 @@ function renderView(initialVariant?: string) {
 describe("ReviewView", () => {
   afterEach(cleanup);
 
-  it("opens on the best-supported signal with its verdict, evidence and the two tables", () => {
+  it("opens on the best-supported signal with its verdict, evidence and the two comparison tables", () => {
     renderView();
 
     expect(screen.getByRole("heading", { name: "Review" })).toBeInTheDocument();
