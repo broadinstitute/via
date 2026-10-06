@@ -6,7 +6,6 @@ import colors from "../libs/colors";
 import Footer from "../components/results/Footer";
 import PhenotypeSummaryStrip from "../components/results/PhenotypeSummaryStrip";
 import ReviewView from "../components/results/ReviewView";
-import { MatchedParticipantsChip, ScopeChip } from "../components/results/ResultsPanel";
 import SearchPopover from "../components/results/SearchPopover";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
@@ -210,12 +209,6 @@ export default function SearchResultsPage() {
             ) : (
               <SectionLoadingPanel
                 title="Candidate variants"
-                scope={
-                  <>
-                    <ScopeChip>All participants</ScopeChip>
-                    {conditionConceptIdKey && <MatchedParticipantsChip participantCount={0} condition="" loading />}
-                  </>
-                }
                 message="Loading variants…"
                 minHeight={VARIANTS_TABLE_MIN_HEIGHT}
               />

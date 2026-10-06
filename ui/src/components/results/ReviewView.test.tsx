@@ -108,6 +108,7 @@ describe("ReviewView", () => {
     renderView();
 
     expect(screen.getByRole("heading", { name: "Review" })).toBeInTheDocument();
+    expect(screen.queryByText("vs. all participants")).not.toBeInTheDocument();
     const rail = screen.getByRole("navigation", { name: /best-supported first/ });
     const items = within(rail).getAllByRole("button");
     // Gene over variant, the fold change on the right: the supported signal first, the

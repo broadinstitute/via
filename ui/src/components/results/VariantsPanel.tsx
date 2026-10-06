@@ -24,7 +24,7 @@ import NotAvailable from "../elements/NotAvailable";
 import SubpopBadge from "../elements/SubpopBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
-import ResultsPanel, { MatchedParticipantsChip, ScopeChip } from "./ResultsPanel";
+import ResultsPanel from "./ResultsPanel";
 
 /** The loading placeholder's height, roughly what a dozen rows of the loaded table take. */
 export const VARIANTS_TABLE_MIN_HEIGHT = 431;
@@ -491,7 +491,7 @@ interface VariantsPanelProps {
   /** Whether a phenotype filter matched anyone; without one the matched column group is left out. */
   hasPhenotypeFilter: boolean;
   participantCount: number;
-  /** The picked condition's name, for the panel's scope chip and the matched header's tooltip; empty when none was picked. */
+  /** The picked condition's name, for the matched header's tooltip; empty when none was picked. */
   condition: string;
   /** Opens Review on the given variant. */
   onReview?: (variant: string) => void;
@@ -885,12 +885,6 @@ export default function VariantsPanel({
   return (
     <ResultsPanel
       title="Candidate variants"
-      scope={
-        <>
-          <ScopeChip>All participants</ScopeChip>
-          {hasPhenotypeFilter && <MatchedParticipantsChip participantCount={participantCount} condition={condition} />}
-        </>
-      }
       headerRight={
         <div style={styles.headerRight}>
           <span style={styles.sub}>Showing {rows.length} results</span>

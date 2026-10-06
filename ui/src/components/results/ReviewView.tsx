@@ -7,7 +7,7 @@ import type { BreakdownSegment, CohortVariantRow, FilteredVariantRow } from "../
 import { buildComparisonRows, formatRatio, sortByEnrichment } from "../../utils/comparison";
 import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, ArrowRightIcon } from "../icons";
-import ResultsPanel, { MatchedParticipantsChip, ScopeChip } from "./ResultsPanel";
+import ResultsPanel from "./ResultsPanel";
 import ReviewDetail from "./ReviewDetail";
 import { VERDICT_TONE, verdictTone } from "./verdictTone";
 
@@ -221,12 +221,6 @@ export default function ReviewView({
   return (
     <ResultsPanel
       title="Review"
-      scope={
-        <>
-          <MatchedParticipantsChip participantCount={participantCount} condition={condition} />
-          <ScopeChip>vs. all participants</ScopeChip>
-        </>
-      }
       headerRight={stepper}
     >
       <div style={styles.body}>

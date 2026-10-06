@@ -108,7 +108,8 @@ describe("VariantsPanel", () => {
     const matchedHeader = screen.getByRole("columnheader", { name: /^Phenotype-matched participants/ });
     expect(matchedHeader).toHaveTextContent(/^Phenotype-matched participants\s*49/);
     expect(screen.getAllByRole("columnheader", { name: "All of Us" }).length).toBeGreaterThan(0);
-    expect(screen.getByText("49 with Tetralogy of Fallot", { selector: "span" })).toBeInTheDocument();
+    // The panel header carries no scope chips; the strip and the scope row say it.
+    expect(screen.queryByText("49 with Tetralogy of Fallot")).not.toBeInTheDocument();
   });
 
   it("leaves the matched column group out when there is no phenotype filter", () => {

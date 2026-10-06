@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import DnaSpinner from "../common/DnaSpinner";
 import ResultsPanel from "./ResultsPanel";
@@ -20,20 +20,17 @@ const styles = {
 
 interface SectionLoadingPanelProps {
   title: string;
-  /** The loaded panel's ScopeChip, or a stand-in for one, so the header doesn't change shape. */
-  scope?: ReactNode;
   message?: string;
   minHeight?: number;
 }
 
 export default function SectionLoadingPanel({
   title,
-  scope,
   message = "Loading…",
   minHeight,
 }: SectionLoadingPanelProps) {
   return (
-    <ResultsPanel title={title} scope={scope}>
+    <ResultsPanel title={title}>
       <div
         // minHeight comes from the caller so this placeholder occupies roughly the same
         // footprint as the panel it stands in for.

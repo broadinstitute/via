@@ -3,7 +3,7 @@ import colors, { alpha } from "../../libs/colors";
 import type { ClinVarSignificance } from "../../types/results";
 import { CLINVAR_BADGE_CONFIG } from "../../utils/clinvar";
 
-// The same pill as SubpopBadge and ScopeChip -- rounded, a tinted fill, a soft border in the ink
+// The same pill as SubpopBadge -- rounded, a tinted fill, a soft border in the ink
 // at partial opacity -- so a ClinVar call sits beside an ancestry badge or a scope chip as one
 // family. The code (P, LP, VUS…) is centered in a fixed slot on the left; the review star count
 // follows a hairline divider in the same ink, so the divider and stars line up down a column.
