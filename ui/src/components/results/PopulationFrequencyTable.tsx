@@ -3,9 +3,10 @@ import colors, { alpha, POPMAX_BACKGROUND, sourceTints } from "../../libs/colors
 import { useHover, useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { AnnotatedCohortVariant, GnomadSubpopCode, PopulationFrequency, SubpopCode } from "../../types/results";
-import { exactAf, formatAcAn, formatAf } from "../../utils/format";
+import { exactAf, formatAcAn, formatAf, formatInt } from "../../utils/format";
 import { SUBPOP_COLOR, SUBPOP_LABEL } from "../../utils/subpopulations";
 import AllOfUs from "../common/AllOfUs";
+import NotAvailable from "../elements/NotAvailable";
 
 // The union of both sources' subpopulation vocabularies, alphabetical by code -- a stable order
 // so rows line up across variants. AoU has EUR/MID with no gnomAD equivalent; gnomAD has
@@ -166,10 +167,10 @@ function FrequencyCells({ af, ac, an, covered, populationLabel, isMax, source, h
     return (
       <>
         <td style={cellStyle}>
-          <span style={Style.elements.notAvailable}>—</span>
+          <NotAvailable />
         </td>
         <td style={cellStyle}>
-          <span style={Style.elements.notAvailable}>—</span>
+          <NotAvailable />
         </td>
       </>
     );
@@ -177,7 +178,7 @@ function FrequencyCells({ af, ac, an, covered, populationLabel, isMax, source, h
 
   if (ac === 0) {
     const zeroStyle = { ...cellStyle, ...styles.zeroCarriers };
-    const title = `No carriers among ${an.toLocaleString()} alleles sampled in ${SOURCE_NAME[source]}.`;
+    const title = `No carriers among ${formatInt(an)} alleles sampled in ${SOURCE_NAME[source]}.`;
     return (
       <>
         <td style={zeroStyle} title={title}>

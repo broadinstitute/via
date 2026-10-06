@@ -4,6 +4,7 @@ import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
+import { formatInt } from "../../utils/format";
 import { useTooltip } from "../common/useTooltip";
 
 // A breakdown as one stacked bar with a legend beneath listing every group, its code and share.
@@ -118,7 +119,7 @@ function Run({ segment, index, quiet, hot, hoverProps }: RunProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const tooltip = useTooltip(
     ref,
-    `${segment.label}: ${segment.count.toLocaleString()} participants (${Math.round(segment.percent)}%)`,
+    `${segment.label}: ${formatInt(segment.count)} participants (${Math.round(segment.percent)}%)`,
   );
 
   return (

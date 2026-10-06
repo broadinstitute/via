@@ -4,6 +4,7 @@ import type { ConditionSearch } from "../../api/conditions";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
+import { formatInt } from "../../utils/format";
 import Clickable from "../common/Clickable";
 import InfoTooltip from "../common/InfoTooltip";
 import { PlusIcon } from "../icons";
@@ -134,11 +135,6 @@ const styles = {
     fontSize: 12.5,
     color: colors.textSecondary,
   },
-  skeleton: {
-    height: 14,
-    borderRadius: 4,
-    background: colors.border,
-  },
 } as const satisfies Record<string, CSSProperties>;
 
 type BreakdownTab = "ancestry" | "age";
@@ -196,19 +192,19 @@ export default function PhenotypeSummaryStrip({
         {[220, 90, 320].map((width, index) => (
           <div key={index} style={{ ...styles.block, ...(index > 0 ? styles.blockDivided : undefined) }}>
             <div style={styles.blockLabel}>
-              <span className="animate-skeleton-pulse" style={{ ...styles.skeleton, width: 60, height: 8 }} />
+              <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 60, height: 8 }} />
             </div>
             <div style={styles.blockContent}>
-              <span className="animate-skeleton-pulse" style={{ ...styles.skeleton, width, height: 18 }} />
+              <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width, height: 18 }} />
             </div>
           </div>
         ))}
         <div style={{ ...styles.block, ...styles.blockDivided, paddingRight: 0 }}>
           <div style={styles.blockLabel}>
-            <span className="animate-skeleton-pulse" style={{ ...styles.skeleton, width: 30, height: 8 }} />
+            <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 30, height: 8 }} />
           </div>
           <div style={styles.blockContent}>
-            <span className="animate-skeleton-pulse" style={{ ...styles.skeleton, width: 150, height: 28, borderRadius: 999 }} />
+            <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 150, height: 28, borderRadius: 999 }} />
           </div>
         </div>
       </div>
@@ -282,7 +278,7 @@ export default function PhenotypeSummaryStrip({
           </span>
         </div>
         <div style={styles.blockContent}>
-          <span style={styles.count}>{participantCount.toLocaleString()}</span>
+          <span style={styles.count}>{formatInt(participantCount)}</span>
           <span style={styles.countUnit}>matched</span>
         </div>
       </div>

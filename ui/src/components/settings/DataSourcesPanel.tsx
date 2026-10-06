@@ -13,12 +13,6 @@ const styles = {
     fontWeight: 600,
     color: colors.textPrimary,
   },
-  intro: {
-    marginBottom: 14,
-    fontSize: 12,
-    lineHeight: 1.5,
-    color: colors.textSecondary,
-  },
   list: {
     margin: 0,
     padding: 0,
@@ -51,18 +45,6 @@ const styles = {
     textDecoration: "none",
     wordBreak: "break-all",
   },
-  skeletonRow: {
-    height: 14,
-    borderRadius: 4,
-    background: colors.border,
-  },
-  error: {
-    padding: "10px 12px",
-    borderRadius: Style.radius,
-    background: colors.bgDanger,
-    color: colors.textDanger,
-    fontSize: 12,
-  },
 } as const satisfies Record<string, CSSProperties>;
 
 const SKELETON_ROWS = 5;
@@ -92,17 +74,17 @@ export default function DataSourcesPanel() {
   return (
     <>
       <h3 style={styles.title}>Data sources</h3>
-      <p style={styles.intro}>The datasets and annotation releases behind VIA's results.</p>
+      <p style={Style.elements.panelIntro}>The datasets and annotation releases behind VIA's results.</p>
 
       {error ? (
-        <div role="alert" style={styles.error}>
+        <div role="alert" style={Style.elements.errorNote}>
           {error}
         </div>
       ) : !versions ? (
         <div style={styles.list} aria-busy="true">
           {Array.from({ length: SKELETON_ROWS }, (_, index) => (
             <div key={index} style={{ ...styles.row, borderTop: rowBorder(index) }}>
-              <span className="animate-skeleton-pulse" style={{ ...styles.skeletonRow, width: `${50 - index * 5}%` }} />
+              <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: `${50 - index * 5}%` }} />
             </div>
           ))}
         </div>

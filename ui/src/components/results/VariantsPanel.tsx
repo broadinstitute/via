@@ -13,7 +13,7 @@ import * as Style from "../../libs/style";
 import type { ClinVarSignificance, CohortVariantRow, FilteredVariantRow } from "../../types/results";
 import { mergeVariantRows, type MergedVariantRow } from "../../utils/comparison";
 import { clinvarSearchUrl, gnomadVariantUrl } from "../../utils/externalLinks";
-import { exactAf, formatAcAn, formatAf } from "../../utils/format";
+import { exactAf, formatAcAn, formatAf, formatInt } from "../../utils/format";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
@@ -683,13 +683,13 @@ export default function VariantsPanel({
         id: "matchedScope",
         header: () => (
           <InfoLabel
-            tooltip={`Statistics among the ${participantCount.toLocaleString()} participants matched by the phenotype filter (${condition}), beside the figures for all participants to their left.`}
+            tooltip={`Statistics among the ${formatInt(participantCount)} participants matched by the phenotype filter (${condition}), beside the figures for all participants to their left.`}
           >
             <span style={{ ...styles.scopeHeader, ...styles.scopeHeaderMatched }}>
               Phenotype-matched participants
               <span style={styles.matchedCount}>
                 <UserIcon size={11} strokeWidth={2.5} aria-hidden="true" />
-                {participantCount.toLocaleString()}
+                {formatInt(participantCount)}
               </span>
             </span>
           </InfoLabel>

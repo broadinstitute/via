@@ -18,12 +18,6 @@ const styles = {
     fontWeight: 600,
     color: colors.textPrimary,
   },
-  intro: {
-    marginBottom: 14,
-    fontSize: 12,
-    lineHeight: 1.5,
-    color: colors.textSecondary,
-  },
   summary: {
     display: "inline-flex",
     alignItems: "center",
@@ -63,18 +57,6 @@ const styles = {
     fontSize: 11,
     fontWeight: 600,
   },
-  skeletonRow: {
-    height: 14,
-    borderRadius: 4,
-    background: colors.border,
-  },
-  error: {
-    padding: "10px 12px",
-    borderRadius: Style.radius,
-    background: colors.bgDanger,
-    color: colors.textDanger,
-    fontSize: 12,
-  },
 } as const satisfies Record<string, CSSProperties>;
 
 const SKELETON_ROWS = 4;
@@ -111,12 +93,12 @@ export default function SystemStatusPanel() {
           {loading ? "Refreshing..." : "Refresh"}
         </Clickable>
       </div>
-      <p style={styles.intro}>
+      <p style={Style.elements.panelIntro}>
         The BigQuery tables VIA queries, and whether this workspace's credentials can read them.
       </p>
 
       {error ? (
-        <div role="alert" style={styles.error}>
+        <div role="alert" style={Style.elements.errorNote}>
           {error}
         </div>
       ) : loading || !status ? (
@@ -126,7 +108,7 @@ export default function SystemStatusPanel() {
               key={index}
               style={{ ...styles.row, borderTop: index > 0 ? `1px solid ${colors.border}` : undefined }}
             >
-              <span className="animate-skeleton-pulse" style={{ ...styles.skeletonRow, width: `${60 - index * 6}%` }} />
+              <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: `${60 - index * 6}%` }} />
             </div>
           ))}
         </div>
