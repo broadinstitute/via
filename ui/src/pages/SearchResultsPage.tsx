@@ -205,6 +205,7 @@ export default function SearchResultsPage() {
                 participantCount={results.conditionSearch?.participantCount ?? 0}
                 condition={conditionName}
                 onReview={hasPhenotypeFilter ? openReview : undefined}
+                onAddPhenotypeFilter={() => setDrawerOpen(true)}
               />
             ) : (
               <SectionLoadingPanel

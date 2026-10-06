@@ -112,17 +112,55 @@ describe("VariantsPanel", () => {
     expect(screen.queryByText("49 with Tetralogy of Fallot")).not.toBeInTheDocument();
   });
 
-  it("leaves the matched column group out when there is no phenotype filter", () => {
-    renderPanel([IN_AOU_ONLY], []);
+  it("keeps the matched columns without a phenotype filter, holding a prompt to add one", () => {
+    const onAddPhenotypeFilter = vi.fn();
+    renderPanel([IN_AOU_ONLY, NOT_IN_AOU], [], { condition: "", onAddPhenotypeFilter });
 
-    expect(screen.queryByRole("columnheader", { name: /^Phenotype-matched/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "All participants" })).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: /^Hom/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Gene" })).toBeInTheDocument();
-    // Four identity cells, two All of Us, one merged gnomAD cell, three annotations, the Review
-    // control: no dashes standing in for the absent group.
-    const row = screen.getByText("2-122517541-C-G").closest("tr")!;
-    expect(within(row).getAllByRole("cell")).toHaveLength(11);
+    const matchedHeader = screen.getByRole("columnheader", { name: /^Phenotype-matched participants/ });
+    // No count to show yet.
+    expect(matchedHeader).not.toHaveTextContent(/\d/);
+    expect(screen.getByRole("columnheader", { name: /^Hom/ })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /^P\/LP in trans/ })).toBeInTheDocument();
+
+    // One cell across the four matched columns and down every row.
+    const prompt = screen.getByTestId("phenotype-prompt-cell");
+    expect(prompt).toHaveAttribute("colspan", "4");
+    expect(prompt).toHaveAttribute("rowspan", "2");
+    expect(within(prompt).getByTestId("phenotype-filter-illustration")).toBeInTheDocument();
+    expect(prompt).toHaveTextContent("Compare with a phenotype");
+
+    fireEvent.click(within(prompt).getByRole("button", { name: "Add phenotype filter" }));
+    expect(onAddPhenotypeFilter).toHaveBeenCalledOnce();
+    // The click stays in the prompt rather than expanding the row it belongs to.
+    expect(screen.queryByRole("button", { name: "Collapse row for more detail" })).not.toBeInTheDocument();
+
+    // A variant not in All of Us leaves the prompt's columns out of its message, in two runs.
+    const message = screen.getByText(cellWithText("Not observed in All of Us"));
+    expect(message).toHaveAttribute("colspan", "6");
+    expect(message.nextElementSibling).toHaveAttribute("colspan", "3");
+    expect(message.nextElementSibling).toHaveTextContent("");
+  });
+
+  it("says no one matched when a picked phenotype matched nobody", () => {
+    renderPanel([IN_AOU_ONLY], [], { onAddPhenotypeFilter: () => {} });
+
+    const prompt = screen.getByTestId("phenotype-prompt-cell");
+    expect(prompt).toHaveTextContent("No matched participants");
+    expect(prompt).toHaveTextContent("Tetralogy of Fallot");
+    expect(within(prompt).getByRole("button", { name: "Change phenotype" })).toBeInTheDocument();
+  });
+
+  it("runs the prompt through an expanded row's detail", () => {
+    renderPanel([IN_AOU_ONLY, NOT_IN_AOU], []);
+
+    fireEvent.click(screen.getByText("7-55181378-G-A"));
+    expect(screen.getByTestId("phenotype-prompt-cell")).toHaveAttribute("rowspan", "3");
+    const detail = screen.getByText("Look up in gnomAD ↗").closest("td")!;
+    // Expand, Variant, Gene, Consequence and the four source columns, before the prompt.
+    expect(detail).toHaveAttribute("colspan", "8");
+    expect(detail.nextElementSibling).toHaveAttribute("colspan", "4");
+    // No button without somewhere to send it.
+    expect(within(screen.getByTestId("phenotype-prompt-cell")).queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("spans a variant that isn't in All of Us with one message across every data column", () => {

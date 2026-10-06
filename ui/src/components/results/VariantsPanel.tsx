@@ -23,6 +23,7 @@ import ClinvarBadge from "../elements/ClinvarBadge";
 import NotAvailable from "../elements/NotAvailable";
 import SubpopBadge from "../elements/SubpopBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
+import PhenotypeFilterPrompt from "./PhenotypeFilterPrompt";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
 
@@ -195,6 +196,15 @@ const styles = {
   sourceMissing: {
     textAlign: "center",
   },
+  // The one cell standing in for the whole matched block without a phenotype filter: it spans
+  // every body row, so its prompt sits at the top in the matched tint.
+  phenotypePrompt: {
+    verticalAlign: "top",
+    whiteSpace: "normal",
+    padding: 0,
+    background: sourceTints.matched.strong,
+    cursor: "default",
+  },
   cellNa: {
     color: colors.textMuted,
     fontStyle: "italic",
@@ -365,6 +375,9 @@ const MATCHED_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.matched
 // has no annotations, no gnomAD data and no matched statistics either -- not because gnomAD lacks
 // it, but because the VAT only covers variants All of Us has seen. One message across the row
 // says so, rather than a "not observed in gnomAD" that may not be true.
+/** Below this many rows the no-phenotype prompt takes its one-line layout, so it doesn't stretch them. */
+const COMPACT_PROMPT_BELOW_ROWS = 4;
+
 const UNANNOTATED_GROUP: MissingGroup = {
   columnIds: new Set([
     "gene",
@@ -488,13 +501,15 @@ function downloadTsv(filename: string, contents: string) {
 interface VariantsPanelProps {
   cohortVariants: CohortVariantRow[];
   filteredVariants: FilteredVariantRow[];
-  /** Whether a phenotype filter matched anyone; without one the matched column group is left out. */
+  /** Whether a phenotype filter matched anyone; without one the matched columns hold a prompt to add one. */
   hasPhenotypeFilter: boolean;
   participantCount: number;
   /** The picked condition's name, for the matched header's tooltip; empty when none was picked. */
   condition: string;
   /** Opens Review on the given variant. */
   onReview?: (variant: string) => void;
+  /** Opens the search editor, from the prompt the matched columns show without a phenotype filter. */
+  onAddPhenotypeFilter?: () => void;
 }
 
 export default function VariantsPanel({
@@ -504,6 +519,7 @@ export default function VariantsPanel({
   participantCount,
   condition,
   onReview,
+  onAddPhenotypeFilter,
 }: VariantsPanelProps) {
   const rows = useMemo(() => mergeVariantRows(cohortVariants, filteredVariants), [cohortVariants, filteredVariants]);
   const [expandedVariants, setExpandedVariants] = useState<Set<string>>(new Set());
@@ -683,14 +699,20 @@ export default function VariantsPanel({
         id: "matchedScope",
         header: () => (
           <InfoLabel
-            tooltip={`Statistics among the ${formatInt(participantCount)} participants matched by the phenotype filter (${condition}), beside the figures for all participants to their left.`}
+            tooltip={
+              hasPhenotypeFilter
+                ? `Statistics among the ${formatInt(participantCount)} participants matched by the phenotype filter (${condition}), beside the figures for all participants to their left.`
+                : "Add a phenotype filter to see these statistics among only the participants who have it, beside the figures for all participants to their left."
+            }
           >
             <span style={{ ...styles.scopeHeader, ...styles.scopeHeaderMatched }}>
               Phenotype-matched participants
-              <span style={styles.matchedCount}>
-                <UserIcon size={11} strokeWidth={2.5} aria-hidden="true" />
-                {formatInt(participantCount)}
-              </span>
+              {hasPhenotypeFilter && (
+                <span style={styles.matchedCount}>
+                  <UserIcon size={11} strokeWidth={2.5} aria-hidden="true" />
+                  {formatInt(participantCount)}
+                </span>
+              )}
             </span>
           </InfoLabel>
         ),
@@ -703,6 +725,7 @@ export default function VariantsPanel({
         columns: columnHelper.columns([
           columnHelper.accessor((row) => row.matched?.cohortAf, {
             id: "matchedFreq",
+            enableSorting: hasPhenotypeFilter,
             header: () => <FrequencyHeader tooltip="Allele frequency among phenotype-matched participants, over the allele count and number behind it." />,
             cell: ({ row }) => {
               const stats = row.original.matched;
@@ -712,18 +735,21 @@ export default function VariantsPanel({
           }),
           columnHelper.accessor((row) => row.matched?.homozygotes, {
             id: "homozygotes",
+            enableSorting: hasPhenotypeFilter,
             header: () => <InfoLabel tooltip="Matched participants carrying two copies of this allele.">Hom</InfoLabel>,
             cell: ({ row }) => row.original.matched?.homozygotes ?? <NotAvailable />,
             sortUndefined: "last",
           }),
           columnHelper.accessor((row) => row.matched?.heterozygotes, {
             id: "heterozygotes",
+            enableSorting: hasPhenotypeFilter,
             header: () => <InfoLabel tooltip="Matched participants carrying one copy of this allele.">Het</InfoLabel>,
             cell: ({ row }) => row.original.matched?.heterozygotes ?? <NotAvailable />,
             sortUndefined: "last",
           }),
           columnHelper.accessor((row) => row.matched?.clinvarPlpInTrans, {
             id: "clinvarPlpInTrans",
+            enableSorting: hasPhenotypeFilter,
             header: () => (
               <InfoLabel tooltip="Count of phenotype-matched participants with a ClinVar Pathogenic/Likely Pathogenic variant in trans with this variant.">
                 P/LP in trans
@@ -816,7 +842,7 @@ export default function VariantsPanel({
       }),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columnHelper, expandedVariants, onReview, participantCount, condition],
+    [columnHelper, expandedVariants, onReview, participantCount, condition, hasPhenotypeFilter],
   );
 
   // Each pinned column sticks at the left edge plus the widths of the pinned columns before it.
@@ -854,17 +880,10 @@ export default function VariantsPanel({
     };
   }
 
-  // Without a phenotype filter there is nothing on the matched side, so the whole group is left
-  // out rather than drawn as a block of dashes.
-  const columnVisibility = useMemo(
-    () => Object.fromEntries(MATCHED_COLUMN_IDS.map((id) => [id, hasPhenotypeFilter])),
-    [hasPhenotypeFilter],
-  );
-
   const table = useReactTable({
     data: rows,
     columns,
-    state: { sorting, columnVisibility },
+    state: { sorting },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -875,6 +894,15 @@ export default function VariantsPanel({
     const lines = rows.map((row) => rowToTsvValues(row).join("\t"));
     downloadTsv("variant_results.tsv", [TSV_HEADER.join("\t"), ...lines].join("\n") + "\n");
   }
+
+  const bodyRows = table.getRowModel().rows;
+  // Without a phenotype filter the matched columns stay, as one cell running down the whole body
+  // that asks for a phenotype. Every row, and every expanded detail beneath one, gives way to it.
+  const leafColumnIds = table.getVisibleLeafColumns().map((column) => column.id);
+  const inPromptBlock = (columnId: string) => !hasPhenotypeFilter && TINT_COLUMN_IDS.matched.has(columnId);
+  const promptStart = leafColumnIds.findIndex(inPromptBlock);
+  const promptSpan = leafColumnIds.filter(inPromptBlock).length;
+  const promptRowSpan = bodyRows.length + bodyRows.filter((row) => expandedVariants.has(row.original.variant)).length;
 
   /** The tint a cell carries, which deepens into a band across whichever row is hovered. */
   function cellBackground(tint: Tint | null, hovered: boolean): string | undefined {
@@ -948,7 +976,7 @@ export default function VariantsPanel({
               })}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row) => {
+              {bodyRows.map((row, rowIndex) => {
                 const { cohort } = row.original;
                 // A source with no data for this variant collapses its whole column group into one
                 // "not observed" cell, rather than a row of bare dashes.
@@ -971,6 +999,29 @@ export default function VariantsPanel({
                       {...rowHoverProps(row.id)}
                     >
                       {visibleCells.map((cell, index) => {
+                        if (inPromptBlock(cell.column.id)) {
+                          if (rowIndex !== 0 || index !== promptStart) return null;
+                          return (
+                            <td
+                              key="phenotype-prompt"
+                              colSpan={promptSpan}
+                              rowSpan={promptRowSpan}
+                              style={styles.phenotypePrompt}
+                              data-testid="phenotype-prompt-cell"
+                              // The cell belongs to the first row but runs down all of them, so it
+                              // neither expands that row nor bands it while the pointer is inside.
+                              onClick={(event) => event.stopPropagation()}
+                              onMouseEnter={rowHoverProps(row.id).onMouseLeave}
+                              onMouseLeave={rowHoverProps(row.id).onMouseEnter}
+                            >
+                              <PhenotypeFilterPrompt
+                                condition={condition}
+                                compact={bodyRows.length < COMPACT_PROMPT_BELOW_ROWS}
+                                onAddPhenotypeFilter={onAddPhenotypeFilter}
+                              />
+                            </td>
+                          );
+                        }
                         const tint = tintOf(cell.column.id);
                         const pinned = pinnedIds.has(cell.column.id);
                         const cellStyle: CSSProperties = {
@@ -985,13 +1036,19 @@ export default function VariantsPanel({
                         };
                         const group = missingGroups.find((candidate) => candidate.columnIds.has(cell.column.id));
                         if (group) {
-                          const groupCells = visibleCells.filter((candidate) => group.columnIds.has(candidate.column.id));
-                          if (cell.id !== groupCells[0].id) return null;
-                          const spansPastPinned = groupCells.some((candidate) => !pinnedIds.has(candidate.column.id));
+                          // The prompt block can split a group in two, so it's drawn as runs of
+                          // adjacent cells, with its message in the first.
+                          const inGroup = (id: string) => group.columnIds.has(id) && !inPromptBlock(id);
+                          if (index > 0 && inGroup(visibleCells[index - 1].column.id)) return null;
+                          let end = index;
+                          while (end < visibleCells.length && inGroup(visibleCells[end].column.id)) end++;
+                          const runCells = visibleCells.slice(index, end);
+                          const firstRun = !visibleCells.slice(0, index).some((candidate) => inGroup(candidate.column.id));
+                          const spansPastPinned = runCells.some((candidate) => !pinnedIds.has(candidate.column.id));
                           return (
                             <td
                               key={cell.id}
-                              colSpan={groupCells.length}
+                              colSpan={runCells.length}
                               style={{
                                 ...cellStyle,
                                 ...styles.sourceMissing,
@@ -999,7 +1056,7 @@ export default function VariantsPanel({
                               }}
                               title={group.title}
                             >
-                              <span style={styles.cellNa}>{group.message}</span>
+                              {firstRun && <span style={styles.cellNa}>{group.message}</span>}
                             </td>
                           );
                         }
@@ -1013,7 +1070,7 @@ export default function VariantsPanel({
                     {expanded && (
                       <tr id={`variant-detail-${row.original.variant}`}>
                         <td
-                          colSpan={visibleCells.length}
+                          colSpan={promptSpan ? promptStart : visibleCells.length}
                           style={{ ...Style.table.bodyCell, ...styles.detailRow, ...styles.expandedBar }}
                         >
                           {cohort.annotated ? (
@@ -1061,6 +1118,13 @@ export default function VariantsPanel({
                             </div>
                           )}
                         </td>
+                        {/* The prompt cell runs through this row; the columns after it close it out. */}
+                        {promptSpan > 0 && promptStart + promptSpan < visibleCells.length && (
+                          <td
+                            colSpan={visibleCells.length - promptStart - promptSpan}
+                            style={{ ...Style.table.bodyCell, ...styles.detailRow }}
+                          />
+                        )}
                       </tr>
                     )}
                   </Fragment>
