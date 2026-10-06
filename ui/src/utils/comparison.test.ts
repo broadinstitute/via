@@ -15,7 +15,6 @@ import {
   largestMatchedAncestry,
   mergeVariantRows,
   sortByEnrichment,
-  zeroEventOddsBound,
 } from "./comparison";
 
 const ANNOTATED: AnnotatedCohortVariant = {
@@ -99,9 +98,9 @@ describe("computeEnrichment", () => {
   });
 
   it("calls a wide interval that straddles 1 inconclusive, however far the point estimate sits from 1", () => {
-    // The reviewer's PCSK9 case in spirit: a 0.3× point estimate on three alleles, interval touching 1.
-    const result = computeEnrichment(3, 782, 5577, 479860)!;
-    expect(result.ratio).toBeCloseTo(0.33, 2);
+    // The reviewer's PCSK9 case in spirit: a 0.4× point estimate on three alleles, interval taking in 1.
+    const result = computeEnrichment(3, 600, 5577, 479860)!;
+    expect(result.ratio).toBeCloseTo(0.43, 2);
     expect(result.ci![0]).toBeLessThan(1);
     expect(result.ci![1]).toBeGreaterThan(1);
     expect(result.verdict).toBe("inconclusive");
@@ -128,7 +127,17 @@ describe("computeEnrichment", () => {
     expect(three.verdict).toBe("enriched");
   });
 
-  it("bounds a zero count by the exact zero-event bound instead of inventing an interval", () => {
+  it("doesn't call a variant enriched when Fisher's exact test isn't significant", () => {
+    // Three of four matched alleles against none of the other four: p = 0.143. The old bound
+    // treated the matched odds as known and put the interval's lower end at 2.69, calling it enriched.
+    const result = computeEnrichment(3, 4, 3, 8)!;
+    expect(result.pValue).toBeCloseTo(0.143, 3);
+    expect(result.ci![0]).toBeLessThan(1);
+    expect(result.verdict).toBe("inconclusive");
+    expect(result.lean).toBe("more");
+  });
+
+  it("bounds a zero count by the exact interval's open side instead of inventing an interval", () => {
     // 0 of 262 against 3 of 481,436, where 0.002 were expected: no information either way.
     const result = computeEnrichment(0, 262, 3, 481436)!;
     expect(result.verdict).toBe("inconclusive");
@@ -154,7 +163,7 @@ describe("computeEnrichment", () => {
   });
 
   it("calls a one-participant cohort with no carriers inconclusive, with a finite bound and a usable strength", () => {
-    // One participant contributes two alleles. The rule of three made this bound negative, which
+    // One participant contributes two alleles. The rule of three once made this bound negative, which
     // read as an interval below 1: a "depleted" call with a NaN strength that broke the rail's sort.
     const one = computeEnrichment(0, 2, 5577, 479860)!;
     expect(one.ci![0]).toBe(0);
@@ -188,50 +197,76 @@ describe("computeEnrichment", () => {
 });
 
 describe("computeOddsRatio", () => {
-  it("computes the odds ratio and its Woolf interval", () => {
-    const { oddsRatio, ci } = computeOddsRatio(10, 90, 20, 380);
-    // (10·380) / (90·20)
-    expect(oddsRatio).toBeCloseTo(2.11, 2);
-    expect(ci![0]).toBeCloseTo(0.96, 2);
-    expect(ci![1]).toBeCloseTo(4.67, 2);
+  it("matches R's fisher.test interval", () => {
+    // Lady tasting tea, [[3,1],[1,3]]: fisher.test gives 0.2117329 to 621.9337. Its upper end is
+    // loose (uniroot's default tolerance on 1/ψ); solving ψ⁴ / (1 + 16ψ + 36ψ² + 16ψ³ + ψ⁴) = 0.975
+    // directly gives 626.2435.
+    const tea = computeOddsRatio(3, 1, 1, 3);
+    expect(tea.oddsRatio).toBe(9);
+    expect(tea.ci![0]).toBeCloseTo(0.2117329, 5);
+    expect(tea.ci![1]).toBeCloseTo(626.2435, 2);
   });
 
-  it("bounds an empty side by the exact zero-event bound", () => {
+  it("is wider than Woolf's interval at small counts", () => {
+    // Woolf gives 0.96 to 4.67 here; the exact interval reaches further on both sides.
+    const { oddsRatio, ci } = computeOddsRatio(10, 90, 20, 380);
+    expect(oddsRatio).toBeCloseTo(2.11, 2);
+    expect(ci![0]).toBeLessThan(0.96);
+    expect(ci![1]).toBeGreaterThan(4.67);
+    expect(ci![0]).toBeLessThan(oddsRatio);
+    expect(ci![1]).toBeGreaterThan(oddsRatio);
+  });
+
+  it("leaves a side open when the count is at the edge the margins allow", () => {
     const none = computeOddsRatio(0, 100, 5, 495);
     expect(none.oddsRatio).toBe(0);
     expect(none.ci![0]).toBe(0);
-    // Matched rate < 1 − 0.05^(1/100) ≈ 0.0295, odds ≈ 0.0304, over the rest's odds 5/495.
-    expect(none.ci![1]).toBeCloseTo(zeroEventOddsBound(100) / (5 / 495), 6);
-    expect(none.ci![1]).toBeCloseTo(3.01, 2);
+    expect(none.ci![1]).toBeGreaterThan(1);
+    expect(Number.isFinite(none.ci![1])).toBe(true);
 
     const all = computeOddsRatio(3, 97, 0, 500);
     expect(all.oddsRatio).toBe(Infinity);
     expect(all.ci![1]).toBe(Infinity);
-    expect(all.ci![0]).toBeCloseTo((3 / 97) / zeroEventOddsBound(500), 6);
+    expect(all.ci![0]).toBeGreaterThan(1);
+
+    // One participant's two alleles, neither a carrier: still a finite, positive bound.
+    const one = computeOddsRatio(0, 2, 28, 23970);
+    expect(one.ci![0]).toBe(0);
+    expect(one.ci![1]).toBeGreaterThan(1);
+    expect(Number.isFinite(one.ci![1])).toBe(true);
   });
 
-  it("keeps the bound finite and positive however few alleles the empty side has", () => {
-    // n = 1, 2 and 3 are where the rule of three reaches 1 and its odds go infinite or negative.
-    for (const n of [1, 2, 3, 4, 10]) {
-      const bound = zeroEventOddsBound(n);
-      expect(bound).toBeGreaterThan(0);
-      expect(Number.isFinite(bound)).toBe(true);
-    }
-    // One participant: rate < 1 − √0.05 ≈ 0.776, odds ≈ 3.47.
-    expect(zeroEventOddsBound(2)).toBeCloseTo(3.47, 2);
-    // Fewer alleles, a wider bound.
-    expect(zeroEventOddsBound(2)).toBeGreaterThan(zeroEventOddsBound(10));
-    // At large n it agrees with the rule of three.
-    expect(zeroEventOddsBound(10000)).toBeCloseTo(3 / 10000, 5);
-
-    // A tiny rest of the cohort with no carriers: the lower bound stays positive.
-    const tinyRest = computeOddsRatio(3, 97, 0, 2);
-    expect(tinyRest.ci![0]).toBeGreaterThan(0);
-    expect(tinyRest.ci![1]).toBe(Infinity);
+  it("doesn't treat the non-empty side's odds as known", () => {
+    // Three of four matched alleles carry it and none of the rest's four: Fisher's p is 0.143, so
+    // the interval must take in 1. The old zero-event bound put its lower end at 2.69.
+    const { ci } = computeOddsRatio(3, 1, 0, 4);
+    expect(fisherTwoSided(3, 1, 0, 4)).toBeCloseTo(0.143, 3);
+    expect(ci![0]).toBeLessThan(1);
+    expect(ci![1]).toBe(Infinity);
   });
 
-  it("leaves the interval undefined when neither side has carriers", () => {
+  it("excludes 1 only when the matching one-sided exact test is significant", () => {
+    // The interval's ends are the 2.5% one-sided tails, so excluding 1 means the observed tail at
+    // ψ = 1 is under 2.5%, which also puts the two-sided Fisher p under 5%.
+    for (let a = 0; a <= 8; a++)
+      for (let b = 0; b <= 12; b++)
+        for (let c = 0; c <= 8; c++)
+          for (let d = 0; d <= 12; d++) {
+            const { ci } = computeOddsRatio(a, b, c, d);
+            if (ci && (ci[0] > 1 || ci[1] < 1)) expect(fisherTwoSided(a, b, c, d), `[[${a},${b}],[${c},${d}]]`).toBeLessThan(0.05);
+          }
+  });
+
+  it("handles cohort-sized counts", () => {
+    const { oddsRatio, ci } = computeOddsRatio(12, 770, 5565, 474295);
+    expect(ci![0]).toBeGreaterThan(0);
+    expect(ci![0]).toBeLessThan(oddsRatio);
+    expect(ci![1]).toBeGreaterThan(oddsRatio);
+  });
+
+  it("leaves the interval undefined when the margins allow only the observed table", () => {
     expect(computeOddsRatio(0, 100, 0, 500)).toEqual({ oddsRatio: 1, ci: null });
+    expect(computeOddsRatio(4, 0, 6, 0)).toEqual({ oddsRatio: 1, ci: null });
   });
 });
 

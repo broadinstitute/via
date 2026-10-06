@@ -369,7 +369,7 @@ export default function ReviewDetail({
               tooltip={
                 "The odds of carrying this allele among matched participants divided by the odds among everyone else in the cohort: the standard case–control effect size, and the one that pairs with Fisher's test. " +
                 "Above 1 means more common in the matched group. For a rare variant it is nearly the same as the fold change in the verdict; for a common one it runs higher. " +
-                "The 95% interval underneath is what decides the verdict. With no carriers on one side, the interval's open end is the largest ratio still consistent with seeing none."
+                "The 95% interval underneath is exact, from the same model as Fisher's test, and it is what decides the verdict. With no carriers on one side, one end stays open: the data can only rule out a difference in the other direction."
               }
             />
             <StatTile

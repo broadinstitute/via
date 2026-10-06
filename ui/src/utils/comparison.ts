@@ -23,10 +23,9 @@ import { AOU_SUBPOP_CODES } from "./subpopulations";
 /** "Similar" means the interval rules out a difference this large in either direction. */
 export const SIMILARITY_FOLD = 2;
 /**
- * An enrichment call needs at least this many matched alternate alleles. Woolf's interval leans on
- * a normal approximation that breaks down at one or two events, and one carrier against a
- * near-zero cohort frequency is a recruitment accident away from zero -- the interval can sit
- * above 1 while saying nothing a reviewer should act on.
+ * An enrichment call needs at least this many matched alternate alleles. The exact interval holds
+ * at any count, but one carrier against a near-zero cohort frequency is a recruitment accident
+ * away from zero -- the interval can sit above 1 while saying nothing a reviewer should act on.
  */
 export const MIN_ALLELES_FOR_ENRICHMENT = 3;
 
@@ -50,8 +49,8 @@ export interface Enrichment {
   pValue: number;
   /**
    * Odds ratio from the same 2×2 table (matched vs the rest of the cohort) and its 95% interval:
-   * Woolf's log method, or at a zero cell the exact zero-event bound on the empty side. Null only when
-   * nobody anywhere carries the allele.
+   * the exact conditional interval, from the same model as pValue. Null when the margins allow only
+   * the observed table (nobody anywhere carries the allele, or everyone does).
    */
   oddsRatio: number;
   ci: [number, number] | null;
@@ -207,23 +206,17 @@ export function computeEnrichment(
 }
 
 /**
- * The highest odds a rate could have, at 95% confidence, when n trials saw no events: the exact
- * one-sided binomial bound, rate < 1 − 0.05^(1/n), as odds. The rule of three (3/n) approximates
- * the same bound, but only for large n; at n ≤ 3 it reaches 1 and the odds go infinite or negative.
- * The exact form stays below 1 for every n, so a one-participant cohort (n = 2) gets a finite,
- * wide bound rather than a negative one.
- */
-export function zeroEventOddsBound(n: number): number {
-  const rate = 1 - 0.05 ** (1 / n);
-  return rate / (1 - rate);
-}
-
-/**
- * Odds ratio of the table [[a, b], [c, d]] with a 95% interval. Woolf's log method when every
- * cell is filled. With no carriers on one side the odds ratio is 0 or infinite and Woolf is
- * undefined, so the empty side's odds are bounded by zeroEventOddsBound instead, which bounds the
- * ratio on that side. With no carriers on either side there is nothing to say, and the interval
- * is null.
+ * Odds ratio of the table [[a, b], [c, d]] with an exact 95% interval: the conditional
+ * (Cornfield) interval, the one R's fisher.test reports. With the margins fixed, the count a
+ * follows Fisher's noncentral hypergeometric distribution in the odds ratio ψ; the lower bound is
+ * the ψ at which a count of a or more has 2.5% probability, the upper the ψ at which a count of a
+ * or fewer does. It rests on the same model as fisherTwoSided, so it holds at the small counts
+ * where Woolf's log interval runs too narrow, and it needs no special case for an empty cell: a
+ * count at the edge of what the margins allow just leaves that side open (0 or infinite).
+ *
+ * The point estimate is the sample odds ratio, ad / bc. With no carriers on either side, or
+ * every allele a carrier on both, the margins allow only the observed table and the interval is
+ * null.
  */
 export function computeOddsRatio(
   a: number,
@@ -231,25 +224,57 @@ export function computeOddsRatio(
   c: number,
   d: number,
 ): { oddsRatio: number; ci: [number, number] | null } {
-  if (a === 0 && c === 0) return { oddsRatio: 1, ci: null };
-  if (b === 0 && d === 0) return { oddsRatio: 1, ci: null };
-  if (a === 0) {
-    // The matched odds are below the zero-event bound; the rest's odds are c/d.
-    return { oddsRatio: 0, ci: [0, zeroEventOddsBound(b) / (c / d)] };
-  }
-  if (c === 0) {
-    return { oddsRatio: Infinity, ci: [(a / b) / zeroEventOddsBound(d), Infinity] };
-  }
-  if (b === 0 || d === 0) {
-    // Everyone on one side carries it: the ratio is degenerate in the other direction.
-    const oddsRatio = b === 0 ? Infinity : 0;
-    return { oddsRatio, ci: null };
-  }
-  const oddsRatio = (a * d) / (b * c);
-  const se = Math.sqrt(1 / a + 1 / b + 1 / c + 1 / d);
-  const logOr = Math.log(oddsRatio);
-  return { oddsRatio, ci: [Math.exp(logOr - 1.96 * se), Math.exp(logOr + 1.96 * se)] };
+  const matched = a + b;
+  const carriers = a + c;
+  const rest = c + d;
+  const lo = Math.max(0, carriers - rest);
+  const hi = Math.min(matched, carriers);
+  const oddsRatio = b * c === 0 ? (a * d === 0 ? 1 : Infinity) : (a * d) / (b * c);
+  if (lo === hi) return { oddsRatio: 1, ci: null };
+
+  // log P(X = x) under ψ = 1, for each x the margins allow; ψ tilts it by ψ^x.
+  const logCentral: number[] = [];
+  for (let x = lo; x <= hi; x++) logCentral.push(logChoose(matched, x) + logChoose(rest, carriers - x));
+
+  /** P(X ≥ a) under ψ when `upper`, else P(X ≤ a). */
+  const tail = (logPsi: number, upper: boolean) => {
+    let max = -Infinity;
+    const terms = logCentral.map((value, i) => {
+      const term = value + (lo + i) * logPsi;
+      if (term > max) max = term;
+      return term;
+    });
+    let total = 0;
+    let inTail = 0;
+    terms.forEach((term, i) => {
+      const weight = Math.exp(term - max);
+      total += weight;
+      if (upper ? lo + i >= a : lo + i <= a) inTail += weight;
+    });
+    return inTail / total;
+  };
+
+  /** The log ψ at which the tail is exactly 2.5%, by bisection; P(X ≥ a) rises with ψ, P(X ≤ a) falls. */
+  const solve = (upper: boolean) => {
+    let low = -60;
+    let high = 60;
+    for (let i = 0; i < 80; i++) {
+      const mid = (low + high) / 2;
+      const rising = upper ? tail(mid, true) : 1 - tail(mid, false);
+      if (rising < (upper ? ODDS_RATIO_TAIL : 1 - ODDS_RATIO_TAIL)) low = mid;
+      else high = mid;
+    }
+    return Math.exp((low + high) / 2);
+  };
+
+  return {
+    oddsRatio,
+    ci: [a === lo ? 0 : solve(true), a === hi ? Infinity : solve(false)],
+  };
 }
+
+/** Each side of the 95% odds-ratio interval leaves out 2.5%. */
+const ODDS_RATIO_TAIL = 0.025;
 
 /**
  * How many matched alternate alleles the cohort-wide per-ancestry frequencies predict, given the

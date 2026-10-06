@@ -130,7 +130,7 @@ describe("ReviewView", () => {
     // expected with the ancestry-adjusted expectation, and carriers.
     const evidence = screen.getByRole("region", { name: /^Evidence/ });
     expect(evidence).toHaveTextContent("< 0.001< 0.001 after Bonferroni, 3 tests");
-    expect(evidence).toHaveTextContent("3395% CI 13 – 83");
+    expect(evidence).toHaveTextContent("3395% CI 11 – 86");
     expect(evidence).toHaveTextContent("6 vs 0.231.0 expected adjusting for ancestry");
     expect(evidence).toHaveTextContent("6 of 1000 hom · 6 het · 1 P/LP in trans");
     // The section title and each of the four tiles explain themselves.
