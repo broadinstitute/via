@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
-import { useHoveredKey } from "../../libs/hooks";
+import { composeHandlers, useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
 import { formatInt } from "../../utils/format";
@@ -134,14 +134,8 @@ function Run({ segment, index, quiet, hot, hoverProps }: RunProps) {
         ...(quiet ? styles.quiet : undefined),
         ...(hot ? styles.hot : undefined),
       }}
-      onMouseEnter={() => {
-        hoverProps.onMouseEnter();
-        tooltip.anchorProps.onMouseEnter();
-      }}
-      onMouseLeave={() => {
-        hoverProps.onMouseLeave();
-        tooltip.anchorProps.onMouseLeave();
-      }}
+      // The tooltip's own wiring, plus this group's highlight across the bar and legend.
+      {...composeHandlers(tooltip.anchorProps, hoverProps)}
     >
       {tooltip.bubble}
     </span>

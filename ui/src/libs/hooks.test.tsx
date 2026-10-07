@@ -1,7 +1,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useCenterAboveFold } from "./hooks";
+import { composeHandlers, useCenterAboveFold } from "./hooks";
 
 function Centred() {
   const ref = useRef<HTMLDivElement>(null);
@@ -55,5 +55,20 @@ describe("useCenterAboveFold", () => {
     layOut(1200, 3000);
     render(<Centred />);
     expect(offsetOf()).toBe("translateY(0px)");
+  });
+});
+
+describe("composeHandlers", () => {
+  it("calls both handlers where names overlap, base first, and keeps the rest", () => {
+    const calls: string[] = [];
+    const merged = composeHandlers(
+      { onMouseEnter: () => calls.push("base enter"), onBlur: () => calls.push("base blur") },
+      { onMouseEnter: () => calls.push("extra enter"), onFocus: () => calls.push("extra focus") },
+    );
+
+    merged.onMouseEnter();
+    merged.onBlur();
+    merged.onFocus();
+    expect(calls).toEqual(["base enter", "extra enter", "base blur", "extra focus"]);
   });
 });
