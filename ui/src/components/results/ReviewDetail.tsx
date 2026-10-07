@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import colors, { alpha, POPMAX_BACKGROUND } from "../../libs/colors";
+import colors, { POPMAX_BACKGROUND } from "../../libs/colors";
 import { useMediaQuery } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
@@ -22,6 +22,7 @@ import InfoLabel from "../common/InfoLabel";
 import InfoTooltip from "../common/InfoTooltip";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import NotAvailable from "../elements/NotAvailable";
+import VerdictGlyph from "./VerdictGlyph";
 import { verdictTone } from "./verdictTone";
 
 // Below this the two tables no longer fit beside each other and stack instead.
@@ -112,15 +113,6 @@ const styles = {
     gap: 6,
     padding: "14px 18px",
     borderRadius: 12,
-  },
-  // The verdict's direction, in a disc of its own ink.
-  verdictGlyph: {
-    display: "inline-grid",
-    placeItems: "center",
-    width: 24,
-    height: 24,
-    borderRadius: "50%",
-    flexShrink: 0,
   },
   // Fixed heights, so the strip is the same height whatever the verdict: with or without a ratio,
   // and with a one- or two-line sentence. Centered rather than baseline-aligned, since the mono
@@ -345,11 +337,7 @@ export default function ReviewDetail({
           style={{ ...styles.verdict, color: tone.ink, background: tone.fill }}
         >
           <div style={styles.verdictLine}>
-            <span style={{ ...styles.verdictGlyph, background: alpha(tone.ink, 0.14) }} aria-hidden="true">
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
-                <path d={tone.glyph} />
-              </svg>
-            </span>
+            <VerdictGlyph tone={tone} />
             <span style={styles.verdictWord}>{tone.word}</span>
             {enrichment && enrichment.verdict !== "inconclusive" && (
               <span style={styles.verdictRatio}>{formatRatio(enrichment.ratio)}</span>

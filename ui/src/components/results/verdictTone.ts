@@ -11,14 +11,14 @@ export interface VerdictTone {
   word: string;
   /** The rule behind the verdict, for the rail's legend. */
   rule: string;
-  /** A 24-unit SVG path for the verdict's direction: up, down, level, or a question. */
+  /** A 24-unit SVG path for the verdict's direction: up, down, level (two lines), or none (one dash). */
   glyph: string;
 }
 
 const GLYPH_UP = "M12 19V5M6 11l6-6 6 6";
 const GLYPH_DOWN = "M12 5v14M6 13l6 6 6-6";
 const GLYPH_LEVEL = "M5 9h14M5 15h14";
-const GLYPH_UNKNOWN = "M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7M12 17h.01";
+const GLYPH_NONE = "M7 12h10";
 
 export const VERDICT_TONE: Record<Verdict, VerdictTone> = {
   enriched: { ink: colors.textDanger, fill: colors.bgDanger, word: "Enriched", rule: "interval above 1", glyph: GLYPH_UP },
@@ -35,7 +35,7 @@ export const VERDICT_TONE: Record<Verdict, VerdictTone> = {
     fill: colors.surface0,
     word: "Inconclusive",
     rule: "too few alleles",
-    glyph: GLYPH_UNKNOWN,
+    glyph: GLYPH_NONE,
   },
 };
 
@@ -44,7 +44,7 @@ const NO_COMPARISON: VerdictTone = {
   fill: colors.surface0,
   word: "No comparison",
   rule: "",
-  glyph: GLYPH_UNKNOWN,
+  glyph: GLYPH_NONE,
 };
 
 /** The tone for a comparison's verdict, or for a variant with nothing to compare. */

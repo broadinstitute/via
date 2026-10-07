@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import colors from "../../libs/colors";
+import colors, { alpha } from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment, CohortVariantRow, FilteredVariantRow } from "../../types/results";
-import { buildComparisonRows, formatRatio, sortByEnrichment } from "../../utils/comparison";
+import { buildComparisonRows, formatRatio, sortByEnrichment, type Enrichment } from "../../utils/comparison";
 import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, ArrowRightIcon } from "../icons";
 import ResultsPanel from "./ResultsPanel";
 import ReviewDetail from "./ReviewDetail";
-import { VERDICT_TONE, verdictTone } from "./verdictTone";
+import VerdictGlyph from "./VerdictGlyph";
+import { verdictTone } from "./verdictTone";
 
 // The rail's height follows the detail's: it's absolutely positioned inside its grid cell, so a
 // long candidate list scrolls within the rail instead of stretching the page.
@@ -44,37 +45,34 @@ const styles = {
     display: "flex",
     flexDirection: "column",
   },
-  railIntro: {
-    padding: "10px 12px 6px",
-    fontSize: 11,
-    lineHeight: 1.45,
-    color: colors.textMuted,
-  },
-  railFooter: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 5,
-    padding: "8px 12px 10px",
-    borderTop: `1px solid ${colors.border}`,
-    fontSize: 11,
-    color: colors.textMuted,
-  },
   railList: {
     flex: 1,
     margin: 0,
-    padding: "0 6px 6px",
+    padding: "6px 8px 10px",
     listStyle: "none",
     overflowY: "auto",
     scrollbarWidth: "thin",
   },
+  // A group's label: what its verdicts have in common, and how many there are.
+  railGroup: {
+    ...Style.elements.eyebrow,
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "12px 8px 6px",
+  },
+  railGroupCount: {
+    fontVariantNumeric: "tabular-nums",
+  },
   railItem: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     width: "100%",
     padding: "7px 8px",
-    border: "none",
-    borderRadius: 6,
+    // Longhands, so the selected entry's borderColor is restored rather than dropped when the
+    // selection moves on (see stateBorder).
+    ...Style.stateBorder("transparent"),
+    borderRadius: Style.radius,
     background: "none",
     textAlign: "left",
     cursor: "pointer",
@@ -82,8 +80,16 @@ const styles = {
   railItemHovered: {
     background: colors.surface0,
   },
+  // The open variant lifts off the rail as a white card outlined in the accent, the way a focused
+  // field is; its glyph goes solid too (see VerdictGlyph's `solid`). Its halo spills a few pixels
+  // into the entries either side, so it's raised above them: otherwise a hovered neighbour's
+  // background, painted later, covers the halo.
   railItemSelected: {
-    background: colors.bgAccent,
+    position: "relative",
+    zIndex: 1,
+    background: colors.surface2,
+    borderColor: alpha(colors.textAccent, 0.55),
+    boxShadow: `0 0 0 3px ${alpha(colors.textAccent, 0.12)}, ${Style.shadows.pill}`,
   },
   railText: {
     display: "flex",
@@ -93,9 +99,9 @@ const styles = {
     minWidth: 0,
   },
   railGene: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: 600,
-    color: colors.textBody,
+    color: colors.textPrimary,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -103,33 +109,36 @@ const styles = {
   railVariant: {
     ...Style.elements.mono,
     fontSize: 10.5,
-    color: colors.textSecondary,
+    color: colors.textMuted,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
+  // Quiet, in body ink: the glyph already carries the direction and its colour.
   railRatio: {
-    ...Style.elements.mono,
     flexShrink: 0,
-    fontWeight: 700,
+    fontSize: 12,
+    fontWeight: 600,
+    fontVariantNumeric: "tabular-nums",
+    color: colors.textSecondary,
   },
   detail: {
     minWidth: 0,
     padding: "22px 28px 26px",
   },
-  legendItem: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 5,
-  },
-  kbd: {
-    padding: "0 4px",
-    border: `1px solid ${colors.borderStrong}`,
-    borderRadius: 3,
-    fontFamily: Style.monoFamily,
-    fontSize: 10,
-  },
 } as const satisfies Record<string, CSSProperties>;
+
+/**
+ * The rail's groups, in the order sortByEnrichment already puts them: supported departures (either
+ * direction) first, then similar, then too few alleles, then nothing to compare. The glyph on each
+ * entry gives its direction, so the groups replace a legend.
+ */
+function railGroup(enrichment: Enrichment | null): string {
+  if (!enrichment) return "No comparison";
+  if (enrichment.verdict === "similar") return "Similar frequency";
+  if (enrichment.verdict === "inconclusive") return "Too few alleles";
+  return "Departs from cohort-wide";
+}
 
 interface ReviewViewProps {
   cohortVariants: CohortVariantRow[];
@@ -181,11 +190,16 @@ export default function ReviewView({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [rows.length]);
 
-  // Keep the selected rail entry in view as the arrow keys move through a long list.
+  // Keep the selected rail entry in view as the arrow keys move through a long list. If focus is
+  // already in the rail (an entry was clicked), it follows the selection, so the focus ring
+  // doesn't stay behind on an entry that's no longer open.
   useEffect(() => {
-    railRef.current
-      ?.querySelector<HTMLElement>(`[data-rail-index="${index}"]`)
-      ?.scrollIntoView?.({ block: "nearest" });
+    const entry = railRef.current?.querySelector<HTMLElement>(`[data-rail-index="${index}"]`);
+    if (!entry) return;
+    if (railRef.current!.contains(document.activeElement) && document.activeElement !== entry) {
+      entry.focus({ preventScroll: true });
+    }
+    entry.scrollIntoView?.({ block: "nearest" });
   }, [index]);
 
   const stepper = (
@@ -226,51 +240,47 @@ export default function ReviewView({
       <div style={styles.body}>
         <div style={styles.railCell}>
           <nav style={styles.rail} aria-label="Candidate variants, best-supported first">
-            <p style={styles.railIntro}>
-              {rows.length} candidate{rows.length === 1 ? "" : "s"}, best-supported departure from cohort-wide first.
-            </p>
             <ol ref={railRef} style={styles.railList}>
               {rows.map((row, i) => {
                 const tone = verdictTone(row.enrichment);
+                const group = railGroup(row.enrichment);
+                const startsGroup = i === 0 || railGroup(rows[i - 1].enrichment) !== group;
+                // An inconclusive point estimate isn't a finding, so it isn't shown as one.
+                const showRatio = row.enrichment && row.enrichment.verdict !== "inconclusive";
                 return (
                   <li key={row.variant}>
+                    {startsGroup && (
+                      <div style={styles.railGroup} aria-hidden="true">
+                        <span>{group}</span>
+                        <span style={styles.railGroupCount}>
+                          {rows.filter((other) => railGroup(other.enrichment) === group).length}
+                        </span>
+                      </div>
+                    )}
                     <button
                       type="button"
                       data-rail-index={i}
                       aria-current={i === index ? "true" : undefined}
+                      title={tone.rule ? `${tone.word}: ${tone.rule}` : tone.word}
                       onClick={() => setIndex(i)}
                       {...hoverProps(row.variant)}
                       style={{
                         ...styles.railItem,
-                        ...(hoveredKey === row.variant ? styles.railItemHovered : undefined),
+                        ...(hoveredKey === row.variant && i !== index ? styles.railItemHovered : undefined),
                         ...(i === index ? styles.railItemSelected : undefined),
                       }}
                     >
-                      <span style={Style.colorDot(tone.ink, 8)} aria-hidden="true" />
+                      <VerdictGlyph tone={tone} size={20} solid={i === index} />
                       <span style={styles.railText}>
                         {row.cohort && <span style={styles.railGene}>{row.cohort.gene}</span>}
-                        <span style={styles.railVariant} title={row.variant}>
-                          {row.variant}
-                        </span>
+                        <span style={styles.railVariant}>{row.variant}</span>
                       </span>
-                      <span style={{ ...styles.railRatio, color: tone.ink }} title={tone.word}>
-                        {row.enrichment ? formatRatio(row.enrichment.ratio) : "—"}
-                      </span>
+                      {showRatio && <span style={styles.railRatio}>{formatRatio(row.enrichment!.ratio)}</span>}
                     </button>
                   </li>
                 );
               })}
             </ol>
-            <div style={styles.railFooter}>
-              {Object.values(VERDICT_TONE).map((tone) => (
-                <span key={tone.word} style={styles.legendItem}>
-                  <span style={Style.colorDot(tone.ink, 8)} /> {tone.word}: {tone.rule}
-                </span>
-              ))}
-              <span style={{ ...styles.legendItem, marginTop: 3 }}>
-                <kbd style={styles.kbd}>←</kbd> <kbd style={styles.kbd}>→</kbd> step between variants
-              </span>
-            </div>
           </nav>
         </div>
 

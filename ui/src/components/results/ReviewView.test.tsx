@@ -113,11 +113,11 @@ describe("ReviewView", () => {
     const items = within(rail).getAllByRole("button");
     // Gene over variant, the fold change on the right: the supported signal first, the
     // three-allele row (inconclusive under the interval rule) second, nothing to compare last.
-    expect(items.map((item) => item.textContent)).toEqual([
-      "LDLR2-122517541-C-G26×",
-      "MYH71-100-A-T1×",
-      "7-55181378-G-A—",
-    ]);
+    // Only a verdict gets a fold change; an inconclusive point estimate isn't shown as a finding.
+    expect(items.map((item) => item.textContent)).toEqual(["LDLR2-122517541-C-G26×", "MYH71-100-A-T", "7-55181378-G-A"]);
+    // Each falls under its group's label, which stands in for a legend.
+    expect(rail).toHaveTextContent(/^Departs from cohort-wide1.*Too few alleles1.*No comparison1/);
+    expect(items[1]).toHaveAttribute("title", "Inconclusive: too few alleles");
     expect(items[0]).toHaveAttribute("aria-current", "true");
 
     const verdict = screen.getByRole("status");
@@ -175,6 +175,20 @@ describe("ReviewView", () => {
     fireEvent.keyDown(document, { key: "ArrowLeft" });
     expect(screen.getByText("1 of 3")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Previous variant" })).toBeDisabled();
+  });
+
+  it("keeps a stepped-past entry's border transparent and moves focus with the selection", () => {
+    renderView();
+    const rail = screen.getByRole("navigation", { name: /best-supported first/ });
+    const [first, second] = within(rail).getAllByRole("button");
+
+    first.focus();
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    // The selected style's borderColor is replaced, not deleted, when the selection moves on;
+    // deleting it would leave the border in the text colour.
+    expect(first.style.borderColor).toBe("transparent");
+    expect(second).toHaveAttribute("aria-current", "true");
+    expect(second).toHaveFocus();
   });
 
   it("can open on a given variant, and jumps on a rail click", () => {
