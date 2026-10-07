@@ -1,3 +1,4 @@
+import { apiFetch } from "./client";
 import type { ConditionSearch } from "./conditions";
 import type {
   BreakdownSegment,
@@ -170,7 +171,7 @@ export async function fetchSearchResults(query?: SearchResultsQuery): Promise<Se
     params.set("conditionConceptId", String(query.conditionConceptId));
   }
   const queryString = params.toString();
-  const url = queryString ? `/api/search?${queryString}` : "/api/search";
+  const url = queryString ? `/search?${queryString}` : "/search";
 
   const cached = cache.get(url);
   if (cached) {
@@ -183,15 +184,11 @@ export async function fetchSearchResults(query?: SearchResultsQuery): Promise<Se
   return request;
 }
 
-async function fetchAndParse(url: string): Promise<SearchResults> {
-  const [response] = await Promise.all([
-    fetch(url),
+async function fetchAndParse(path: string): Promise<SearchResults> {
+  const [raw] = await Promise.all([
+    apiFetch<RawSearchResultsResponse>(path),
     new Promise((resolve) => setTimeout(resolve, MIN_LOAD_TIME_MS)),
   ]);
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
-  }
-  const raw: RawSearchResultsResponse = await response.json();
   return {
     searchSummary: raw.searchSummary,
     conditionSearch: raw.conditionSearch,

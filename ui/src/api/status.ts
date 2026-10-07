@@ -1,3 +1,5 @@
+import { apiFetch } from "./client";
+
 export interface TableStatus {
   /** As "project.dataset.table". */
   table: string;
@@ -12,10 +14,4 @@ export interface BigQueryStatus {
   tables: TableStatus[];
 }
 
-export async function fetchStatus(): Promise<BigQueryStatus> {
-  const response = await fetch("/api/status");
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
-  }
-  return response.json() as Promise<BigQueryStatus>;
-}
+export const fetchStatus = () => apiFetch<BigQueryStatus>("/status");
