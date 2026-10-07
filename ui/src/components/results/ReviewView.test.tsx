@@ -192,6 +192,25 @@ describe("ReviewView", () => {
     expect(second).toHaveFocus();
   });
 
+  it("explains a row whose matched counts exceed the cohort-wide ones instead of comparing them", () => {
+    // Six matched carriers against three cohort-wide: impossible if the matched are part of the
+    // cohort, so the sources disagree. No test runs, and the row says why.
+    render(
+      <ReviewView
+        cohortVariants={[{ ...ENRICHED, aouAllAc: 3 }]}
+        filteredVariants={[MATCHED[0]]}
+        condition="Familial hypercholesterolemia"
+        participantCount={100}
+        ancestryBreakdown={ANCESTRY}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("No comparison");
+    expect(screen.getByRole("status")).toHaveTextContent(/exceed the cohort-wide counts/);
+    expect(screen.queryByRole("region", { name: /^Evidence/ })).not.toBeInTheDocument();
+    const rail = screen.getByRole("navigation", { name: /best-supported first/ });
+    expect(rail).toHaveTextContent(/^No comparison1/);
+  });
+
   it("can open on a given variant, and jumps on a rail click", () => {
     renderView("1-100-A-T");
     expect(screen.getByText("2 of 3")).toBeInTheDocument();

@@ -190,6 +190,16 @@ describe("computeEnrichment", () => {
     expect(computeEnrichment(3, 0, 28, 24000)).toBeNull();
   });
 
+  it("makes no comparison when the matched counts can't be nested in the cohort's", () => {
+    // More matched carriers than the whole cohort has: the sources disagree, and comparing the
+    // matched group with a cohort that contains it would be neither separate groups nor a real one.
+    expect(computeEnrichment(5, 200, 3, 24000)).toBeNull();
+    // More matched alleles than the cohort has.
+    expect(computeEnrichment(1, 30000, 28, 24000)).toBeNull();
+    // Nested counts, even with every cohort-wide carrier among the matched, still compare.
+    expect(computeEnrichment(3, 200, 3, 24000)!.verdict).toBe("enriched");
+  });
+
   it("carries the ancestry-adjusted expectation through when given", () => {
     expect(computeEnrichment(6, 200, 28, 24000, { expectedAdjustedAc: 1.0 })!.expectedAdjustedAc).toBe(1.0);
     expect(computeEnrichment(6, 200, 28, 24000)!.expectedAdjustedAc).toBeNull();

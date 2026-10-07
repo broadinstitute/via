@@ -156,14 +156,12 @@ export function computeEnrichment(
   const ratio = cohortAf === 0 ? (matchedAf === 0 ? 1 : Infinity) : matchedAf / cohortAf;
 
   // The matched participants are part of the cohort, so the comparison group is the rest of it.
-  // The mock phenotype data doesn't always respect that nesting; when it doesn't, the whole cohort
-  // stands in.
-  let restAc = cohortAc - matchedAc;
-  let restAn = cohortAn - matchedAn;
-  if (restAc < 0 || restAn <= 0 || restAn - restAc < 0) {
-    restAc = cohortAc;
-    restAn = cohortAn;
-  }
+  // Counts that can't be nested (more matched carriers or alleles than the whole cohort has) come
+  // from sources that disagree, and no comparison against them is valid: Fisher's test needs two
+  // separate groups, and comparing the matched group with a cohort that contains it is neither.
+  const restAc = cohortAc - matchedAc;
+  const restAn = cohortAn - matchedAn;
+  if (restAc < 0 || restAn <= 0 || restAn - restAc < 0) return null;
   const [a, b, c, d] = [matchedAc, matchedAn - matchedAc, restAc, restAn - restAc];
   const pValue = fisherTwoSided(a, b, c, d);
   const { oddsRatio, ci } = computeOddsRatio(a, b, c, d);

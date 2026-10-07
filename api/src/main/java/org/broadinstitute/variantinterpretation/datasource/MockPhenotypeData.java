@@ -201,9 +201,20 @@ public final class MockPhenotypeData {
     }
 
     int cohortAn = 2 * participants;
+    // The matched cohort is part of All of Us, so it can't hold more alleles of either kind than
+    // the variant table counts cohort-wide. The UI refuses to compare counts that don't nest.
+    Integer aouAllAc = cohortVariant.getAouAllAc().orElse(null);
+    Integer aouAllAn = cohortVariant.getAouAllAn().orElse(null);
+    if (aouAllAn != null && aouAllAn < cohortAn) {
+      return withoutStats(variant, gene, consequence);
+    }
     if (curated != null) {
       if (curated.cohortAc() < 0 || curated.cohortAc() > cohortAn || 2 * curated.homozygotes() > curated.cohortAc()) {
         throw new IllegalArgumentException("Curated counts " + curated + " for " + variant + " don't fit " + participants);
+      }
+      if (aouAllAc != null && curated.cohortAc() > aouAllAc) {
+        throw new IllegalArgumentException(
+            "Curated counts " + curated + " for " + variant + " exceed its cohort-wide AC of " + aouAllAc);
       }
       return withStats(cohortVariant, participants, curated.cohortAc(), curated.homozygotes(), curated.plpInTrans());
     }
@@ -219,6 +230,9 @@ public final class MockPhenotypeData {
     // A small cohort can't hold what the bump above, or a high AF, asks for. Keep at least one
     // reference allele, for the same reason as MAX_COHORT_AF.
     cohortAc = Math.min(cohortAc, cohortAn - 1);
+    if (aouAllAc != null) {
+      cohortAc = Math.min(cohortAc, aouAllAc);
+    }
     // Everything below is computed back from the final integer AC, so AF, the zygosity split, and
     // the ratio all agree with each other and with the AoU frequency they were derived from.
     cohortAf = (double) cohortAc / cohortAn;

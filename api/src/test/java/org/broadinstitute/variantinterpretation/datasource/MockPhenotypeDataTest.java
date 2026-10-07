@@ -73,6 +73,45 @@ class MockPhenotypeDataTest {
     }
   }
 
+  /**
+   * The matched cohort is part of All of Us, so its counts have to nest inside the cohort-wide
+   * ones from the variant table; the UI makes no comparison for counts that don't. A rare variant
+   * (three carriers cohort-wide) stays at or below three however enriched the mock would like it.
+   */
+  @Test
+  void filteredVariants_neverExceedTheCohortWideAlleleCount() {
+    List<CohortVariant> variants =
+        IntStream.range(0, 200)
+            .mapToObj(i -> annotated("1-" + (1000 + i) + "-A-G", "0.4").aouAllAc(3).aouAllAn(480_000))
+            .toList();
+
+    List<FilteredVariant> filtered = MockPhenotypeData.filteredVariants(variants, 978);
+
+    assertThat(filtered).allMatch(variant -> variant.getCohortAc().orElseThrow() <= 3);
+    assertThat(filtered).anyMatch(variant -> variant.getCohortAc().orElseThrow() > 0);
+  }
+
+  /** A cohort larger than the whole table's allele number can't exist, so it gets no statistics. */
+  @Test
+  void filteredVariants_giveNoStatsWhenTheCohortOutgrowsTheTable() {
+    CohortVariant variant = annotated("1-1000-A-G", "0.4").aouAllAc(300).aouAllAn(1_000);
+
+    List<FilteredVariant> filtered = MockPhenotypeData.filteredVariants(List.of(variant), 978);
+
+    assertThat(filtered.get(0).getHasStats()).isFalse();
+  }
+
+  /** Hand-picked demo counts that don't nest fail loudly rather than reaching the UI. */
+  @Test
+  void filteredVariants_rejectCuratedCountsAboveTheCohortWideCount() {
+    CohortVariant variant = annotated("1-1000-A-G", "0.0005").aouAllAc(3).aouAllAn(480_000);
+    var curated = java.util.Map.of("1-1000-A-G", new MockPhenotypeData.CuratedCounts(5, 0, 0));
+
+    assertThatThrownBy(() -> MockPhenotypeData.filteredVariants(List.of(variant), 978, curated))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("exceed its cohort-wide AC");
+  }
+
   @Test
   void filteredVariants_rejectsAnEmptyCohort() {
     assertThatThrownBy(() -> MockPhenotypeData.filteredVariants(List.of(), 0))

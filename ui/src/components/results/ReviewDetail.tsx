@@ -587,7 +587,13 @@ function verdictSentence(row: ComparisonRow, condition: string): ReactNode {
   const { cohort, matched, enrichment } = row;
   if (!cohort) return "This variant has no cohort-wide frequency, so there is nothing to compare against.";
   if (!matched) return "No phenotype-matched statistics exist for this variant yet.";
-  if (!enrichment) return "Cohort-wide allele counts are missing for this variant.";
+  if (!enrichment) {
+    const exceeds =
+      cohort.aouAllAc !== null && cohort.aouAllAn !== null && (matched.cohortAc > cohort.aouAllAc || matched.cohortAn > cohort.aouAllAn);
+    return exceeds
+      ? "The matched participants' counts exceed the cohort-wide counts, so the two sources disagree and no comparison is possible."
+      : "Cohort-wide allele counts are missing for this variant.";
+  }
   const counts = `${formatInt(enrichment.matchedAc)} allele${enrichment.matchedAc === 1 ? "" : "s"} observed among participants with ${condition}, ${formatExpected(enrichment.expectedMatchedAc)} expected at the cohort-wide rate`;
   switch (enrichment.verdict) {
     case "enriched":
