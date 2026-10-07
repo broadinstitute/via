@@ -1,11 +1,12 @@
 import type { CSSProperties, ReactNode } from "react";
 import colors, { alpha } from "../libs/colors";
+import HeroHelix from "./HeroHelix";
 
 const styles = {
   hero: {
     position: "relative",
     // Bottom padding is what the search card overlaps; see SearchEntryPage.
-    padding: "52px 20px 112px",
+    padding: "56px 20px 116px",
     overflow: "hidden",
     // Brand navy with a blue glow top-right and a teal one bottom-left. Dark enough throughout for
     // white text without a scrim or text shadows.
@@ -22,15 +23,22 @@ const styles = {
     margin: "0 auto",
     textAlign: "center",
   },
+  // Narrow enough that the title breaks after "variants" rather than inside "All of Us".
   title: {
-    marginBottom: 10,
+    maxWidth: 680,
+    margin: "0 auto 12px",
     color: colors.white,
-    fontSize: 30,
+    fontSize: 34,
     fontWeight: 800,
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
+    lineHeight: 1.15,
+  },
+  /** The part of the title set in the brand green, like the marketing headline's second half. */
+  titleAccent: {
+    color: colors.brandGreen,
   },
   subtitle: {
-    maxWidth: 500,
+    maxWidth: 540,
     margin: "0 auto",
     color: alpha(colors.white, 0.85),
     fontSize: 15,
@@ -39,17 +47,23 @@ const styles = {
 } as const satisfies Record<string, CSSProperties>;
 
 interface HeroProps {
-  title: string;
+  title: ReactNode;
   subtitle: ReactNode;
 }
 
 export default function Hero({ title, subtitle }: HeroProps) {
   return (
     <div style={styles.hero}>
+      <HeroHelix />
       <div style={styles.inner}>
         <h1 style={styles.title}>{title}</h1>
         <p style={styles.subtitle}>{subtitle}</p>
       </div>
     </div>
   );
+}
+
+/** Marks the words of a Hero title that take the brand green. */
+export function HeroAccent({ children }: { children: ReactNode }) {
+  return <span style={styles.titleAccent}>{children}</span>;
 }
