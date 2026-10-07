@@ -7,7 +7,7 @@ import colors from "../libs/colors";
 import * as Style from "../libs/style";
 import Clickable from "../components/common/Clickable";
 import AllOfUs from "../components/common/AllOfUs";
-import Hero from "../components/Hero";
+import Hero, { HeroAccent } from "../components/Hero";
 import PhenotypeStep from "../components/PhenotypeStep";
 import RecentSearches from "../components/RecentSearches";
 import SearchSteps from "../components/SearchSteps";
@@ -126,11 +126,18 @@ export default function SearchEntryPage() {
     <>
       <TopBar userEmail={userEmail} />
       <Hero
-        title="Variant Interpretation"
+        title={
+          <>
+            Weigh candidate variants{" "}
+            <HeroAccent>
+              against the full <AllOfUs /> cohort
+            </HeroAccent>
+          </>
+        }
         subtitle={
           <>
-            Rule candidate variants in or out by comparing them against the full <AllOfUs /> participant
-            cohort — no coding required.
+            See how often each variant appears across <AllOfUs /> participants, beside gnomAD and ClinVar. Add a
+            phenotype to compare the participants who share it with everyone else — no coding required.
           </>
         }
       />

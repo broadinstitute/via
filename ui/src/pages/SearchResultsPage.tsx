@@ -3,29 +3,23 @@ import { useSearchParams } from "react-router-dom";
 import { fetchProfile } from "../api/profile";
 import { fetchSearchResults, type SearchResults } from "../api/searchResults";
 import colors from "../libs/colors";
-import { useMediaQuery } from "../libs/hooks";
-import CohortVariantsPanel, { COHORT_TABLE_MIN_HEIGHT } from "../components/results/CohortVariantsPanel";
 import Footer from "../components/results/Footer";
-import ParticipantMatchedVariantsPanel, { MATCHED_TABLE_HEIGHT } from "../components/results/ParticipantMatchedVariantsPanel";
-import PhenotypeFilterPanel from "../components/results/PhenotypeFilterPanel";
-import { ScopeChip } from "../components/results/ResultsPanel";
+import PhenotypeSummaryStrip from "../components/results/PhenotypeSummaryStrip";
+import ReviewView from "../components/results/ReviewView";
 import SearchPopover from "../components/results/SearchPopover";
 import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
-import { UserIcon } from "../components/icons";
+import VariantsPanel, { VARIANTS_TABLE_MIN_HEIGHT } from "../components/results/VariantsPanel";
+import type { ResultsView } from "../components/results/ViewSwitcher";
 import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
 
 interface RevealedSections {
-  cohort: boolean;
   phenotype: boolean;
-  filtered: boolean;
+  variants: boolean;
 }
 
-const NOT_REVEALED: RevealedSections = { cohort: false, phenotype: false, filtered: false };
-
-// Below this the variants table and the phenotype panel no longer fit side by side, so they stack.
-const NARROW_LAYOUT_QUERY = "(max-width: 900px)";
+const NOT_REVEALED: RevealedSections = { phenotype: false, variants: false };
 
 export default function SearchResultsPage() {
   const [userEmail, setUserEmail] = useState("");
@@ -33,6 +27,10 @@ export default function SearchResultsPage() {
   const [error, setError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<RevealedSections>(NOT_REVEALED);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Table or Review, chosen from the summary strip. Review opens on reviewVariant when a row asked
+  // for it, otherwise on the best-supported signal.
+  const [view, setView] = useState<ResultsView>("table");
+  const [reviewVariant, setReviewVariant] = useState<string | undefined>(undefined);
   const [drawerVariants, setDrawerVariants] = useState("");
   const [drawerCondition, setDrawerCondition] = useState("");
   // The concept behind drawerCondition while it's still a pick; cleared by any edit, as on the
@@ -42,7 +40,6 @@ export default function SearchResultsPage() {
   // concept as picked instead of re-querying the restored name.
   const [drawerKey, setDrawerKey] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
-  const isNarrow = useMediaQuery(NARROW_LAYOUT_QUERY);
 
   useEffect(() => {
     fetchProfile()
@@ -63,6 +60,8 @@ export default function SearchResultsPage() {
   useEffect(() => {
     setResults(null);
     setError(null);
+    setView("table");
+    setReviewVariant(undefined);
     fetchSearchResults({
       variants: variantsKey ? variantsKey.split("\n") : [],
       conditionConceptId: conditionConceptIdKey ? Number(conditionConceptIdKey) : undefined,
@@ -86,7 +85,7 @@ export default function SearchResultsPage() {
   useEffect(() => {
     if (!results) return;
     setRevealed(NOT_REVEALED);
-    const sections: Array<keyof RevealedSections> = ["cohort", "phenotype", "filtered"];
+    const sections: Array<keyof RevealedSections> = ["phenotype", "variants"];
     let delay = 0;
     const timers = sections.map((section) => {
       delay += 90 + Math.random() * 140;
@@ -122,6 +121,18 @@ export default function SearchResultsPage() {
     }
     setSearchParams(nextParams);
     setDrawerOpen(false);
+  }
+
+  // One rule for "there are matched participants to compare with": it shows the table's matched
+  // columns, enables Review in the strip, and offers each row's Review button.
+  const hasPhenotypeFilter = (results?.ancestryBreakdown.length ?? 0) > 0;
+  const conditionName = results?.conditionSearch
+    ? (results.conditionSearch.concept?.name ?? `concept ${results.conditionSearch.conceptId}`)
+    : "";
+
+  function openReview(variant?: string) {
+    setReviewVariant(variant);
+    setView("review");
   }
 
   if (error) {
@@ -163,66 +174,47 @@ export default function SearchResultsPage() {
         }
       />
 
-
       <main style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isNarrow ? "1fr" : "1fr 300px",
-            gap: 16,
-            alignItems: "stretch",
-          }}
-        >
-          {results && revealed.cohort ? (
-            <CohortVariantsPanel rows={results.cohortVariants} />
-          ) : (
-            <SectionLoadingPanel
-              title="Candidate variants"
-              scope={<ScopeChip>All participants</ScopeChip>}
-              message="Loading variants…"
-              minHeight={COHORT_TABLE_MIN_HEIGHT}
-            />
-          )}
+        <PhenotypeSummaryStrip
+          loading={!(results && revealed.phenotype)}
+          conditionSearch={results?.conditionSearch}
+          ancestryBreakdown={results?.ancestryBreakdown ?? []}
+          ageBreakdown={results?.ageBreakdown ?? []}
+          onAddPhenotypeFilter={() => setDrawerOpen(true)}
+          view={view}
+          onViewChange={(next) => (next === "review" ? openReview() : setView("table"))}
+          canReview={hasPhenotypeFilter}
+        />
 
-          {results && revealed.phenotype ? (
-            <PhenotypeFilterPanel
-              conditionSearch={results.conditionSearch}
-              ancestryBreakdown={results.ancestryBreakdown}
-              ageBreakdown={results.ageBreakdown}
-              onAddPhenotypeFilter={() => setDrawerOpen(true)}
-            />
-          ) : (
-            <SectionLoadingPanel title="Phenotype filter" message="Loading phenotype data…" />
-          )}
-        </div>
-
-        {results && revealed.filtered ? (
-          <ParticipantMatchedVariantsPanel
-            rows={results.filteredVariants}
-            participantCount={results.conditionSearch?.participantCount ?? 0}
-            hasPhenotypeFilter={results.ancestryBreakdown.length > 0}
-            condition={
-              results.conditionSearch
-                ? (results.conditionSearch.concept?.name ?? `concept ${results.conditionSearch.conceptId}`)
-                : ""
-            }
-            onAddPhenotypeFilter={() => setDrawerOpen(true)}
+        {view === "review" && results?.conditionSearch && hasPhenotypeFilter ? (
+          <ReviewView
+            initialVariant={reviewVariant}
+            cohortVariants={results.cohortVariants}
+            filteredVariants={results.filteredVariants}
+            condition={conditionName}
+            participantCount={results.conditionSearch.participantCount ?? 0}
+            ancestryBreakdown={results.ancestryBreakdown}
           />
         ) : (
-          <SectionLoadingPanel
-            title="Candidate variants"
-            scope={
-              conditionConceptIdKey ? (
-                <ScopeChip tone="accent" icon={<UserIcon size={12} strokeWidth={2.5} aria-hidden="true" />} loading>
-                  Loading participant count
-                </ScopeChip>
-              ) : (
-                <ScopeChip>Phenotype-matched participants</ScopeChip>
-              )
-            }
-            message="Loading variants…"
-            minHeight={MATCHED_TABLE_HEIGHT}
-          />
+          <>
+            {results && revealed.variants ? (
+              <VariantsPanel
+                cohortVariants={results.cohortVariants}
+                filteredVariants={results.filteredVariants}
+                hasPhenotypeFilter={hasPhenotypeFilter}
+                participantCount={results.conditionSearch?.participantCount ?? 0}
+                condition={conditionName}
+                onReview={hasPhenotypeFilter ? openReview : undefined}
+                onAddPhenotypeFilter={() => setDrawerOpen(true)}
+              />
+            ) : (
+              <SectionLoadingPanel
+                title="Candidate variants"
+                message="Loading variants…"
+                minHeight={VARIANTS_TABLE_MIN_HEIGHT}
+              />
+            )}
+          </>
         )}
 
         <Footer />

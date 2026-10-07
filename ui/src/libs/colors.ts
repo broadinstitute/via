@@ -22,7 +22,7 @@ const colors = {
   textWarning: "#854f0b",
   textDanger: "#a32d2d",
 
-  // Brand, from the favicon's helix
+  // Brand, from the logo's navy tile and green variant rung
   brandNavy: "#074770",
   brandGreen: "#5cc88d",
 
@@ -46,7 +46,6 @@ const colors = {
   bgDanger: "#fcebeb",
 
   white: "#ffffff",
-  black: "#000000",
   /** The hero's navy at its top edge, deepening into textPrimary below. */
   heroDeep: "#1a1c4d",
   /** The teal glow in the hero's bottom-left corner. */
@@ -69,13 +68,15 @@ export default colors;
 /**
  * Background tints that mark which source a table's column group reports -- All of Us or gnomAD.
  *
- * `strong` is for the cohort table, where the tint separates two side-by-side column groups;
+ * `strong` is for the variants table, where the tint separates its side-by-side column groups;
  * `soft` is for the population table nested inside an expanded row, where the same distinction
  * only needs a hint. Both share one `hover` value so a hovered row reads as a single band.
  */
 export const sourceTints = {
   aou: { strong: "#ebf3fa", soft: "#f7fafd", hover: "#e3edf6" },
   gnomad: { strong: "#f1f0ec", soft: "#fafbfb", hover: "#e9e8e3" },
+  /** The phenotype-matched column group in the merged table: the accent's own tint, a step deeper than aou's. */
+  matched: { strong: "#e4edf3", hover: "#d9e6ef" },
 } as const;
 
 /** Marks the subpopulation with the highest allele frequency in the population table. */

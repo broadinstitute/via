@@ -1,24 +1,19 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { ScopeChip } from "./ResultsPanel";
+import ResultsPanel from "./ResultsPanel";
 
-describe("ScopeChip", () => {
+describe("ResultsPanel", () => {
   afterEach(cleanup);
 
-  it("shows its text", () => {
-    render(<ScopeChip>All participants</ScopeChip>);
-
-    expect(screen.getByText("All participants")).toBeVisible();
-  });
-
-  it("swaps the text for a pulsing placeholder while loading, keeping it for screen readers", () => {
-    const { container } = render(
-      <ScopeChip tone="accent" loading>
-        Loading participant count
-      </ScopeChip>,
+  it("shows its title, the header's right-hand content and its body", () => {
+    render(
+      <ResultsPanel title="Candidate variants" headerRight={<button type="button">Export TSV</button>}>
+        <p>Body</p>
+      </ResultsPanel>,
     );
 
-    expect(container.querySelector(".animate-skeleton-pulse")).toHaveAttribute("aria-hidden", "true");
-    expect(screen.getByText("Loading participant count").style.position).toBe("absolute");
+    expect(screen.getByRole("heading", { name: "Candidate variants" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export TSV" })).toBeInTheDocument();
+    expect(screen.getByText("Body")).toBeInTheDocument();
   });
 });

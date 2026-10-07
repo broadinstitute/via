@@ -117,6 +117,27 @@ export const elements = {
     outline: "none",
     boxShadow: `0 0 0 2px ${alpha(colors.textAccent, 0.35)}`,
   },
+  /** A placeholder bar that pulses while content loads; pair with the animate-skeleton-pulse class. */
+  skeleton: {
+    height: 14,
+    borderRadius: 4,
+    background: colors.border,
+  },
+  /** The sentence under a settings panel's title saying what the panel is for. */
+  panelIntro: {
+    marginBottom: 14,
+    fontSize: 12,
+    lineHeight: 1.5,
+    color: colors.textSecondary,
+  },
+  /** A failed request, stated in place of the content it was for. */
+  errorNote: {
+    padding: "10px 12px",
+    borderRadius: radius,
+    background: colors.bgDanger,
+    color: colors.textDanger,
+    fontSize: 12,
+  },
   /** Explanatory line under a form field. */
   fieldHint: {
     marginTop: 6,
@@ -212,13 +233,6 @@ export function stateBorder(color: string): CSSProperties {
 }
 
 export const inputs = {
-  label: {
-    display: "block",
-    marginBottom: 4,
-    fontSize: 11,
-    fontWeight: 600,
-    color: colors.textSecondary,
-  },
   /** Prose field -- a phenotype term, a search box. */
   text: {
     width: "100%",
@@ -250,7 +264,7 @@ export const inputs = {
 } as const satisfies Record<string, CSSProperties>;
 
 // Both variant tables are built from these. Note that neither sets borderCollapse: the cohort
-// table needs `separate` for its two stacked sticky header rows (see CohortVariantsPanel), while
+// table needs `separate` for its two stacked sticky header rows (see VariantsPanel), while
 // the phenotype-matched table below it uses `collapse`.
 export const table = {
   base: {
@@ -292,12 +306,6 @@ export const table = {
     marginLeft: 2,
     fontSize: 9,
     color: colors.textAccent,
-  },
-  checkbox: {
-    width: 14,
-    height: 14,
-    accentColor: colors.textAccent,
-    cursor: "pointer",
   },
 } as const satisfies Record<string, CSSProperties>;
 

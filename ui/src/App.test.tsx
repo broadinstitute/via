@@ -28,12 +28,12 @@ describe("App", () => {
 
   it("renders the search entry page at /", () => {
     renderAt("/");
-    expect(screen.getByRole("heading", { name: "Variant Interpretation" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^Weigh candidate variants against the full All of Us cohort$/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /search/i })).toBeInTheDocument();
   });
 
   it("renders the search results page at /results", () => {
     renderAt("/results");
-    expect(screen.getByRole("heading", { name: "Phenotype filter" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Candidate variants" }).length).toBeGreaterThan(0);
   });
 });

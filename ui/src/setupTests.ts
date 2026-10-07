@@ -5,7 +5,7 @@ import { vi } from "vitest";
 window.scrollTo = vi.fn();
 
 // jsdom doesn't implement matchMedia either; several components use it to react to viewport
-// breakpoints (e.g. SearchResultsPage's .topRow collapse, CohortVariantsPanel's docked layout).
+// breakpoints (e.g. the top bar going compact).
 // matches: false is an arbitrary but stable default -- individual tests can still override it.
 window.matchMedia =
   window.matchMedia ||

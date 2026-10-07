@@ -5,6 +5,7 @@ import type { ConditionConcept } from "../api/conditions";
 import colors from "../libs/colors";
 import { useFocus, useHoveredKey } from "../libs/hooks";
 import * as Style from "../libs/style";
+import { formatInt } from "../utils/format";
 import { UserIcon } from "./icons";
 
 /**
@@ -121,7 +122,7 @@ function describeEstimate(estimate: number | null): { label: string; tooltip: st
       spoken: "no participant estimate",
     };
   }
-  const count = estimate.toLocaleString();
+  const count = formatInt(estimate);
   return {
     label: `~${count}`,
     tooltip: `Estimated participants with this condition, from the All of Us Cohort Builder. ${EXACT_COUNT_NOTE}`,

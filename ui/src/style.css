@@ -32,52 +32,22 @@ body {
  * ----------
  * @keyframes has nowhere to live inline, so each animation is exposed as a utility class that
  * carries motion only -- the animated element's colors and dimensions still come from its own
- * inline styles. Anything that varies per element stays inline too (e.g. BreakdownLegend sets its
- * own animationDelay to stagger rows). */
+ * inline styles. Anything that varies per element stays inline too (e.g. BreakdownBar sets each
+ * run's animationDelay to stagger them). */
 
-/* Covers the whole donut ring, then "shrinks" to reveal it clockwise from the top, like a clock
-   hand sweeping around. The dasharray has to be here rather than inline so the reduced-motion
-   rule below can land the animation on its end state. */
-@keyframes via-donut-reveal {
+/* A breakdown run growing in from its left edge; BreakdownBar staggers them with animationDelay. */
+@keyframes via-grow-x {
   from {
-    stroke-dasharray: 100 0;
+    transform: scaleX(0);
   }
   to {
-    stroke-dasharray: 0 100;
+    transform: scaleX(1);
   }
 }
 
-.animate-donut-reveal {
-  stroke-dasharray: 100 0;
-  animation: via-donut-reveal 0.9s cubic-bezier(0.65, 0, 0.35, 1) forwards;
-}
-
-@keyframes via-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.animate-fade-in {
-  animation: via-fade-in 0.5s ease 0.35s backwards;
-}
-
-@keyframes via-row-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-row-fade-in {
-  animation: via-row-fade-in 0.35s ease backwards;
+.animate-grow-x {
+  transform-origin: left center;
+  animation: via-grow-x 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
 
 @keyframes via-skeleton-pulse {
@@ -94,8 +64,8 @@ body {
   animation: via-skeleton-pulse 1.2s ease-in-out infinite;
 }
 
-/* InfoTooltip. Quick, and without the delay animate-fade-in has: the tooltip's own show delay
-   already keeps it from flickering as the pointer passes over an icon. */
+/* InfoTooltip. Quick and undelayed: the tooltip's own show delay already keeps it from
+   flickering as the pointer passes over an icon. */
 @keyframes via-tooltip-in {
   from {
     opacity: 0;
@@ -111,26 +81,41 @@ body {
   animation: via-tooltip-in 0.12s ease-out;
 }
 
+/* LensSpinner's rungs scanning up through the glass: a rest with the green rung centred, then one
+   eased step of four rungs (4 x 6 units) to the next green one, which lands where the first began,
+   so the loop is seamless. The component sets the duration and a wall-clock delay inline. */
+@keyframes via-lens-scan {
+  0%,
+  35% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-24px);
+  }
+}
+
+.animate-lens-scan {
+  animation: via-lens-scan 1.8s cubic-bezier(0.5, 0, 0.25, 1) infinite;
+}
+
 /* A transition is inline-able on its own, but its reduced-motion counterpart isn't. */
 .transition-transform {
   transition: transform 0.15s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-donut-reveal {
-    animation: none;
-    stroke-dasharray: 0 100;
-  }
-
-  .animate-fade-in,
-  .animate-row-fade-in,
-  .animate-tooltip-in {
+    .animate-tooltip-in,
+  .animate-grow-x {
     animation: none;
   }
 
   .animate-skeleton-pulse {
     animation: none;
     opacity: 0.7;
+  }
+
+  .animate-lens-scan {
+    animation: none;
   }
 
   .transition-transform {

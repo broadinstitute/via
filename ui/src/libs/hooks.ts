@@ -1,7 +1,6 @@
 // State hooks standing in for the CSS features an inline style object can't express.
 
-import { useEffect, useState } from "react";
-import type { RefObject } from "react";
+import { useEffect, useLayoutEffect, useState, type RefObject } from "react";
 
 /** Tracks ":hover" as state, so a hovered style can be merged over the base one. */
 export function useHover() {
@@ -65,60 +64,38 @@ export function useMediaQuery(query: string): boolean {
 }
 
 /**
- * Whether a scroll container has content hidden below its bottom edge, and how many of its rows
- * are out of sight there, for a "more below" cue. `rowSelector` picks out what counts as a row
- * within the container -- a table's data rows, say, and not a row's expanded detail.
+ * Centres an element in whatever part of its parent is on screen when it first appears, for content
+ * in a tall container that would otherwise sit at its top, or below the fold. It then stays put
+ * while the page scrolls. The element moves by a transform and never leaves the parent's box: a
+ * parent that later shrinks pulls it back inside.
  *
- * A row counts as below once more than half of it is past the bottom edge. Re-checked on scroll,
- * whenever the container or its content resizes, and when rows are added or removed, so
- * expanding a row, re-sorting or a new set of results all keep it current.
+ * `topInset` is the height of anything pinned over the top of the window, like the top bar.
  */
-export function useMoreBelow(
-  ref: RefObject<HTMLElement | null>,
-  rowSelector: string,
-): { hasMoreBelow: boolean; rowsBelow: number } {
-  const [state, setState] = useState({ hasMoreBelow: false, rowsBelow: 0 });
-
-  useEffect(() => {
+export function useCenterAboveFold(ref: RefObject<HTMLElement | null>, topInset = 0) {
+  useLayoutEffect(() => {
     const element = ref.current;
-    if (!element) return;
-
-    const update = () => {
-      // 1px of slack: scrollTop can be fractional on zoomed or high-DPI displays, which would
-      // otherwise leave the cue showing at the very bottom.
-      const hasMoreBelow = element.scrollTop + element.clientHeight < element.scrollHeight - 1;
-      // clientTop/clientHeight rather than the rect's bottom, which would include a horizontal
-      // scrollbar that no row can be seen through.
-      const visibleBottom = element.getBoundingClientRect().top + element.clientTop + element.clientHeight;
-      let rowsBelow = 0;
-      if (hasMoreBelow) {
-        for (const row of element.querySelectorAll(rowSelector)) {
-          const rect = row.getBoundingClientRect();
-          if (rect.top + rect.height / 2 > visibleBottom) rowsBelow++;
-        }
-      }
-      // Bail out of the re-render when nothing changed, since this runs on every scroll event.
-      setState((current) =>
-        current.hasMoreBelow === hasMoreBelow && current.rowsBelow === rowsBelow
-          ? current
-          : { hasMoreBelow, rowsBelow },
-      );
+    const parent = element?.parentElement;
+    if (!element || !parent) return;
+    const slackOf = () => Math.max(0, parent.getBoundingClientRect().height - element.offsetHeight);
+    const place = (offset: number) => {
+      element.style.transform = `translateY(${Math.round(Math.min(slackOf(), Math.max(0, offset)))}px)`;
     };
 
-    update();
-    element.addEventListener("scroll", update, { passive: true });
-    // Guarded: jsdom doesn't implement ResizeObserver.
-    const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
-    resizeObserver?.observe(element);
-    for (const child of Array.from(element.children)) resizeObserver?.observe(child);
-    const mutationObserver = new MutationObserver(update);
-    mutationObserver.observe(element, { childList: true, subtree: true });
-    return () => {
-      element.removeEventListener("scroll", update);
-      resizeObserver?.disconnect();
-      mutationObserver.disconnect();
-    };
-  }, [ref, rowSelector]);
+    const box = parent.getBoundingClientRect();
+    const top = Math.max(box.top, topInset);
+    const bottom = Math.min(box.bottom, window.innerHeight);
+    const offset =
+      bottom > top
+        ? (top + bottom) / 2 - box.top - element.offsetHeight / 2
+        : box.top >= window.innerHeight
+          ? 0
+          : slackOf();
+    place(offset);
 
-  return state;
+    // The parent grows and shrinks with the table (rows expanding, sorting); keep the chosen spot
+    // where it still fits.
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => place(offset));
+    observer?.observe(parent);
+    return () => observer?.disconnect();
+  }, [ref, topInset]);
 }

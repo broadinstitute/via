@@ -2,10 +2,9 @@ import colors from "../libs/colors";
 import { describe, expect, it } from "vitest";
 import {
   CLINVAR_BADGE_CONFIG,
-  clinvarReviewWords,
+  clinvarReviewDescription,
   clinvarSubmissionColor,
   clinvarSubmissionLabel,
-  clinvarSubmissionShortCode,
 } from "./clinvar";
 
 describe("clinvar utils", () => {
@@ -14,50 +13,27 @@ describe("clinvar utils", () => {
       shortLabel: "P",
       ink: colors.textDanger,
       fill: colors.bgDanger,
-      borderStyle: "solid",
-      tagPadding: "1px 6px",
     });
     expect(CLINVAR_BADGE_CONFIG["Likely pathogenic"]).toEqual({
       shortLabel: "LP",
       ink: colors.textDanger,
       fill: colors.bgDanger,
-      borderStyle: "dashed",
-      tagPadding: "2px 7px",
     });
     expect(CLINVAR_BADGE_CONFIG.VUS).toEqual({
       shortLabel: "VUS",
       ink: colors.textWarning,
       fill: colors.bgWarning,
-      borderStyle: "solid",
-      tagPadding: "2px 7px",
     });
     expect(CLINVAR_BADGE_CONFIG["Likely benign"]).toEqual({
       shortLabel: "LB",
       ink: colors.textSuccess,
       fill: colors.bgSuccess,
-      borderStyle: "dashed",
-      tagPadding: "2px 7px",
     });
     expect(CLINVAR_BADGE_CONFIG.Benign).toEqual({
       shortLabel: "B",
       ink: colors.textSuccess,
       fill: colors.bgSuccess,
-      borderStyle: "solid",
-      tagPadding: "1px 6px",
     });
-  });
-
-  it("maps known submission classifications to short codes", () => {
-    expect(clinvarSubmissionShortCode("Pathogenic")).toBe("P");
-    expect(clinvarSubmissionShortCode("Likely pathogenic")).toBe("LP");
-    expect(clinvarSubmissionShortCode("Uncertain significance")).toBe("VUS");
-    expect(clinvarSubmissionShortCode("Likely benign")).toBe("LB");
-    expect(clinvarSubmissionShortCode("Benign")).toBe("B");
-  });
-
-  it("falls back for missing or unknown submission classifications", () => {
-    expect(clinvarSubmissionShortCode(null)).toBe("—");
-    expect(clinvarSubmissionShortCode("Conflicting interpretations")).toBe("Conflicting interpretations");
   });
 
   it("maps known submission classifications to their display colors", () => {
@@ -73,17 +49,14 @@ describe("clinvar utils", () => {
     expect(clinvarSubmissionColor("Conflicting interpretations")).toBe(colors.textMuted);
   });
 
-  it("formats review words for each supported star level", () => {
-    expect(clinvarReviewWords(0, false, 1)).toBe("0★ no assertion criteria provided");
-    expect(clinvarReviewWords(1, false, 1)).toBe("1★ criteria provided, single submitter");
-    expect(clinvarReviewWords(1, true, 2)).toBe("1★ criteria provided, conflicting classifications");
-    expect(clinvarReviewWords(2, false, 3)).toBe("2★ criteria provided, multiple submitters, no conflicts");
-    expect(clinvarReviewWords(3, false, 1)).toBe("3★ reviewed by expert panel");
-    expect(clinvarReviewWords(4, false, 1)).toBe("4★ practice guideline");
-  });
-
-  it("falls back to an unknown review status for out-of-range star counts", () => {
-    expect(clinvarReviewWords(9, false, 1)).toBe("9★ unknown review status");
+  it("describes each review status, and falls back for an out-of-range star count", () => {
+    expect(clinvarReviewDescription(0, false)).toBe("no assertion criteria provided");
+    expect(clinvarReviewDescription(1, false)).toBe("criteria provided, single submitter");
+    expect(clinvarReviewDescription(1, true)).toBe("criteria provided, conflicting classifications");
+    expect(clinvarReviewDescription(2, false)).toBe("criteria provided, multiple submitters, no conflicts");
+    expect(clinvarReviewDescription(3, false)).toBe("reviewed by expert panel");
+    expect(clinvarReviewDescription(4, false)).toBe("practice guideline");
+    expect(clinvarReviewDescription(9, false)).toBe("unknown review status");
   });
 
   it("shortens only the record classifications too long for a narrow list", () => {
