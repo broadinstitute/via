@@ -257,6 +257,23 @@ describe("computeOddsRatio", () => {
           }
   });
 
+  it("stays fast for a common variant in a large matched cohort", () => {
+    // 50,000 matched participants and a variant carried by 30% of them: a support of 100,000
+    // values. Summing every value on each of the bisection's steps took half a second here;
+    // summing from the mode outward takes milliseconds. The budget is loose for slow CI machines.
+    const started = performance.now();
+    const { oddsRatio, ci } = computeOddsRatio(30000, 70000, 120000, 359860);
+    expect(performance.now() - started).toBeLessThan(50);
+    expect(oddsRatio).toBeCloseTo(1.285, 3);
+    expect(ci![0]).toBeGreaterThan(1);
+    expect(ci![0]).toBeLessThan(oddsRatio);
+    expect(ci![1]).toBeGreaterThan(oddsRatio);
+    // Bounds this tight on a table this large: Woolf's interval is 1.264 to 1.306 here, and the
+    // exact one agrees to three figures.
+    expect(ci![0]).toBeCloseTo(1.264, 2);
+    expect(ci![1]).toBeCloseTo(1.306, 2);
+  });
+
   it("handles cohort-sized counts", () => {
     const { oddsRatio, ci } = computeOddsRatio(12, 770, 5565, 474295);
     expect(ci![0]).toBeGreaterThan(0);

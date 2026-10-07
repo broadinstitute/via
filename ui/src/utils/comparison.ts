@@ -217,6 +217,11 @@ export function computeEnrichment(
  * The point estimate is the sample odds ratio, ad / bc. With no carriers on either side, or
  * every allele a carrier on both, the margins allow only the observed table and the interval is
  * null.
+ *
+ * Each tail probability is summed from the distribution's mode outward, by the ratio of one
+ * term to the next, stopping once terms are negligible. The mass sits within a few hundred
+ * values of the mode however wide the support, so a common variant in a large matched cohort
+ * (a support of 100,000 values) costs the same few milliseconds as a rare one.
  */
 export function computeOddsRatio(
   a: number,
@@ -232,25 +237,40 @@ export function computeOddsRatio(
   const oddsRatio = b * c === 0 ? (a * d === 0 ? 1 : Infinity) : (a * d) / (b * c);
   if (lo === hi) return { oddsRatio: 1, ci: null };
 
-  // log P(X = x) under ψ = 1, for each x the margins allow; ψ tilts it by ψ^x.
-  const logCentral: number[] = [];
-  for (let x = lo; x <= hi; x++) logCentral.push(logChoose(matched, x) + logChoose(rest, carriers - x));
-
   /** P(X ≥ a) under ψ when `upper`, else P(X ≤ a). */
   const tail = (logPsi: number, upper: boolean) => {
-    let max = -Infinity;
-    const terms = logCentral.map((value, i) => {
-      const term = value + (lo + i) * logPsi;
-      if (term > max) max = term;
-      return term;
-    });
-    let total = 0;
-    let inTail = 0;
-    terms.forEach((term, i) => {
-      const weight = Math.exp(term - max);
-      total += weight;
-      if (upper ? lo + i >= a : lo + i <= a) inTail += weight;
-    });
+    const psi = Math.exp(logPsi);
+    // P(X = x + 1) / P(X = x): ψ times the hypergeometric ratio. It falls as x rises, so the
+    // terms are unimodal.
+    const ratio = (x: number) => (psi * (matched - x) * (carriers - x)) / ((x + 1) * (rest - carriers + x + 1));
+    // The mode: the first x whose next term is smaller, found by bisection on the ratio.
+    let low = lo;
+    let high = hi;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if (ratio(mid) < 1) high = mid;
+      else low = mid + 1;
+    }
+    const mode = low;
+    const counts = (x: number) => (upper ? x >= a : x <= a);
+
+    // Terms relative to the mode's, which is 1; each direction stops once they stop mattering.
+    let total = 1;
+    let inTail = counts(mode) ? 1 : 0;
+    let term = 1;
+    for (let x = mode; x < hi; x++) {
+      term *= ratio(x);
+      if (term < NEGLIGIBLE_TERM) break;
+      total += term;
+      if (counts(x + 1)) inTail += term;
+    }
+    term = 1;
+    for (let x = mode; x > lo; x--) {
+      term /= ratio(x - 1);
+      if (term < NEGLIGIBLE_TERM) break;
+      total += term;
+      if (counts(x - 1)) inTail += term;
+    }
     return inTail / total;
   };
 
@@ -258,7 +278,7 @@ export function computeOddsRatio(
   const solve = (upper: boolean) => {
     let low = -60;
     let high = 60;
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < BISECTION_STEPS; i++) {
       const mid = (low + high) / 2;
       const rising = upper ? tail(mid, true) : 1 - tail(mid, false);
       if (rising < (upper ? ODDS_RATIO_TAIL : 1 - ODDS_RATIO_TAIL)) low = mid;
@@ -272,6 +292,14 @@ export function computeOddsRatio(
     ci: [a === lo ? 0 : solve(true), a === hi ? Infinity : solve(false)],
   };
 }
+
+/**
+ * A term this small relative to the mode's is dropped. Even a support of a million values can
+ * then only lose a millionth of a billionth of the mass -- nothing at two significant figures.
+ */
+const NEGLIGIBLE_TERM = 1e-17;
+/** Halvings of the 120-unit log ψ range: a relative precision of 1e-13, far past what's shown. */
+const BISECTION_STEPS = 50;
 
 /** Each side of the 95% odds-ratio interval leaves out 2.5%. */
 const ODDS_RATIO_TAIL = 0.025;
