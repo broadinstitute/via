@@ -1,12 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { CSSProperties, ReactNode, RefObject } from "react";
+import type { CSSProperties, FocusEvent, ReactNode, RefObject } from "react";
 import { createPortal } from "react-dom";
 import colors from "../../libs/colors";
+import { isFocusVisible } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 
 // The app's one tooltip: a dark bubble with an arrow, fixed and portalled into <body> so the
 // scroll containers it's used in can't clip it. InfoTooltip puts it on its circled "i"; other
-// elements -- a breakdown token, say -- attach it through this hook.
+// elements -- a breakdown token, say -- attach it through this hook. Spreading `anchorProps` is
+// the whole wiring: hover, keyboard focus and click all show it, so no anchor can forget one.
 
 /** Long enough that sweeping the pointer across a row of anchors doesn't flash every tooltip. */
 const SHOW_DELAY_MS = 120;
@@ -58,14 +60,32 @@ interface Position {
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
+export interface TooltipAnchorProps {
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  onFocus: (event: FocusEvent<HTMLElement>) => void;
+  onBlur: () => void;
+  onClick: () => void;
+}
+
 export interface TooltipHandle {
   /** Whether the bubble is showing. */
   open: boolean;
-  /** Show after the hover delay (or at once with 0), e.g. on focus or click. */
+  /** Whether the pointer is over the anchor, for an anchor that changes colour while it is. */
+  hovered: boolean;
+  /** Whether the anchor has keyboard focus (not a click), for drawing a focus ring. */
+  keyboardFocused: boolean;
+  /** Show after the hover delay (or at once with 0). */
   show: (delay?: number) => void;
   hide: () => void;
-  /** Spread onto the anchor: shows on hover, hides on leave. Focus and click are the caller's. */
-  anchorProps: { onMouseEnter: () => void; onMouseLeave: () => void };
+  /**
+   * Spread onto the anchor: shows on hover (after the delay), on focus and on click. Hides once
+   * nothing keeps it open: the pointer leaving hides it unless the anchor has keyboard focus, and
+   * blur hides it unless the pointer is still over it. (Focus from a mouse click doesn't pin it,
+   * so clicking an icon and moving away still closes it.) An anchor with handlers of its own lays
+   * them over these with composeHandlers, or overrides one by setting it after the spread.
+   */
+  anchorProps: TooltipAnchorProps;
   /** Render this once, anywhere in the anchor's tree; it portals itself to <body>. */
   bubble: ReactNode;
 }
@@ -77,6 +97,8 @@ export interface TooltipHandle {
  */
 export function useTooltip(anchorRef: RefObject<HTMLElement | null>, text: ReactNode): TooltipHandle {
   const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [keyboardFocused, setKeyboardFocused] = useState(false);
   const [position, setPosition] = useState<Position | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const showTimer = useRef<number | undefined>(undefined);
@@ -159,9 +181,30 @@ export function useTooltip(anchorRef: RefObject<HTMLElement | null>, text: React
 
   return {
     open,
+    hovered,
+    keyboardFocused,
     show,
     hide,
-    anchorProps: { onMouseEnter: () => show(), onMouseLeave: hide },
+    anchorProps: {
+      onMouseEnter: () => {
+        setHovered(true);
+        show();
+      },
+      onMouseLeave: () => {
+        setHovered(false);
+        // A keyboard user who has tabbed to the anchor keeps the tooltip while the pointer wanders.
+        if (!keyboardFocused) hide();
+      },
+      onFocus: (event) => {
+        setKeyboardFocused(isFocusVisible(event.currentTarget));
+        show(0);
+      },
+      onBlur: () => {
+        setKeyboardFocused(false);
+        if (!hovered) hide();
+      },
+      onClick: () => show(0),
+    },
     bubble,
   };
 }

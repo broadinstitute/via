@@ -99,3 +99,38 @@ export function useCenterAboveFold(ref: RefObject<HTMLElement | null>, topInset 
     return () => observer?.disconnect();
   }, [ref, topInset]);
 }
+
+/**
+ * Whether the browser would draw a focus ring here: keyboard focus, not a click. Inline styles
+ * can't use :focus-visible, so it's asked of the element instead. Browsers too old to know the
+ * selector throw, and get the ring on every focus.
+ */
+export function isFocusVisible(element: Element): boolean {
+  try {
+    return element.matches(":focus-visible");
+  } catch {
+    return true;
+  }
+}
+
+type Handler = (...args: never[]) => void;
+
+/**
+ * Two sets of event handlers as one, calling both where they share a name (`base` first). For
+ * laying an element's own handlers over a hook's, e.g. a tooltip's anchor props plus the hover
+ * highlight of the group it belongs to.
+ */
+export function composeHandlers<A extends object, B extends object>(base: A, extra: B): A & B {
+  const merged = { ...base } as Record<string, Handler | undefined>;
+  for (const [name, handler] of Object.entries(extra) as [string, Handler | undefined][]) {
+    const existing = merged[name];
+    merged[name] =
+      existing && handler
+        ? (...args: never[]) => {
+            existing(...args);
+            handler(...args);
+          }
+        : (handler ?? existing);
+  }
+  return merged as A & B;
+}
