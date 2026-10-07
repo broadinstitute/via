@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
-import DnaSpinner from "../common/DnaSpinner";
+import LensSpinner from "../common/LensSpinner";
 import ResultsPanel from "./ResultsPanel";
 
 const styles = {
@@ -36,7 +36,7 @@ export default function SectionLoadingPanel({
         // footprint as the panel it stands in for.
         style={{ ...styles.body, minHeight }}
       >
-        <DnaSpinner size={56} />
+        <LensSpinner size={56} />
         <span>{message}</span>
       </div>
     </ResultsPanel>

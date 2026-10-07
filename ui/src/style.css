@@ -81,6 +81,23 @@ body {
   animation: via-tooltip-in 0.12s ease-out;
 }
 
+/* LensSpinner's rungs scanning up through the glass: a rest with the green rung centred, then one
+   eased step of four rungs (4 x 6 units) to the next green one, which lands where the first began,
+   so the loop is seamless. The component sets the duration and a wall-clock delay inline. */
+@keyframes via-lens-scan {
+  0%,
+  35% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-24px);
+  }
+}
+
+.animate-lens-scan {
+  animation: via-lens-scan 1.8s cubic-bezier(0.5, 0, 0.25, 1) infinite;
+}
+
 /* A transition is inline-able on its own, but its reduced-motion counterpart isn't. */
 .transition-transform {
   transition: transform 0.15s ease;
@@ -95,6 +112,10 @@ body {
   .animate-skeleton-pulse {
     animation: none;
     opacity: 0.7;
+  }
+
+  .animate-lens-scan {
+    animation: none;
   }
 
   .transition-transform {
