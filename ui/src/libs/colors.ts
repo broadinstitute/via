@@ -22,7 +22,7 @@ const colors = {
   textWarning: "#854f0b",
   textDanger: "#a32d2d",
 
-  // Brand, from the favicon's helix
+  // Brand, from the logo's navy tile and green variant rung
   brandNavy: "#074770",
   brandGreen: "#5cc88d",
 

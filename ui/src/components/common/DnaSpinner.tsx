@@ -5,9 +5,10 @@ import { useMediaQuery } from '../../libs/hooks';
 /**
  * DnaSpinner
  *
- * The favicon, with its double helix turning in 3D. At rest (first paint, and
- * whenever the user prefers reduced motion) it is drawn at the favicon's own
- * pose, so the static fallback is the favicon itself.
+ * VIA's original helix mark (the favicon before the lens logo replaced it), its
+ * double helix turning in 3D. At rest (first paint, and whenever the user
+ * prefers reduced motion) it is drawn at that mark's own pose, so the static
+ * fallback is the original mark itself. Later comments call it "the favicon".
  *
  * The helix is modelled as two strands winding round a vertical axis, half a
  * turn tall, with base-pair rungs at fixed heights. Each frame advances the
