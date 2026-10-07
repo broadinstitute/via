@@ -104,13 +104,23 @@ const styles = {
     alignItems: "center",
     gap: 2,
   },
+  // A soft, borderless tint, like a large version of a status pill: the colour and the glyph carry
+  // the verdict, so no outline is needed to set it apart.
   verdict: {
     display: "flex",
     flexDirection: "column",
     gap: 6,
     padding: "14px 18px",
-    borderRadius: Style.radius,
-    border: "1px solid",
+    borderRadius: 12,
+  },
+  // The verdict's direction, in a disc of its own ink.
+  verdictGlyph: {
+    display: "inline-grid",
+    placeItems: "center",
+    width: 24,
+    height: 24,
+    borderRadius: "50%",
+    flexShrink: 0,
   },
   // Fixed heights, so the strip is the same height whatever the verdict: with or without a ratio,
   // and with a one- or two-line sentence. Centered rather than baseline-aligned, since the mono
@@ -119,28 +129,31 @@ const styles = {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: "4px 12px",
-    height: 22,
+    gap: "4px 10px",
+    height: 24,
   },
   verdictWord: {
     fontSize: 17,
     fontWeight: 700,
     lineHeight: "22px",
   },
+  // Set like the evidence figures: sans with tabular digits, a little lighter than the word.
   verdictRatio: {
-    ...Style.elements.mono,
     fontSize: 17,
-    fontWeight: 700,
+    fontWeight: 600,
     lineHeight: "22px",
+    fontVariantNumeric: "tabular-nums",
+    opacity: 0.85,
   },
+  // Indented to start under the word, past the glyph.
   verdictSentence: {
-    margin: 0,
+    margin: "0 0 0 34px",
     fontSize: 12.5,
     lineHeight: "19px",
     minHeight: 38,
     color: colors.textBody,
   },
-  // Evidence: a row of stat tiles, each a label over a figure over a one-line reading of it.
+  // Evidence: a row of stat tiles, each a label over a headline figure over a short reading of it.
   evidence: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
@@ -149,32 +162,35 @@ const styles = {
   tile: {
     display: "flex",
     flexDirection: "column",
-    gap: 3,
-    padding: "10px 12px",
+    gap: 4,
+    padding: 12,
     border: `1px solid ${colors.border}`,
     borderRadius: Style.radius,
     background: colors.surface1,
   },
+  // The figure is the tile's point, so it's set large, in the sans face with lining tabular digits.
   tileValue: {
-    ...Style.elements.mono,
-    fontSize: 15,
+    fontSize: 22,
     fontWeight: 700,
+    lineHeight: "28px",
     color: colors.textPrimary,
+    fontVariantNumeric: "tabular-nums",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
-  tileFooter: {
-    display: "flex",
-    alignItems: "center",
-    height: 20,
+  // The words joining two figures ("vs", "of"), a step back so the numbers read first.
+  tileConnective: {
+    fontSize: 13,
+    fontWeight: 500,
+    color: colors.textMuted,
   },
+  // Two lines, held open whether the note needs them or not, so every tile is the same height.
   tileNote: {
     fontSize: 11,
-    color: colors.textMuted,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    lineHeight: "15px",
+    minHeight: 30,
+    color: colors.textSecondary,
   },
   // Head to head and ancestry share one table treatment.
   table: {
@@ -326,9 +342,14 @@ export default function ReviewDetail({
         </SectionTitle>
         <div
           role="status"
-          style={{ ...styles.verdict, color: tone.ink, background: tone.fill, borderColor: alpha(tone.ink, 0.35) }}
+          style={{ ...styles.verdict, color: tone.ink, background: tone.fill }}
         >
           <div style={styles.verdictLine}>
+            <span style={{ ...styles.verdictGlyph, background: alpha(tone.ink, 0.14) }} aria-hidden="true">
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+                <path d={tone.glyph} />
+              </svg>
+            </span>
             <span style={styles.verdictWord}>{tone.word}</span>
             {enrichment && enrichment.verdict !== "inconclusive" && (
               <span style={styles.verdictRatio}>{formatRatio(enrichment.ratio)}</span>
@@ -374,7 +395,13 @@ export default function ReviewDetail({
             />
             <StatTile
               label="Observed vs expected"
-              value={`${formatInt(enrichment.matchedAc)} vs ${formatExpected(enrichment.expectedMatchedAc)}`}
+              value={
+                <>
+                  {formatInt(enrichment.matchedAc)}
+                  <Connective>vs</Connective>
+                  {formatExpected(enrichment.expectedMatchedAc)}
+                </>
+              }
               note={
                 enrichment.expectedAdjustedAc !== null
                   ? `${formatExpected(enrichment.expectedAdjustedAc)} expected adjusting for ancestry`
@@ -389,7 +416,13 @@ export default function ReviewDetail({
             />
             <StatTile
               label="Matched carriers"
-              value={`${formatInt(matched.homozygotes + matched.heterozygotes)} of ${formatInt(participantCount)}`}
+              value={
+                <>
+                  {formatInt(matched.homozygotes + matched.heterozygotes)}
+                  <Connective>of</Connective>
+                  {formatInt(participantCount)}
+                </>
+              }
               note={`${formatInt(matched.homozygotes)} hom · ${formatInt(matched.heterozygotes)} het · ${formatInt(matched.clinvarPlpInTrans)} P/LP in trans`}
               tooltip={
                 "How many of the matched participants carry at least one copy of this allele, split into homozygous and heterozygous carriers. " +
@@ -580,7 +613,8 @@ function verdictSentence(row: ComparisonRow, condition: string): ReactNode {
 
 interface StatTileProps {
   label: string;
-  value: string;
+  /** The headline figure; join two figures with <Connective>. */
+  value: ReactNode;
   note: string;
   /** What the figure is and how to read it, for the info icon beside the label. */
   tooltip: string;
@@ -592,16 +626,15 @@ function StatTile({ label, value, note, tooltip }: StatTileProps) {
       <span style={Style.elements.eyebrow}>
         <InfoLabel tooltip={tooltip}>{label}</InfoLabel>
       </span>
-      <span style={styles.tileValue} title={value}>
-        {value}
-      </span>
-      <span style={styles.tileFooter}>
-        <span style={styles.tileNote} title={note}>
-          {note}
-        </span>
-      </span>
+      <span style={styles.tileValue}>{value}</span>
+      <span style={styles.tileNote}>{note}</span>
     </div>
   );
+}
+
+/** A word joining two figures in a stat tile, with the spaces around it. */
+function Connective({ children }: { children: string }) {
+  return <span style={styles.tileConnective}> {children} </span>;
 }
 
 function SectionTitle({ id, children, tooltip }: { id: string; children: ReactNode; tooltip?: string }) {

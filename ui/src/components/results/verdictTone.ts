@@ -6,25 +6,46 @@ import { SIMILARITY_FOLD, type Enrichment, type Verdict } from "../../utils/comp
 
 export interface VerdictTone {
   ink: string;
+  /** The verdict strip's background. It has no border, so even the neutral verdicts need a fill that shows on a white panel. */
   fill: string;
   word: string;
   /** The rule behind the verdict, for the rail's legend. */
   rule: string;
+  /** A 24-unit SVG path for the verdict's direction: up, down, level, or a question. */
+  glyph: string;
 }
 
+const GLYPH_UP = "M12 19V5M6 11l6-6 6 6";
+const GLYPH_DOWN = "M12 5v14M6 13l6 6 6-6";
+const GLYPH_LEVEL = "M5 9h14M5 15h14";
+const GLYPH_UNKNOWN = "M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7M12 17h.01";
+
 export const VERDICT_TONE: Record<Verdict, VerdictTone> = {
-  enriched: { ink: colors.textDanger, fill: colors.bgDanger, word: "Enriched", rule: "interval above 1" },
-  depleted: { ink: colors.textAccent, fill: colors.bgAccent, word: "Depleted", rule: "interval below 1" },
+  enriched: { ink: colors.textDanger, fill: colors.bgDanger, word: "Enriched", rule: "interval above 1", glyph: GLYPH_UP },
+  depleted: { ink: colors.textAccent, fill: colors.bgAccent, word: "Depleted", rule: "interval below 1", glyph: GLYPH_DOWN },
   similar: {
     ink: colors.textSecondary,
-    fill: colors.surface1,
+    fill: colors.surface0,
     word: "Similar frequency",
     rule: `within ${1 / SIMILARITY_FOLD}×–${SIMILARITY_FOLD}×`,
+    glyph: GLYPH_LEVEL,
   },
-  inconclusive: { ink: colors.textMuted, fill: colors.surface1, word: "Inconclusive", rule: "too few alleles" },
+  inconclusive: {
+    ink: colors.textMuted,
+    fill: colors.surface0,
+    word: "Inconclusive",
+    rule: "too few alleles",
+    glyph: GLYPH_UNKNOWN,
+  },
 };
 
-const NO_COMPARISON: VerdictTone = { ink: colors.textMuted, fill: colors.surface1, word: "No comparison", rule: "" };
+const NO_COMPARISON: VerdictTone = {
+  ink: colors.textMuted,
+  fill: colors.surface0,
+  word: "No comparison",
+  rule: "",
+  glyph: GLYPH_UNKNOWN,
+};
 
 /** The tone for a comparison's verdict, or for a variant with nothing to compare. */
 export function verdictTone(enrichment: Enrichment | null): VerdictTone {
