@@ -175,12 +175,18 @@ function LegendEntry({ segment, quiet, hoverProps }: LegendEntryProps) {
         ...(quiet ? styles.quiet : undefined),
         ...(tooltip.keyboardFocused ? Style.elements.tooltipIconFocusRing : undefined),
       }}
-      // The tooltip's own wiring, plus the group highlight on hover and on focus alike.
+      // The tooltip's own wiring, plus the group highlight on hover and on focus alike. The
+      // highlight follows the tooltip's rule: it stays while either keyboard focus or the
+      // pointer remains, so it isn't lost when the pointer leaves a focused entry.
       {...composeHandlers(tooltip.anchorProps, {
         onMouseEnter: hoverProps.onMouseEnter,
-        onMouseLeave: hoverProps.onMouseLeave,
+        onMouseLeave: () => {
+          if (!tooltip.keyboardFocused) hoverProps.onMouseLeave();
+        },
         onFocus: hoverProps.onMouseEnter,
-        onBlur: hoverProps.onMouseLeave,
+        onBlur: () => {
+          if (!tooltip.hovered) hoverProps.onMouseLeave();
+        },
       })}
     >
       <span style={Style.colorDot(segment.color, 8)} aria-hidden="true" />

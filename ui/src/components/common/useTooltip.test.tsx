@@ -55,6 +55,48 @@ describe("useTooltip's anchor props", () => {
     expect(screen.getByTestId("infoTooltip")).toBeInTheDocument();
   });
 
+  it("keep the tooltip while keyboard focus remains after the pointer leaves, and hide on blur", async () => {
+    render(<Anchor />);
+    const anchor = screen.getByRole("button");
+    vi.spyOn(anchor, "matches").mockReturnValue(true);
+
+    fireEvent.focus(anchor);
+    expect(await screen.findByTestId("infoTooltip")).toBeInTheDocument();
+    fireEvent.mouseEnter(anchor);
+    fireEvent.mouseLeave(anchor);
+    expect(screen.getByTestId("infoTooltip")).toBeInTheDocument();
+
+    fireEvent.blur(anchor);
+    expect(screen.queryByTestId("infoTooltip")).not.toBeInTheDocument();
+  });
+
+  it("keep the tooltip while the pointer remains after blur, and hide when it leaves", async () => {
+    render(<Anchor />);
+    const anchor = screen.getByRole("button");
+
+    fireEvent.mouseEnter(anchor);
+    fireEvent.focus(anchor);
+    expect(await screen.findByTestId("infoTooltip")).toBeInTheDocument();
+    fireEvent.blur(anchor);
+    expect(screen.getByTestId("infoTooltip")).toBeInTheDocument();
+
+    fireEvent.mouseLeave(anchor);
+    expect(screen.queryByTestId("infoTooltip")).not.toBeInTheDocument();
+  });
+
+  it("still close on leaving after a click, since mouse focus doesn't pin the tooltip", async () => {
+    render(<Anchor />);
+    const anchor = screen.getByRole("button");
+    vi.spyOn(anchor, "matches").mockReturnValue(false);
+
+    fireEvent.mouseEnter(anchor);
+    fireEvent.focus(anchor); // what a click does to a button
+    expect(await screen.findByTestId("infoTooltip")).toBeInTheDocument();
+
+    fireEvent.mouseLeave(anchor);
+    expect(screen.queryByTestId("infoTooltip")).not.toBeInTheDocument();
+  });
+
   it("report keyboard focus only when the browser would draw a focus ring", () => {
     render(<Anchor />);
     const anchor = screen.getByRole("button");

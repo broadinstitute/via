@@ -79,9 +79,11 @@ export interface TooltipHandle {
   show: (delay?: number) => void;
   hide: () => void;
   /**
-   * Spread onto the anchor: shows on hover (after the delay), on focus and on click, hides on
-   * leave and blur. An anchor with handlers of its own lays them over these with composeHandlers,
-   * or overrides one by setting it after the spread.
+   * Spread onto the anchor: shows on hover (after the delay), on focus and on click. Hides once
+   * nothing keeps it open: the pointer leaving hides it unless the anchor has keyboard focus, and
+   * blur hides it unless the pointer is still over it. (Focus from a mouse click doesn't pin it,
+   * so clicking an icon and moving away still closes it.) An anchor with handlers of its own lays
+   * them over these with composeHandlers, or overrides one by setting it after the spread.
    */
   anchorProps: TooltipAnchorProps;
   /** Render this once, anywhere in the anchor's tree; it portals itself to <body>. */
@@ -190,7 +192,8 @@ export function useTooltip(anchorRef: RefObject<HTMLElement | null>, text: React
       },
       onMouseLeave: () => {
         setHovered(false);
-        hide();
+        // A keyboard user who has tabbed to the anchor keeps the tooltip while the pointer wanders.
+        if (!keyboardFocused) hide();
       },
       onFocus: (event) => {
         setKeyboardFocused(isFocusVisible(event.currentTarget));
@@ -198,7 +201,7 @@ export function useTooltip(anchorRef: RefObject<HTMLElement | null>, text: React
       },
       onBlur: () => {
         setKeyboardFocused(false);
-        hide();
+        if (!hovered) hide();
       },
       onClick: () => show(0),
     },
