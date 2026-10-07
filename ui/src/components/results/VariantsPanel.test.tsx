@@ -134,11 +134,18 @@ describe("VariantsPanel", () => {
     // The click stays in the prompt rather than expanding the row it belongs to.
     expect(screen.queryByRole("button", { name: "Collapse row for more detail" })).not.toBeInTheDocument();
 
-    // A variant not in All of Us leaves the prompt's columns out of its message, in two runs.
+    // The matched block moves to the end, past the annotations, and the empty Review column goes.
+    const headers = screen.getAllByRole("columnheader").map((th) => th.textContent?.trim());
+    expect(headers.findIndex((h) => h?.startsWith("P/LP in trans"))).toBeGreaterThan(headers.indexOf("pLOF"));
+    expect(headers.indexOf("pLOF")).toBeGreaterThan(headers.indexOf("ClinVar"));
+    expect(screen.getByRole("columnheader", { name: /^Phenotype-matched participants/ })).toHaveAttribute("colspan", "4");
+    const firstRow = screen.getByText("2-122517541-C-G").closest("tr")!;
+    expect(firstRow.lastElementChild).toBe(prompt);
+
+    // A variant not in All of Us spans one message up to the prompt: Gene through pLOF.
     const message = screen.getByText(cellWithText("Not observed in All of Us"));
-    expect(message).toHaveAttribute("colspan", "6");
-    expect(message.nextElementSibling).toHaveAttribute("colspan", "3");
-    expect(message.nextElementSibling).toHaveTextContent("");
+    expect(message).toHaveAttribute("colspan", "9");
+    expect(message.nextElementSibling).toBeNull();
   });
 
   it("says no one matched when a picked phenotype matched nobody", () => {
@@ -156,9 +163,9 @@ describe("VariantsPanel", () => {
     fireEvent.click(screen.getByText("7-55181378-G-A"));
     expect(screen.getByTestId("phenotype-prompt-cell")).toHaveAttribute("rowspan", "3");
     const detail = screen.getByText("Look up in gnomAD ↗").closest("td")!;
-    // Expand, Variant, Gene, Consequence and the four source columns, before the prompt.
-    expect(detail).toHaveAttribute("colspan", "8");
-    expect(detail.nextElementSibling).toHaveAttribute("colspan", "4");
+    // Everything before the prompt: four pinned, four source and three annotation columns.
+    expect(detail).toHaveAttribute("colspan", "11");
+    expect(detail.nextElementSibling).toBeNull();
     // No button without somewhere to send it.
     expect(within(screen.getByTestId("phenotype-prompt-cell")).queryByRole("button")).not.toBeInTheDocument();
   });

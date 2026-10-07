@@ -880,10 +880,24 @@ export default function VariantsPanel({
     };
   }
 
+  // Without a phenotype filter the matched block holds only the prompt to add one, so it moves to
+  // the end, out of the way of the figures there are; and with no Review to open, the Review
+  // column goes. Moving the whole block keeps its group headers whole.
+  const columnOrder = useMemo(() => {
+    if (hasPhenotypeFilter) return [];
+    // A column keyed by a field name takes that as its id; one missing from the order would land last.
+    type Def = { id?: string; accessorKey?: string; columns?: readonly Def[] };
+    const leafIds = (defs: readonly Def[]): string[] =>
+      defs.flatMap((def) => (def.columns ? leafIds(def.columns) : [def.id ?? def.accessorKey ?? ""]));
+    const ids = leafIds(columns as readonly Def[]);
+    return [...ids.filter((id) => !TINT_COLUMN_IDS.matched.has(id)), ...ids.filter((id) => TINT_COLUMN_IDS.matched.has(id))];
+  }, [columns, hasPhenotypeFilter]);
+  const columnVisibility = useMemo(() => ({ review: onReview !== undefined }), [onReview]);
+
   const table = useReactTable({
     data: rows,
     columns,
-    state: { sorting },
+    state: { sorting, columnOrder, columnVisibility },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
