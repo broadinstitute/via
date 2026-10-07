@@ -3,19 +3,19 @@ import colors, { POPMAX_BACKGROUND } from "../../libs/colors";
 import { useMediaQuery } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
+import { ancestryContext, largestMatchedAncestry, type ComparisonRow } from "../../utils/comparison";
 import {
-  ancestryContext,
+  exactAf,
+  formatAcAn,
+  formatAf,
   formatExpected,
+  formatInt,
   formatInterval,
   formatPValue,
   formatRatio,
   formatSig,
-  largestMatchedAncestry,
-  MIN_ALLELES_FOR_ENRICHMENT,
-  SIMILARITY_FOLD,
-  type ComparisonRow,
-} from "../../utils/comparison";
-import { exactAf, formatAcAn, formatAf, formatInt } from "../../utils/format";
+} from "../../utils/format";
+import { MIN_ALLELES_FOR_ENRICHMENT, SIMILARITY_FOLD } from "../../utils/statistics";
 import { SUBPOP_COLOR, SUBPOP_LABEL } from "../../utils/subpopulations";
 import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";

@@ -1,5 +1,5 @@
 import colors from "../../libs/colors";
-import { SIMILARITY_FOLD, type Enrichment, type Verdict } from "../../utils/comparison";
+import { SIMILARITY_FOLD, type Enrichment, type Verdict } from "../../utils/statistics";
 
 // How each Review verdict looks, in one place: the detail's verdict strip, the rail's dots and
 // ratios, and the rail's legend all read from here, so they can't drift apart.
