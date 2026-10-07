@@ -1,3 +1,5 @@
+import { apiFetch } from "./client";
+
 /** A condition concept matching a free-text term, as offered in the phenotype dropdown. */
 export interface ConditionConcept {
   conceptId: number;
@@ -42,14 +44,7 @@ export interface ConditionSearch {
  * Deliberately not cached, unlike fetchSearchResults: every keystroke is a distinct term, so a
  * cache would grow one entry per prefix and almost never hit.
  */
-export async function fetchConditionCandidates(
-  term: string,
-  signal?: AbortSignal,
-): Promise<ConditionCandidates> {
+export function fetchConditionCandidates(term: string, signal?: AbortSignal): Promise<ConditionCandidates> {
   const params = new URLSearchParams({ condition: term });
-  const response = await fetch(`/api/condition?${params.toString()}`, { signal });
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
-  }
-  return response.json() as Promise<ConditionCandidates>;
+  return apiFetch<ConditionCandidates>(`/condition?${params.toString()}`, { signal });
 }

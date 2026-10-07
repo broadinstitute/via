@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { fetchDataSourceVersions, type DataSourceVersion } from "../../api/dataSourceVersions";
+import { describeError } from "../../api/client";
 import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
@@ -66,7 +67,7 @@ export default function DataSourcesPanel() {
   useEffect(() => {
     fetchDataSourceVersions()
       .then(setVersions)
-      .catch((err: Error) => setError(`Couldn't reach the backend: ${err.message}`));
+      .catch((err: unknown) => setError(`Couldn't reach the backend: ${describeError(err)}`));
   }, []);
 
   const rowBorder = (index: number) => (index > 0 ? `1px solid ${colors.border}` : undefined);

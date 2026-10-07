@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { fetchStatus, type BigQueryStatus } from "../../api/status";
+import { describeError } from "../../api/client";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
@@ -71,7 +72,7 @@ export default function SystemStatusPanel() {
     setError(null);
     fetchStatus()
       .then(setStatus)
-      .catch((err: Error) => setError(`Couldn't reach the backend: ${err.message}`))
+      .catch((err: unknown) => setError(`Couldn't reach the backend: ${describeError(err)}`))
       .finally(() => setLoading(false));
   }, []);
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetchProfile } from "../api/profile";
 import { fetchSearchResults, type SearchResults } from "../api/searchResults";
+import { describeError } from "../api/client";
 import colors from "../libs/colors";
 import Footer from "../components/results/Footer";
 import PhenotypeSummaryStrip from "../components/results/PhenotypeSummaryStrip";
@@ -76,7 +77,7 @@ export default function SearchResultsPage() {
           condition: concept ? { conceptId: concept.conceptId, name: concept.name } : null,
         });
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: unknown) => setError(describeError(err)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variantsKey, conditionConceptIdKey]);
 
