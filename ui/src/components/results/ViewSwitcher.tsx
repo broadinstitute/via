@@ -60,14 +60,15 @@ interface ViewSwitcherProps {
 
 export default function ViewSwitcher({ value, onChange, reviewUnavailableReason }: ViewSwitcherProps) {
   return (
-    <div role="tablist" aria-label="Results view" style={styles.group}>
+    // A group of toggle buttons, not tabs: there are no tab panels or arrow-key moves, so the
+    // tab pattern would promise what isn't there. Pressed state says which view is showing.
+    <div role="group" aria-label="Results view" style={styles.group}>
       {OPTIONS.map(({ value: option, label, icon: Icon }) => {
         const disabled = option === "review" && reviewUnavailableReason !== undefined;
         return (
           <Clickable
             key={option}
-            role="tab"
-            aria-selected={value === option}
+            aria-pressed={value === option}
             style={{ ...styles.option, ...(value === option ? styles.optionSelected : undefined) }}
             hoverStyle={value === option ? undefined : styles.optionHover}
             disabledStyle={Style.buttons.disabled}

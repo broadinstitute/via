@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ConditionSearch } from "../../api/conditions";
 import type { BreakdownSegment } from "../../types/results";
@@ -43,8 +43,8 @@ describe("PhenotypeSummaryStrip", () => {
     expect(screen.getByText("No phenotype filter")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /add phenotype filter/i }));
     expect(onAddPhenotypeFilter).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("tab", { name: "Review" })).toBeDisabled();
-    expect(screen.getByRole("tab", { name: "Table" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("button", { name: "Review" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Table", pressed: true })).toBeInTheDocument();
   });
 
   it("shows the condition, the participant count and the breakdown in one row", () => {
@@ -60,7 +60,12 @@ describe("PhenotypeSummaryStrip", () => {
     expect(screen.getByText("EUR")).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: /Age breakdown/ })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Age" }));
+    // The toggle is a group of pressed buttons, not tabs: nothing here is a tab panel.
+    const breakdownToggle = screen.getByRole("group", { name: "Participant breakdown" });
+    expect(within(breakdownToggle).getByRole("button", { name: "Ancestry", pressed: true })).toBeInTheDocument();
+    fireEvent.click(within(breakdownToggle).getByRole("button", { name: "Age", pressed: false }));
+    expect(within(breakdownToggle).getByRole("button", { name: "Age", pressed: true })).toBeInTheDocument();
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Age breakdown: 40–49 100%" })).toBeInTheDocument();
     expect(screen.getByText("40–49")).toBeInTheDocument();
   });
@@ -68,7 +73,7 @@ describe("PhenotypeSummaryStrip", () => {
   it("switches views from its segmented control", () => {
     const { onViewChange } = renderStrip({ conditionSearch: CONDITION, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
 
-    const review = screen.getByRole("tab", { name: "Review" });
+    const review = within(screen.getByRole("group", { name: "Results view" })).getByRole("button", { name: "Review" });
     expect(review).toBeEnabled();
     fireEvent.click(review);
     expect(onViewChange).toHaveBeenCalledWith("review");
@@ -81,7 +86,7 @@ describe("PhenotypeSummaryStrip", () => {
 
     renderStrip({ conditionSearch: { ...CONDITION, participantCount: 0 } });
     expect(screen.getByText("0")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Review" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Review" })).toBeDisabled();
   });
 
   it("shows a skeleton while results load", () => {
@@ -98,6 +103,6 @@ describe("PhenotypeSummaryStrip", () => {
       />,
     );
     expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
-    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Results view" })).not.toBeInTheDocument();
   });
 });

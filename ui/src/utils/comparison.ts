@@ -424,11 +424,16 @@ export function formatPValue(p: number): string {
   return p.toFixed(p < 0.01 ? 3 : 2);
 }
 
-/** A number to two significant figures, with thousands separators above 999: "0.083", "2.1", "26", "310", "1,800". */
+/**
+ * A number to two significant figures, with thousands separators above 999: "0.083", "2.1", "26",
+ * "310", "1,800". Always significant figures, never a cap on decimal places, so a tiny but
+ * positive bound never rounds to "0"; below 0.0001 it takes exponent form ("3.2e-7") to stay short.
+ */
 export function formatSig(value: number): string {
   if (value === 0) return "0";
   if (!Number.isFinite(value)) return "∞";
-  return Number(value.toPrecision(2)).toLocaleString("en-US", { maximumFractionDigits: 6 });
+  if (Math.abs(value) < 1e-4) return value.toExponential(1);
+  return value.toLocaleString("en-US", { maximumSignificantDigits: 2 });
 }
 
 /** A fold change for display: "26×", "0.31×", "∞". Two significant figures, never truncated. */

@@ -173,6 +173,9 @@ export default function ReviewView({
   const { hoveredKey, hoverProps } = useHoveredKey<string>();
   const railRef = useRef<HTMLOListElement>(null);
   const selected = rows[index] ?? null;
+  // Bonferroni divides by the tests actually run. A variant not in All of Us, or one without
+  // matched statistics, has no comparison and so no test; it doesn't count against the others.
+  const testedCount = rows.filter((row) => row.enrichment !== null).length;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -292,7 +295,7 @@ export default function ReviewView({
               condition={condition}
               participantCount={participantCount}
               ancestryBreakdown={ancestryBreakdown}
-              candidateCount={rows.length}
+              candidateCount={testedCount}
             />
           ) : (
             <p style={{ color: colors.textSecondary }}>No candidate variants to review.</p>

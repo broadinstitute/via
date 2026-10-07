@@ -287,12 +287,11 @@ export default function PhenotypeSummaryStrip({
         <div style={styles.blockLabel}>
           <span style={styles.eyebrow}>Breakdown</span>
           {hasBreakdown && (
-            <div style={styles.tabs} role="tablist" aria-label="Participant breakdown">
+            <div style={styles.tabs} role="group" aria-label="Participant breakdown">
               {TABS.map((tab) => (
                 <Clickable
                   key={tab.id}
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
+                  aria-pressed={activeTab === tab.id}
                   style={{ ...styles.tab, ...(activeTab === tab.id ? styles.tabActive : undefined) }}
                   hoverStyle={{ color: colors.textAccent }}
                   onClick={() => setActiveTab(tab.id)}

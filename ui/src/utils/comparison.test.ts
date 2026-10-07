@@ -387,11 +387,18 @@ describe("formatting", () => {
     expect(formatSig(312)).toBe("310");
     expect(formatSig(1837)).toBe("1,800");
     expect(formatSig(Infinity)).toBe("∞");
+    // Significant figures all the way down: a positive bound never shows as zero.
+    expect(formatSig(0.00032)).toBe("0.00032");
+    expect(formatSig(0.000121)).toBe("0.00012");
+    expect(formatSig(3.2e-7)).toBe("3.2e-7");
+    expect(formatSig(0)).toBe("0");
     expect(formatRatio(25.7)).toBe("26×");
     expect(formatRatio(0.33)).toBe("0.33×");
     expect(formatRatio(Infinity)).toBe("∞");
     expect(formatInterval([0.0834, 0.98])).toBe("0.083 – 0.98");
     expect(formatInterval([120, Infinity])).toBe("120 – ∞");
+    // An exact lower bound this small is real, and must not read as touching zero.
+    expect(formatInterval([4.7e-7, 0.21])).toBe("4.7e-7 – 0.21");
   });
 
   it("formats p-values and expected counts", () => {

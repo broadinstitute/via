@@ -266,7 +266,7 @@ interface ReviewDetailProps {
   condition: string;
   participantCount: number;
   ancestryBreakdown: BreakdownSegment[];
-  /** How many variants are under review, for the multiple-testing note on the p-value. */
+  /** How many candidates actually ran a test, for the Bonferroni note on the p-value. */
   candidateCount: number;
 }
 

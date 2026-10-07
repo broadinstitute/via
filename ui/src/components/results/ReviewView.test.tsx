@@ -129,7 +129,8 @@ describe("ReviewView", () => {
     // Four tiles: p with its Bonferroni figure, the odds ratio with its interval, observed vs
     // expected with the ancestry-adjusted expectation, and carriers.
     const evidence = screen.getByRole("region", { name: /^Evidence/ });
-    expect(evidence).toHaveTextContent("< 0.001< 0.001 after Bonferroni, 3 tests");
+    // Two tests, not three: the variant with no comparison ran none, so it doesn't count.
+    expect(evidence).toHaveTextContent("< 0.001< 0.001 after Bonferroni, 2 tests");
     expect(evidence).toHaveTextContent("3395% CI 11 – 86");
     expect(evidence).toHaveTextContent("6 vs 0.231.0 expected adjusting for ancestry");
     expect(evidence).toHaveTextContent("6 of 1000 hom · 6 het · 1 P/LP in trans");
