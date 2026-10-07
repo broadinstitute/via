@@ -56,7 +56,7 @@ describe("PhenotypeSummaryStrip", () => {
     expect(screen.getByText("matched")).toBeInTheDocument();
     // Every block carries the same small label.
     expect(["Phenotype", "Participants", "Breakdown", "View"].map((label) => screen.getByText(label))).toHaveLength(4);
-    expect(screen.getByRole("img", { name: "Ancestry breakdown: EUR 67%, AFR 33%" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /^Ancestry breakdown: EUR: .* \(67%\); AFR: .* \(33%\)$/ })).toBeInTheDocument();
     expect(screen.getByText("EUR")).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: /Age breakdown/ })).not.toBeInTheDocument();
 
@@ -66,7 +66,7 @@ describe("PhenotypeSummaryStrip", () => {
     fireEvent.click(within(breakdownToggle).getByRole("button", { name: "Age", pressed: false }));
     expect(within(breakdownToggle).getByRole("button", { name: "Age", pressed: true })).toBeInTheDocument();
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Age breakdown: 40–49 100%" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /^Age breakdown: 40–49: .* \(100%\)$/ })).toBeInTheDocument();
     expect(screen.getByText("40–49")).toBeInTheDocument();
   });
 

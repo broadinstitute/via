@@ -140,6 +140,12 @@ function railGroup(enrichment: Enrichment | null): string {
   return "Departs from cohort-wide";
 }
 
+/** Marks the rail and the stepper: the arrow-key shortcut applies to their buttons too. */
+const SHORTCUT_SCOPE_ATTRIBUTE = "data-review-shortcuts";
+/** Anything with its own keyboard behaviour, which the shortcut must not override. */
+const INTERACTIVE_SELECTOR =
+  'input, textarea, select, button, a[href], [contenteditable], [role="button"], [role="listbox"], [role="option"], [role="menu"], [role="menuitem"], [role="dialog"], [tabindex]';
+
 interface ReviewViewProps {
   cohortVariants: CohortVariantRow[];
   filteredVariants: FilteredVariantRow[];
@@ -177,10 +183,16 @@ export default function ReviewView({
   // matched statistics, has no comparison and so no test; it doesn't count against the others.
   const testedCount = rows.filter((row) => row.enrichment !== null).length;
 
+  // Arrow keys step through the rail. The listener is on the document so the keys work with
+  // nothing focused, but it leaves other controls alone: a key pressed on a field, a link, a
+  // button outside the rail and stepper, or editable text means what it normally means there.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Not while typing in a field, e.g. the edit-search popover.
-      if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+      if (event.key !== "ArrowRight" && event.key !== "ArrowDown" && event.key !== "ArrowLeft" && event.key !== "ArrowUp") return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target && !target.closest(`[${SHORTCUT_SCOPE_ATTRIBUTE}]`) && (target.isContentEditable || target.closest(INTERACTIVE_SELECTOR))) {
+        return;
+      }
       if (event.key === "ArrowRight" || event.key === "ArrowDown") {
         event.preventDefault();
         setIndex((i) => Math.min(rows.length - 1, i + 1));
@@ -206,7 +218,7 @@ export default function ReviewView({
   }, [index]);
 
   const stepper = (
-    <div style={styles.stepper}>
+    <div style={styles.stepper} {...{ [SHORTCUT_SCOPE_ATTRIBUTE]: "" }}>
       <Clickable
         style={Style.buttons.icon}
         hoverStyle={Style.buttons.iconHover}
@@ -242,7 +254,7 @@ export default function ReviewView({
     >
       <div style={styles.body}>
         <div style={styles.railCell}>
-          <nav style={styles.rail} aria-label="Candidate variants, best-supported first">
+          <nav style={styles.rail} aria-label="Candidate variants, best-supported first" {...{ [SHORTCUT_SCOPE_ATTRIBUTE]: "" }}>
             <ol ref={railRef} style={styles.railList}>
               {rows.map((row, i) => {
                 const tone = verdictTone(row.enrichment);

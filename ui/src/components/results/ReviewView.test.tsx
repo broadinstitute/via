@@ -178,6 +178,31 @@ describe("ReviewView", () => {
     expect(screen.getByRole("button", { name: "Previous variant" })).toBeDisabled();
   });
 
+  it("leaves arrow keys to controls outside the rail and stepper", () => {
+    renderView();
+    // An info control in the detail has nothing to do with stepping.
+    const info = screen.getAllByRole("button", { name: "More information" })[0];
+    const onInfo = fireEvent.keyDown(info, { key: "ArrowRight" });
+    expect(onInfo).toBe(true); // not defaultPrevented
+    expect(screen.getByText("1 of 3")).toBeInTheDocument();
+
+    // Editable text keeps its caret movement.
+    const editable = document.createElement("div");
+    editable.setAttribute("contenteditable", "true");
+    document.body.appendChild(editable);
+    fireEvent.keyDown(editable, { key: "ArrowDown" });
+    expect(screen.getByText("1 of 3")).toBeInTheDocument();
+    editable.remove();
+
+    // The rail's own entries and the stepper's buttons are where the shortcut belongs.
+    const rail = screen.getByRole("navigation", { name: /best-supported first/ });
+    const stepped = fireEvent.keyDown(within(rail).getAllByRole("button")[0], { key: "ArrowRight" });
+    expect(stepped).toBe(false); // defaultPrevented
+    expect(screen.getByText("2 of 3")).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Next variant" }), { key: "ArrowRight" });
+    expect(screen.getByText("3 of 3")).toBeInTheDocument();
+  });
+
   it("keeps a stepped-past entry's border transparent and moves focus with the selection", () => {
     renderView();
     const rail = screen.getByRole("navigation", { name: /best-supported first/ });

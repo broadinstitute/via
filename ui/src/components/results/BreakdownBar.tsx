@@ -8,8 +8,9 @@ import { formatInt } from "../../utils/format";
 import { useTooltip } from "../common/useTooltip";
 
 // A breakdown as one stacked bar with a legend beneath listing every group, its code and share.
-// Every run names itself in the app's tooltip on hover, and a hovered run or legend entry
-// quietens the rest. Sized to the width it's given, so it suits a band across the page.
+// Every run names itself in the app's tooltip on hover, the legend entries do the same on hover or
+// focus, and a highlighted group quietens the rest. Sized to the width it's given, so it suits a
+// band across the page.
 
 /** A sliver of a group stays visible even when its share rounds to nothing. */
 const MIN_RUN_WIDTH = 3;
@@ -48,10 +49,19 @@ const styles = {
     fontSize: 11.5,
     color: colors.textBody,
   },
+  // A button with the chrome stripped, so the legend reads as text; the focus ring is drawn only
+  // for keyboard focus.
   legendItem: {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
+    padding: "0 2px",
+    border: "none",
+    borderRadius: 4,
+    background: "none",
+    font: "inherit",
+    color: "inherit",
+    cursor: "default",
     transition: "opacity 0.12s ease",
   },
   legendPercent: {
@@ -68,42 +78,44 @@ interface BreakdownBarProps {
   height?: number;
 }
 
+/** How a group is described everywhere it's named: the tooltip, the legend and the bar's label. */
+const describe = (segment: BreakdownSegment) =>
+  `${segment.label}: ${formatInt(segment.count)} participants (${Math.round(segment.percent)}%)`;
+
 export default function BreakdownBar({ segments, label, height = 10 }: BreakdownBarProps) {
   const { hoveredKey, hoverProps } = useHoveredKey<string>();
-  const description = segments.map((segment) => `${segment.label} ${Math.round(segment.percent)}%`).join(", ");
+  const quiet = (segment: BreakdownSegment) => hoveredKey !== null && hoveredKey !== segment.label;
 
   return (
     <div style={styles.root}>
-      <div style={{ ...styles.bar, height }} role="img" aria-label={`${label} breakdown: ${description}`}>
+      {/* The label carries the counts as well as the shares, so assistive technology gets
+          everything the tooltips show. */}
+      <div style={{ ...styles.bar, height }} role="img" aria-label={`${label} breakdown: ${segments.map(describe).join("; ")}`}>
         {segments.map((segment, index) => (
           <Run
             key={segment.label}
             segment={segment}
             index={index}
-            quiet={hoveredKey !== null && hoveredKey !== segment.label}
+            quiet={quiet(segment)}
             hot={hoveredKey === segment.label}
             hoverProps={hoverProps(segment.label)}
           />
         ))}
       </div>
-      <div style={styles.legend} aria-hidden="true">
+      {/* Each legend entry is a button that shows the run's tooltip on focus as well as hover, so
+          the counts are reachable from the keyboard. */}
+      <div style={styles.legend}>
         {segments.map((segment) => (
-          <span
-            key={segment.label}
-            style={{
-              ...styles.legendItem,
-              ...(hoveredKey !== null && hoveredKey !== segment.label ? styles.quiet : undefined),
-            }}
-            {...hoverProps(segment.label)}
-          >
-            <span style={Style.colorDot(segment.color, 8)} />
-            {segment.label}
-            <span style={styles.legendPercent}>{Math.round(segment.percent)}%</span>
-          </span>
+          <LegendEntry key={segment.label} segment={segment} quiet={quiet(segment)} hoverProps={hoverProps(segment.label)} />
         ))}
       </div>
     </div>
   );
+}
+
+interface HoverProps {
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }
 
 interface RunProps {
@@ -111,16 +123,13 @@ interface RunProps {
   index: number;
   quiet: boolean;
   hot: boolean;
-  hoverProps: { onMouseEnter: () => void; onMouseLeave: () => void };
+  hoverProps: HoverProps;
 }
 
 /** One group's run of the bar, with the app's tooltip naming it and its count on hover. */
 function Run({ segment, index, quiet, hot, hoverProps }: RunProps) {
   const ref = useRef<HTMLSpanElement>(null);
-  const tooltip = useTooltip(
-    ref,
-    `${segment.label}: ${formatInt(segment.count)} participants (${Math.round(segment.percent)}%)`,
-  );
+  const tooltip = useTooltip(ref, describe(segment));
 
   return (
     <span
@@ -139,5 +148,45 @@ function Run({ segment, index, quiet, hot, hoverProps }: RunProps) {
     >
       {tooltip.bubble}
     </span>
+  );
+}
+
+interface LegendEntryProps {
+  segment: BreakdownSegment;
+  quiet: boolean;
+  hoverProps: HoverProps;
+}
+
+/**
+ * One group in the legend: its dot, code and share, as a button so it can take focus. Hovering or
+ * focusing it highlights the group's run and shows the same tooltip the run does.
+ */
+function LegendEntry({ segment, quiet, hoverProps }: LegendEntryProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const tooltip = useTooltip(ref, describe(segment));
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      aria-label={describe(segment)}
+      style={{
+        ...styles.legendItem,
+        ...(quiet ? styles.quiet : undefined),
+        ...(tooltip.keyboardFocused ? Style.elements.tooltipIconFocusRing : undefined),
+      }}
+      // The tooltip's own wiring, plus the group highlight on hover and on focus alike.
+      {...composeHandlers(tooltip.anchorProps, {
+        onMouseEnter: hoverProps.onMouseEnter,
+        onMouseLeave: hoverProps.onMouseLeave,
+        onFocus: hoverProps.onMouseEnter,
+        onBlur: hoverProps.onMouseLeave,
+      })}
+    >
+      <span style={Style.colorDot(segment.color, 8)} aria-hidden="true" />
+      {segment.label}
+      <span style={styles.legendPercent}>{Math.round(segment.percent)}%</span>
+      {tooltip.bubble}
+    </button>
   );
 }
