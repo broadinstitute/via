@@ -41,3 +41,41 @@ export function formatDate(isoDate: string): string {
     timeZone: "UTC",
   });
 }
+
+/** p-values for display: "< 0.001", "0.003", "0.42", "1.0". */
+export function formatPValue(p: number): string {
+  if (p < 0.001) return "< 0.001";
+  if (p >= 0.995) return "1.0";
+  return p.toFixed(p < 0.01 ? 3 : 2);
+}
+
+/**
+ * A number to two significant figures, with thousands separators above 999: "0.083", "2.1", "26",
+ * "310", "1,800". Always significant figures, never a cap on decimal places, so a tiny but
+ * positive bound never rounds to "0"; below 0.0001 it takes exponent form ("3.2e-7") to stay short.
+ */
+export function formatSig(value: number): string {
+  if (value === 0) return "0";
+  if (!Number.isFinite(value)) return "∞";
+  if (Math.abs(value) < 1e-4) return value.toExponential(1);
+  return value.toLocaleString("en-US", { maximumSignificantDigits: 2 });
+}
+
+/** A fold change for display: "26×", "0.31×", "∞". Two significant figures, never truncated. */
+export function formatRatio(ratio: number): string {
+  if (!Number.isFinite(ratio)) return "∞";
+  return `${formatSig(ratio)}×`;
+}
+
+/** An interval for display: "13 – 83", "0 – 1,800", "120 – ∞". */
+export function formatInterval([low, high]: [number, number]): string {
+  return `${formatSig(low)} – ${formatSig(high)}`;
+}
+
+/** Expected counts for display: "< 0.001", "0.002", "0.23", "9.1", "120". */
+export function formatExpected(expected: number): string {
+  if (expected >= 10) return expected.toFixed(0);
+  if (expected >= 1) return expected.toFixed(1);
+  if (expected >= 0.01) return expected.toFixed(2);
+  return expected < 0.001 ? "< 0.001" : expected.toFixed(3);
+}
