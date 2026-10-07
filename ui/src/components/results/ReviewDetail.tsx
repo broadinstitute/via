@@ -43,56 +43,70 @@ const styles = {
     gap: 32,
     alignItems: "start",
   },
-  // Identity: the variant on the first line with its annotation badges, the gene line under it.
+  // Identity on the left, annotation facts on the right, both two lines tall so they share a
+  // rhythm: the gene line over the variant ID, and each fact's label over its value.
   identity: {
     display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px 24px",
+  },
+  identityText: {
+    display: "flex",
     flexDirection: "column",
-    gap: 4,
-  },
-  identityLine: {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 10,
-  },
-  variantId: {
-    ...Style.elements.mono,
-    fontSize: 16,
-    fontWeight: 700,
-    color: colors.textPrimary,
-  },
-  badges: {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 6,
-    marginLeft: "auto",
-  },
-  // A labelled badge: the source's name in muted ink, then its value.
-  pill: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 5,
-    padding: "2px 8px",
-    borderRadius: 999,
-    border: `1px solid ${colors.border}`,
-    background: colors.surface1,
-    fontSize: 11,
-    fontWeight: 600,
-    color: colors.textBody,
-    whiteSpace: "nowrap",
-  },
-  pillLabel: {
-    fontWeight: 500,
-    color: colors.textMuted,
+    gap: 3,
+    minWidth: 0,
   },
   geneLine: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    gap: "0 8px",
     fontSize: 13,
     color: colors.textSecondary,
   },
   gene: {
+    fontSize: 20,
+    fontWeight: 700,
+    lineHeight: "26px",
+    color: colors.textPrimary,
+  },
+  proteinChange: {
+    ...Style.elements.mono,
+    fontSize: 12.5,
+  },
+  variantId: {
+    ...Style.elements.mono,
+    fontSize: 12.5,
+    color: colors.textMuted,
+  },
+  // The variant's annotations as labelled facts, like the blocks of the summary strip.
+  facts: {
+    display: "flex",
+    alignItems: "stretch",
+    margin: 0,
+  },
+  fact: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    gap: 6,
+    padding: "0 16px",
+    borderLeft: `1px solid ${colors.border}`,
+  },
+  factFirst: {
+    paddingLeft: 0,
+    borderLeft: "none",
+  },
+  factValue: {
+    display: "flex",
+    alignItems: "center",
+    height: 20,
+    fontSize: 13,
     fontWeight: 600,
-    color: colors.textBody,
+    color: colors.textPrimary,
+    fontVariantNumeric: "tabular-nums",
   },
   section: {
     display: "flex",
@@ -278,45 +292,45 @@ export default function ReviewDetail({
   return (
     <div style={styles.root}>
       <header style={styles.identity}>
-        <div style={styles.identityLine}>
-          <span style={styles.variantId}>{row.variant}</span>
-          {cohort && (
-            <span style={styles.badges}>
-              {cohort.clinvarSignificance && (
-                <span style={styles.pill} title="ClinVar classification and review stars">
-                  <span style={styles.pillLabel}>ClinVar</span>
-                  <ClinvarBadge significance={cohort.clinvarSignificance} stars={cohort.clinvarStars} />
-                </span>
-              )}
-              <span style={styles.pill} title="SpliceAI delta score, 0 to 1">
-                <span style={styles.pillLabel}>SpliceAI</span>
-                {cohort.spliceAi.toFixed(2)}
-              </span>
-              <span
-                style={styles.pill}
-                title={
-                  cohort.plof
-                    ? "LOFTEE loss-of-function call: HC is high confidence, LC low"
-                    : "LOFTEE doesn't score this consequence type"
-                }
-              >
-                <span style={styles.pillLabel}>pLOF</span>
-                {cohort.plof ?? "—"}
-              </span>
-            </span>
-          )}
-        </div>
-        <div style={styles.geneLine}>
+        <div style={styles.identityText}>
           {cohort ? (
-            <>
-              <span style={styles.gene}>{cohort.gene}</span> · {cohort.consequence} · {cohort.proteinChange}
-            </>
+            <div style={styles.geneLine}>
+              <span style={styles.gene}>{cohort.gene}</span>
+              <span>{cohort.consequence}</span>
+              {cohort.proteinChange && <span style={styles.proteinChange}>{cohort.proteinChange}</span>}
+            </div>
           ) : (
-            <>
-              Not observed in <AllOfUs />, so there are no annotations or frequencies to compare.
-            </>
+            <div style={styles.geneLine}>
+              <span style={styles.gene}>Not observed in <AllOfUs /></span>
+            </div>
           )}
+          <span style={styles.variantId}>
+            {row.variant}
+            {!cohort && " · no annotations or frequencies to compare"}
+          </span>
         </div>
+        {cohort && (
+          <dl style={styles.facts}>
+            {cohort.clinvarSignificance && (
+              <Fact label="ClinVar" title="ClinVar classification and review stars" first>
+                <ClinvarBadge significance={cohort.clinvarSignificance} stars={cohort.clinvarStars} />
+              </Fact>
+            )}
+            <Fact label="SpliceAI" title="SpliceAI delta score, 0 to 1" first={!cohort.clinvarSignificance}>
+              {cohort.spliceAi.toFixed(2)}
+            </Fact>
+            <Fact
+              label="pLOF"
+              title={
+                cohort.plof
+                  ? "LOFTEE loss-of-function call: HC is high confidence, LC low"
+                  : "LOFTEE doesn't score this consequence type"
+              }
+            >
+              {cohort.plof ?? "—"}
+            </Fact>
+          </dl>
+        )}
       </header>
 
       <section style={styles.section} aria-labelledby="reviewVerdict">
@@ -623,6 +637,16 @@ function StatTile({ label, value, note, tooltip }: StatTileProps) {
 /** A word joining two figures in a stat tile, with the spaces around it. */
 function Connective({ children }: { children: string }) {
   return <span style={styles.tileConnective}> {children} </span>;
+}
+
+/** One labelled annotation in the header: a small label over its value. */
+function Fact({ label, title, first = false, children }: { label: string; title: string; first?: boolean; children: ReactNode }) {
+  return (
+    <div style={{ ...styles.fact, ...(first ? styles.factFirst : undefined) }} title={title}>
+      <dt style={Style.elements.eyebrow}>{label}</dt>
+      <dd style={{ ...styles.factValue, margin: 0 }}>{children}</dd>
+    </div>
+  );
 }
 
 function SectionTitle({ id, children, tooltip }: { id: string; children: ReactNode; tooltip?: string }) {
