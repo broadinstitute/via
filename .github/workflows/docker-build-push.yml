@@ -5,7 +5,7 @@ on:
     # main publishes :latest. Any other branch listed here publishes an image tagged with the
     # branch name (slashes become dashes), for trying a branch out in Workbench before merge:
     # point deploy/docker-compose.yaml at that tag, and remove both when the branch merges.
-    branches: [main, mb-via-76]
+    branches: [main, mb-faster-startup]
     paths:
       - "api/**"
       - "ui/**"
