@@ -736,7 +736,8 @@ a { color: inherit; }
 
 /* ---------- Get started ---------- */
 
-#get-started { padding: 0 var(--gutter) 96px; background: var(--surface2); }
+/* Its own band now that the questions sit above it: room on both sides of the card. */
+#get-started { padding: 88px var(--gutter) 96px; background: var(--surface2); }
 .cta-card {
   display: flex;
   align-items: center;
