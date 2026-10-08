@@ -2,10 +2,12 @@
 
 This is a copy of the subset of `startupscript/` needed by `post-startup.sh`
 at container runtime (`emit.sh`, `install-java.sh`, `install-cli.sh`,
-`setup-bashrc.sh`, `git-setup.sh`, `bash-completion.sh`, `gcp/`, `aws/`),
-originally copied from the upstream `verily-src/workbench-app-devcontainers`
-repo's `startupscript/` directory (not vendored here -- see
-[deploy/README.md](../deploy/README.md)).
+`setup-bashrc.sh`, `bash-completion.sh`, `gcp/vm-metadata.sh`), originally
+copied from the upstream `verily-src/workbench-app-devcontainers` repo's
+`startupscript/` directory (not vendored here -- see
+[deploy/README.md](../deploy/README.md)). Upstream's git setup, bucket
+mounting, restart remount and AWS scripts are intentionally not copied: VIA
+only reads BigQuery, and they each added boot time (see `post-startup.sh`).
 
 It exists here, at the repo root, because the Verily Workbench devcontainer
 framework (`050-parse-devcontainer.sh`, fetched fresh from

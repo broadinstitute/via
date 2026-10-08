@@ -21,9 +21,11 @@ FROM eclipse-temurin:21-jre-noble
 WORKDIR /app
 # post-startup.sh (run via postCreateCommand, see .devcontainer.json) requires
 # these -- sudo in particular, since it runs every step via
-# `sudo -u root bash -l -c ...`, and fails immediately without it.
+# `sudo -u root bash -l -c ...`, and fails immediately without it. The rest are
+# what its package check looks for; baking them in makes that step a no-op
+# instead of an apt-get update on every boot.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends sudo jq git lsb-release && \
+    apt-get install -y --no-install-recommends sudo jq git lsb-release curl tar wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=api-build /api/build/libs/*.jar app.jar

@@ -4,9 +4,11 @@ set -o errexit
 set -o nounset
 set -o pipefail
 set -o xtrace
+# Timestamp every traced command, so the output file doubles as a boot profile.
+export PS4='+ $(date +%T) '
 
 if [[ $# -ne 4 ]]; then
-  echo "Usage: $0 user workDirectory <gcp/aws> <true/false>"
+  echo "Usage: $0 user workDirectory gcp <true/false>"
   exit 1
 fi
 
@@ -108,18 +110,17 @@ if command -v rstudio-server &> /dev/null; then
 MAGIC_EOF
 fi
 
-# The apt package index may not be clean when we run; resynchronize
-if type apk > /dev/null 2>&1; then
-  apk update
-  apk add --no-cache jq curl fuse tar wget
-elif type dnf > /dev/null 2>&1; then
-  dnf install -y jq curl fuse tar wget
-elif type apt-get > /dev/null 2>&1; then
+# The image (deploy/Dockerfile) bakes these in, so this is normally a no-op. It only refreshes the
+# apt index and installs when something is missing, because apt-get update alone costs tens of
+# seconds on a fresh VM.
+missing=()
+for pkg in jq curl tar wget; do
+  dpkg -s "${pkg}" > /dev/null 2>&1 || missing+=("${pkg}")
+done
+if (( ${#missing[@]} )); then
+  emit "Installing missing packages: ${missing[*]}"
   apt-get update
-  apt-get install -y jq curl fuse tar wget
-else
-  >&2 echo "ERROR: Unable to find a supported package manager"
-  exit 1
+  apt-get install -y "${missing[@]}"
 fi
 
 
@@ -233,25 +234,7 @@ source "${SCRIPT_DIR}/setup-bashrc.sh"
 #################
 source "${SCRIPT_DIR}/bash-completion.sh"
 
-###############
-# git setup
-###############
-if [[ "${LOG_IN}" == "true" ]]; then
-    retry 5 "${SCRIPT_DIR}/git-setup.sh"
-fi
-
-#############################
-# Mount buckets
-#############################
-
-# Uncomment user_allow_other in the fuse.conf to enable non-root user to mount files with -o allow-other option.
-sed -i '/user_allow_other/s/^#//g' /etc/fuse.conf
-
-source "${CLOUD_SCRIPT_DIR}/resource-mount.sh"
-
-###############################
-# cloud platform specific setup
-###############################
-if [[ -f "${CLOUD_SCRIPT_DIR}/post-startup-hook.sh" ]]; then
-  source "${CLOUD_SCRIPT_DIR}/post-startup-hook.sh"
-fi
+# Upstream's post-startup.sh continues with git setup (SSH key, cloning workspace repos), bucket
+# mounting (gcsfuse), and a gcloud region hook. VIA is an app container that reads BigQuery and
+# nothing else, and nobody opens a shell in it, so those steps are left out: together they cost
+# a minute or more of boot time and need gcloud, fuse and SYS_ADMIN that the image no longer has.
