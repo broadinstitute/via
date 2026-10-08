@@ -125,7 +125,10 @@ a { color: inherit; }
 }
 
 /* The mark as a watermark, as on the app's own search page: the lens without its tile, large and
-   faint in the top-right corner, cropped by the band. */
+   faint in the top-right corner. The wrapper clips it to the hero, since the hero itself can't
+   hide its overflow: the product frame below hangs out of it on purpose. Without the clip, the
+   part of the lens past the right edge widens the page and brings up a horizontal scrollbar. */
+.hero-art { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .hero-watermark {
   position: absolute;
   top: -70px;
