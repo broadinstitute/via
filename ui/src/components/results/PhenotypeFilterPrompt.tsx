@@ -9,7 +9,7 @@ import { TOP_BAR_HEIGHT } from "./TopBar";
 
 // What the phenotype-matched columns hold when there's nothing matched to show: the picture, one
 // line saying what the columns would show, and the button that fills them. It sits on a white card
-// so the picture's colours and the orange button aren't read against the column's blue tint, and
+// so the picture's colours and the navy button aren't read against the column's blue tint, and
 // the card starts centred in whatever part of the column is on screen. Two layouts, so a short
 // table doesn't stretch its rows to fit the full one.
 

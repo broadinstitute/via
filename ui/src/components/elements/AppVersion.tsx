@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import colors, { alpha } from "../../libs/colors";
+import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import { APP_VERSION, IS_BETA } from "../../libs/version";
 
@@ -15,12 +15,13 @@ const styles = {
     fontSize: 11,
     fontWeight: 600,
   },
+  // A chip in the accent tint, like the search card's "0 entered" and "Optional": a label for the
+  // product's stage, not a warning.
   betaBadge: {
-    padding: "2px 6px",
-    background: colors.bgWarning,
-    border: `1px solid ${alpha(colors.textWarning, 0.2)}`,
-    borderRadius: 6,
-    color: colors.textWarning,
+    padding: "2px 7px",
+    background: colors.bgAccent,
+    borderRadius: 999,
+    color: colors.textAccent,
     fontSize: 10,
     fontWeight: 700,
     letterSpacing: 0.5,

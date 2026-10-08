@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import colors, { alpha } from "../libs/colors";
-import HeroHelix from "./HeroHelix";
+import HeroWatermark from "./HeroWatermark";
 
 const styles = {
   hero: {
@@ -8,10 +8,10 @@ const styles = {
     // Bottom padding is what the search card overlaps; see SearchEntryPage.
     padding: "56px 20px 116px",
     overflow: "hidden",
-    // Brand navy with a blue glow top-right and a teal one bottom-left. Dark enough throughout for
-    // white text without a scrim or text shadows.
+    // The favicon's navy, deepening upward, with a blue glow top-right and a teal one bottom-left.
+    // Dark enough throughout for white text without a scrim or text shadows.
     backgroundImage: [
-      `radial-gradient(ellipse 50% 110% at 92% 0%, ${alpha(colors.textAccent, 0.9)}, ${alpha(colors.textAccent, 0)} 72%)`,
+      `radial-gradient(ellipse 50% 110% at 92% 0%, ${alpha(colors.heroGlowBlue, 0.9)}, ${alpha(colors.heroGlowBlue, 0)} 72%)`,
       `radial-gradient(ellipse 45% 110% at 5% 100%, ${alpha(colors.heroGlowTeal, 0.75)}, ${alpha(colors.heroGlowTeal, 0)} 72%)`,
       `linear-gradient(180deg, ${colors.heroDeep} 0%, ${colors.textPrimary} 100%)`,
     ].join(", "),
@@ -33,12 +33,9 @@ const styles = {
     letterSpacing: -0.5,
     lineHeight: 1.15,
   },
-  /** The part of the title set in the brand green, like the marketing headline's second half. */
-  titleAccent: {
-    color: colors.brandGreen,
-  },
+  // Wide enough that the one-sentence subtitle breaks after its full stop, not before it.
   subtitle: {
-    maxWidth: 540,
+    maxWidth: 640,
     margin: "0 auto",
     color: alpha(colors.white, 0.85),
     fontSize: 15,
@@ -54,16 +51,11 @@ interface HeroProps {
 export default function Hero({ title, subtitle }: HeroProps) {
   return (
     <div style={styles.hero}>
-      <HeroHelix />
+      <HeroWatermark />
       <div style={styles.inner}>
         <h1 style={styles.title}>{title}</h1>
         <p style={styles.subtitle}>{subtitle}</p>
       </div>
     </div>
   );
-}
-
-/** Marks the words of a Hero title that take the brand green. */
-export function HeroAccent({ children }: { children: ReactNode }) {
-  return <span style={styles.titleAccent}>{children}</span>;
 }

@@ -150,7 +150,7 @@ export const elements = {
 // Each `*Hover` object is meant to be merged over its base while the pointer is inside the
 // element, which is what <Clickable> does with its `hoverStyle` prop.
 export const buttons = {
-  /** Orange call to action: the page's Search, Export TSV, "add a phenotype". */
+  /** The call to action, filled in the brand navy: the page's Search, Export TSV, "add a phenotype". */
   primary: {
     display: "inline-flex",
     alignItems: "center",
@@ -159,14 +159,14 @@ export const buttons = {
     padding: "7px 14px",
     border: "none",
     borderRadius: radius,
-    background: colors.accentOrange,
+    background: colors.brandNavy,
     color: colors.white,
     fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",
   },
   primaryHover: {
-    background: colors.accentOrangeHover,
+    background: colors.brandNavyHover,
   },
   /** Outlined neutral button standing next to a primary one, e.g. the drawer's Cancel. */
   secondary: {
