@@ -173,7 +173,7 @@ export default function PhenotypeSummaryStrip({
       value={view}
       onChange={onViewChange}
       reviewUnavailableReason={
-        canReview ? undefined : "Review compares matched participants with the cohort, so it needs a phenotype filter."
+        canReview ? undefined : "Review compares matched participants with the cohort. Add a phenotype filter to enable it."
       }
     />
   );

@@ -18,7 +18,7 @@ import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulation
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
-import { ChevronRightIcon, CompareIcon, EyeOffIcon, GlobeIcon, UserIcon } from "../icons";
+import { ChevronRightIcon, CompareIcon, EyeOffIcon, GlobeIcon, SortIcon, UserIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import NotAvailable from "../elements/NotAvailable";
 import SubpopBadge from "../elements/SubpopBadge";
@@ -370,7 +370,7 @@ const NOT_IN_AOU = (
 const AOU_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.aou, message: NOT_IN_AOU };
 const GNOMAD_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.gnomad, message: "Not observed in gnomAD" };
 /** No matched-participant statistics for a variant All of Us does have. */
-const MATCHED_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.matched, message: NOT_IN_AOU };
+const MATCHED_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.matched, message: "No matched statistics" };
 
 // Everything after the Variant column. A variant that isn't in All of Us has no VAT row, so it
 // has no annotations, no gnomAD data and no matched statistics either -- not because gnomAD lacks
@@ -981,6 +981,15 @@ export default function VariantsPanel({
                           key={header.id}
                           colSpan={header.colSpan}
                           data-column-id={header.column.id}
+                          aria-sort={
+                            sortable
+                              ? sortDirection === "asc"
+                                ? "ascending"
+                                : sortDirection === "desc"
+                                  ? "descending"
+                                  : "none"
+                              : undefined
+                          }
                           style={{
                             ...styles.headerCell,
                             ...(isGroupRow ? styles.groupHeaderCell : undefined),
@@ -1002,9 +1011,33 @@ export default function VariantsPanel({
                             <>
                               {flexRender(header.column.columnDef.header, header.getContext())}
                               {sortable && (
-                                <span style={Style.table.sortIndicator}>
-                                  {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
-                                </span>
+                                // The whole header cell sorts on click for mouse users; this button
+                                // is the keyboard path and the visible affordance. It sits beside the
+                                // label rather than around it because some labels hold an info button
+                                // of their own.
+                                <button
+                                  type="button"
+                                  style={{
+                                    ...Style.table.sortButton,
+                                    ...(sortDirection ? Style.table.sortButtonActive : undefined),
+                                  }}
+                                  // Which direction comes first depends on the column (numbers sort
+                                  // descending first), so the label names the state, not the next step.
+                                  aria-label={
+                                    sortDirection === "asc"
+                                      ? "Sorted ascending; change sort"
+                                      : sortDirection === "desc"
+                                        ? "Sorted descending; change sort"
+                                        : "Sort"
+                                  }
+                                  onClick={(event) => {
+                                    // The header cell's own click would toggle it a second time.
+                                    event.stopPropagation();
+                                    header.column.toggleSorting();
+                                  }}
+                                >
+                                  <SortIcon direction={sortDirection || "none"} size={11} strokeWidth={2.5} aria-hidden="true" />
+                                </button>
                               )}
                             </>
                           )}

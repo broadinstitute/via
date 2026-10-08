@@ -15,18 +15,10 @@ import type { ResultsView } from "../components/results/ViewSwitcher";
 import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
 
-interface RevealedSections {
-  phenotype: boolean;
-  variants: boolean;
-}
-
-const NOT_REVEALED: RevealedSections = { phenotype: false, variants: false };
-
 export default function SearchResultsPage() {
   const [userEmail, setUserEmail] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [revealed, setRevealed] = useState<RevealedSections>(NOT_REVEALED);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Table or Review, chosen from the summary strip. Review opens on reviewVariant when a row asked
   // for it, otherwise on the best-supported signal.
@@ -80,22 +72,6 @@ export default function SearchResultsPage() {
       .catch((err: unknown) => setError(describeError(err)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variantsKey, conditionConceptIdKey]);
-
-  // Once data arrives, reveal each section in quick, slightly jittered succession
-  // rather than all at once, so the page doesn't feel like it's snapping into place.
-  useEffect(() => {
-    if (!results) return;
-    setRevealed(NOT_REVEALED);
-    const sections: Array<keyof RevealedSections> = ["phenotype", "variants"];
-    let delay = 0;
-    const timers = sections.map((section) => {
-      delay += 90 + Math.random() * 140;
-      return window.setTimeout(() => {
-        setRevealed((prev) => ({ ...prev, [section]: true }));
-      }, delay);
-    });
-    return () => timers.forEach((id) => window.clearTimeout(id));
-  }, [results]);
 
   function resetDrawer(data: SearchResults) {
     setDrawerVariants(data.searchSummary.variantsRaw);
@@ -177,7 +153,7 @@ export default function SearchResultsPage() {
 
       <main style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
         <PhenotypeSummaryStrip
-          loading={!(results && revealed.phenotype)}
+          loading={!results}
           conditionSearch={results?.conditionSearch}
           ancestryBreakdown={results?.ancestryBreakdown ?? []}
           ageBreakdown={results?.ageBreakdown ?? []}
@@ -198,7 +174,7 @@ export default function SearchResultsPage() {
           />
         ) : (
           <>
-            {results && revealed.variants ? (
+            {results ? (
               <VariantsPanel
                 cohortVariants={results.cohortVariants}
                 filteredVariants={results.filteredVariants}

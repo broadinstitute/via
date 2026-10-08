@@ -190,9 +190,10 @@ describe("VariantsPanel", () => {
   it("merges only the matched columns when All of Us has the variant but no matched statistics", () => {
     renderPanel([IN_AOU_ONLY], [{ ...NOT_MATCHED, variant: "2-122517541-C-G", gene: "LDLR", consequence: "Missense" }]);
 
-    const messages = screen.getAllByText(cellWithText("Not observed in All of Us"));
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toHaveAttribute("colspan", "4");
+    // Not "Not observed in All of Us": the row shows an All of Us frequency right beside it.
+    expect(screen.queryByText(cellWithText("Not observed in All of Us"))).not.toBeInTheDocument();
+    const message = screen.getByText(cellWithText("No matched statistics"));
+    expect(message).toHaveAttribute("colspan", "4");
     expect(screen.getByText("LDLR")).toBeInTheDocument();
     expect(screen.getByText("24 / 2,000")).toBeInTheDocument();
   });
@@ -223,6 +224,18 @@ describe("VariantsPanel", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
+  it("sorts from the header's button, reporting the state on the column header", () => {
+    renderPanel([IN_AOU_ONLY, NOT_IN_AOU], []);
+
+    const gene = screen.getByRole("columnheader", { name: /^Gene/ });
+    expect(gene).toHaveAttribute("aria-sort", "none");
+    fireEvent.click(within(gene).getByRole("button", { name: "Sort" }));
+    expect(gene).toHaveAttribute("aria-sort", "ascending");
+    expect(within(gene).getByRole("button", { name: /^Sorted ascending/ })).toBeInTheDocument();
+    // The variant column, not a sort key, keeps its resting state.
+    expect(screen.getByRole("columnheader", { name: /^Variant/ })).toHaveAttribute("aria-sort", "none");
+  });
+
   it("pins the expand, Variant, Gene and Consequence columns while the rest scroll", () => {
     renderPanel([IN_AOU_ONLY], [MATCHED]);
 
@@ -230,7 +243,8 @@ describe("VariantsPanel", () => {
     const cells = within(row).getAllByRole("cell");
     cells.slice(0, 4).forEach((cell) => expect(cell).toHaveStyle({ position: "sticky" }));
     expect(cells[4]).not.toHaveStyle({ position: "sticky" });
-    expect(screen.getByRole("columnheader", { name: "Variant" })).toHaveStyle({ position: "sticky" });
+    // The header's name carries its sort button's too.
+    expect(screen.getByRole("columnheader", { name: /^Variant/ })).toHaveStyle({ position: "sticky" });
 
     // A "not observed" cell that spans past the pinned columns scrolls with the rest.
     cleanup();
