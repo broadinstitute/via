@@ -48,10 +48,12 @@ export const elements = {
     background: colors.surface1,
     borderBottom: `1px solid ${colors.border}`,
   },
+  /** A panel's title: dark ink, not the accent, which elsewhere means "clickable". */
   panelTitle: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: colors.textAccent,
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: 700,
+    letterSpacing: -0.1,
   },
   /** Small uppercase label introducing a value: "Condition", "Updated", "Sources". */
   eyebrow: {
@@ -150,7 +152,7 @@ export const elements = {
 // Each `*Hover` object is meant to be merged over its base while the pointer is inside the
 // element, which is what <Clickable> does with its `hoverStyle` prop.
 export const buttons = {
-  /** The call to action, filled in the brand navy: the page's Search, Export TSV, "add a phenotype". */
+  /** The one call to action in a view, filled in the brand navy: the entry page's Search, the results page's Export TSV. */
   primary: {
     display: "inline-flex",
     alignItems: "center",
@@ -182,7 +184,7 @@ export const buttons = {
   secondaryHover: {
     background: colors.surface1,
   },
-  /** Outlined button in accent ink: "View results". */
+  /** Outlined button in accent ink, for a secondary action that navigates or reveals: "Add phenotype filter". */
   accent: {
     display: "inline-flex",
     alignItems: "center",
@@ -271,6 +273,8 @@ export const table = {
     width: "100%",
     fontSize: 12,
     whiteSpace: "nowrap",
+    // Digits line up down a column without a monospace face.
+    fontVariantNumeric: "tabular-nums",
   },
   /** Wrapper that scrolls the table under its own sticky header. */
   scroller: {

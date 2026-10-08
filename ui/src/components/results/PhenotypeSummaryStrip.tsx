@@ -221,11 +221,7 @@ export default function PhenotypeSummaryStrip({
           <div style={{ ...styles.blockContent, gap: 16 }}>
             <span style={styles.emptyTitle}>No phenotype filter</span>
             <span style={styles.emptyMessage}>Add a phenotype filter to see participant breakdowns and Review.</span>
-            <Clickable
-              style={{ ...Style.buttons.primary, padding: "6px 12px", fontSize: 12, fontWeight: 700 }}
-              hoverStyle={Style.buttons.primaryHover}
-              onClick={onAddPhenotypeFilter}
-            >
+            <Clickable style={Style.buttons.accent} hoverStyle={Style.buttons.accentHover} onClick={onAddPhenotypeFilter}>
               <PlusIcon size={12} strokeWidth={2.5} />
               Add phenotype filter
             </Clickable>

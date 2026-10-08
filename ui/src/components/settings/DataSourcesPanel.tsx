@@ -9,10 +9,8 @@ import AppVersion from "../elements/AppVersion";
 
 const styles = {
   title: {
+    ...Style.elements.panelTitle,
     marginBottom: 6,
-    fontSize: 14,
-    fontWeight: 600,
-    color: colors.textPrimary,
   },
   list: {
     margin: 0,
