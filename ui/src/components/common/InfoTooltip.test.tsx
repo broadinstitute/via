@@ -123,7 +123,7 @@ describe("InfoTooltip", () => {
     render(<InfoTooltip text={TEXT} />);
     const icon = screen.getByRole("button", { name: "More information" });
     const muted = "rgb(149, 152, 166)";
-    const accent = "rgb(59, 125, 191)";
+    const accent = "rgb(7, 71, 112)";
 
     expect(icon).toHaveStyle({ color: muted });
     fireEvent.mouseEnter(icon);
@@ -141,7 +141,7 @@ describe("InfoTooltip", () => {
       vi.runAllTimers();
     });
 
-    expect(icon).toHaveStyle({ color: "rgb(59, 125, 191)" });
+    expect(icon).toHaveStyle({ color: "rgb(7, 71, 112)" });
   });
 
   it("draws a focus ring for keyboard focus but not for a click", () => {

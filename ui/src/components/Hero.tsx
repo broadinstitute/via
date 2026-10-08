@@ -8,10 +8,10 @@ const styles = {
     // Bottom padding is what the search card overlaps; see SearchEntryPage.
     padding: "56px 20px 116px",
     overflow: "hidden",
-    // Brand navy with a blue glow top-right and a teal one bottom-left. Dark enough throughout for
-    // white text without a scrim or text shadows.
+    // The favicon's navy, deepening upward, with a blue glow top-right and a teal one bottom-left.
+    // Dark enough throughout for white text without a scrim or text shadows.
     backgroundImage: [
-      `radial-gradient(ellipse 50% 110% at 92% 0%, ${alpha(colors.textAccent, 0.9)}, ${alpha(colors.textAccent, 0)} 72%)`,
+      `radial-gradient(ellipse 50% 110% at 92% 0%, ${alpha(colors.heroGlowBlue, 0.9)}, ${alpha(colors.heroGlowBlue, 0)} 72%)`,
       `radial-gradient(ellipse 45% 110% at 5% 100%, ${alpha(colors.heroGlowTeal, 0.75)}, ${alpha(colors.heroGlowTeal, 0)} 72%)`,
       `linear-gradient(180deg, ${colors.heroDeep} 0%, ${colors.textPrimary} 100%)`,
     ].join(", "),

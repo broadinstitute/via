@@ -11,19 +11,26 @@
 // fixed set of semantic ink/surface pairs rather than a brand color to derive shades from, so a
 // call on every reference would be noise.
 
+/**
+ * The favicon's navy: the tile behind the lens. It is the app's ink for titles and key figures, its
+ * one interactive colour, and its brand colour, so the mark and the page it sits on agree. At 9.8:1
+ * on white it carries small text with room to spare.
+ */
+const NAVY = "#074770";
+
 const colors = {
   // Ink
-  textPrimary: "#22245b",
+  textPrimary: NAVY,
   textBody: "#2b2b33",
   textSecondary: "#5b5f73",
   textMuted: "#9598a6",
-  textAccent: "#3b7dbf",
+  textAccent: NAVY,
   textSuccess: "#3b6d11",
   textWarning: "#854f0b",
   textDanger: "#a32d2d",
 
   // Brand, from the logo's navy tile and green variant rung
-  brandNavy: "#074770",
+  brandNavy: NAVY,
   brandGreen: "#5cc88d",
 
   // Call-to-action
@@ -40,16 +47,18 @@ const colors = {
   borderHover: "#a9a8a1",
 
   // Tinted fills, each paired with the ink of the same name
-  bgAccent: "#d8e6ee",
+  bgAccent: "#e1edf4",
   bgSuccess: "#eaf3de",
   bgWarning: "#faeeda",
   bgDanger: "#fcebeb",
 
   white: "#ffffff",
   /** The hero's navy at its top edge, deepening into textPrimary below. */
-  heroDeep: "#1a1c4d",
+  heroDeep: "#052f4c",
   /** The teal glow in the hero's bottom-left corner. */
   heroGlowTeal: "#1a9a86",
+  /** The blue glow in the hero's top-right corner: lighter than the navy it sits on, so it shows. */
+  heroGlowBlue: "#2f8fcf",
 
   subpopEur: "#F9C854",
   subpopAfr: "#2078B4",
@@ -73,14 +82,14 @@ export default colors;
  * only needs a hint. Both share one `hover` value so a hovered row reads as a single band.
  */
 export const sourceTints = {
-  aou: { strong: "#ebf3fa", soft: "#f7fafd", hover: "#e3edf6" },
+  aou: { strong: "#eaf2f8", soft: "#f6f9fc", hover: "#e1ecf4" },
   gnomad: { strong: "#f1f0ec", soft: "#fafbfb", hover: "#e9e8e3" },
   /** The phenotype-matched column group in the merged table: the accent's own tint, a step deeper than aou's. */
-  matched: { strong: "#e4edf3", hover: "#d9e6ef" },
+  matched: { strong: "#dfeaf2", hover: "#d4e3ee" },
 } as const;
 
 /** Marks the subpopulation with the highest allele frequency in the population table. */
-export const POPMAX_BACKGROUND = "#dbe8f5";
+export const POPMAX_BACKGROUND = "#d9e6f0";
 
 /** The same color at partial opacity -- e.g. alpha(colors.textPrimary, 0.14) for a panel shadow. */
 export function alpha(hex: string, opacity: number): string {
