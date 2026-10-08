@@ -1,7 +1,9 @@
+import { useRef } from "react";
 import type { CSSProperties } from "react";
 import colors, { alpha } from "../../libs/colors";
 import type { ClinVarSignificance } from "../../types/results";
-import { CLINVAR_BADGE_CONFIG } from "../../utils/clinvar";
+import { CLINVAR_BADGE_CONFIG, CLINVAR_MAX_STARS, clinvarReviewDescription } from "../../utils/clinvar";
+import { useTooltip } from "../common/useTooltip";
 
 // The same pill as SubpopBadge -- rounded, a tinted fill, a soft border in the ink
 // at partial opacity -- so a ClinVar call sits beside an ancestry badge or a scope chip as one
@@ -39,6 +41,12 @@ const styles = {
     fontWeight: 500,
     color: colors.textSecondary,
   },
+  // As a link the pill keeps its look and gains a pointer; the border firms up under it.
+  link: {
+    textDecoration: "none",
+    cursor: "pointer",
+    transition: "border-color 0.12s ease",
+  },
 } as const satisfies Record<string, CSSProperties>;
 
 interface ClinvarBadgeProps {
@@ -47,27 +55,73 @@ interface ClinvarBadgeProps {
   stars?: number | null;
   /** "split" shows the short code (P, LP, VUS…) for table cells; "tag" spells the classification out. */
   mode?: "split" | "tag";
+  /** Whether ClinVar's submissions conflict, which changes what one review star means. */
+  conflicts?: boolean;
+  /**
+   * The variant's ClinVar page. Given, the badge is a link to it, opening in a new tab, with the
+   * app's tooltip explaining the classification and review status on hover or focus.
+   */
+  href?: string;
 }
 
-export default function ClinvarBadge({ significance, stars = null, mode = "split" }: ClinvarBadgeProps) {
+export default function ClinvarBadge({ significance, stars = null, mode = "split", conflicts = false, href }: ClinvarBadgeProps) {
   const config = CLINVAR_BADGE_CONFIG[significance];
   const label = mode === "tag" ? significance : config.shortLabel;
+  const ref = useRef<HTMLAnchorElement>(null);
+  const review = stars !== null ? `${stars} of ${CLINVAR_MAX_STARS} stars: ${clinvarReviewDescription(stars, conflicts)}` : null;
+  // The spoken name, and the native hover text for a badge that isn't a link.
+  const description = `ClinVar: ${significance}${review ? `, ${review}` : ""}`;
+  // To the badge's left: the ClinVar column sits at the table's right edge, and a bubble above or
+  // below would cover the rows around it.
+  const tooltip = useTooltip(
+    ref,
+    [significance, review, "Click to open ClinVar in a new tab."].filter((line) => line !== null).join("\n"),
+    "left",
+  );
 
-  return (
-    <span
-      style={{
-        ...styles.badge,
-        ...(mode === "split" ? styles.split : undefined),
-        background: config.fill,
-        border: `1px solid ${alpha(config.ink, 0.35)}`,
-        color: config.ink,
-      }}
-      title={`ClinVar: ${significance}${stars !== null ? `, ${stars} of 4 review stars` : ""}`}
-    >
+  const style: CSSProperties = {
+    ...styles.badge,
+    ...(mode === "split" ? styles.split : undefined),
+    background: config.fill,
+    border: `1px solid ${alpha(config.ink, href && tooltip.hovered ? 0.7 : 0.35)}`,
+    color: config.ink,
+    ...(href ? styles.link : undefined),
+  };
+  const content = (
+    <>
       <span style={mode === "split" ? styles.splitCode : undefined}>{label}</span>
       {stars !== null && (
         <span style={{ ...styles.stars, borderLeft: `1px solid ${alpha(config.ink, 0.3)}` }}>{`${stars}★`}</span>
       )}
-    </span>
+    </>
+  );
+
+  if (!href) {
+    return (
+      <span style={style} title={description}>
+        {content}
+      </span>
+    );
+  }
+  return (
+    <a
+      ref={ref}
+      style={style}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      // An element with no title shows its nearest ancestor's (ReviewDetail's Fact has one), which
+      // would sit on top of the app's tooltip; an empty title opts out.
+      title=""
+      // Names the context change for screen readers, since the visible bubble is aria-hidden.
+      aria-label={`${description}. Open in ClinVar (opens in new tab)`}
+      {...tooltip.anchorProps}
+      // A click follows the link; it shouldn't also expand the table row underneath, or re-show
+      // the tooltip the way the hook's own click handler would.
+      onClick={(event) => event.stopPropagation()}
+    >
+      {content}
+      {tooltip.bubble}
+    </a>
   );
 }

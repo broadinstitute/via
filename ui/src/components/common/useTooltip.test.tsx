@@ -2,11 +2,12 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useTooltip } from "./useTooltip";
+import type { TooltipPlacement } from "./useTooltip";
 
 /** The smallest anchor: a button that only spreads the hook's props. */
-function Anchor() {
+function Anchor({ placement }: { placement?: TooltipPlacement }) {
   const ref = useRef<HTMLButtonElement>(null);
-  const tooltip = useTooltip(ref, "Explains itself");
+  const tooltip = useTooltip(ref, "Explains itself", placement);
   return (
     <button ref={ref} type="button" data-hovered={tooltip.hovered} data-keyboard={tooltip.keyboardFocused} {...tooltip.anchorProps}>
       Anchor
@@ -14,6 +15,58 @@ function Anchor() {
     </button>
   );
 }
+
+/** jsdom does no layout, so rects are stubbed per element: the anchor, then the tooltip itself. */
+function stubRects(anchor: DOMRect, tooltip: DOMRect) {
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+    return this.getAttribute("data-testid") === "infoTooltip" ? tooltip : anchor;
+  });
+}
+
+describe("useTooltip's placement", () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("sits to the anchor's left when asked, centred on its middle", async () => {
+    stubRects(new DOMRect(400, 300, 60, 20), new DOMRect(0, 0, 200, 40));
+    render(<Anchor placement="left" />);
+
+    fireEvent.focus(screen.getByRole("button"));
+    const bubble = await screen.findByTestId("infoTooltip");
+    // Left of the anchor by the 8px gap: 400 - 8 - 200. Centred on its middle (310): 310 - 20.
+    expect(bubble).toHaveStyle({ left: "192px", top: "290px", visibility: "visible" });
+    // The arrow is on the right edge, pointing back at the anchor's middle: 310 - 290 - 4.
+    expect(bubble.querySelector("span")).toHaveStyle({ right: "-4px", top: "16px" });
+  });
+
+  it("flips to the right when there's no room on the left", async () => {
+    stubRects(new DOMRect(50, 300, 60, 20), new DOMRect(0, 0, 200, 40));
+    render(<Anchor placement="left" />);
+
+    fireEvent.focus(screen.getByRole("button"));
+    const bubble = await screen.findByTestId("infoTooltip");
+    // Right of the anchor by the gap: 50 + 60 + 8.
+    expect(bubble).toHaveStyle({ left: "118px", top: "290px" });
+    expect(bubble.querySelector("span")).toHaveStyle({ left: "-4px" });
+  });
+
+  it("sits below when asked, and flips above at the bottom of the window", async () => {
+    stubRects(new DOMRect(400, 300, 60, 20), new DOMRect(0, 0, 200, 40));
+    const below = render(<Anchor placement="bottom" />);
+    fireEvent.focus(screen.getByRole("button"));
+    // Below the anchor by the gap: 320 + 8. Centred: 430 - 100.
+    expect(await screen.findByTestId("infoTooltip")).toHaveStyle({ left: "330px", top: "328px" });
+    below.unmount();
+
+    stubRects(new DOMRect(400, window.innerHeight - 30, 60, 20), new DOMRect(0, 0, 200, 40));
+    render(<Anchor placement="bottom" />);
+    fireEvent.focus(screen.getByRole("button"));
+    // No room beneath: above instead, by the gap: (innerHeight - 30) - 8 - 40.
+    expect(await screen.findByTestId("infoTooltip")).toHaveStyle({ top: `${window.innerHeight - 78}px` });
+  });
+});
 
 describe("useTooltip's anchor props", () => {
   afterEach(() => {

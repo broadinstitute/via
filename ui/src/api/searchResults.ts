@@ -30,13 +30,11 @@ interface RawCohortVariant {
   gnomadAf: number | null;
   gnomadAc: number | null;
   gnomadAn: number | null;
-  gnomadUrl: string | null;
   gnomadPopulations: PopulationFrequency[];
   gnomadAllAf: number | null;
   gnomadAllAc: number | null;
   gnomadAllAn: number | null;
   clinvarSignificance: ClinVarSignificance | null;
-  clinvarUrl: string | null;
   clinvarStars: number | null;
   clinvarHasConflicts: boolean;
   clinvarConditions: string[];
@@ -105,13 +103,11 @@ function toCohortVariantRow(raw: RawCohortVariant): CohortVariantRow {
     gnomadAf: raw.gnomadAf,
     gnomadAc: raw.gnomadAc,
     gnomadAn: raw.gnomadAn,
-    gnomadUrl: raw.gnomadUrl,
     gnomadPopulations: raw.gnomadPopulations,
     gnomadAllAf: raw.gnomadAllAf,
     gnomadAllAc: raw.gnomadAllAc,
     gnomadAllAn: raw.gnomadAllAn,
     clinvarSignificance: raw.clinvarSignificance,
-    clinvarUrl: raw.clinvarUrl,
     clinvarStars: raw.clinvarStars,
     clinvarHasConflicts: raw.clinvarHasConflicts,
     clinvarConditions: raw.clinvarConditions,

@@ -11,6 +11,7 @@ import {
 import { formatDate } from "../../utils/format";
 import Clickable from "../common/Clickable";
 import ClinvarBadge from "../elements/ClinvarBadge";
+import { clinvarSearchUrl } from "../../utils/externalLinks";
 
 // Past these, the rest collapse behind a "+N more" button.
 const MAX_VISIBLE_CONDITIONS = 2;
@@ -186,13 +187,13 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
     clinvarHasConflicts,
     clinvarConditions,
     clinvarLastUpdated,
-    clinvarUrl,
   } = variant;
+  const clinvarUrl = clinvarSearchUrl(variant.variant);
 
   const header = (
     <div style={styles.header}>
       <div style={styles.sectionTitle}>ClinVar</div>
-      {clinvarUrl && clinvarSubmissions.length > 0 && (
+      {clinvarSubmissions.length > 0 && (
         <a
           style={{ ...styles.link, ...(linkHovered ? styles.linkHover : undefined) }}
           href={clinvarUrl}
@@ -227,7 +228,7 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
 
       <div style={styles.classification}>
         {clinvarSignificance ? (
-          <ClinvarBadge significance={clinvarSignificance} mode="tag" />
+          <ClinvarBadge significance={clinvarSignificance} mode="tag" conflicts={clinvarHasConflicts} href={clinvarUrl} />
         ) : (
           <span style={styles.noConsensus}>No consensus classification</span>
         )}

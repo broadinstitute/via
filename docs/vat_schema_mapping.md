@@ -32,9 +32,9 @@ every "same collapse" note below rather than being repeated per row.
 | `consequence` | `consequence` (array) | Same collapse; also needs picking/rendering one value from the array. |
 | `aouSubpopulation`/`aouAf`/`aouAc`/`aouAn` | `gvs_max_subpop`/`gvs_max_af`/`gvs_max_ac`/`gvs_max_an` | Direct — the VAT was designed with exactly this "max subpopulation" concept (Appendix G). |
 | `gnomadSubpopulation`/`gnomadAf`/`gnomadAc`/`gnomadAn` | `gnomad_max_subpop`/`gnomad_max_af`/`gnomad_max_ac`/`gnomad_max_an` | Direct, same pattern. |
-| `gnomadUrl` | — | Not a VAT field. Trivial to construct client/API-side from `vid`, but it's new work, not a lookup. |
+| ~~`gnomadUrl`~~ | — | Removed from the API. A function of `vid` alone, so the UI builds it (`utils/externalLinks.ts`); the frequency table shows it when the variant has gnomAD data (`gnomadSubpopulation` set). |
 | `clinvarSignificance` | `clinvar_classification` (array) | VAT stores ClinVar's full submission vocabulary (Benign, Likely benign, Uncertain significance, Likely pathogenic, Pathogenic, conflicting, risk factor, etc.), unioned across submitters. Our 3-bucket `Pathogenic \| VUS \| Benign` taxonomy requires real collapsing logic, not a rename. |
-| `clinvarUrl` | — | VAT has no ClinVar accession/variation ID — only classification/date/phenotype. Would have to build a URL off `dbsnp_rsid` or the variant coordinates; not a clean 1:1 field. |
+| ~~`clinvarUrl`~~ | — | Removed from the API. VAT has no ClinVar accession/variation ID, and a search-by-coordinates URL is a function of `vid` alone, so the UI builds it (`utils/externalLinks.ts`) for every variant. |
 | `spliceAi` (single score) | none directly — closest is 4 raw NIRVANA/SpliceAI fields: `splice_ai_acceptor_gain_score`, `_acceptor_loss_score`, `_donor_gain_score`, `_donor_loss_score` | VAT never collapses these to one number. Our single score needs a derivation (commonly max of the four) that isn't specified anywhere in the design doc. |
 | `plof` (LOFTEE HC flag) | not in this design doc | LOFTEE isn't listed anywhere in Table 1's datasource list (NIRVANA, GVS, CADD, KEGG, GTEx, MGI, AoU subpop) or in Table 2 — but per team knowledge, LOFTEE was added to the VAT pipeline *after* this doc was written, so this isn't a real gap, just a stale doc. Confirm the current field name in the live VAT schema. |
 

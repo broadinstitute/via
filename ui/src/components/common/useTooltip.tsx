@@ -49,16 +49,72 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
+/** Which side of the anchor the tooltip sits on. */
+export type TooltipPlacement = "top" | "bottom" | "left" | "right";
+
+const OPPOSITE: Record<TooltipPlacement, TooltipPlacement> = { top: "bottom", bottom: "top", left: "right", right: "left" };
+
 interface Position {
   top: number;
   left: number;
-  /** The arrow's offset from the tooltip's left edge, so it points at the anchor even when the
-   * tooltip has been pushed in from a window edge. */
-  arrowLeft: number;
-  placement: "above" | "below";
+  /** The side it ended up on: the one asked for, or the opposite when that had no room. */
+  side: TooltipPlacement;
+  /**
+   * The arrow's offset along the anchor's edge -- from the tooltip's left edge for top and
+   * bottom, from its top edge for left and right -- so it points at the anchor even when the
+   * tooltip has been pushed in from a window edge.
+   */
+  arrowOffset: number;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+/** The arrow on the tooltip's edge that faces the anchor, half outside it. */
+function arrowStyle({ side, arrowOffset }: Position): CSSProperties {
+  switch (side) {
+    case "top":
+      return { left: arrowOffset, bottom: -ARROW_SIZE / 2 };
+    case "bottom":
+      return { left: arrowOffset, top: -ARROW_SIZE / 2 };
+    case "left":
+      return { top: arrowOffset, right: -ARROW_SIZE / 2 };
+    case "right":
+      return { top: arrowOffset, left: -ARROW_SIZE / 2 };
+  }
+}
+
+/** Where a tooltip of this size would go on this side of the anchor, kept inside the window
+ * along the anchor's edge, and whether it has room on that side. */
+function place(side: TooltipPlacement, anchor: DOMRect, tooltip: DOMRect): { top: number; left: number; fits: boolean } {
+  const centreX = anchor.left + anchor.width / 2;
+  const centreY = anchor.top + anchor.height / 2;
+  switch (side) {
+    case "top": {
+      const top = anchor.top - GAP - tooltip.height;
+      return { top, left: clamp(centreX - tooltip.width / 2, EDGE, window.innerWidth - tooltip.width - EDGE), fits: top >= EDGE };
+    }
+    case "bottom": {
+      const top = anchor.bottom + GAP;
+      return {
+        top,
+        left: clamp(centreX - tooltip.width / 2, EDGE, window.innerWidth - tooltip.width - EDGE),
+        fits: top + tooltip.height <= window.innerHeight - EDGE,
+      };
+    }
+    case "left": {
+      const left = anchor.left - GAP - tooltip.width;
+      return { top: clamp(centreY - tooltip.height / 2, EDGE, window.innerHeight - tooltip.height - EDGE), left, fits: left >= EDGE };
+    }
+    case "right": {
+      const left = anchor.right + GAP;
+      return {
+        top: clamp(centreY - tooltip.height / 2, EDGE, window.innerHeight - tooltip.height - EDGE),
+        left,
+        fits: left + tooltip.width <= window.innerWidth - EDGE,
+      };
+    }
+  }
+}
 
 export interface TooltipAnchorProps {
   onMouseEnter: () => void;
@@ -91,11 +147,16 @@ export interface TooltipHandle {
 }
 
 /**
- * The tooltip's behaviour, for an anchor the caller renders and refs. Shows above the anchor
- * unless there's no room, kept inside the window; hides on Escape or any scroll, since a fixed
- * tooltip would otherwise stay behind while its anchor scrolls away.
+ * The tooltip's behaviour, for an anchor the caller renders and refs. Shows on the given side of
+ * the anchor (above by default), or the opposite side when there's no room, kept inside the
+ * window; hides on Escape or any scroll, since a fixed tooltip would otherwise stay behind while
+ * its anchor scrolls away.
  */
-export function useTooltip(anchorRef: RefObject<HTMLElement | null>, text: ReactNode): TooltipHandle {
+export function useTooltip(
+  anchorRef: RefObject<HTMLElement | null>,
+  text: ReactNode,
+  placement: TooltipPlacement = "top",
+): TooltipHandle {
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [keyboardFocused, setKeyboardFocused] = useState(false);
@@ -121,17 +182,15 @@ export function useTooltip(anchorRef: RefObject<HTMLElement | null>, text: React
     if (!open || !anchorRef.current || !tooltipRef.current) return;
     const anchor = anchorRef.current.getBoundingClientRect();
     const tooltip = tooltipRef.current.getBoundingClientRect();
-    const anchorCentre = anchor.left + anchor.width / 2;
-    const left = clamp(anchorCentre - tooltip.width / 2, EDGE, window.innerWidth - tooltip.width - EDGE);
-    const topIfAbove = anchor.top - GAP - tooltip.height;
-    const placement = topIfAbove >= EDGE ? "above" : "below";
-    setPosition({
-      top: placement === "above" ? topIfAbove : anchor.bottom + GAP,
-      left,
-      arrowLeft: clamp(anchorCentre - left - ARROW_SIZE / 2, 10, tooltip.width - 10 - ARROW_SIZE),
-      placement,
-    });
-  }, [open, anchorRef]);
+    const preferred = place(placement, anchor, tooltip);
+    const side = preferred.fits ? placement : OPPOSITE[placement];
+    const { top, left } = preferred.fits ? preferred : place(side, anchor, tooltip);
+    const vertical = side === "top" || side === "bottom";
+    const arrowOffset = vertical
+      ? clamp(anchor.left + anchor.width / 2 - left - ARROW_SIZE / 2, 10, tooltip.width - 10 - ARROW_SIZE)
+      : clamp(anchor.top + anchor.height / 2 - top - ARROW_SIZE / 2, 10, tooltip.height - 10 - ARROW_SIZE);
+    setPosition({ top, left, side, arrowOffset });
+  }, [open, anchorRef, placement]);
 
   useEffect(() => {
     if (!open) return;
@@ -166,15 +225,7 @@ export function useTooltip(anchorRef: RefObject<HTMLElement | null>, text: React
         }}
       >
         {text}
-        {position && (
-          <span
-            style={{
-              ...styles.arrow,
-              left: position.arrowLeft,
-              ...(position.placement === "above" ? { bottom: -ARROW_SIZE / 2 } : { top: -ARROW_SIZE / 2 }),
-            }}
-          />
-        )}
+        {position && <span style={{ ...styles.arrow, ...arrowStyle(position) }} />}
       </div>,
       document.body,
     );

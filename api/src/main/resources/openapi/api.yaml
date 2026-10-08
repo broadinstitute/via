@@ -394,9 +394,6 @@ components:
         gnomadAn:
           type: integer
           nullable: true
-        gnomadUrl:
-          type: string
-          nullable: true
         gnomadPopulations:
           description: One entry per gnomAD subpopulation, for the expanded row's frequency table.
           type: array
@@ -415,9 +412,6 @@ components:
           type: string
           nullable: true
           enum: [Pathogenic, Likely pathogenic, VUS, Likely benign, Benign]
-        clinvarUrl:
-          type: string
-          nullable: true
         clinvarStars:
           type: integer
           nullable: true

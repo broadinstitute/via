@@ -57,7 +57,7 @@ const styles = {
   group: {
     display: "flex",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
     width: "100%",
     padding: "7px 16px 5px",
     border: "none",
@@ -70,11 +70,18 @@ const styles = {
     textTransform: "uppercase",
     textAlign: "left",
   },
+  // Buttons don't inherit the page's font or line height; without these the Earlier row sits
+  // tighter and shorter than the two headings above it.
   groupToggle: {
+    fontFamily: "inherit",
+    lineHeight: "inherit",
     cursor: "pointer",
   },
   groupToggleHover: {
     color: colors.textAccent,
+  },
+  groupSeparator: {
+    color: colors.textMuted,
   },
   groupCount: {
     fontWeight: 600,
@@ -203,7 +210,10 @@ export default function RecentSearches() {
           <ChevronRightIcon size={12} strokeWidth={2.5} aria-hidden="true" />
         )}
         {group.label}
-        <span style={styles.groupCount}>· {group.searches.length}</span>
+        <span style={styles.groupSeparator} aria-hidden="true">
+          ·
+        </span>
+        <span style={styles.groupCount}>{group.searches.length}</span>
       </button>
     );
   };
