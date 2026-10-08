@@ -110,7 +110,7 @@ export default function ClinvarBadge({ significance, stars = null, mode = "split
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`${description}. Open in ClinVar.`}
+      aria-label={`${description}. Open in ClinVar (opens in new tab)`}
       {...tooltip.anchorProps}
       // A click follows the link; it shouldn't also expand the table row underneath, or re-show
       // the tooltip the way the hook's own click handler would.
