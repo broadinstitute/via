@@ -1,6 +1,6 @@
 /**
  * Draws the product illustrations: the variants table, shown both in the hero and in the Table
- * view, and the hero's DNA helix.
+ * view.
  *
  * The figures are illustrative, modelled on VIA's Familial hypercholesterolemia demo. They are
  * not real All of Us data.
@@ -112,29 +112,5 @@ function renderTable(table) {
     </tbody>`;
 }
 
-/** The hero's DNA helix: two phase-shifted strands with rungs, drawn rather than shipped as an image. */
-function renderHelix(svg) {
-  const width = 900, mid = 300, amplitude = 120, wavelength = 420;
-  const strand = (phase) => {
-    let d = '';
-    for (let x = 0; x <= width; x += 6) {
-      const y = mid + amplitude * Math.sin((x / wavelength) * 2 * Math.PI + phase) + x * 0.18;
-      d += `${x === 0 ? 'M' : 'L'}${x} ${y.toFixed(1)}`;
-    }
-    return d;
-  };
-  let rungs = '';
-  for (let x = 12; x <= width; x += 22) {
-    const y1 = mid + amplitude * Math.sin((x / wavelength) * 2 * Math.PI) + x * 0.18;
-    const y2 = mid + amplitude * Math.sin((x / wavelength) * 2 * Math.PI + Math.PI) + x * 0.18;
-    rungs += `<line x1="${x}" y1="${y1.toFixed(1)}" x2="${x}" y2="${y2.toFixed(1)}" />`;
-  }
-  svg.innerHTML = `
-    <g class="helix-rungs">${rungs}</g>
-    <path class="helix-strand" d="${strand(0)}" />
-    <path class="helix-strand alt" d="${strand(Math.PI)}" />`;
-}
-
 renderTable(document.getElementById('hero-table'));
 renderTable(document.getElementById('feature-table'));
-renderHelix(document.querySelector('.hero-helix'));

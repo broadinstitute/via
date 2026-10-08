@@ -7,7 +7,7 @@ terra-scientific-pipelines-service (`ui/allofus-anvil-imputation`).
 ### Code layout
 * `index.html` — the page: hero, why use VIA, the Table and Review views, how it works, data sources, call to action and footer.
 * `css/style.css` — all styles. Brand tokens are at the top; the product illustrations reuse the app's palette and its Public Sans face.
-* `js/illustrations.js` — draws the two variants-table illustrations and the hero's DNA helix. The figures are illustrative, not real All of Us data.
+* `js/illustrations.js` — draws the variants-table illustration used in the hero and the Table view. The figures are illustrative, not real All of Us data.
 * `js/tabs.js` — the Table / Review tabs. The open tab can be linked with a bare hash, e.g. `<base-url>#review`.
 * `img/` — the All of Us and Broad logos (copied from the imputation site), the VIA mark on its navy tile (`via-mark.svg`, the same as the app's favicon), and the same mark on a white tile for dark backgrounds (`via-mark-light.svg`), used in the hero beside the white All of Us logo.
 
