@@ -5,7 +5,7 @@
 // as "no history" rather than failing.
 
 const STORAGE_KEY = "via.recentSearches.v1";
-const MAX_SEARCHES = 5;
+const MAX_SEARCHES = 20;
 
 export interface RecentSearch {
   variants: string[];
@@ -67,6 +67,41 @@ export function clearRecentSearches() {
   } catch {
     // Nothing to clear if storage is unavailable.
   }
+}
+
+export type RecentSearchGroupLabel = "Today" | "This week" | "Earlier";
+
+export interface RecentSearchGroup {
+  label: RecentSearchGroupLabel;
+  searches: RecentSearch[];
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The searches in their display groups, newest first within each: today by the calendar, then
+ * the rest of the last seven days, then everything older. Empty groups are left out.
+ */
+export function groupRecentSearches(searches: RecentSearch[], now = Date.now()): RecentSearchGroup[] {
+  const today = new Date(now);
+  const isToday = (at: number) => {
+    const date = new Date(at);
+    return (
+      date.getFullYear() === today.getFullYear() &&
+      date.getMonth() === today.getMonth() &&
+      date.getDate() === today.getDate()
+    );
+  };
+  const labelOf = (search: RecentSearch): RecentSearchGroupLabel =>
+    isToday(search.searchedAt) ? "Today" : now - search.searchedAt < 7 * DAY_MS ? "This week" : "Earlier";
+  const groups: RecentSearchGroup[] = [];
+  for (const search of searches) {
+    const label = labelOf(search);
+    const group = groups.find((candidate) => candidate.label === label);
+    if (group) group.searches.push(search);
+    else groups.push({ label, searches: [search] });
+  }
+  return groups;
 }
 
 const RELATIVE_TIME = new Intl.RelativeTimeFormat("en", { numeric: "auto" });

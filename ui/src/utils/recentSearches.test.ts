@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clearRecentSearches, describeSearchedAt, loadRecentSearches, recordRecentSearch } from "./recentSearches";
+import { clearRecentSearches, describeSearchedAt, groupRecentSearches, loadRecentSearches, recordRecentSearch } from "./recentSearches";
 
 const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot" };
 
@@ -40,18 +40,34 @@ describe("recent searches", () => {
     expect(loadRecentSearches()).toHaveLength(2);
   });
 
-  it("keeps only the five most recent", () => {
-    for (let i = 1; i <= 7; i++) {
+  it("keeps only the twenty most recent", () => {
+    for (let i = 1; i <= 23; i++) {
       recordRecentSearch({ variants: [`${i}-1-A-G`], condition: null }, i);
     }
 
-    expect(loadRecentSearches().map((search) => search.variants[0])).toEqual([
-      "7-1-A-G",
-      "6-1-A-G",
-      "5-1-A-G",
-      "4-1-A-G",
-      "3-1-A-G",
+    const kept = loadRecentSearches().map((search) => search.variants[0]);
+    expect(kept).toHaveLength(20);
+    expect(kept[0]).toBe("23-1-A-G");
+    expect(kept[19]).toBe("4-1-A-G");
+  });
+
+  it("groups searches into today, this week and earlier, by the calendar for today", () => {
+    // Mid-afternoon, so "today" has hours either side of it.
+    const now = new Date(2026, 9, 8, 15, 0).getTime();
+    const hour = 60 * 60 * 1000, day = 24 * hour;
+    const at = (ms: number, id: string) => ({ variants: [id], condition: null, searchedAt: ms });
+    const groups = groupRecentSearches(
+      [at(now - hour, "a"), at(now - 14 * hour, "b"), at(now - 20 * hour, "c"), at(now - 3 * day, "d"), at(now - 9 * day, "e")],
+      now,
+    );
+
+    // 14 hours ago is 1am today; 20 hours ago is yesterday evening, so it's "this week".
+    expect(groups.map((group) => [group.label, group.searches.map((search) => search.variants[0])])).toEqual([
+      ["Today", ["a", "b"]],
+      ["This week", ["c", "d"]],
+      ["Earlier", ["e"]],
     ]);
+    expect(groupRecentSearches([], now)).toEqual([]);
   });
 
   it("ignores a search with no variants", () => {

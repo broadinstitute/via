@@ -243,6 +243,24 @@ describe("SearchEntryPage", () => {
     );
   });
 
+  it("folds searches older than a week under Earlier until asked", () => {
+    stubApi([], "");
+    const day = 24 * 60 * 60 * 1000;
+    recordRecentSearch({ variants: ["9-9-A-G"], condition: null }, Date.now() - 9 * day);
+    recordRecentSearch({ variants: ["1-1-A-G"], condition: { conceptId: 9000010, name: "Tetralogy of Fallot" } });
+    renderPage();
+
+    expect(screen.getByRole("region", { name: "Today" })).toHaveTextContent("Tetralogy of Fallot");
+    const earlier = screen.getByRole("button", { name: /^Earlier/ });
+    expect(earlier).toHaveAttribute("aria-expanded", "false");
+    expect(earlier).toHaveTextContent("1");
+    expect(screen.queryByRole("button", { name: /^Run again: 1 variant, no phenotype/ })).not.toBeInTheDocument();
+
+    fireEvent.click(earlier);
+    expect(earlier).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: /^Run again: 1 variant, no phenotype/ })).toBeInTheDocument();
+  });
+
   it("clears recent searches", () => {
     stubApi([], "");
     recordRecentSearch({ variants: ["1-1-A-G"], condition: null });
