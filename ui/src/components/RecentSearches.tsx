@@ -63,7 +63,7 @@ const styles = {
     border: "none",
     borderTop: `1px solid ${colors.border}`,
     background: colors.surface1,
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: 700,
     letterSpacing: 0.3,
