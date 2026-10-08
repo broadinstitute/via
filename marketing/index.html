@@ -271,7 +271,7 @@
       <li class="step">
         <div class="step-copy">
           <h3>Open VIA in your workspace</h3>
-          <p>Launch VIA from a Researcher Workbench workspace with access to <i>All of Us</i> genomic data. There's nothing to install or configure.</p>
+          <p>Launch VIA from a Researcher Workbench workspace with Controlled Tier access, which is where <i>All of Us</i> genomic data lives. There's nothing to install or configure.</p>
         </div>
         <div class="step-visual" aria-hidden="true">
           <div class="mini-launch">
@@ -388,12 +388,52 @@
     </div>
   </section>
 
+  <!-- FAQ -->
+  <section id="faq">
+    <h2 class="section-title">Questions</h2>
+    <p class="section-sub">The ones we're asked first. Details on the statistics are in the app itself, beside each figure.</p>
+    <div class="faq-list">
+      <details class="faq">
+        <summary>Who can use VIA?</summary>
+        <p>Researchers with Controlled Tier access to the <i>All of Us</i> Researcher Workbench. <i>All of Us</i> makes its genomic data available only in the Controlled Tier, and VIA reads that data, so Registered Tier access isn't enough. VIA runs as an app inside your workspace, and nothing leaves the Workbench.</p>
+      </details>
+      <details class="faq">
+        <summary>How do I get Controlled Tier access?</summary>
+        <p>Four steps, all through <i>All of Us</i> rather than VIA. Your institution must have a Data Use and Registration Agreement with <i>All of Us</i> that includes the Controlled Tier. You register for the Researcher Workbench and verify your identity, which needs an eRA Commons account. You complete the required training and sign the Data User Code of Conduct, with the additional Controlled Tier training on top of the Registered Tier's. Then your institution signs off on your access. <a href="https://www.researchallofus.org/?p=4786" target="_blank" rel="noopener">The <i>All of Us</i> guide to accessing genomic data</a> has the current details and the list of institutions with agreements in place.</p>
+      </details>
+      <details class="faq">
+        <summary>Do I need to write code?</summary>
+        <p>No. You paste variant IDs, optionally pick a condition, and read the results. There are no notebooks, queries or files to manage.</p>
+      </details>
+      <details class="faq">
+        <summary>What does VIA compare?</summary>
+        <p>For each candidate variant, how often it appears across all <i>All of Us</i> participants with genomes, and, if you add a phenotype, how often it appears among the participants recorded with that condition. gnomAD frequencies, ClinVar classifications, SpliceAI scores and LOFTEE calls sit beside those figures for context.</p>
+      </details>
+      <details class="faq">
+        <summary>How does VIA decide a variant is enriched or depleted?</summary>
+        <p>Review compares the phenotype-matched participants with the rest of the cohort using Fisher's exact test and an exact confidence interval for the odds ratio. The verdict comes from that interval: enriched if it sits entirely above 1, depleted if entirely below, similar if it rules out a two-fold difference either way, and inconclusive otherwise. The p-value is also shown corrected for the number of variants you searched.</p>
+      </details>
+      <details class="faq">
+        <summary>Is VIA a clinical tool?</summary>
+        <p>VIA is a research tool. It summarises frequencies and statistics to support interpretation; it doesn't classify variants or make clinical determinations. Those remain with the interpreter, following your institution's processes.</p>
+      </details>
+      <details class="faq">
+        <summary>What does VIA store?</summary>
+        <p>Nothing on its own. It reads the curated data repository read-only using your workspace's credentials and keeps no copy. Your recent searches, just the variant IDs and the condition you picked, are remembered in your browser so you can re-run them, and you can clear them at any time.</p>
+      </details>
+      <details class="faq">
+        <summary>How many variants can I search at once?</summary>
+        <p>Up to 50 per search. You can export the results table as a TSV file to keep or share.</p>
+      </details>
+    </div>
+  </section>
+
   <!-- Get started -->
   <section id="get-started">
     <div class="cta-card">
       <div>
         <h2>Ready to look at your variants?</h2>
-        <p>VIA is in development for the <i>All of Us</i> Researcher Workbench. Open it from a workspace with access to genomic data.</p>
+        <p>VIA is in development for the <i>All of Us</i> Researcher Workbench. Open it from a workspace with Controlled Tier access.</p>
       </div>
       <!-- TODO: point at the Researcher Workbench launch URL once VIA is published there. -->
       <a class="btn-primary" href="#get-started">

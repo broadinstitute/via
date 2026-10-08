@@ -706,6 +706,30 @@ a { color: inherit; }
 .source-icon { display: grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; border-radius: 10px; background: #e3f5ea; }
 .source-icon svg { width: 22px; height: 22px; fill: none; stroke: var(--navy); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
+/* ---------- FAQ ---------- */
+
+#faq { padding: 88px var(--gutter); background: var(--surface0); }
+.faq-list { display: flex; flex-direction: column; gap: 10px; max-width: 760px; margin: 40px auto 0; }
+.faq { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-panel); }
+.faq summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px 20px; cursor: pointer; list-style: none;
+  color: var(--navy); font-size: 16px; font-weight: 700; line-height: 1.35;
+}
+.faq summary::-webkit-details-marker { display: none; }
+/* The disclosure mark: a navy plus that turns into a minus when open. */
+.faq summary::after {
+  content: ""; flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #e1edf4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23074770' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M12 6v12M6 12h12'/%3E%3C/svg%3E");
+  background-size: 12px; background-position: center; background-repeat: no-repeat;
+}
+.faq[open] summary::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23074770' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E");
+}
+.faq summary:focus-visible { outline: 3px solid var(--green); outline-offset: -3px; border-radius: var(--radius-lg); }
+.faq p { margin: 0; padding: 0 20px 18px; color: var(--secondary); font-size: 15.5px; line-height: 1.65; max-width: 68ch; }
+.faq p a { color: var(--navy); font-weight: 600; }
+
 /* ---------- Get started ---------- */
 
 #get-started { padding: 0 var(--gutter) 96px; background: var(--surface2); }
