@@ -778,7 +778,14 @@ export default function VariantsPanel({
               cell: ({ row }) => {
                 const { cohort } = row.original;
                 if (!cohort.annotated || !cohort.clinvarSignificance) return <NotAvailable />;
-                return <ClinvarBadge significance={cohort.clinvarSignificance} stars={cohort.clinvarStars} />;
+                return (
+                  <ClinvarBadge
+                    significance={cohort.clinvarSignificance}
+                    stars={cohort.clinvarStars}
+                    conflicts={cohort.clinvarHasConflicts}
+                    href={cohort.clinvarUrl ?? clinvarSearchUrl(cohort.variant)}
+                  />
+                );
               },
               sortUndefined: "last",
             },

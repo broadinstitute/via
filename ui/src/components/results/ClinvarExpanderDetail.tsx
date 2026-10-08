@@ -227,7 +227,7 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
 
       <div style={styles.classification}>
         {clinvarSignificance ? (
-          <ClinvarBadge significance={clinvarSignificance} mode="tag" />
+          <ClinvarBadge significance={clinvarSignificance} mode="tag" href={clinvarUrl ?? undefined} />
         ) : (
           <span style={styles.noConsensus}>No consensus classification</span>
         )}

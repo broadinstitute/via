@@ -4,6 +4,7 @@ import { useMediaQuery } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
 import { ancestryContext, largestMatchedAncestry, type ComparisonRow } from "../../utils/comparison";
+import { clinvarSearchUrl } from "../../utils/externalLinks";
 import {
   exactAf,
   formatAcAn,
@@ -313,7 +314,12 @@ export default function ReviewDetail({
           <dl style={styles.facts}>
             {cohort.clinvarSignificance && (
               <Fact label="ClinVar" title="ClinVar classification and review stars" first>
-                <ClinvarBadge significance={cohort.clinvarSignificance} stars={cohort.clinvarStars} />
+                <ClinvarBadge
+                  significance={cohort.clinvarSignificance}
+                  stars={cohort.clinvarStars}
+                  conflicts={cohort.clinvarHasConflicts}
+                  href={cohort.clinvarUrl ?? clinvarSearchUrl(cohort.variant)}
+                />
               </Fact>
             )}
             <Fact label="SpliceAI" title="SpliceAI delta score, 0 to 1" first={!cohort.clinvarSignificance}>

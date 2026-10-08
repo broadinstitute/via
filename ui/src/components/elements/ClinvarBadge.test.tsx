@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import colors, { alpha } from "../../libs/colors";
 import ClinvarBadge from "./ClinvarBadge";
 
@@ -19,7 +19,7 @@ describe("ClinvarBadge", () => {
     const { container, unmount } = render(<ClinvarBadge significance="VUS" stars={3} />);
     expect(screen.getByText("3★")).toBeInTheDocument();
     expect(screen.getByText("3★")).toHaveStyle({ color: colors.textSecondary });
-    expect(container.firstChild).toHaveAttribute("title", "ClinVar: VUS, 3 of 4 review stars");
+    expect(container.firstChild).toHaveAttribute("title", "ClinVar: VUS, 3 of 4 stars: reviewed by expert panel");
     unmount();
 
     const { container: plain } = render(<ClinvarBadge significance="Benign" stars={null} />);
@@ -42,5 +42,46 @@ describe("ClinvarBadge", () => {
 
     const { container: tag } = render(<ClinvarBadge significance="VUS" mode="tag" />);
     expect(tag.firstChild).not.toHaveStyle({ width: "68px" });
+  });
+
+  it("links to ClinVar in a new tab when given a URL, without expanding the row beneath", async () => {
+    const onRowClick = vi.fn();
+    const { unmount } = render(
+      <div onClick={onRowClick}>
+        <ClinvarBadge significance="Pathogenic" stars={2} href="https://www.ncbi.nlm.nih.gov/clinvar/variation/1/" />
+      </div>,
+    );
+
+    const link = screen.getByRole("link", {
+      name: "ClinVar: Pathogenic, 2 of 4 stars: criteria provided, multiple submitters, no conflicts. Open in ClinVar.",
+    });
+    // The app's tooltip, not the browser's: it shows on focus too, and spells the review status out.
+    expect(link).not.toHaveAttribute("title");
+    fireEvent.focus(link);
+    const bubble = await screen.findByTestId("infoTooltip");
+    expect(bubble).toHaveTextContent("Pathogenic");
+    expect(bubble).toHaveTextContent("2 of 4 stars: criteria provided, multiple submitters, no conflicts");
+    expect(bubble).toHaveTextContent("Click to open ClinVar in a new tab.");
+    fireEvent.blur(link);
+    expect(screen.queryByTestId("infoTooltip")).not.toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "https://www.ncbi.nlm.nih.gov/clinvar/variation/1/");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveTextContent("P2★");
+
+    fireEvent.click(link);
+    expect(onRowClick).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("stays a plain badge without a URL, and says what one star means when submissions conflict", () => {
+    const { unmount } = render(<ClinvarBadge significance="Benign" stars={1} />);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByTitle("ClinVar: Benign, 1 of 4 stars: criteria provided, single submitter")).toBeInTheDocument();
+    unmount();
+
+    const conflicting = render(<ClinvarBadge significance="VUS" stars={1} conflicts />);
+    expect(screen.getByTitle("ClinVar: VUS, 1 of 4 stars: criteria provided, conflicting classifications")).toBeInTheDocument();
+    conflicting.unmount();
   });
 });

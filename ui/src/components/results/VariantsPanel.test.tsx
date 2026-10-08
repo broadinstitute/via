@@ -96,6 +96,11 @@ describe("VariantsPanel", () => {
     const matchedFreq = within(row).getByText("0.0204").closest("td")!;
     expect(matchedFreq).toHaveTextContent("0.02042 / 98");
     expect(within(row).getByText("0.0120").closest("td")).toHaveTextContent("0.012024 / 2,000");
+    // The ClinVar badge opens the variant's ClinVar page; with no URL from the backend, a search for it.
+    expect(within(row).getByRole("link", { name: /^ClinVar: Pathogenic/ })).toHaveAttribute(
+      "href",
+      "https://www.ncbi.nlm.nih.gov/clinvar/?term=2-122517541-C-G",
+    );
     expect(screen.getAllByRole("columnheader", { name: "Subpopulation" })).toHaveLength(2);
     expect(screen.getByRole("columnheader", { name: /^Hom/ })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /^Het/ })).toBeInTheDocument();
