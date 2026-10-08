@@ -16,6 +16,7 @@
 # - USER_BASHRC: path to user's ~/.bashrc file
 # - LOG_IN: whether the user is logged into the wb CLI as part of the script
 # - RUN_AS_LOGIN_USER: run command as non-root Unix user (ex: jupyter, dataproc)
+# - USER_WORKBENCH_CONFIG_DIR: where install-cli.sh leaves workspace.json
 # 
 # This script must be run after install-cli.sh
 
@@ -23,10 +24,17 @@ emit "Customize user bashrc ..."
 
 if [[ "${LOG_IN}" == "true" ]]; then
   # The app reads two values from here (entrypoint.sh sources the exports): the Workbench user's
-  # email and the workspace's GCP project. One `workspace describe` carries both; it is a ~10s
-  # call, so upstream's pattern of describing once per value is not followed. Upstream also
-  # records the pet service account via `auth status`; nothing here reads it.
-  WORKSPACE_JSON="$(${RUN_AS_LOGIN_USER} "'${WORKBENCH_INSTALL_PATH}' workspace describe --format=json")"
+  # email and the workspace's GCP project. install-cli.sh's `workspace set` already fetched the
+  # workspace description that carries both, so read its JSON; only describe (a ~10s call) when
+  # that file isn't there, i.e. the VM had no workspace id in its metadata. Upstream describes
+  # once per value and also records the pet service account via `auth status`; nothing here
+  # reads that.
+  readonly WORKSPACE_JSON_FILE="${USER_WORKBENCH_CONFIG_DIR}/workspace.json"
+  if [[ -s "${WORKSPACE_JSON_FILE}" ]]; then
+    WORKSPACE_JSON="$(cat "${WORKSPACE_JSON_FILE}")"
+  else
+    WORKSPACE_JSON="$(${RUN_AS_LOGIN_USER} "'${WORKBENCH_INSTALL_PATH}' workspace describe --format=json")"
+  fi
   readonly WORKSPACE_JSON
   OWNER_EMAIL="$(jq --raw-output ".userEmail" <<< "${WORKSPACE_JSON}")"
   readonly OWNER_EMAIL

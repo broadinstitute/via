@@ -10,6 +10,7 @@
 # - get_metadata_value (function)
 # - RUN_AS_LOGIN_USER: run command as app user
 # - WORKBENCH_INSTALL_PATH: path to install workbench cli
+# - USER_WORKBENCH_CONFIG_DIR: where the workspace JSON is left for setup-bashrc.sh
 # - WORKBENCH_LEGACY_PATH: path to the legacy cli name.
 # - LOG_IN: whether to log in to CLI
 
@@ -90,11 +91,13 @@ if [[ "${LOG_IN}" == "true" ]]; then
   emit "Logging into workbench CLI with mode ${LOG_IN_MODE}"
   ${RUN_AS_LOGIN_USER} "'${WORKBENCH_INSTALL_PATH}' auth login --mode=${LOG_IN_MODE}"
 
-  # Set the CLI workspace id using the VM metadata, if set.
+  # Set the CLI workspace id using the VM metadata, if set. `workspace set` returns the same
+  # description `workspace describe` would, and each is a ~10s round trip, so its JSON is kept
+  # for setup-bashrc.sh to read the user email and project from instead of describing again.
   TERRA_WORKSPACE="$(get_metadata_value "terra-workspace-id")"
   readonly TERRA_WORKSPACE
   if [[ -n "${TERRA_WORKSPACE}" ]]; then
-    ${RUN_AS_LOGIN_USER} "'${WORKBENCH_INSTALL_PATH}' workspace set --id='${TERRA_WORKSPACE}'"
+    ${RUN_AS_LOGIN_USER} "'${WORKBENCH_INSTALL_PATH}' workspace set --id='${TERRA_WORKSPACE}' --format=json > '${USER_WORKBENCH_CONFIG_DIR}/workspace.json'"
   fi
 else
   emit "Do not log user into workbench CLI. Manual log in is required."
