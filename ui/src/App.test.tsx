@@ -28,7 +28,7 @@ describe("App", () => {
 
   it("renders the search entry page at /", () => {
     renderAt("/");
-    expect(screen.getByRole("heading", { name: /^Weigh candidate variants against the full All of Us cohort$/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^All of Us Variant Interpretation$/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /search/i })).toBeInTheDocument();
   });
 
