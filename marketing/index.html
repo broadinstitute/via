@@ -159,12 +159,12 @@
     <section class="view-panel wide" id="panel-table" role="tabpanel" aria-labelledby="tab-table">
       <div class="view-copy">
         <h3>Every candidate in one row</h3>
-        <p>All participants and phenotype-matched participants sit side by side, so the comparison that matters is a glance instead of a trip between tables.</p>
+        <p>Each variant's frequency across all participants sits right beside its frequency among the phenotype-matched, so the comparison that matters takes a glance.</p>
         <ul class="feature-list">
           <li><i>All of Us</i> and gnomAD allele frequencies, with the ancestry group where each variant is most common</li>
           <li>Homozygous and heterozygous carriers among matched participants, and ClinVar pathogenic variants in trans</li>
           <li>ClinVar classification with review stars, SpliceAI scores and LOFTEE loss-of-function calls</li>
-          <li>Expand any row for per-population frequencies and individual ClinVar submissions</li>
+          <li>Expand any row for the variant's frequency in each ancestry group</li>
         </ul>
       </div>
       <div class="view-figure" aria-hidden="true">
@@ -382,7 +382,7 @@
       <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/><path d="M9.5 7h5M9.5 17h5"/></svg></span><div><b><i>All of Us</i> genomic data</b><span>Whole-genome allele counts and frequencies, overall and by genetic ancestry</span></div></div>
       <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM9 11h6M9 15h4"/></svg></span><div><b><i>All of Us</i> phenotypes</b><span>Conditions recorded for participants, for the phenotype-matched cohort</span></div></div>
       <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 0 1 0 18a13.5 13.5 0 0 1 0-18z"/></svg></span><div><b>gnomAD</b><span>Population frequencies from an external reference</span></div></div>
-      <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span><div><b>ClinVar</b><span>Clinical classifications, review status and submissions</span></div></div>
+      <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span><div><b>ClinVar</b><span>Clinical classification and review status</span></div></div>
       <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8 7.5L20 18M8 16.5L20 6"/></svg></span><div><b>SpliceAI</b><span>Predicted effect on splicing</span></div></div>
       <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h8M11 7v10M15 12h1.5M19.5 12h1.5"/></svg></span><div><b>LOFTEE</b><span>High- and low-confidence loss-of-function calls</span></div></div>
     </div>
@@ -399,7 +399,14 @@
       </details>
       <details class="faq">
         <summary>How do I get Controlled Tier access?</summary>
-        <p>Four steps, all through <i>All of Us</i> rather than VIA. Your institution must have a Data Use and Registration Agreement with <i>All of Us</i> that includes the Controlled Tier. You register for the Researcher Workbench and verify your identity, which needs an eRA Commons account. You complete the required training and sign the Data User Code of Conduct, with the additional Controlled Tier training on top of the Registered Tier's. Then your institution signs off on your access. <a href="https://www.researchallofus.org/?p=4786" target="_blank" rel="noopener">The <i>All of Us</i> guide to accessing genomic data</a> has the current details and the list of institutions with agreements in place.</p>
+        <p>Four steps, all through <i>All of Us</i> rather than VIA:</p>
+        <ol>
+          <li><b>Institutional agreement.</b> Your institution needs a Data Use and Registration Agreement with <i>All of Us</i> that includes the Controlled Tier.</li>
+          <li><b>Register.</b> Create a Researcher Workbench account and verify your identity, which needs an eRA Commons account.</li>
+          <li><b>Train and sign.</b> Complete the Registered Tier training, sign the Data User Code of Conduct, then complete the additional Controlled Tier training.</li>
+          <li><b>Institutional sign-off.</b> Your institution approves your Controlled Tier access.</li>
+        </ol>
+        <p><a href="https://www.researchallofus.org/?p=4786" target="_blank" rel="noopener">The <i>All of Us</i> guide to accessing genomic data</a> has the current details and the list of institutions with agreements in place.</p>
       </details>
       <details class="faq">
         <summary>Do I need to write code?</summary>
