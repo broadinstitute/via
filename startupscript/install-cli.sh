@@ -11,13 +11,14 @@
 # - RUN_AS_LOGIN_USER: run command as app user
 # - WORKBENCH_INSTALL_PATH: path to install workbench cli
 # - WORKBENCH_LEGACY_PATH: path to the legacy cli name.
-# - USER_BASH_COMPLETION_DIR: path to the bash completion file
 # - LOG_IN: whether to log in to CLI
 
 set -o errexit
 set -o nounset
 set -o pipefail
 set -o xtrace
+# bash running as root doesn't inherit PS4 from the environment, so set it here too.
+export PS4='+ $(date +%T) '
 
 source "${SCRIPT_DIR}/emit.sh"
 source "${CLOUD_SCRIPT_DIR}/vm-metadata.sh"
@@ -73,23 +74,17 @@ if ! command -v "${WORKBENCH_INSTALL_PATH}" &> /dev/null; then
   chmod 755 "${WORKBENCH_LEGACY_PATH}"
 fi
 
-# Set browser manual login since that's the only login supported from a Vertex AI Notebook VM
-${RUN_AS_LOGIN_USER} "'${WORKBENCH_INSTALL_PATH}' config set browser MANUAL"
+# Every wb call is a cold JVM start of several seconds, so only the ones the login and the
+# workspace lookup in setup-bashrc.sh depend on are made. Upstream also sets the browser login
+# mode and generates shell completion here; neither matters in a container nobody opens a shell in.
 
 # Set the CLI server based on the server that created the VM.
 ${RUN_AS_LOGIN_USER} "'${WORKBENCH_INSTALL_PATH}' server set --name=${TERRA_SERVER}"
 
-# Generate the bash completion script
-${RUN_AS_LOGIN_USER} "'${WORKBENCH_INSTALL_PATH}' generate-completion > '${USER_BASH_COMPLETION_DIR}/workbench'"
-
 if [[ "${LOG_IN}" == "true" ]]; then
 
-  # For GCP use "APP_DEFAULT_CREDENTIALS", for AWS use "AWS_IAM" as --mode arg to "/usr/bin/wb auth login".
-  LOG_IN_MODE="APP_DEFAULT_CREDENTIALS"
-  if [[ "${CLOUD}" == "aws" ]]; then
-    LOG_IN_MODE="AWS_IAM"
-  fi
-  readonly LOG_IN_MODE
+  # Log in with the VM's attached service account (the user's pet SA).
+  readonly LOG_IN_MODE="APP_DEFAULT_CREDENTIALS"
 
   # Log in with app-default-credentials
   emit "Logging into workbench CLI with mode ${LOG_IN_MODE}"

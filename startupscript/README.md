@@ -2,7 +2,7 @@
 
 This is a copy of the subset of `startupscript/` needed by `post-startup.sh`
 at container runtime (`emit.sh`, `install-java.sh`, `install-cli.sh`,
-`setup-bashrc.sh`, `bash-completion.sh`, `gcp/vm-metadata.sh`), originally
+`setup-bashrc.sh`, `gcp/vm-metadata.sh`), originally
 copied from the upstream `verily-src/workbench-app-devcontainers` repo's
 `startupscript/` directory (not vendored here -- see
 [deploy/README.md](../deploy/README.md)). Upstream's git setup, bucket
