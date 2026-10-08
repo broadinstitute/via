@@ -110,6 +110,10 @@ export default function ClinvarBadge({ significance, stars = null, mode = "split
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      // An element with no title shows its nearest ancestor's (ReviewDetail's Fact has one), which
+      // would sit on top of the app's tooltip; an empty title opts out.
+      title=""
+      // Names the context change for screen readers, since the visible bubble is aria-hidden.
       aria-label={`${description}. Open in ClinVar (opens in new tab)`}
       {...tooltip.anchorProps}
       // A click follows the link; it shouldn't also expand the table row underneath, or re-show

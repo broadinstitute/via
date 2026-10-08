@@ -56,7 +56,8 @@ describe("ClinvarBadge", () => {
       name: "ClinVar: Pathogenic, 2 of 4 stars: criteria provided, multiple submitters, no conflicts. Open in ClinVar (opens in new tab)",
     });
     // The app's tooltip, not the browser's: it shows on focus too, and spells the review status out.
-    expect(link).not.toHaveAttribute("title");
+    // The empty title keeps a titled ancestor's native tooltip from showing alongside it.
+    expect(link).toHaveAttribute("title", "");
     fireEvent.focus(link);
     const bubble = await screen.findByTestId("infoTooltip");
     expect(bubble).toHaveTextContent("Pathogenic");
