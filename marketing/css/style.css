@@ -729,6 +729,10 @@ a { color: inherit; }
 .faq summary:focus-visible { outline: 3px solid var(--green); outline-offset: -3px; border-radius: var(--radius-lg); }
 .faq p { margin: 0; padding: 0 20px 18px; color: var(--secondary); font-size: 15.5px; line-height: 1.65; max-width: 68ch; }
 .faq p a { color: var(--navy); font-weight: 600; }
+/* A numbered answer: the steps as a list, with the same measure and ink as the paragraphs. */
+.faq ol { margin: 0 0 14px; padding: 0 20px 0 42px; max-width: 68ch; color: var(--secondary); font-size: 15.5px; line-height: 1.6; display: grid; gap: 8px; }
+.faq ol li b { color: var(--navy); font-weight: 700; }
+.faq p + ol { margin-top: -6px; }
 
 /* ---------- Get started ---------- */
 
