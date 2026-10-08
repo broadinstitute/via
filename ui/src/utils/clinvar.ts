@@ -1,5 +1,5 @@
 import colors from "../libs/colors";
-import type { ClinVarSignificance } from "../types/results";
+import type { AnnotatedCohortVariant, ClinVarSignificance } from "../types/results";
 
 export interface ClinvarBadgeConfig {
   shortLabel: string;
@@ -7,9 +7,7 @@ export interface ClinvarBadgeConfig {
   fill: string;
 }
 
-// The aggregate badge config for both row and detail badges. Distinct from
-// CLINVAR_SUBMISSION_COLOR below, which is keyed by an individual submission's raw
-// (unmapped) classification string.
+// The aggregate badge config for both row and detail badges.
 export const CLINVAR_BADGE_CONFIG: Record<ClinVarSignificance, ClinvarBadgeConfig> = {
   Pathogenic: {
     shortLabel: "P",
@@ -38,33 +36,14 @@ export const CLINVAR_BADGE_CONFIG: Record<ClinVarSignificance, ClinvarBadgeConfi
   },
 };
 
-// Colours for individual ClinVar RCV submissions. Broader than
-// ClinVarSignificance -- an individual submission's raw classification can also be
-// "Conflicting interpretations" or "not provided", which have no equivalent there.
-const CLINVAR_SUBMISSION_COLOR: Record<string, string> = {
-  Pathogenic: colors.textDanger,
-  "Likely pathogenic": colors.textDanger,
-  "Uncertain significance": colors.textWarning,
-  "Likely benign": colors.textSuccess,
-  Benign: colors.textSuccess,
-};
-
-// Record classifications long enough to crowd a narrow list, shortened to the terms clinicians
-// already use; the rest read fine in full.
-const CLINVAR_SUBMISSION_LABELS: Record<string, string> = {
-  "Uncertain significance": "VUS",
-  "Conflicting interpretations": "Conflicting",
-};
-
-/** A record's classification, shortened where the full wording is long. */
-export function clinvarSubmissionLabel(classification: string | null): string {
-  if (classification === null) return "Not provided";
-  return CLINVAR_SUBMISSION_LABELS[classification] ?? classification;
-}
-
-export function clinvarSubmissionColor(classification: string | null): string {
-  if (classification === null) return colors.textMuted;
-  return CLINVAR_SUBMISSION_COLOR[classification] ?? colors.textMuted;
+/**
+ * Whether ClinVar has a record for this variant at all. Not clinvarSignificance: a record whose
+ * only classification is "Conflicting interpretations" or "not provided" maps to no significance
+ * but is still a real record to show and link to. The VAT dates every ClinVar record it carries,
+ * so the last-updated date stands in for the record itself.
+ */
+export function hasClinvarRecord(variant: AnnotatedCohortVariant): boolean {
+  return variant.clinvarLastUpdated !== null;
 }
 
 /** ClinVar's highest review status: a practice guideline. */

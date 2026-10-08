@@ -31,13 +31,6 @@ function makeVariant(overrides: Partial<AnnotatedCohortVariant> = {}): Annotated
     clinvarHasConflicts: false,
     clinvarConditions: ["Condition A", "Condition B", "Condition C"],
     clinvarLastUpdated: "2024-02-14",
-    clinvarSubmissions: [
-      { id: "RCV000001", classification: "Pathogenic", stars: 2 },
-      { id: "RCV000002", classification: "Likely pathogenic", stars: 1 },
-      { id: "RCV000003", classification: "Uncertain significance", stars: 1 },
-      { id: "RCV000004", classification: "Likely benign", stars: 1 },
-      { id: "RCV000005", classification: "Benign", stars: 1 },
-    ],
     spliceAi: 0.12,
     plof: "HC",
     ...overrides,
@@ -49,11 +42,11 @@ describe("ClinvarExpanderDetail", () => {
     cleanup();
   });
 
-  it("renders the empty state when there are no ClinVar submissions", () => {
-    render(<ClinvarExpanderDetail variant={makeVariant({ clinvarSubmissions: [] })} />);
+  it("renders the empty state when there is no ClinVar record", () => {
+    render(<ClinvarExpanderDetail variant={makeVariant({ clinvarSignificance: null, clinvarLastUpdated: null })} />);
 
     expect(screen.getByText("ClinVar")).toBeInTheDocument();
-    expect(screen.getByText("No ClinVar submissions for this variant.")).toBeInTheDocument();
+    expect(screen.getByText("No ClinVar record for this variant.")).toBeInTheDocument();
   });
 
   it("renders the ClinVar summary, badge, conditions and updated date", () => {
@@ -65,9 +58,6 @@ describe("ClinvarExpanderDetail", () => {
     expect(screen.getByText("Condition A")).toBeInTheDocument();
     expect(screen.getByText("Condition B")).toBeInTheDocument();
     expect(screen.getByText("14 Feb 2024")).toBeInTheDocument();
-    // The individual records are hidden for now; see ClinvarExpanderDetail.
-    expect(screen.queryByText(/Records/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/RCV000001/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open in ClinVar ↗" })).toHaveAttribute(
       "href",
       "https://www.ncbi.nlm.nih.gov/clinvar/?term=1-12345-A-G",
@@ -86,9 +76,7 @@ describe("ClinvarExpanderDetail", () => {
   });
 
   it("lists conditions one per line, expanding past the first two when the disclosure is clicked", () => {
-    render(
-      <ClinvarExpanderDetail variant={makeVariant({ clinvarSubmissions: makeVariant().clinvarSubmissions.slice(0, 2) })} />,
-    );
+    render(<ClinvarExpanderDetail variant={makeVariant()} />);
     expect(screen.queryByText("Condition C")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "+1 more" }));
@@ -97,24 +85,8 @@ describe("ClinvarExpanderDetail", () => {
     expect(screen.queryByRole("button", { name: "+1 more" })).not.toBeInTheDocument();
   });
 
-  // Skipped while ClinvarExpanderDetail's records list is hidden; turn back on with it.
-  it.skip("expands additional submissions when the disclosure is clicked", () => {
-    render(<ClinvarExpanderDetail variant={makeVariant({ clinvarConditions: ["Condition A"] })} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "+1 more" }));
-
-    expect(screen.getByText(/RCV000005/)).toBeInTheDocument();
-  });
-
-  // Skipped while ClinvarExpanderDetail's records list is hidden; turn back on with it.
-  it.skip("shortens long record classifications, keeping the full wording as a tooltip", () => {
-    render(<ClinvarExpanderDetail variant={makeVariant()} />);
-
-    expect(screen.getByText("VUS")).toHaveAttribute("title", "Uncertain significance");
-  });
-
   it("omits the ClinVar link when there's nothing in ClinVar to open", () => {
-    render(<ClinvarExpanderDetail variant={makeVariant({ clinvarSubmissions: [] })} />);
+    render(<ClinvarExpanderDetail variant={makeVariant({ clinvarSignificance: null, clinvarLastUpdated: null })} />);
 
     expect(screen.queryByRole("link", { name: "Open in ClinVar ↗" })).not.toBeInTheDocument();
   });

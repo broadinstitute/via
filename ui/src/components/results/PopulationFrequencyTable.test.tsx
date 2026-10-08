@@ -44,7 +44,6 @@ function makeVariant(overrides: Partial<AnnotatedCohortVariant> = {}): Annotated
     clinvarHasConflicts: false,
     clinvarConditions: [],
     clinvarLastUpdated: null,
-    clinvarSubmissions: [],
     spliceAi: null,
     plof: null,
     ...overrides,

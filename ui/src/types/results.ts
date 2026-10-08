@@ -11,14 +11,6 @@ export interface PopulationFrequency {
   an: number | null;
 }
 
-/** One ClinVar RCV record. There's no submitter identity in the VAT, so `id` (the RCV
- * accession) is what distinguishes one submission from another. */
-export interface ClinvarSubmission {
-  id: string;
-  classification: string | null;
-  stars: number | null;
-}
-
 interface CohortVariantBase {
   variant: string;
 }
@@ -53,7 +45,6 @@ export interface AnnotatedCohortVariant extends CohortVariantBase {
   clinvarConditions: string[];
   /** When the ClinVar record was last updated -- not necessarily when it was last evaluated. */
   clinvarLastUpdated: string | null;
-  clinvarSubmissions: ClinvarSubmission[];
   spliceAi: number;
   /** LOFTEE's call. null = LOFTEE does not score this consequence type. */
   plof: "HC" | "LC" | null;

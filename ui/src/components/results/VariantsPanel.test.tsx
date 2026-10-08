@@ -35,7 +35,6 @@ const IN_AOU_ONLY: AnnotatedCohortVariant = {
   clinvarHasConflicts: false,
   clinvarConditions: [],
   clinvarLastUpdated: null,
-  clinvarSubmissions: [],
   spliceAi: 0.042,
   plof: null,
 };

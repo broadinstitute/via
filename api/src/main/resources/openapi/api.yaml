@@ -437,15 +437,6 @@ components:
           description: >-
             When this variant's ClinVar record was last updated -- not necessarily the date its
             clinical significance was last evaluated, which the VAT doesn't separately provide.
-        clinvarSubmissions:
-          description: >-
-            One entry per ClinVar RCV record for this variant, for the
-            expanded row's ClinVar detail. There's no submitter identity in
-            the underlying VAT, so each entry is keyed by its RCV accession
-            instead of a lab/submitter name.
-          type: array
-          items:
-            $ref: "#/components/schemas/ClinvarSubmission"
         spliceAi:
           type: number
           nullable: true
@@ -520,21 +511,3 @@ components:
         an:
           type: integer
           nullable: true
-    ClinvarSubmission:
-      type: object
-      required:
-        - id
-      properties:
-        id:
-          type: string
-          description: ClinVar RCV accession.
-          example: "RCV000041652"
-        classification:
-          type: string
-          nullable: true
-          description: This submission's own classification, verbatim from ClinVar.
-        stars:
-          type: integer
-          nullable: true
-          minimum: 0
-          maximum: 4

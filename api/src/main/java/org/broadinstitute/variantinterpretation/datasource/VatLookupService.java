@@ -19,7 +19,6 @@ import static org.broadinstitute.variantinterpretation.util.BigQueryValues.intVa
 import static org.broadinstitute.variantinterpretation.util.BigQueryValues.string;
 import static org.broadinstitute.variantinterpretation.util.BigQueryValues.stringList;
 
-import org.broadinstitute.variantinterpretation.model.ClinvarSubmission;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
 import org.broadinstitute.variantinterpretation.model.PopulationFrequency;
 import org.springframework.stereotype.Service;
@@ -51,8 +50,7 @@ public class VatLookupService {
              gnomad_nfe_af, gnomad_nfe_ac, gnomad_nfe_an,
              gnomad_oth_af, gnomad_oth_ac, gnomad_oth_an,
              gnomad_sas_af, gnomad_sas_ac, gnomad_sas_an,
-             clinvar_classification, clinvar_phenotype, clinvar_last_updated,
-             clinvar_rcv_ids, clinvar_rcv_classifications, clinvar_rcv_num_stars,
+             clinvar_classification, clinvar_phenotype, clinvar_last_updated, clinvar_rcv_num_stars,
              splice_ai_acceptor_gain_score, splice_ai_acceptor_loss_score,
              splice_ai_donor_gain_score, splice_ai_donor_loss_score,
              LoF
@@ -142,15 +140,13 @@ public class VatLookupService {
             .findFirst()
             .orElse(null);
 
-    List<String> clinvarRcvIds = stringList(row, "clinvar_rcv_ids");
-    List<String> clinvarRcvClassifications = stringList(row, "clinvar_rcv_classifications");
     List<Integer> clinvarRcvStars = intList(row, "clinvar_rcv_num_stars");
     // ClinVar's gold-star review status is per RCV record, not per overall classification; a
     // variant can have several (possibly conflicting) RCV submissions, so this takes the highest.
     Integer clinvarStars = clinvarRcvStars.stream().filter(Objects::nonNull).max(Integer::compareTo).orElse(null);
     // Each RCV is a variant+condition pair, not just variant. two RCVs legitimately differing
     // (e.g. pathogenic for one condition, benign for another) is not a conflict, so this can't be
-    // derived from a distinct-count over clinvarRcvClassifications. clinvar_classification is
+    // derived from a distinct-count over the per-RCV classifications. clinvar_classification is
     // ClinVar's own aggregate call across all of this variant's RCVs, and carries "Conflicting
     // interpretations" itself when submitters actually disagree.
     boolean clinvarHasConflicts = clinvarClassifications.contains("Conflicting interpretations");
@@ -168,10 +164,6 @@ public class VatLookupService {
             .max(Double::compareTo)
             .orElse(null);
 
-    // Based on whether there are ClinVar RCV records at all, not on clinvarSignificance -- a
-    // variant's RCVs can all be classifications with no equivalent in ClinvarSignificanceEnum
-    // (e.g. "Conflicting interpretations", "not provided"), which still means there's a real
-    // ClinVar record to view even though there's no clean aggregate call for the row.
     String variant = string(row, "vid");
     return new CohortVariant()
         .variant(variant)
@@ -202,7 +194,6 @@ public class VatLookupService {
         .clinvarHasConflicts(clinvarHasConflicts)
         .clinvarConditions(stringList(row, "clinvar_phenotype"))
         .clinvarLastUpdated(clinvarLastUpdated == null ? null : LocalDate.parse(clinvarLastUpdated))
-        .clinvarSubmissions(clinvarSubmissions(clinvarRcvIds, clinvarRcvClassifications, clinvarRcvStars))
         .spliceAi(bigDecimal(spliceAi))
         .plof(plof(string(row, "LoF")));
   }
@@ -219,22 +210,6 @@ public class VatLookupService {
               .an(intValue(row, columnPrefix + "_" + population + "_an")));
     }
     return frequencies;
-  }
-
-  // clinvar_rcv_ids, clinvar_rcv_classifications, and clinvar_rcv_num_stars are parallel arrays
-  // (index i describes the same RCV record); there's no submitter identity in the VAT, so each
-  // submission is keyed by its RCV accession instead of a lab/submitter name.
-  private static List<ClinvarSubmission> clinvarSubmissions(
-      List<String> ids, List<String> classifications, List<Integer> stars) {
-    List<ClinvarSubmission> submissions = new ArrayList<>();
-    for (int i = 0; i < ids.size(); i++) {
-      submissions.add(
-          new ClinvarSubmission()
-              .id(ids.get(i))
-              .classification(i < classifications.size() ? classifications.get(i) : null)
-              .stars(i < stars.size() ? stars.get(i) : null));
-    }
-    return submissions;
   }
 
   // Other LOFTEE values (e.g. OS, "other splice") aren't a call the UI shows, so they read as
