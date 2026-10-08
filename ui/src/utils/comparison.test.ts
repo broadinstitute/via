@@ -39,7 +39,6 @@ const ANNOTATED: AnnotatedCohortVariant = {
   clinvarHasConflicts: false,
   clinvarConditions: [],
   clinvarLastUpdated: null,
-  clinvarSubmissions: [],
   spliceAi: 0.02,
   plof: null,
 };

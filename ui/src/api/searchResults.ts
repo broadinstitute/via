@@ -3,7 +3,6 @@ import type { ConditionSearch } from "./conditions";
 import type {
   BreakdownSegment,
   ClinVarSignificance,
-  ClinvarSubmission,
   CohortVariantRow,
   FilteredVariantRow,
   GnomadSubpopCode,
@@ -39,7 +38,6 @@ interface RawCohortVariant {
   clinvarHasConflicts: boolean;
   clinvarConditions: string[];
   clinvarLastUpdated: string | null;
-  clinvarSubmissions: ClinvarSubmission[];
   spliceAi: number | null;
   plof: "HC" | "LC" | null;
 }
@@ -112,7 +110,6 @@ function toCohortVariantRow(raw: RawCohortVariant): CohortVariantRow {
     clinvarHasConflicts: raw.clinvarHasConflicts,
     clinvarConditions: raw.clinvarConditions,
     clinvarLastUpdated: raw.clinvarLastUpdated,
-    clinvarSubmissions: raw.clinvarSubmissions,
     spliceAi: raw.spliceAi!,
     plof: raw.plof,
   };

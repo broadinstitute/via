@@ -4,10 +4,7 @@ import colors from "../../libs/colors";
 import { useHover } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { AnnotatedCohortVariant } from "../../types/results";
-import {
-  CLINVAR_MAX_STARS,
-  clinvarReviewDescription
-} from "../../utils/clinvar";
+import { CLINVAR_MAX_STARS, clinvarReviewDescription, hasClinvarRecord } from "../../utils/clinvar";
 import { formatDate } from "../../utils/format";
 import Clickable from "../common/Clickable";
 import ClinvarBadge from "../elements/ClinvarBadge";
@@ -15,12 +12,10 @@ import { clinvarSearchUrl } from "../../utils/externalLinks";
 
 // Past these, the rest collapse behind a "+N more" button.
 const MAX_VISIBLE_CONDITIONS = 2;
-// With the records list below, hidden for now.
-// const MAX_VISIBLE_SUBMISSIONS = 4;
 
 // Laid out as a stack of labelled blocks -- the consensus classification, then its details as
-// label/value rows, then the individual records as an aligned list -- rather than one wrapping
-// run of fields, which broke wherever the column's width happened to fall.
+// label/value rows -- rather than one wrapping run of fields, which broke wherever the column's
+// width happened to fall.
 const styles = {
   container: {
     display: "flex",
@@ -91,39 +86,6 @@ const styles = {
     margin: 0,
     minWidth: 0,
   },
-  recordsTitle: {
-    ...Style.elements.eyebrow,
-    paddingBottom: 4,
-    textAlign: "left",
-  },
-  records: {
-    width: "100%",
-    borderCollapse: "collapse",
-  },
-  recordCell: {
-    padding: "4px 0",
-    borderTop: `1px solid ${colors.border}`,
-    verticalAlign: "baseline",
-    whiteSpace: "nowrap",
-  },
-  recordId: {
-    ...Style.elements.mono,
-    paddingRight: 10,
-    color: colors.textBody,
-  },
-  // Takes the leftover width and truncates within it: maxWidth 0 stops the text from widening
-  // the column instead.
-  recordClassification: {
-    width: "100%",
-    maxWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    fontWeight: 600,
-  },
-  recordStars: {
-    paddingLeft: 10,
-    textAlign: "right",
-  },
   empty: {
     color: colors.textMuted,
     fontStyle: "italic",
@@ -176,24 +138,22 @@ interface ClinvarExpanderDetailProps {
 
 export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetailProps) {
   const [showAllConditions, setShowAllConditions] = useState(false);
-  // With the records list below, hidden for now.
-  // const [showAllSubmissions, setShowAllSubmissions] = useState(false);
   const { hovered: linkHovered, hoverProps: linkHoverProps } = useHover();
 
   const {
     clinvarSignificance,
-    clinvarSubmissions,
     clinvarStars,
     clinvarHasConflicts,
     clinvarConditions,
     clinvarLastUpdated,
   } = variant;
   const clinvarUrl = clinvarSearchUrl(variant.variant);
+  const hasRecord = hasClinvarRecord(variant);
 
   const header = (
     <div style={styles.header}>
       <div style={styles.sectionTitle}>ClinVar</div>
-      {clinvarSubmissions.length > 0 && (
+      {hasRecord && (
         <a
           style={{ ...styles.link, ...(linkHovered ? styles.linkHover : undefined) }}
           href={clinvarUrl}
@@ -208,19 +168,17 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
     </div>
   );
 
-  if (clinvarSubmissions.length === 0) {
+  if (!hasRecord) {
     return (
       <div style={styles.container}>
         {header}
-        <p style={styles.empty}>No ClinVar submissions for this variant.</p>
+        <p style={styles.empty}>No ClinVar record for this variant.</p>
       </div>
     );
   }
 
   const visibleConditions = showAllConditions ? clinvarConditions : clinvarConditions.slice(0, MAX_VISIBLE_CONDITIONS);
   const hiddenConditionCount = clinvarConditions.length - visibleConditions.length;
-  // const visibleSubmissions = showAllSubmissions ? clinvarSubmissions : clinvarSubmissions.slice(0, MAX_VISIBLE_SUBMISSIONS);
-  // const hiddenSubmissionCount = clinvarSubmissions.length - visibleSubmissions.length;
 
   return (
     <div style={styles.container}>
@@ -263,44 +221,6 @@ export default function ClinvarExpanderDetail({ variant }: ClinvarExpanderDetail
           )}
         </dl>
       )}
-
-      {/*Hiding these records for now. The VAT appears to support them but we don't want to overcommit*/}
-
-      {/*<div>*/}
-      {/*  <table style={styles.records}>*/}
-      {/*    <caption style={styles.recordsTitle}>Records ({clinvarSubmissions.length})</caption>*/}
-      {/*    <thead style={Style.elements.visuallyHidden}>*/}
-      {/*      <tr>*/}
-      {/*        <th scope="col">Record</th>*/}
-      {/*        <th scope="col">Classification</th>*/}
-      {/*        <th scope="col">Review status</th>*/}
-      {/*      </tr>*/}
-      {/*    </thead>*/}
-      {/*    <tbody>*/}
-      {/*      {visibleSubmissions.map((submission) => (*/}
-      {/*        <tr key={submission.id}>*/}
-      {/*          <td style={{ ...styles.recordCell, ...styles.recordId }}>{submission.id}</td>*/}
-      {/*          <td*/}
-      {/*            style={{*/}
-      {/*              ...styles.recordCell,*/}
-      {/*              ...styles.recordClassification,*/}
-      {/*              color: clinvarSubmissionColor(submission.classification),*/}
-      {/*            }}*/}
-      {/*            title={submission.classification ?? undefined}*/}
-      {/*          >*/}
-      {/*            {clinvarSubmissionLabel(submission.classification)}*/}
-      {/*          </td>*/}
-      {/*          <td style={{ ...styles.recordCell, ...styles.recordStars }}>*/}
-      {/*            {submission.stars !== null && <Stars count={submission.stars} />}*/}
-      {/*          </td>*/}
-      {/*        </tr>*/}
-      {/*      ))}*/}
-      {/*    </tbody>*/}
-      {/*  </table>*/}
-      {/*  {hiddenSubmissionCount > 0 && (*/}
-      {/*    <MoreButton count={hiddenSubmissionCount} onClick={() => setShowAllSubmissions(true)} />*/}
-      {/*  )}*/}
-      {/*</div>*/}
     </div>
   );
 }

@@ -1,11 +1,7 @@
 import colors from "../libs/colors";
 import { describe, expect, it } from "vitest";
-import {
-  CLINVAR_BADGE_CONFIG,
-  clinvarReviewDescription,
-  clinvarSubmissionColor,
-  clinvarSubmissionLabel,
-} from "./clinvar";
+import type { AnnotatedCohortVariant } from "../types/results";
+import { CLINVAR_BADGE_CONFIG, clinvarReviewDescription, hasClinvarRecord } from "./clinvar";
 
 describe("clinvar utils", () => {
   it("exposes the expected badge config for each aggregate ClinVar significance", () => {
@@ -36,17 +32,12 @@ describe("clinvar utils", () => {
     });
   });
 
-  it("maps known submission classifications to their display colors", () => {
-    expect(clinvarSubmissionColor("Pathogenic")).toBe(colors.textDanger);
-    expect(clinvarSubmissionColor("Likely pathogenic")).toBe(colors.textDanger);
-    expect(clinvarSubmissionColor("Uncertain significance")).toBe(colors.textWarning);
-    expect(clinvarSubmissionColor("Likely benign")).toBe(colors.textSuccess);
-    expect(clinvarSubmissionColor("Benign")).toBe(colors.textSuccess);
-  });
+  it("treats a variant as having a ClinVar record when the record is dated, even with no consensus", () => {
+    const withRecord = { clinvarSignificance: null, clinvarLastUpdated: "2024-02-14" } as AnnotatedCohortVariant;
+    const withoutRecord = { clinvarSignificance: null, clinvarLastUpdated: null } as AnnotatedCohortVariant;
 
-  it("falls back to muted ink for missing or unknown submission classifications", () => {
-    expect(clinvarSubmissionColor(null)).toBe(colors.textMuted);
-    expect(clinvarSubmissionColor("Conflicting interpretations")).toBe(colors.textMuted);
+    expect(hasClinvarRecord(withRecord)).toBe(true);
+    expect(hasClinvarRecord(withoutRecord)).toBe(false);
   });
 
   it("describes each review status, and falls back for an out-of-range star count", () => {
@@ -57,12 +48,5 @@ describe("clinvar utils", () => {
     expect(clinvarReviewDescription(3, false)).toBe("reviewed by expert panel");
     expect(clinvarReviewDescription(4, false)).toBe("practice guideline");
     expect(clinvarReviewDescription(9, false)).toBe("unknown review status");
-  });
-
-  it("shortens only the record classifications too long for a narrow list", () => {
-    expect(clinvarSubmissionLabel("Uncertain significance")).toBe("VUS");
-    expect(clinvarSubmissionLabel("Conflicting interpretations")).toBe("Conflicting");
-    expect(clinvarSubmissionLabel("Likely pathogenic")).toBe("Likely pathogenic");
-    expect(clinvarSubmissionLabel(null)).toBe("Not provided");
   });
 });
