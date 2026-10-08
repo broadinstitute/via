@@ -24,6 +24,7 @@ import NotAvailable from "../elements/NotAvailable";
 import SubpopBadge from "../elements/SubpopBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PhenotypeFilterPrompt from "./PhenotypeFilterPrompt";
+import { useTooltip } from "../common/useTooltip";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
 
@@ -393,6 +394,40 @@ const UNANNOTATED_GROUP: MissingGroup = {
 };
 
 /** The subpopulation column's header: the badge beneath says which group, so the header says only what kind of thing it is. */
+// The chevron takes its colour from its cell, which the row loop sets to the accent while the
+// row is hovered or expanded: the affordance is easy to miss at rest, so it brightens wherever
+// the pointer is, not only when it's over the 16px button itself.
+const EXPAND_TOOLTIP = "Expand for ClinVar detail and population frequencies";
+
+function ExpandButton({ expanded, variant, onToggle }: { expanded: boolean; variant: string; onToggle: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const tooltip = useTooltip(ref, expanded ? "Collapse" : EXPAND_TOOLTIP, "right");
+  return (
+    <Clickable
+      ref={ref}
+      style={{ ...Style.buttons.icon, color: "inherit" }}
+      hoverStyle={Style.buttons.iconHover}
+      aria-expanded={expanded}
+      aria-controls={`variant-detail-${variant}`}
+      aria-label={expanded ? "Collapse row for more detail" : "Expand row for more detail"}
+      {...tooltip.anchorProps}
+      onClick={(event) => {
+        // The row this sits in toggles on click too.
+        event.stopPropagation();
+        onToggle();
+      }}
+    >
+      <ChevronRightIcon
+        size={16}
+        strokeWidth={2.2}
+        className="transition-transform"
+        style={expanded ? { transform: "rotate(90deg)" } : undefined}
+      />
+      {tooltip.bubble}
+    </Clickable>
+  );
+}
+
 function SubpopHeader() {
   return (
     <span style={styles.subpopHeader} role="img" aria-label="Subpopulation" title="Subpopulation with the highest allele frequency">
@@ -552,29 +587,13 @@ export default function VariantsPanel({
             id: "expand",
             header: "",
             enableSorting: false,
-            cell: ({ row }) => {
-              const isExpanded = expandedVariants.has(row.original.variant);
-              return (
-                <Clickable
-                  style={Style.buttons.icon}
-                  hoverStyle={Style.buttons.iconHover}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggleExpanded(row.original.variant);
-                  }}
-                  aria-expanded={isExpanded}
-                  aria-controls={`variant-detail-${row.original.variant}`}
-                  aria-label={isExpanded ? "Collapse row for more detail" : "Expand row for more detail"}
-                >
-                  <ChevronRightIcon
-                    size={12}
-                    strokeWidth={2.5}
-                    className="transition-transform"
-                    style={isExpanded ? { transform: "rotate(90deg)", color: colors.textAccent } : undefined}
-                  />
-                </Clickable>
-              );
-            },
+            cell: ({ row }) => (
+              <ExpandButton
+                expanded={expandedVariants.has(row.original.variant)}
+                variant={row.original.variant}
+                onToggle={() => toggleExpanded(row.original.variant)}
+              />
+            ),
           }),
           columnHelper.accessor("variant", {
             header: "Variant",
@@ -1054,6 +1073,10 @@ export default function VariantsPanel({
                             cellBackground(tint, hovered) ??
                             (expanded ? styles.expandedRowFill.background : pinned ? colors.surface2 : undefined),
                           ...(expanded && index === 0 ? styles.expandedBar : undefined),
+                          // See ExpandButton: the chevron inherits this.
+                          ...(cell.column.id === "expand"
+                            ? { color: hovered || expanded ? colors.textAccent : colors.textSecondary }
+                            : undefined),
                         };
                         const group = missingGroups.find((candidate) => candidate.columnIds.has(cell.column.id));
                         if (group) {
