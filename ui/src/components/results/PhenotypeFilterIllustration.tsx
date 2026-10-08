@@ -2,8 +2,8 @@ import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 
 // The no-phenotype picture: every participant as a scatter of ancestry-coloured dots, falling
-// toward a dashed funnel where the phenotype filter would go, with an orange "+" on its rim in
-// the colour of the button beside it. Decorative; the text beside it carries the meaning.
+// toward a dashed funnel where the phenotype filter would go, with an navy "+" on its rim, the
+// colour of the button beside it. Decorative; the text beside it carries the meaning.
 
 const VIEW_W = 220;
 const VIEW_H = 128;
@@ -75,7 +75,7 @@ export default function PhenotypeFilterIllustration({ width = 160 }: PhenotypeFi
         strokeLinejoin="round"
       />
       {/* The "add" badge on its rim. */}
-      <circle cx="164" cy="66" r="10" fill={colors.accentOrange} />
+      <circle cx="164" cy="66" r="10" fill={colors.brandNavy} />
       <path d="M164 61.5v9M159.5 66h9" stroke={colors.white} strokeWidth="2.2" strokeLinecap="round" />
     </svg>
   );

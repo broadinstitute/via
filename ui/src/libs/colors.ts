@@ -33,9 +33,9 @@ const colors = {
   brandNavy: NAVY,
   brandGreen: "#5cc88d",
 
-  // Call-to-action
-  accentOrange: "#e8834e",
-  accentOrangeHover: "#d9723d",
+  // Call to action: the navy itself, so the one filled button in a view is the mark's tile. A step
+  // deeper under the pointer.
+  brandNavyHover: "#063a5c",
 
   // Surfaces, from the page backdrop (0) up to cards sitting on it (2)
   surface0: "#f6f5f2",
