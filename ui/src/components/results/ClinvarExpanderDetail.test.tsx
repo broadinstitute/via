@@ -22,13 +22,11 @@ function makeVariant(overrides: Partial<AnnotatedCohortVariant> = {}): Annotated
     gnomadAf: 0.002,
     gnomadAc: 2,
     gnomadAn: 1000,
-    gnomadUrl: "https://gnomad.broadinstitute.org/variant/1-12345-A-G",
     gnomadPopulations: [],
     gnomadAllAf: 0.002,
     gnomadAllAc: 2,
     gnomadAllAn: 1000,
     clinvarSignificance: "Pathogenic",
-    clinvarUrl: "https://www.ncbi.nlm.nih.gov/clinvar/variation/12345/",
     clinvarStars: 2,
     clinvarHasConflicts: false,
     clinvarConditions: ["Condition A", "Condition B", "Condition C"],
@@ -72,7 +70,12 @@ describe("ClinvarExpanderDetail", () => {
     expect(screen.queryByText(/RCV000001/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open in ClinVar ↗" })).toHaveAttribute(
       "href",
-      "https://www.ncbi.nlm.nih.gov/clinvar/variation/12345/",
+      "https://www.ncbi.nlm.nih.gov/clinvar/?term=1-12345-A-G",
+    );
+    // The badge links to the same place, so the classification itself is clickable.
+    expect(screen.getByRole("link", { name: /^ClinVar: Pathogenic/ })).toHaveAttribute(
+      "href",
+      "https://www.ncbi.nlm.nih.gov/clinvar/?term=1-12345-A-G",
     );
   });
 
@@ -110,8 +113,8 @@ describe("ClinvarExpanderDetail", () => {
     expect(screen.getByText("VUS")).toHaveAttribute("title", "Uncertain significance");
   });
 
-  it("omits the ClinVar link when no URL is available", () => {
-    render(<ClinvarExpanderDetail variant={makeVariant({ clinvarUrl: null })} />);
+  it("omits the ClinVar link when there's nothing in ClinVar to open", () => {
+    render(<ClinvarExpanderDetail variant={makeVariant({ clinvarSubmissions: [] })} />);
 
     expect(screen.queryByRole("link", { name: "Open in ClinVar ↗" })).not.toBeInTheDocument();
   });

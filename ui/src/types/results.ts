@@ -42,14 +42,12 @@ export interface AnnotatedCohortVariant extends CohortVariantBase {
   gnomadAf: number | null;
   gnomadAc: number | null;
   gnomadAn: number | null;
-  gnomadUrl: string | null;
   gnomadPopulations: PopulationFrequency[];
   gnomadAllAf: number | null;
   gnomadAllAc: number | null;
   gnomadAllAn: number | null;
   /** null = this variant has no ClinVar record. */
   clinvarSignificance: ClinVarSignificance | null;
-  clinvarUrl: string | null;
   clinvarStars: number | null;
   clinvarHasConflicts: boolean;
   clinvarConditions: string[];

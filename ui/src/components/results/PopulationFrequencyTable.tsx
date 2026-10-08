@@ -7,6 +7,7 @@ import { exactAf, formatAcAn, formatAf, formatInt } from "../../utils/format";
 import { SUBPOP_COLOR, SUBPOP_LABEL } from "../../utils/subpopulations";
 import AllOfUs from "../common/AllOfUs";
 import NotAvailable from "../elements/NotAvailable";
+import { gnomadVariantUrl } from "../../utils/externalLinks";
 
 // The union of both sources' subpopulation vocabularies, alphabetical by code -- a stable order
 // so rows line up across variants. AoU has EUR/MID with no gnomAD equivalent; gnomAD has
@@ -274,10 +275,10 @@ export default function PopulationFrequencyTable({ variant }: PopulationFrequenc
           </th>
           <th colSpan={2} style={groupHeaderStyle("gnomad")}>
             gnomAD{" "}
-            {variant.gnomadUrl && (
+            {variant.gnomadSubpopulation !== null && (
               <a
                 style={{ ...styles.sourceLink, ...(linkHovered ? { color: colors.textAccent } : undefined) }}
-                href={variant.gnomadUrl}
+                href={gnomadVariantUrl(variant.variant)}
                 target="_blank"
                 rel="noopener noreferrer"
                 title={`Open ${variant.variant} in gnomAD`}

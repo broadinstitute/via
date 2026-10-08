@@ -168,12 +168,10 @@ public class VatLookupService {
             .max(Double::compareTo)
             .orElse(null);
 
-    boolean inGnomad = gnomadSubpop != null;
     // Based on whether there are ClinVar RCV records at all, not on clinvarSignificance -- a
     // variant's RCVs can all be classifications with no equivalent in ClinvarSignificanceEnum
     // (e.g. "Conflicting interpretations", "not provided"), which still means there's a real
     // ClinVar record to view even though there's no clean aggregate call for the row.
-    boolean inClinvar = !clinvarRcvIds.isEmpty();
     String variant = string(row, "vid");
     return new CohortVariant()
         .variant(variant)
@@ -195,13 +193,11 @@ public class VatLookupService {
         .gnomadAf(bigDecimal(doubleValue(row, "gnomad_max_af")))
         .gnomadAc(intValue(row, "gnomad_max_ac"))
         .gnomadAn(intValue(row, "gnomad_max_an"))
-        .gnomadUrl(inGnomad ? "https://gnomad.broadinstitute.org/variant/" + variant : null)
         .gnomadPopulations(populationFrequencies(row, "gnomad", GNOMAD_POPULATIONS))
         .gnomadAllAf(bigDecimal(doubleValue(row, "gnomad_all_af")))
         .gnomadAllAc(intValue(row, "gnomad_all_ac"))
         .gnomadAllAn(intValue(row, "gnomad_all_an"))
         .clinvarSignificance(clinvarSignificance)
-        .clinvarUrl(inClinvar ? "https://www.ncbi.nlm.nih.gov/clinvar/?term=" + variant : null)
         .clinvarStars(clinvarStars)
         .clinvarHasConflicts(clinvarHasConflicts)
         .clinvarConditions(stringList(row, "clinvar_phenotype"))

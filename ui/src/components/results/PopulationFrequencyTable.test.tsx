@@ -31,7 +31,6 @@ function makeVariant(overrides: Partial<AnnotatedCohortVariant> = {}): Annotated
     gnomadAf: null,
     gnomadAc: null,
     gnomadAn: null,
-    gnomadUrl: null,
     // gnomAD covers its populations but has no record of this variant.
     gnomadPopulations: [
       { population: "AFR", af: null, ac: null, an: null },
@@ -41,7 +40,6 @@ function makeVariant(overrides: Partial<AnnotatedCohortVariant> = {}): Annotated
     gnomadAllAc: null,
     gnomadAllAn: null,
     clinvarSignificance: null,
-    clinvarUrl: null,
     clinvarStars: null,
     clinvarHasConflicts: false,
     clinvarConditions: [],
@@ -74,6 +72,18 @@ describe("PopulationFrequencyTable", () => {
     expect(block).toHaveAttribute("colspan", "2");
     // Every population row plus "All populations".
     expect(block).toHaveAttribute("rowspan", "11");
+  });
+
+  it("links the gnomAD header to the variant's gnomAD page only when gnomAD has a record of it", () => {
+    const { unmount } = render(<PopulationFrequencyTable variant={makeVariant({ gnomadSubpopulation: "NFE" })} />);
+    expect(screen.getByRole("link", { name: "Open 1-12345-A-G in gnomAD (opens in new tab)" })).toHaveAttribute(
+      "href",
+      "https://gnomad.broadinstitute.org/variant/1-12345-A-G",
+    );
+    unmount();
+
+    render(<PopulationFrequencyTable variant={makeVariant()} />);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("keeps a covered population with no carriers as a real zero, explained in its tooltip", () => {

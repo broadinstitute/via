@@ -318,7 +318,7 @@ export default function ReviewDetail({
                   significance={cohort.clinvarSignificance}
                   stars={cohort.clinvarStars}
                   conflicts={cohort.clinvarHasConflicts}
-                  href={cohort.clinvarUrl ?? clinvarSearchUrl(cohort.variant)}
+                  href={clinvarSearchUrl(cohort.variant)}
                 />
               </Fact>
             )}
