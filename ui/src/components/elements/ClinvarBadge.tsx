@@ -5,11 +5,6 @@ import type { ClinVarSignificance } from "../../types/results";
 import { CLINVAR_BADGE_CONFIG, CLINVAR_MAX_STARS, clinvarReviewDescription } from "../../utils/clinvar";
 import { useTooltip } from "../common/useTooltip";
 
-// The same pill as SubpopBadge -- rounded, a tinted fill, a soft border in the ink
-// at partial opacity -- so a ClinVar call sits beside an ancestry badge or a scope chip as one
-// family. The code (P, LP, VUS…) is centered in a fixed slot on the left; the review star count
-// follows a hairline divider in the same ink, so the divider and stars line up down a column.
-
 /** Split badges share one width, so a column of them lines up. */
 const SPLIT_WIDTH = 68;
 /** The code's slot, wide enough for "VUS" with a little air, with the code centered in it. */
@@ -69,14 +64,12 @@ export default function ClinvarBadge({ significance, stars = null, mode = "split
   const label = mode === "tag" ? significance : config.shortLabel;
   const ref = useRef<HTMLAnchorElement>(null);
   const review = stars !== null ? `${stars} of ${CLINVAR_MAX_STARS} stars: ${clinvarReviewDescription(stars, conflicts)}` : null;
-  // The spoken name, and the native hover text for a badge that isn't a link.
   const description = `ClinVar: ${significance}${review ? `, ${review}` : ""}`;
-  // To the badge's left: the ClinVar column sits at the table's right edge, and a bubble above or
-  // below would cover the rows around it.
+
   const tooltip = useTooltip(
     ref,
     [significance, review, "Click to open ClinVar in a new tab."].filter((line) => line !== null).join("\n"),
-    "left",
+    "right",
   );
 
   const style: CSSProperties = {
