@@ -2,10 +2,7 @@ name: Build and push Docker image
 
 on:
   push:
-    # main publishes :latest. Any other branch listed here publishes an image tagged with the
-    # branch name (slashes become dashes), for trying a branch out in Workbench before merge:
-    # point deploy/docker-compose.yaml at that tag, and remove both when the branch merges.
-    branches: [main, mb-faster-startup]
+    branches: [main]
     paths:
       - "api/**"
       - "ui/**"
@@ -36,8 +33,7 @@ jobs:
       - uses: docker/setup-buildx-action@v4
 
       # PR runs only validate that the image builds -- they never authenticate
-      # to GCP or push, so a PR can't publish an image before it's merged. Only
-      # pushes to the branches listed above publish.
+      # to GCP or push, so a PR can't publish an image before it's merged.
       - name: Authenticate to Google Cloud
         id: auth
         if: github.event_name == 'push'
@@ -61,15 +57,10 @@ jobs:
         env:
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}
         run: |
-          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            MOVING_TAG="latest"
-          else
-            MOVING_TAG="$(tr '/' '-' <<< "${GITHUB_REF_NAME}")"
-          fi
           {
             echo "tags<<EOF"
             echo "${IMAGE_REF}:${{ github.sha }}"
-            echo "${IMAGE_REF}:${MOVING_TAG}"
+            echo "${IMAGE_REF}:latest"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 

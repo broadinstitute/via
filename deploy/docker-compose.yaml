@@ -2,9 +2,7 @@ services:
   app:
     # The container name must be "application-server"
     container_name: "application-server"
-    # TEMPORARY: the mb-faster-startup branch build, to trial the trimmed boot in Workbench.
-    # Revert to :latest (and drop the branch from docker-build-push.yml) before merging.
-    image: us-central1-docker.pkg.dev/dsp-artifact-registry/via/via:mb-faster-startup
+    image: us-central1-docker.pkg.dev/dsp-artifact-registry/via/via:latest
     pull_policy: always
     restart: always
     # Most Workbench values (OWNER_EMAIL, GOOGLE_PROJECT, etc.) aren't
