@@ -229,11 +229,13 @@ describe("VariantsPanel", () => {
 
     const gene = screen.getByRole("columnheader", { name: /^Gene/ });
     expect(gene).toHaveAttribute("aria-sort", "none");
-    fireEvent.click(within(gene).getByRole("button", { name: "Sort" }));
+    // Each sort button names its column, so the fourteen of them are told apart by name alone.
+    fireEvent.click(screen.getByRole("button", { name: "Sort Gene" }));
     expect(gene).toHaveAttribute("aria-sort", "ascending");
-    expect(within(gene).getByRole("button", { name: /^Sorted ascending/ })).toBeInTheDocument();
-    // The variant column, not a sort key, keeps its resting state.
+    expect(screen.getByRole("button", { name: "Gene sorted ascending; change sort" })).toBeInTheDocument();
+    // The variant column, not a sort key, keeps its resting state and name.
     expect(screen.getByRole("columnheader", { name: /^Variant/ })).toHaveAttribute("aria-sort", "none");
+    expect(screen.getByRole("button", { name: "Sort Variant" })).toBeInTheDocument();
   });
 
   it("pins the expand, Variant, Gene and Consequence columns while the rest scroll", () => {

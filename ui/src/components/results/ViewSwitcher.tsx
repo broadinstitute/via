@@ -46,10 +46,11 @@ const styles = {
     color: colors.white,
     boxShadow: Style.shadows.pill,
   },
-  // A disabled button takes no pointer events (Style.buttons.disabled), so the reason it's
-  // disabled is shown from a wrapper around it, which does receive the hover.
-  disabledWrap: {
-    display: "inline-flex",
+  // An unavailable option is aria-disabled rather than natively disabled, so it stays in the tab
+  // order and keeps receiving pointer events: the reason it can't be chosen is a tooltip shown on
+  // hover and on focus, which a natively disabled button (no focus, no pointer events) can't do.
+  optionUnavailable: {
+    opacity: 0.5,
     cursor: "not-allowed",
   },
 } as const satisfies Record<string, CSSProperties>;
@@ -70,40 +71,48 @@ interface OptionProps {
   label: string;
   icon: typeof TableIcon;
   selected: boolean;
-  /** Given, the option is disabled and this is shown as its tooltip and read to screen readers. */
+  /** Given, the option can't be chosen; this says why, as its tooltip and its accessible description. */
   disabledReason?: string;
   onSelect: () => void;
 }
 
 function Option({ label, icon: Icon, selected, disabledReason, onSelect }: OptionProps) {
-  const disabled = disabledReason !== undefined;
-  const wrapRef = useRef<HTMLSpanElement>(null);
+  const unavailable = disabledReason !== undefined;
+  const ref = useRef<HTMLButtonElement>(null);
   const reasonId = useId();
-  const tooltip = useTooltip(wrapRef, disabledReason ?? "", "top");
+  const tooltip = useTooltip(ref, disabledReason ?? "", "top");
 
-  const button = (
-    <Clickable
-      aria-pressed={selected}
-      aria-describedby={disabled ? reasonId : undefined}
-      style={{ ...styles.option, ...(selected ? styles.optionSelected : undefined) }}
-      hoverStyle={selected ? undefined : styles.optionHover}
-      disabledStyle={Style.buttons.disabled}
-      disabled={disabled}
-      onClick={onSelect}
-    >
-      <Icon size={15} strokeWidth={2.2} aria-hidden="true" />
-      {label}
-    </Clickable>
-  );
-  if (!disabled) return button;
   return (
-    <span ref={wrapRef} style={styles.disabledWrap} {...tooltip.anchorProps}>
-      {button}
-      <span id={reasonId} style={Style.elements.visuallyHidden}>
-        {disabledReason}
-      </span>
-      {tooltip.bubble}
-    </span>
+    <>
+      <Clickable
+        ref={ref}
+        aria-pressed={selected}
+        aria-disabled={unavailable || undefined}
+        aria-describedby={unavailable ? reasonId : undefined}
+        style={{
+          ...styles.option,
+          ...(selected ? styles.optionSelected : undefined),
+          ...(unavailable ? styles.optionUnavailable : undefined),
+        }}
+        hoverStyle={selected || unavailable ? undefined : styles.optionHover}
+        // Activation is guarded here rather than by `disabled`, which would drop the option from
+        // the tab order. The tooltip's own click handler still shows the reason.
+        onClick={unavailable ? undefined : onSelect}
+        {...(unavailable ? tooltip.anchorProps : undefined)}
+      >
+        <Icon size={15} strokeWidth={2.2} aria-hidden="true" />
+        {label}
+      </Clickable>
+      {/* Beside the button, not inside it, so the reason is its description and not part of its name. */}
+      {unavailable && (
+        <>
+          <span id={reasonId} style={Style.elements.visuallyHidden}>
+            {disabledReason}
+          </span>
+          {tooltip.bubble}
+        </>
+      )}
+    </>
   );
 }
 

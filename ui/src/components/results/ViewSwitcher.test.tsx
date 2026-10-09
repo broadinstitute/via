@@ -14,18 +14,30 @@ describe("ViewSwitcher", () => {
     expect(onChange).toHaveBeenCalledWith("review");
   });
 
-  it("disables Review with its reason as the button's description and as a tooltip on hover", () => {
+  it("marks Review unavailable with its reason as the description, shown as a tooltip on hover and on focus", () => {
     vi.useFakeTimers();
     try {
-      render(<ViewSwitcher value="table" onChange={() => {}} reviewUnavailableReason="Add a phenotype filter to review." />);
+      const onChange = vi.fn();
+      render(<ViewSwitcher value="table" onChange={onChange} reviewUnavailableReason="Add a phenotype filter to review." />);
 
+      // aria-disabled, not disabled: the option stays in the tab order so keyboard users can
+      // reach the reason, and clicking it does nothing.
       const review = screen.getByRole("button", { name: "Review" });
-      expect(review).toBeDisabled();
+      expect(review).not.toBeDisabled();
+      expect(review).toHaveAttribute("aria-disabled", "true");
       expect(review).toHaveAccessibleDescription("Add a phenotype filter to review.");
+      fireEvent.click(review);
+      expect(onChange).not.toHaveBeenCalled();
 
-      // The disabled button takes no pointer events, so the hover lands on its wrapper, and the
-      // reason appears as the app tooltip after the hover delay.
-      fireEvent.mouseEnter(review.parentElement!);
+      // Focus shows the reason at once; hover shows it after the delay.
+      fireEvent.focus(review);
+      act(() => vi.advanceTimersByTime(0));
+      expect(screen.getByTestId("infoTooltip")).toHaveTextContent("Add a phenotype filter to review.");
+      fireEvent.blur(review);
+      act(() => vi.advanceTimersByTime(0));
+      expect(screen.queryByTestId("infoTooltip")).not.toBeInTheDocument();
+
+      fireEvent.mouseEnter(review);
       act(() => vi.advanceTimersByTime(200));
       expect(screen.getByTestId("infoTooltip")).toHaveTextContent("Add a phenotype filter to review.");
     } finally {

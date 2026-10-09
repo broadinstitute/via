@@ -321,6 +321,33 @@ const TINT_COLUMN_IDS: Record<Tint, Set<string>> = {
 };
 
 const BADGE_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
+
+// What each sortable column is called in its sort button's accessible name. Most headers are
+// JSX (an icon, an info label, a two-line header), so the name can't be read off them, and a
+// bare "Sort" on fourteen buttons would leave a screen-reader user guessing which column.
+const SORT_LABELS: Record<string, string> = {
+  variant: "Variant",
+  gene: "Gene",
+  consequence: "Consequence",
+  aouSubpop: "All of Us subpopulation",
+  aouFreq: "All of Us frequency",
+  gnomadSubpop: "gnomAD subpopulation",
+  gnomadFreq: "gnomAD frequency",
+  matchedFreq: "Matched frequency",
+  homozygotes: "Homozygotes",
+  heterozygotes: "Heterozygotes",
+  clinvarPlpInTrans: "P/LP in trans",
+  clinvar: "ClinVar",
+  spliceAi: "SpliceAI",
+  plof: "pLOF",
+};
+
+function sortButtonLabel(columnId: string, direction: false | "asc" | "desc"): string {
+  const column = SORT_LABELS[columnId] ?? columnId;
+  if (direction === "asc") return `${column} sorted ascending; change sort`;
+  if (direction === "desc") return `${column} sorted descending; change sort`;
+  return `Sort ${column}`;
+}
 const FIGURES_COLUMN_IDS = new Set(["aouFreq", "gnomadFreq"]);
 
 /** Tighter inner padding for a badge cell and the figures cell beside it. */
@@ -1023,13 +1050,7 @@ export default function VariantsPanel({
                                   }}
                                   // Which direction comes first depends on the column (numbers sort
                                   // descending first), so the label names the state, not the next step.
-                                  aria-label={
-                                    sortDirection === "asc"
-                                      ? "Sorted ascending; change sort"
-                                      : sortDirection === "desc"
-                                        ? "Sorted descending; change sort"
-                                        : "Sort"
-                                  }
+                                  aria-label={sortButtonLabel(header.column.id, sortDirection)}
                                   onClick={(event) => {
                                     // The header cell's own click would toggle it a second time.
                                     event.stopPropagation();
