@@ -420,7 +420,6 @@ const UNANNOTATED_GROUP: MissingGroup = {
     "Annotations and gnomAD frequencies come from the All of Us variant annotation table, which only includes variants observed in All of Us.",
 };
 
-/** The subpopulation column's header: the badge beneath says which group, so the header says only what kind of thing it is. */
 // The chevron takes its colour from its cell, which the row loop sets to the accent while the
 // row is hovered or expanded: the affordance is easy to miss at rest, so it brightens wherever
 // the pointer is, not only when it's over the 16px button itself.
@@ -455,6 +454,7 @@ function ExpandButton({ expanded, variant, onToggle }: { expanded: boolean; vari
   );
 }
 
+/** The subpopulation column's header: the badge beneath says which group, so the header says only what kind of thing it is. */
 function SubpopHeader() {
   return (
     <span style={styles.subpopHeader} role="img" aria-label="Subpopulation" title="Subpopulation with the highest allele frequency">
