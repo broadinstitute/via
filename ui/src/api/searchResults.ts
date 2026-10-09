@@ -134,9 +134,6 @@ function toFilteredVariantRow(raw: RawFilteredVariant): FilteredVariantRow {
   };
 }
 
-// TODO remove this now that we're using a real data source
-const MIN_LOAD_TIME_MS = 1000;
-
 export interface SearchResultsQuery {
   variants: string[];
   /**
@@ -178,10 +175,7 @@ export async function fetchSearchResults(query?: SearchResultsQuery): Promise<Se
 }
 
 async function fetchAndParse(path: string): Promise<SearchResults> {
-  const [raw] = await Promise.all([
-    apiFetch<RawSearchResultsResponse>(path),
-    new Promise((resolve) => setTimeout(resolve, MIN_LOAD_TIME_MS)),
-  ]);
+  const raw = await apiFetch<RawSearchResultsResponse>(path);
   return {
     searchSummary: raw.searchSummary,
     conditionSearch: raw.conditionSearch,

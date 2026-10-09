@@ -45,7 +45,7 @@ const styles = {
     alignItems: "start",
   },
   // Identity on the left, annotation facts on the right, both two lines tall so they share a
-  // rhythm: the gene line over the variant ID, and each fact's label over its value.
+  // rhythm: the name line over the description line, and each fact's label over its value.
   identity: {
     display: "flex",
     flexWrap: "wrap",
@@ -59,28 +59,49 @@ const styles = {
     gap: 3,
     minWidth: 0,
   },
-  geneLine: {
+  // Two lines in two voices. The name line is how a clinician says the variant ("LDLR
+  // p.Cys681Ter"): the gene and its protein change together, in primary ink. The description
+  // line holds the supporting facts, the consequence category and the genomic coordinate, in
+  // secondary. Neither wraps: a long protein change truncates, with the full text in its title.
+  // Both lines have fixed heights: baseline-aligning two type sizes makes a flex row a few pixels
+  // taller than its line-height, so without them the header grew whenever a variant had a
+  // protein change, and stepping through variants jogged everything below it.
+  nameLine: {
     display: "flex",
-    flexWrap: "wrap",
     alignItems: "baseline",
-    gap: "0 8px",
-    fontSize: 13,
-    color: colors.textSecondary,
+    gap: 10,
+    minWidth: 0,
+    height: 26,
+    lineHeight: "26px",
+    color: colors.textPrimary,
   },
   gene: {
     fontSize: 20,
     fontWeight: 700,
-    lineHeight: "26px",
-    color: colors.textPrimary,
+    flexShrink: 0,
   },
   proteinChange: {
     ...Style.elements.mono,
+    fontSize: 16,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  descriptionLine: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 6,
+    height: 18,
+    lineHeight: "18px",
     fontSize: 12.5,
+    color: colors.textSecondary,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   variantId: {
     ...Style.elements.mono,
-    fontSize: 12.5,
-    color: colors.textMuted,
   },
   // The variant's annotations as labelled facts, like the blocks of the summary strip.
   facts: {
@@ -295,20 +316,29 @@ export default function ReviewDetail({
       <header style={styles.identity}>
         <div style={styles.identityText}>
           {cohort ? (
-            <div style={styles.geneLine}>
+            <div style={styles.nameLine}>
               <span style={styles.gene}>{cohort.gene}</span>
-              <span>{cohort.consequence}</span>
-              {cohort.proteinChange && <span style={styles.proteinChange}>{cohort.proteinChange}</span>}
+              {cohort.proteinChange && (
+                <span style={styles.proteinChange} title={cohort.proteinChange}>
+                  {cohort.proteinChange}
+                </span>
+              )}
             </div>
           ) : (
-            <div style={styles.geneLine}>
+            <div style={styles.nameLine}>
               <span style={styles.gene}>Not observed in <AllOfUs /></span>
             </div>
           )}
-          <span style={styles.variantId}>
-            {row.variant}
-            {!cohort && " · no annotations or frequencies to compare"}
-          </span>
+          <div style={styles.descriptionLine}>
+            {cohort && (
+              <>
+                <span>{cohort.consequence}</span>
+                <span aria-hidden="true">·</span>
+              </>
+            )}
+            <span style={styles.variantId}>{row.variant}</span>
+            {!cohort && <span>· no annotations or frequencies to compare</span>}
+          </div>
         </div>
         {cohort && (
           <dl style={styles.facts}>

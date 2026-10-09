@@ -15,9 +15,7 @@ const styles = {
     marginBottom: 6,
   },
   title: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: colors.textPrimary,
+    ...Style.elements.panelTitle,
   },
   summary: {
     display: "inline-flex",

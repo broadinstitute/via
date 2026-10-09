@@ -1,7 +1,9 @@
+import { useId, useRef } from "react";
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
+import { useTooltip } from "../common/useTooltip";
 import { CompareIcon, TableIcon } from "../icons";
 
 export type ResultsView = "table" | "review";
@@ -44,6 +46,13 @@ const styles = {
     color: colors.white,
     boxShadow: Style.shadows.pill,
   },
+  // An unavailable option is aria-disabled rather than natively disabled, so it stays in the tab
+  // order and keeps receiving pointer events: the reason it can't be chosen is a tooltip shown on
+  // hover and on focus, which a natively disabled button (no focus, no pointer events) can't do.
+  optionUnavailable: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
 } as const satisfies Record<string, CSSProperties>;
 
 const OPTIONS: { value: ResultsView; label: string; icon: typeof TableIcon }[] = [
@@ -58,29 +67,70 @@ interface ViewSwitcherProps {
   reviewUnavailableReason?: string;
 }
 
+interface OptionProps {
+  label: string;
+  icon: typeof TableIcon;
+  selected: boolean;
+  /** Given, the option can't be chosen; this says why, as its tooltip and its accessible description. */
+  disabledReason?: string;
+  onSelect: () => void;
+}
+
+function Option({ label, icon: Icon, selected, disabledReason, onSelect }: OptionProps) {
+  const unavailable = disabledReason !== undefined;
+  const ref = useRef<HTMLButtonElement>(null);
+  const reasonId = useId();
+  const tooltip = useTooltip(ref, disabledReason ?? "", "top");
+
+  return (
+    <>
+      <Clickable
+        ref={ref}
+        aria-pressed={selected}
+        aria-disabled={unavailable || undefined}
+        aria-describedby={unavailable ? reasonId : undefined}
+        style={{
+          ...styles.option,
+          ...(selected ? styles.optionSelected : undefined),
+          ...(unavailable ? styles.optionUnavailable : undefined),
+        }}
+        hoverStyle={selected || unavailable ? undefined : styles.optionHover}
+        // Activation is guarded here rather than by `disabled`, which would drop the option from
+        // the tab order. The tooltip's own click handler still shows the reason.
+        onClick={unavailable ? undefined : onSelect}
+        {...(unavailable ? tooltip.anchorProps : undefined)}
+      >
+        <Icon size={15} strokeWidth={2.2} aria-hidden="true" />
+        {label}
+      </Clickable>
+      {/* Beside the button, not inside it, so the reason is its description and not part of its name. */}
+      {unavailable && (
+        <>
+          <span id={reasonId} style={Style.elements.visuallyHidden}>
+            {disabledReason}
+          </span>
+          {tooltip.bubble}
+        </>
+      )}
+    </>
+  );
+}
+
 export default function ViewSwitcher({ value, onChange, reviewUnavailableReason }: ViewSwitcherProps) {
   return (
     // A group of toggle buttons, not tabs: there are no tab panels or arrow-key moves, so the
     // tab pattern would promise what isn't there. Pressed state says which view is showing.
     <div role="group" aria-label="Results view" style={styles.group}>
-      {OPTIONS.map(({ value: option, label, icon: Icon }) => {
-        const disabled = option === "review" && reviewUnavailableReason !== undefined;
-        return (
-          <Clickable
-            key={option}
-            aria-pressed={value === option}
-            style={{ ...styles.option, ...(value === option ? styles.optionSelected : undefined) }}
-            hoverStyle={value === option ? undefined : styles.optionHover}
-            disabledStyle={Style.buttons.disabled}
-            disabled={disabled}
-            title={disabled ? reviewUnavailableReason : undefined}
-            onClick={() => onChange(option)}
-          >
-            <Icon size={15} strokeWidth={2.2} aria-hidden="true" />
-            {label}
-          </Clickable>
-        );
-      })}
+      {OPTIONS.map(({ value: option, label, icon }) => (
+        <Option
+          key={option}
+          label={label}
+          icon={icon}
+          selected={value === option}
+          disabledReason={option === "review" ? reviewUnavailableReason : undefined}
+          onSelect={() => onChange(option)}
+        />
+      ))}
     </div>
   );
 }

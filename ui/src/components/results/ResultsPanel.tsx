@@ -1,5 +1,4 @@
 import type { CSSProperties, ReactNode } from "react";
-import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 
 const styles = {
@@ -15,13 +14,9 @@ const styles = {
     gap: 12,
     minHeight: 53,
   },
-  // Dark ink rather than panelTitle's accent blue, which elsewhere on the page means "clickable".
   title: {
+    ...Style.elements.panelTitle,
     flexShrink: 0,
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: 700,
-    letterSpacing: -0.1,
   },
 } as const satisfies Record<string, CSSProperties>;
 

@@ -18,12 +18,13 @@ import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulation
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
-import { ChevronRightIcon, CompareIcon, EyeOffIcon, GlobeIcon, UserIcon } from "../icons";
+import { ChevronRightIcon, CompareIcon, EyeOffIcon, GlobeIcon, SortIcon, UserIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import NotAvailable from "../elements/NotAvailable";
 import SubpopBadge from "../elements/SubpopBadge";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PhenotypeFilterPrompt from "./PhenotypeFilterPrompt";
+import { useTooltip } from "../common/useTooltip";
 import PopulationFrequencyTable from "./PopulationFrequencyTable";
 import ResultsPanel from "./ResultsPanel";
 
@@ -320,6 +321,33 @@ const TINT_COLUMN_IDS: Record<Tint, Set<string>> = {
 };
 
 const BADGE_COLUMN_IDS = new Set(["aouSubpop", "gnomadSubpop"]);
+
+// What each sortable column is called in its sort button's accessible name. Most headers are
+// JSX (an icon, an info label, a two-line header), so the name can't be read off them, and a
+// bare "Sort" on fourteen buttons would leave a screen-reader user guessing which column.
+const SORT_LABELS: Record<string, string> = {
+  variant: "Variant",
+  gene: "Gene",
+  consequence: "Consequence",
+  aouSubpop: "All of Us subpopulation",
+  aouFreq: "All of Us frequency",
+  gnomadSubpop: "gnomAD subpopulation",
+  gnomadFreq: "gnomAD frequency",
+  matchedFreq: "Matched frequency",
+  homozygotes: "Homozygotes",
+  heterozygotes: "Heterozygotes",
+  clinvarPlpInTrans: "P/LP in trans",
+  clinvar: "ClinVar",
+  spliceAi: "SpliceAI",
+  plof: "pLOF",
+};
+
+function sortButtonLabel(columnId: string, direction: false | "asc" | "desc"): string {
+  const column = SORT_LABELS[columnId] ?? columnId;
+  if (direction === "asc") return `${column} sorted ascending; change sort`;
+  if (direction === "desc") return `${column} sorted descending; change sort`;
+  return `Sort ${column}`;
+}
 const FIGURES_COLUMN_IDS = new Set(["aouFreq", "gnomadFreq"]);
 
 /** Tighter inner padding for a badge cell and the figures cell beside it. */
@@ -369,7 +397,7 @@ const NOT_IN_AOU = (
 const AOU_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.aou, message: NOT_IN_AOU };
 const GNOMAD_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.gnomad, message: "Not observed in gnomAD" };
 /** No matched-participant statistics for a variant All of Us does have. */
-const MATCHED_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.matched, message: NOT_IN_AOU };
+const MATCHED_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.matched, message: "No matched statistics" };
 
 // Everything after the Variant column. A variant that isn't in All of Us has no VAT row, so it
 // has no annotations, no gnomAD data and no matched statistics either -- not because gnomAD lacks
@@ -391,6 +419,40 @@ const UNANNOTATED_GROUP: MissingGroup = {
   title:
     "Annotations and gnomAD frequencies come from the All of Us variant annotation table, which only includes variants observed in All of Us.",
 };
+
+// The chevron takes its colour from its cell, which the row loop sets to the accent while the
+// row is hovered or expanded: the affordance is easy to miss at rest, so it brightens wherever
+// the pointer is, not only when it's over the 16px button itself.
+const EXPAND_TOOLTIP = "Expand for ClinVar detail and population frequencies";
+
+function ExpandButton({ expanded, variant, onToggle }: { expanded: boolean; variant: string; onToggle: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const tooltip = useTooltip(ref, expanded ? "Collapse" : EXPAND_TOOLTIP, "right");
+  return (
+    <Clickable
+      ref={ref}
+      style={{ ...Style.buttons.icon, color: "inherit" }}
+      hoverStyle={Style.buttons.iconHover}
+      aria-expanded={expanded}
+      aria-controls={`variant-detail-${variant}`}
+      aria-label={expanded ? "Collapse row for more detail" : "Expand row for more detail"}
+      {...tooltip.anchorProps}
+      onClick={(event) => {
+        // The row this sits in toggles on click too.
+        event.stopPropagation();
+        onToggle();
+      }}
+    >
+      <ChevronRightIcon
+        size={16}
+        strokeWidth={2.2}
+        className="transition-transform"
+        style={expanded ? { transform: "rotate(90deg)" } : undefined}
+      />
+      {tooltip.bubble}
+    </Clickable>
+  );
+}
 
 /** The subpopulation column's header: the badge beneath says which group, so the header says only what kind of thing it is. */
 function SubpopHeader() {
@@ -552,29 +614,13 @@ export default function VariantsPanel({
             id: "expand",
             header: "",
             enableSorting: false,
-            cell: ({ row }) => {
-              const isExpanded = expandedVariants.has(row.original.variant);
-              return (
-                <Clickable
-                  style={Style.buttons.icon}
-                  hoverStyle={Style.buttons.iconHover}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggleExpanded(row.original.variant);
-                  }}
-                  aria-expanded={isExpanded}
-                  aria-controls={`variant-detail-${row.original.variant}`}
-                  aria-label={isExpanded ? "Collapse row for more detail" : "Expand row for more detail"}
-                >
-                  <ChevronRightIcon
-                    size={12}
-                    strokeWidth={2.5}
-                    className="transition-transform"
-                    style={isExpanded ? { transform: "rotate(90deg)", color: colors.textAccent } : undefined}
-                  />
-                </Clickable>
-              );
-            },
+            cell: ({ row }) => (
+              <ExpandButton
+                expanded={expandedVariants.has(row.original.variant)}
+                variant={row.original.variant}
+                onToggle={() => toggleExpanded(row.original.variant)}
+              />
+            ),
           }),
           columnHelper.accessor("variant", {
             header: "Variant",
@@ -962,6 +1008,9 @@ export default function VariantsPanel({
                           key={header.id}
                           colSpan={header.colSpan}
                           data-column-id={header.column.id}
+                          // Only on the sorted header: ARIA asks for aria-sort on one header at a
+                          // time, and the sort buttons already say which other columns can sort.
+                          aria-sort={sortDirection === "asc" ? "ascending" : sortDirection === "desc" ? "descending" : undefined}
                           style={{
                             ...styles.headerCell,
                             ...(isGroupRow ? styles.groupHeaderCell : undefined),
@@ -983,9 +1032,27 @@ export default function VariantsPanel({
                             <>
                               {flexRender(header.column.columnDef.header, header.getContext())}
                               {sortable && (
-                                <span style={Style.table.sortIndicator}>
-                                  {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : ""}
-                                </span>
+                                // The whole header cell sorts on click for mouse users; this button
+                                // is the keyboard path and the visible affordance. It sits beside the
+                                // label rather than around it because some labels hold an info button
+                                // of their own.
+                                <button
+                                  type="button"
+                                  style={{
+                                    ...Style.table.sortButton,
+                                    ...(sortDirection ? Style.table.sortButtonActive : undefined),
+                                  }}
+                                  // Which direction comes first depends on the column (numbers sort
+                                  // descending first), so the label names the state, not the next step.
+                                  aria-label={sortButtonLabel(header.column.id, sortDirection)}
+                                  onClick={(event) => {
+                                    // The header cell's own click would toggle it a second time.
+                                    event.stopPropagation();
+                                    header.column.toggleSorting();
+                                  }}
+                                >
+                                  <SortIcon direction={sortDirection || "none"} size={11} strokeWidth={2.5} aria-hidden="true" />
+                                </button>
                               )}
                             </>
                           )}
@@ -1054,6 +1121,10 @@ export default function VariantsPanel({
                             cellBackground(tint, hovered) ??
                             (expanded ? styles.expandedRowFill.background : pinned ? colors.surface2 : undefined),
                           ...(expanded && index === 0 ? styles.expandedBar : undefined),
+                          // See ExpandButton: the chevron inherits this.
+                          ...(cell.column.id === "expand"
+                            ? { color: hovered || expanded ? colors.textAccent : colors.textSecondary }
+                            : undefined),
                         };
                         const group = missingGroups.find((candidate) => candidate.columnIds.has(cell.column.id));
                         if (group) {

@@ -57,8 +57,10 @@ const styles = {
     gap: 1,
     minWidth: 0,
   },
+  // Accent, not primary: Export TSV is the table's one call to action, and this reveals the search
+  // editor rather than completing anything.
   button: {
-    ...Style.buttons.primary,
+    ...Style.buttons.accent,
     flexShrink: 0,
   },
 } as const satisfies Record<string, CSSProperties>;
@@ -83,7 +85,7 @@ export default function PhenotypeFilterPrompt({ condition, onAddPhenotypeFilter,
   const button = onAddPhenotypeFilter && (
     <Clickable
       style={styles.button}
-      hoverStyle={Style.buttons.primaryHover}
+      hoverStyle={Style.buttons.accentHover}
       onClick={(event) => {
         // The row underneath toggles expansion on click.
         event.stopPropagation();

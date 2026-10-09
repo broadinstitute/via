@@ -43,7 +43,7 @@ describe("PhenotypeSummaryStrip", () => {
     expect(screen.getByText("No phenotype filter")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /add phenotype filter/i }));
     expect(onAddPhenotypeFilter).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("button", { name: "Review" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Review" })).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("button", { name: "Table", pressed: true })).toBeInTheDocument();
   });
 
@@ -86,7 +86,7 @@ describe("PhenotypeSummaryStrip", () => {
 
     renderStrip({ conditionSearch: { ...CONDITION, participantCount: 0 } });
     expect(screen.getByText("0")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Review" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Review" })).toHaveAttribute("aria-disabled", "true");
   });
 
   it("shows a skeleton while results load", () => {

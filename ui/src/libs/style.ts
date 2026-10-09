@@ -48,10 +48,12 @@ export const elements = {
     background: colors.surface1,
     borderBottom: `1px solid ${colors.border}`,
   },
+  /** A panel's title: dark ink, not the accent, which elsewhere means "clickable". */
   panelTitle: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: colors.textAccent,
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: 700,
+    letterSpacing: -0.1,
   },
   /** Small uppercase label introducing a value: "Condition", "Updated", "Sources". */
   eyebrow: {
@@ -150,7 +152,7 @@ export const elements = {
 // Each `*Hover` object is meant to be merged over its base while the pointer is inside the
 // element, which is what <Clickable> does with its `hoverStyle` prop.
 export const buttons = {
-  /** The call to action, filled in the brand navy: the page's Search, Export TSV, "add a phenotype". */
+  /** The one call to action in a view, filled in the brand navy: the entry page's Search, the results page's Export TSV. */
   primary: {
     display: "inline-flex",
     alignItems: "center",
@@ -182,7 +184,7 @@ export const buttons = {
   secondaryHover: {
     background: colors.surface1,
   },
-  /** Outlined button in accent ink: "View results". */
+  /** Outlined button in accent ink, for a secondary action that navigates or reveals: "Add phenotype filter". */
   accent: {
     display: "inline-flex",
     alignItems: "center",
@@ -271,6 +273,8 @@ export const table = {
     width: "100%",
     fontSize: 12,
     whiteSpace: "nowrap",
+    // Digits line up down a column without a monospace face.
+    fontVariantNumeric: "tabular-nums",
   },
   /** Wrapper that scrolls the table under its own sticky header. */
   scroller: {
@@ -299,12 +303,26 @@ export const table = {
   sortableHover: {
     color: colors.textAccent,
   },
-  /** Fixed-width slot for the ▲/▼ glyph, so a header doesn't shift when it becomes the sort key. */
-  sortIndicator: {
-    display: "inline-block",
-    width: 10,
+  /**
+   * The sort control beside a sortable header's label: a real button, so sorting reaches the
+   * keyboard, holding the sort icon in a fixed-width slot so the header doesn't shift when it
+   * becomes the sort key. At rest it shows both arrows, muted, so a reader can tell which
+   * columns sort.
+   */
+  sortButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 12,
     marginLeft: 2,
-    fontSize: 9,
+    padding: 0,
+    border: "none",
+    background: "none",
+    verticalAlign: "middle",
+    color: colors.textMuted,
+    cursor: "pointer",
+  },
+  sortButtonActive: {
     color: colors.textAccent,
   },
 } as const satisfies Record<string, CSSProperties>;
