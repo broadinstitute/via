@@ -1,6 +1,8 @@
 /**
  * Draws the product illustrations: the variants table, shown both in the hero and in the Table
- * view.
+ * view. The markup follows VariantsPanel in the app: two group rows over the column headers, the
+ * expand chevron at the left and the Review action at the right. The app's sort and info icons on
+ * the headers are left out, so the table fits the page's text column.
  *
  * The figures are illustrative, modelled on VIA's Familial hypercholesterolemia demo. They are
  * not real All of Us data.
@@ -55,8 +57,14 @@ const ROWS = [
   },
 ];
 
-const CHEVRON = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>';
-const USER = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+// The app's icons (ui/src/components/icons), at the sizes the table draws them.
+const icon = (body, size, strokeWidth = 2) =>
+  `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+
+const CHEVRON = icon('<polyline points="9 6 15 12 9 18"/>', 16, 2.2);
+const USER = icon('<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>', 11, 2.5);
+const GLOBE = icon('<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 0 1 0 18a13.5 13.5 0 0 1 0-18z"/>', 14);
+const COMPARE = icon('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><path d="M6 9h3M6 12h3M6 15h3M15 9h3M15 12h3M15 15h3"/>', 14, 2.2);
 
 const pill = (code) => `<span class="pill"><span class="dot" style="background:${SUBPOP_COLORS[code]}"></span>${code}</span>`;
 const freq = (af, acan) => `<span class="stack"><span>${af}</span><span class="sub">${acan}</span></span>`;
@@ -75,7 +83,6 @@ function sourceCells(tint, source, missing) {
   return `<td class="${tint} badge">${pill(source.code)}</td><td class="${tint}">${freq(source.af, source.acan)}</td>`;
 }
 
-const GLOBE = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 0 1 0 18a13.5 13.5 0 0 1 0-18z"/></svg>';
 const FREQ_HEADER = 'AF <span class="unit">· AC / AN</span>';
 
 /** The variants table as the app draws it. Shown in the hero and in the Table view. */
@@ -86,21 +93,21 @@ function renderTable(table) {
         <th colspan="4"></th>
         <th class="group scope aou" colspan="4">All participants</th>
         <th class="group scope matched" colspan="4">Phenotype-matched <span class="count">${USER}391</span></th>
-        <th colspan="3"></th>
+        <th colspan="4"></th>
       </tr>
       <tr>
         <th colspan="4"></th>
         <th class="group aou" colspan="2"><i>All of Us</i> <span class="unit">— max subpopulation</span></th>
         <th class="group gnomad" colspan="2">gnomAD <span class="unit">— max subpopulation</span></th>
         <th class="group matched" colspan="4"><i>All of Us</i></th>
-        <th colspan="3"></th>
+        <th colspan="4"></th>
       </tr>
       <tr>
         <th></th><th>Variant</th><th>Gene</th><th>Consequence</th>
         <th class="aou badge">${GLOBE}</th><th class="aou">${FREQ_HEADER}</th>
         <th class="gnomad badge">${GLOBE}</th><th class="gnomad">${FREQ_HEADER}</th>
-        <th class="matched">${FREQ_HEADER}</th><th class="matched num">Hom</th><th class="matched num">Het</th><th class="matched num">P/LP</th>
-        <th>ClinVar</th><th>SpliceAI</th><th>pLOF</th>
+        <th class="matched">${FREQ_HEADER}</th><th class="matched num">Hom</th><th class="matched num">Het</th><th class="matched num">P/LP in trans</th>
+        <th>ClinVar</th><th>SpliceAI</th><th>pLOF</th><th></th>
       </tr>
     </thead>
     <tbody>${ROWS.map((row) => `
@@ -108,6 +115,7 @@ function renderTable(table) {
         ${sourceCells('aou', row.aou, 'Not observed in <i>All of Us</i>')}${sourceCells('gnomad', row.gnomad, 'Not observed in gnomAD')}
         <td class="matched">${freq(row.matched.af, row.matched.acan)}</td>${count(row.matched.hom)}${count(row.matched.het)}${count(row.matched.plp)}
         <td>${clinvar(row.clinvar)}</td><td class="num">${row.spliceAi}</td><td>${plof(row.plof)}</td>
+        <td class="action">${COMPARE}</td>
       </tr>`).join('')}
     </tbody>`;
 }

@@ -5,11 +5,14 @@ JavaScript with no build step, modelled on the All of Us + AnVIL Imputation Serv
 terra-scientific-pipelines-service (`ui/allofus-anvil-imputation`).
 
 ### Code layout
-* `index.html` — the page: hero, why use VIA, the Table and Review views, how it works, data sources, call to action and footer.
+* `index.html` — the page: hero, why use VIA, the Table and Review views, how it works, data sources, questions, call to action and footer. The product frames (the hero's results page, the Table view and the Review view) are hand-written markup that follows the app's components: the top bar with its search box (`TopBar`), the summary strip (`PhenotypeSummaryStrip`), the titled results panel (`ResultsPanel`), and Review's rail, verdict, evidence tiles and the head-to-head and ancestry tables (`ReviewView`, `ReviewDetail`). When the app's UX changes, update them to match.
 * `css/style.css` — all styles. Brand tokens are at the top; the product illustrations reuse the app's palette and its Public Sans face.
-* `js/illustrations.js` — draws the variants-table illustration used in the hero and the Table view. The figures are illustrative, not real All of Us data.
+* `js/illustrations.js` — draws the variants-table illustration used in the hero and the Table view, following `VariantsPanel`: the scope and source group rows, the expand chevron and the per-row Review action. The figures are illustrative, not real All of Us data.
 * `js/tabs.js` — the Table / Review tabs. The open tab can be linked with a bare hash, e.g. `<base-url>#review`.
 * `img/` — the All of Us and Broad logos (copied from the imputation site), the VIA mark on its navy tile (`via-mark.svg`, the same as the app's favicon), and the same mark on a white tile for dark backgrounds (`via-mark-light.svg`), used in the hero beside the white All of Us logo.
+
+### Keeping the illustrations current
+The product frames are drawn to the app at main, so a UX change in `ui/` usually means a change here. The table leaves out the app's sort and info icons on the headers, shortens the matched scope header to "Phenotype-matched", and uses 8px rather than 10px cell padding, so every column fits the text column on a display 1,280px or wider; narrower than that the table scrolls within its frame, as it does in the app.
 
 ### Development
 Open `index.html` in a browser, or serve the folder with any static server, e.g.
