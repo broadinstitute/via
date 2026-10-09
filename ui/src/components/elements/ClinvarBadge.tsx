@@ -71,8 +71,8 @@ export default function ClinvarBadge({ significance, stars = null, mode = "split
   const review = stars !== null ? `${stars} of ${CLINVAR_MAX_STARS} stars: ${clinvarReviewDescription(stars, conflicts)}` : null;
   // The spoken name, and the native hover text for a badge that isn't a link.
   const description = `ClinVar: ${significance}${review ? `, ${review}` : ""}`;
-  // To the badge's left: the ClinVar column sits at the table's right edge, and a bubble above or
-  // below would cover the rows around it.
+  // To the badge's left, over the pinned identity cells: a bubble above or below would cover the
+  // rows around it, and one to the right would cover the figures.
   const tooltip = useTooltip(
     ref,
     [significance, review, "Click to open ClinVar in a new tab."].filter((line) => line !== null).join("\n"),

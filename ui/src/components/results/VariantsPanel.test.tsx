@@ -81,7 +81,9 @@ describe("VariantsPanel", () => {
     renderPanel([IN_AOU_ONLY], [MATCHED]);
 
     const headers = screen.getAllByRole("columnheader").map((th) => th.textContent?.trim());
-    expect(headers.indexOf("ClinVar")).toBeGreaterThan(headers.findIndex((h) => h?.startsWith("P/LP in trans")));
+    expect(headers.indexOf("pLOF")).toBeGreaterThan(headers.findIndex((h) => h?.startsWith("P/LP in trans")));
+    // ClinVar rides with the identity columns, right after the consequence.
+    expect(headers.indexOf("ClinVar")).toBe(headers.indexOf("Consequence") + 1);
 
     const row = screen.getByText("2-122517541-C-G").closest("tr")!;
     expect(row).toHaveTextContent("LDLR");
@@ -144,9 +146,12 @@ describe("VariantsPanel", () => {
     const firstRow = screen.getByText("2-122517541-C-G").closest("tr")!;
     expect(firstRow.lastElementChild).toBe(prompt);
 
-    // A variant not in All of Us spans one message up to the prompt: Gene through pLOF.
+    // A variant not in All of Us spans one message from the first scrolling column up to the
+    // prompt: four source and two annotation columns. Gene, Consequence and ClinVar, being
+    // pinned, stay a cell of their own, so they hold still while the message scrolls.
     const message = screen.getByText(cellWithText("Not observed in All of Us"));
-    expect(message).toHaveAttribute("colspan", "9");
+    expect(message).toHaveAttribute("colspan", "6");
+    expect(message.previousElementSibling).toHaveAttribute("colspan", "3");
     expect(message.nextElementSibling).toBeNull();
   });
 
@@ -172,12 +177,15 @@ describe("VariantsPanel", () => {
     expect(within(screen.getByTestId("phenotype-prompt-cell")).queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("spans a variant that isn't in All of Us with one message across every data column", () => {
+  it("spans a variant that isn't in All of Us with one message across every scrolling data column", () => {
     renderPanel([NOT_IN_AOU], [NOT_MATCHED]);
 
     const message = screen.getByText(cellWithText("Not observed in All of Us"));
-    // Gene through pLOF: two identity, four source, four matched, three annotation.
-    expect(message).toHaveAttribute("colspan", "13");
+    // Four source, four matched, two annotation. The pinned Gene, Consequence and ClinVar columns
+    // are one empty cell before it, so the pinned block keeps its edge on this row too.
+    expect(message).toHaveAttribute("colspan", "10");
+    expect(message.previousElementSibling).toHaveAttribute("colspan", "3");
+    expect(message.previousElementSibling).toHaveTextContent("");
     expect(message.getAttribute("title")).toMatch(/only includes variants observed in All of Us/);
     // One line of text, but the same row height as the two-line rows around it.
     expect(message).toHaveStyle({ height: "46px" });
@@ -238,13 +246,13 @@ describe("VariantsPanel", () => {
     expect(screen.getByRole("button", { name: "Sort Variant" })).toBeInTheDocument();
   });
 
-  it("pins the expand, Variant, Gene and Consequence columns while the rest scroll", () => {
+  it("pins the expand, Variant, Gene, Consequence and ClinVar columns while the rest scroll", () => {
     renderPanel([IN_AOU_ONLY], [MATCHED]);
 
     const row = screen.getByText("2-122517541-C-G").closest("tr")!;
     const cells = within(row).getAllByRole("cell");
-    cells.slice(0, 4).forEach((cell) => expect(cell).toHaveStyle({ position: "sticky" }));
-    expect(cells[4]).not.toHaveStyle({ position: "sticky" });
+    cells.slice(0, 5).forEach((cell) => expect(cell).toHaveStyle({ position: "sticky" }));
+    expect(cells[5]).not.toHaveStyle({ position: "sticky" });
     // The header's name carries its sort button's too.
     expect(screen.getByRole("columnheader", { name: /^Variant/ })).toHaveStyle({ position: "sticky" });
 

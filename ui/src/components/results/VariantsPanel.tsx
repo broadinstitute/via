@@ -56,13 +56,15 @@ const GROUP_HEADER_HEIGHT = 28;
 const BODY_ROW_HEIGHT = 46;
 
 /**
- * The columns that stay put while the rest scroll sideways: a row's identity. Their group header
- * ("pinned") spans exactly these, so it can pin as one cell. The protein change rides under the
- * consequence in the last of them.
+ * The columns that stay put while the rest scroll sideways: a row's identity, with its ClinVar
+ * call, which an interpreter reads as part of what the variant is. Their group header ("pinned")
+ * spans exactly these, so it can pin as one cell. The protein change rides under the consequence.
  */
-const PINNED_COLUMN_IDS = ["expand", "variant", "gene", "consequence"] as const;
+const PINNED_COLUMN_IDS = ["expand", "variant", "gene", "consequence", "clinvar"] as const;
 const PINNED_GROUP_ID = "pinned";
 const LAST_PINNED_COLUMN_ID = PINNED_COLUMN_IDS[PINNED_COLUMN_IDS.length - 1];
+/** The seam's hairline plus the width its shadow fades over. */
+const SEAM_WIDTH = 9;
 
 const styles = {
   headerRight: {
@@ -132,13 +134,26 @@ const styles = {
   pinnedGroupHeaderCell: {
     zIndex: 4,
   },
-  // The seam where pinned meets scrolling: a hairline and a soft shadow that reads as depth. The
-  // header version keeps the header's own bottom hairline, which is also drawn as an inset shadow.
-  lastPinned: {
-    boxShadow: `inset -1px 0 0 ${colors.border}, 6px 0 8px -6px ${alpha(colors.textPrimary, 0.14)}`,
+  // The seam where pinned meets scrolling: a hairline, and, once the table is wide enough to
+  // scroll, a soft shadow over the scrolling cells that reads as depth and says there is more
+  // to the right. Each last-pinned cell draws it with this child, which spans the cell's exact
+  // height, so the seam runs unbroken from one row into the next. It isn't a box-shadow on the
+  // cell: a blurred shadow fades at the top and bottom of every cell, and down the table that
+  // read as a row of dashes.
+  seam: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: "100%",
+    // Over the cell's own last pixel, so the hairline sits where the cell's border would.
+    marginLeft: -1,
+    width: 1,
+    pointerEvents: "none",
+    background: colors.border,
   },
-  lastPinnedHeader: {
-    boxShadow: `inset -1px 0 0 ${colors.border}, inset 0 -1px 0 0 ${colors.border}, 6px 0 8px -6px ${alpha(colors.textPrimary, 0.14)}`,
+  seamScrollable: {
+    width: SEAM_WIDTH,
+    background: `linear-gradient(to right, ${colors.border} 1px, ${alpha(colors.textPrimary, 0.12)} 1px, transparent)`,
   },
   groupQualifier: {
     color: colors.textSecondary,
@@ -209,6 +224,13 @@ const styles = {
   cellNa: {
     color: colors.textMuted,
     fontStyle: "italic",
+  },
+  // A message spanning the scrolling columns, which can be wider than the window: it's centred in
+  // its run, but stays within whatever part of the run is on screen, right of the pinned columns.
+  cellNaSticky: {
+    display: "inline-block",
+    position: "sticky",
+    right: 10,
   },
   plofBadge: {
     display: "inline-block",
@@ -309,7 +331,7 @@ const styles = {
 // beneath in quieter ink. The frequency is what's compared across rows; the counts back it up.
 const AOU_COLUMN_IDS = ["aouSubpop", "aouFreq"] as const;
 const GNOMAD_COLUMN_IDS = ["gnomadSubpop", "gnomadFreq"] as const;
-const ANNOTATION_COLUMN_IDS = ["clinvar", "spliceAi", "plof"] as const;
+const ANNOTATION_COLUMN_IDS = ["spliceAi", "plof"] as const;
 // The AF ratio isn't a column: Review states it with the interval behind it, which a bare ratio
 // in a cell can't.
 const MATCHED_COLUMN_IDS = ["matchedFreq", "homozygotes", "heterozygotes", "clinvarPlpInTrans"] as const;
@@ -410,6 +432,7 @@ const UNANNOTATED_GROUP: MissingGroup = {
   columnIds: new Set([
     "gene",
     "consequence",
+    "clinvar",
     ...AOU_COLUMN_IDS,
     ...GNOMAD_COLUMN_IDS,
     ...MATCHED_COLUMN_IDS,
@@ -649,6 +672,29 @@ export default function VariantsPanel({
             },
             sortUndefined: "last",
           }),
+          columnHelper.accessor(
+            (row) =>
+              row.cohort.annotated && row.cohort.clinvarSignificance
+                ? CLINVAR_SEVERITY_RANK[row.cohort.clinvarSignificance]
+                : undefined,
+            {
+              id: "clinvar",
+              header: "ClinVar",
+              cell: ({ row }) => {
+                const { cohort } = row.original;
+                if (!cohort.annotated || !cohort.clinvarSignificance) return <NotAvailable />;
+                return (
+                  <ClinvarBadge
+                    significance={cohort.clinvarSignificance}
+                    stars={cohort.clinvarStars}
+                    conflicts={cohort.clinvarHasConflicts}
+                    href={clinvarSearchUrl(cohort.variant)}
+                  />
+                );
+              },
+              sortUndefined: "last",
+            },
+          ),
         ]),
       }),
       columnHelper.group({
@@ -813,29 +859,6 @@ export default function VariantsPanel({
         header: "",
         enableSorting: false,
         columns: columnHelper.columns([
-          columnHelper.accessor(
-            (row) =>
-              row.cohort.annotated && row.cohort.clinvarSignificance
-                ? CLINVAR_SEVERITY_RANK[row.cohort.clinvarSignificance]
-                : undefined,
-            {
-              id: "clinvar",
-              header: "ClinVar",
-              cell: ({ row }) => {
-                const { cohort } = row.original;
-                if (!cohort.annotated || !cohort.clinvarSignificance) return <NotAvailable />;
-                return (
-                  <ClinvarBadge
-                    significance={cohort.clinvarSignificance}
-                    stars={cohort.clinvarStars}
-                    conflicts={cohort.clinvarHasConflicts}
-                    href={clinvarSearchUrl(cohort.variant)}
-                  />
-                );
-              },
-              sortUndefined: "last",
-            },
-          ),
           columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.spliceAi : undefined), {
             id: "spliceAi",
             header: "SpliceAI",
@@ -901,7 +924,12 @@ export default function VariantsPanel({
   // Each pinned column sticks at the left edge plus the widths of the pinned columns before it.
   // Widths come from the rendered header cells, re-read whenever the table's shape could change.
   const tableRef = useRef<HTMLTableElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const [pinnedOffsets, setPinnedOffsets] = useState<Record<string, number>>({});
+  /** The pinned columns' total width: where the scrolling columns begin. */
+  const [pinnedWidth, setPinnedWidth] = useState(0);
+  /** Whether the table is wider than its panel, so the pinned columns have something to pin against. */
+  const [scrollable, setScrollable] = useState(false);
   useLayoutEffect(() => {
     const measure = () => {
       const offsets: Record<string, number> = {};
@@ -915,6 +943,9 @@ export default function VariantsPanel({
       setPinnedOffsets((current) =>
         PINNED_COLUMN_IDS.every((id) => current[id] === offsets[id]) ? current : offsets,
       );
+      setPinnedWidth(left);
+      const scroller = scrollerRef.current;
+      setScrollable(scroller !== null && scroller.scrollWidth > scroller.clientWidth);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -926,12 +957,11 @@ export default function VariantsPanel({
   function pinnedStyle(columnId: string): CSSProperties | undefined {
     if (columnId === PINNED_GROUP_ID) return { ...styles.pinnedCell, ...styles.pinnedGroupHeaderCell, left: 0 };
     if (!pinnedIds.has(columnId)) return undefined;
-    return {
-      ...styles.pinnedCell,
-      left: pinnedOffsets[columnId] ?? 0,
-      ...(columnId === LAST_PINNED_COLUMN_ID ? styles.lastPinned : undefined),
-    };
+    return { ...styles.pinnedCell, left: pinnedOffsets[columnId] ?? 0 };
   }
+
+  /** The seam a last-pinned cell draws down its right edge; see styles.seam. */
+  const seam = <span aria-hidden="true" style={{ ...styles.seam, ...(scrollable ? styles.seamScrollable : undefined) }} />;
 
   // Without a phenotype filter the matched block holds only the prompt to add one, so it moves to
   // the end, out of the way of the figures there are; and with no Review to open, the Review
@@ -989,7 +1019,7 @@ export default function VariantsPanel({
         </div>
       }
     >
-      <div style={styles.tableScroll}>
+      <div ref={scrollerRef} style={styles.tableScroll}>
           <table ref={tableRef} style={styles.table}>
             <thead>
               {table.getHeaderGroups().map((headerGroup, depth, headerGroups) => {
@@ -1021,13 +1051,11 @@ export default function VariantsPanel({
                             ...(sortable && hoveredHeader === header.id ? Style.table.sortableHover : undefined),
                             ...pinnedStyle(header.column.id),
                             ...(pinnedIds.has(header.column.id) ? styles.pinnedHeaderCell : undefined),
-                            ...(header.column.id === PINNED_GROUP_ID || header.column.id === LAST_PINNED_COLUMN_ID
-                              ? styles.lastPinnedHeader
-                              : undefined),
                           }}
                           onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
                           {...(sortable ? headerHoverProps(header.id) : undefined)}
                         >
+                          {(header.column.id === PINNED_GROUP_ID || header.column.id === LAST_PINNED_COLUMN_ID) && seam}
                           {header.isPlaceholder ? null : (
                             <>
                               {flexRender(header.column.columnDef.header, header.getContext())}
@@ -1128,15 +1156,26 @@ export default function VariantsPanel({
                         };
                         const group = missingGroups.find((candidate) => candidate.columnIds.has(cell.column.id));
                         if (group) {
-                          // The prompt block can split a group in two, so it's drawn as runs of
-                          // adjacent cells, with its message in the first.
-                          const inGroup = (id: string) => group.columnIds.has(id) && !inPromptBlock(id);
-                          if (index > 0 && inGroup(visibleCells[index - 1].column.id)) return null;
+                          // A group is drawn as runs of adjacent cells rather than one cell: the
+                          // prompt block can split it, and a run never crosses from the pinned
+                          // columns into the scrolling ones, so the pinned part stays put and
+                          // draws the seam like any other row. The message goes in the first
+                          // scrolling run, beside the other rows' figures.
+                          const inRun = (id: string) =>
+                            group.columnIds.has(id) && !inPromptBlock(id) && pinnedIds.has(id) === pinned;
+                          if (index > 0 && inRun(visibleCells[index - 1].column.id)) return null;
                           let end = index;
-                          while (end < visibleCells.length && inGroup(visibleCells[end].column.id)) end++;
+                          while (end < visibleCells.length && inRun(visibleCells[end].column.id)) end++;
                           const runCells = visibleCells.slice(index, end);
-                          const firstRun = !visibleCells.slice(0, index).some((candidate) => inGroup(candidate.column.id));
-                          const spansPastPinned = runCells.some((candidate) => !pinnedIds.has(candidate.column.id));
+                          const holdsMessage =
+                            !pinned &&
+                            !visibleCells
+                              .slice(0, index)
+                              .some((candidate) => group.columnIds.has(candidate.column.id) && !pinnedIds.has(candidate.column.id));
+                          const endsPinned = runCells[runCells.length - 1].column.id === LAST_PINNED_COLUMN_ID;
+                          // A run keeps its source's tint only if it lies within one source; the
+                          // run across everything for a variant not in All of Us is untinted.
+                          const runTint = runCells.every((candidate) => tintOf(candidate.column.id) === tint) ? tint : null;
                           return (
                             <td
                               key={cell.id}
@@ -1144,16 +1183,21 @@ export default function VariantsPanel({
                               style={{
                                 ...cellStyle,
                                 ...styles.sourceMissing,
-                                ...(spansPastPinned ? undefined : pinnedStyle(cell.column.id)),
+                                background: cellBackground(runTint, hovered) ?? (pinned ? colors.surface2 : undefined),
+                                ...pinnedStyle(cell.column.id),
                               }}
                               title={group.title}
                             >
-                              {firstRun && <span style={styles.cellNa}>{group.message}</span>}
+                              {endsPinned && seam}
+                              {holdsMessage && (
+                                <span style={{ ...styles.cellNa, ...styles.cellNaSticky, left: pinnedWidth + 10 }}>{group.message}</span>
+                              )}
                             </td>
                           );
                         }
                         return (
                           <td key={cell.id} style={{ ...cellStyle, ...pinnedStyle(cell.column.id) }}>
+                            {cell.column.id === LAST_PINNED_COLUMN_ID && seam}
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         );
