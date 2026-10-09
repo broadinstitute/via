@@ -50,6 +50,7 @@ For local testing:
 - `docker-compose.yaml` - Docker Compose configuration
 - `devcontainer-template.json` - Template options and metadata
 - `entrypoint.sh` - Waits for Workbench-specific env vars, and checks the required ones are set, before starting the jar
+- `LICENSE` - Upstream license (see above)
 
 ## Boot time
 
@@ -57,9 +58,8 @@ The container's startup is deliberately minimal: `startupscript/post-startup.sh`
 installs the Workbench CLI, logs in, and records the workspace's user email and project
 for the app. Git setup, bucket mounting and devcontainer features from the upstream
 template are left out because the app doesn't use them and each cost boot time. The
-script's trace is timestamped and written to `/root/.workbench/post-startup-output.txt`
-inside the container, which is the place to look when a boot is slow.
-- `LICENSE` - Upstream license (see above)
+script's output is written to `/root/.workbench/post-startup-output.txt` inside the
+container, which is the place to look when a boot is slow.
 
 ## Usage
 

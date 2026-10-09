@@ -4,8 +4,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 set -o xtrace
-# Timestamp every traced command, so the output file doubles as a boot profile.
-export PS4='+ $(date +%T) '
 
 if [[ $# -ne 4 ]]; then
   echo "Usage: $0 user workDirectory gcp <true/false>"

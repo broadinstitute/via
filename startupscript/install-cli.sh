@@ -18,8 +18,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 set -o xtrace
-# bash running as root doesn't inherit PS4 from the environment, so set it here too.
-export PS4='+ $(date +%T) '
 
 source "${SCRIPT_DIR}/emit.sh"
 source "${CLOUD_SCRIPT_DIR}/vm-metadata.sh"
