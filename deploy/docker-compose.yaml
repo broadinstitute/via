@@ -33,14 +33,6 @@ services:
     # The service must be connected to the "app-network" Docker network
     networks:
       - app-network
-    # SYS_ADMIN and fuse are required to mount workspace resources into the
-    # container.
-    cap_add:
-      - SYS_ADMIN
-    devices:
-      - /dev/fuse
-    security_opt:
-      - apparmor:unconfined
 
 networks:
   # The Docker network must be named "app-network". This is an external network

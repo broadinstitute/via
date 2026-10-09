@@ -6,14 +6,19 @@
   "options": {
     "cloud": {
       "type": "string",
-      "enum": ["gcp", "aws"],
+      "enum": [
+        "gcp"
+      ],
       "default": "gcp",
-      "description": "Cloud provider (gcp or aws)"
+      "description": "Cloud provider (only gcp is supported)"
     },
     "login": {
       "type": "string",
       "description": "Whether to log in to workbench CLI",
-      "proposals": ["true", "false"],
+      "proposals": [
+        "true",
+        "false"
+      ],
       "default": "true"
     }
   }

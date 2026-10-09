@@ -44,11 +44,22 @@ For local testing:
 ## Files
 
 - `Dockerfile` - Multi-stage build combining `ui/` and `api/` into one image
-- `.devcontainer.json` - Devcontainer configuration and features
+- `.devcontainer.json` - Devcontainer configuration. Deliberately has no `features`: the
+  devcontainer CLI would build them into a new image on the VM at every boot, and the app
+  needs nothing they provide
 - `docker-compose.yaml` - Docker Compose configuration
 - `devcontainer-template.json` - Template options and metadata
 - `entrypoint.sh` - Waits for Workbench-specific env vars, and checks the required ones are set, before starting the jar
 - `LICENSE` - Upstream license (see above)
+
+## Boot time
+
+The container's startup is deliberately minimal: `startupscript/post-startup.sh` only
+installs the Workbench CLI, logs in, and records the workspace's user email and project
+for the app. Git setup, bucket mounting and devcontainer features from the upstream
+template are left out because the app doesn't use them and each cost boot time. The
+script's output is written to `/root/.workbench/post-startup-output.txt` inside the
+container, which is the place to look when a boot is slow.
 
 ## Usage
 
