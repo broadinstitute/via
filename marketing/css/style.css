@@ -30,7 +30,8 @@
   --border: #e2e1dc;
   --border-strong: #c7c6c0;
 
-  --tint-aou: #eaf2f8;
+  /* All of Us figures share one tint wherever they sit; the scope row says which participants. */
+  --tint-aou: #dfeaf2;
   --tint-gnomad: #f1f0ec;
   --tint-matched: #dfeaf2;
   --tint-accent: #e1edf4;
@@ -324,7 +325,7 @@ a { color: inherit; }
 .app-table th { padding: 8px 8px; background: var(--surface1); color: var(--secondary); font-weight: 600; text-align: left; box-shadow: inset 0 -1px 0 var(--border); }
 .app-table th.group { height: 26px; padding: 0 6px; font-size: 11px; font-weight: 700; text-align: center; }
 .app-table th.scope { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; }
-.app-table th.scope.matched { color: var(--ink); }
+.app-table th.scope.matched-scope { color: var(--ink); }
 .app-table th svg { vertical-align: middle; }
 .app-table .unit { color: var(--muted); font-weight: 500; }
 .app-table .count { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; color: var(--secondary); font-weight: 600; }

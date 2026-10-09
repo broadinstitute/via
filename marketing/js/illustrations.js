@@ -46,7 +46,7 @@ const ROWS = [
     aou: { code: 'AFR', af: '0.0045', acan: '461 / 102,500' },
     gnomad: { code: 'AFR', af: '0.0029', acan: '120 / 41,574' },
     matched: { af: '0.0000', acan: '0 / 782', hom: 0, het: 0, plp: 0 },
-    clinvar: null, spliceAi: '0.04', plof: 'HC',
+    clinvar: ['p', 'LP', 1], spliceAi: '0.04', plof: 'HC',
   },
   {
     variant: '19-11120205-T-C', gene: 'LDLR', consequence: 'Synonymous', protein: 'p.Val653=',
@@ -72,9 +72,11 @@ const clinvar = (c) => (c ? `<span class="cv ${c[0]}"><span class="code">${c[1]}
 const plof = (p) => (p ? `<span class="hc">${p}</span>` : '<span class="muted">—</span>');
 const count = (n) => `<td class="matched num ${n === 0 ? 'zero' : ''}">${n}</td>`;
 
+/** A row's identity, ClinVar included: the columns the app pins while the rest scroll. */
 function identityCells(row) {
   return `<td class="chev">${CHEVRON}</td><td class="mono">${row.variant}</td><td>${row.gene}</td>` +
-    `<td><span class="stack"><span>${row.consequence}</span><span class="sub mono">${row.protein}</span></span></td>`;
+    `<td><span class="stack"><span>${row.consequence}</span><span class="sub mono">${row.protein}</span></span></td>` +
+    `<td>${clinvar(row.clinvar)}</td>`;
 }
 
 /** A source's maximum-subpopulation badge and frequency, or one "not observed" cell across both. */
@@ -90,31 +92,31 @@ function renderTable(table) {
   table.innerHTML = `
     <thead>
       <tr>
-        <th colspan="4"></th>
-        <th class="group scope aou" colspan="4">All participants</th>
-        <th class="group scope matched" colspan="4">Phenotype-matched <span class="count">${USER}391</span></th>
-        <th colspan="4"></th>
+        <th colspan="5"></th>
+        <th class="group scope" colspan="4">All participants</th>
+        <th class="group scope matched-scope" colspan="4">Phenotype-matched <span class="count">${USER}391</span></th>
+        <th colspan="3"></th>
       </tr>
       <tr>
-        <th colspan="4"></th>
+        <th colspan="5"></th>
         <th class="group aou" colspan="2"><i>All of Us</i> <span class="unit">— max subpopulation</span></th>
         <th class="group gnomad" colspan="2">gnomAD <span class="unit">— max subpopulation</span></th>
         <th class="group matched" colspan="4"><i>All of Us</i></th>
-        <th colspan="4"></th>
+        <th colspan="3"></th>
       </tr>
       <tr>
-        <th></th><th>Variant</th><th>Gene</th><th>Consequence</th>
+        <th></th><th>Variant</th><th>Gene</th><th>Consequence</th><th>ClinVar</th>
         <th class="aou badge">${GLOBE}</th><th class="aou">${FREQ_HEADER}</th>
         <th class="gnomad badge">${GLOBE}</th><th class="gnomad">${FREQ_HEADER}</th>
         <th class="matched">${FREQ_HEADER}</th><th class="matched num">Hom</th><th class="matched num">Het</th><th class="matched num">P/LP in trans</th>
-        <th>ClinVar</th><th>SpliceAI</th><th>pLOF</th><th></th>
+        <th>SpliceAI</th><th>pLOF</th><th></th>
       </tr>
     </thead>
     <tbody>${ROWS.map((row) => `
       <tr>${identityCells(row)}
         ${sourceCells('aou', row.aou, 'Not observed in <i>All of Us</i>')}${sourceCells('gnomad', row.gnomad, 'Not observed in gnomAD')}
         <td class="matched">${freq(row.matched.af, row.matched.acan)}</td>${count(row.matched.hom)}${count(row.matched.het)}${count(row.matched.plp)}
-        <td>${clinvar(row.clinvar)}</td><td class="num">${row.spliceAi}</td><td>${plof(row.plof)}</td>
+        <td class="num">${row.spliceAi}</td><td>${plof(row.plof)}</td>
         <td class="action">${COMPARE}</td>
       </tr>`).join('')}
     </tbody>`;
