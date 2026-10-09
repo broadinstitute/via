@@ -1008,15 +1008,9 @@ export default function VariantsPanel({
                           key={header.id}
                           colSpan={header.colSpan}
                           data-column-id={header.column.id}
-                          aria-sort={
-                            sortable
-                              ? sortDirection === "asc"
-                                ? "ascending"
-                                : sortDirection === "desc"
-                                  ? "descending"
-                                  : "none"
-                              : undefined
-                          }
+                          // Only on the sorted header: ARIA asks for aria-sort on one header at a
+                          // time, and the sort buttons already say which other columns can sort.
+                          aria-sort={sortDirection === "asc" ? "ascending" : sortDirection === "desc" ? "descending" : undefined}
                           style={{
                             ...styles.headerCell,
                             ...(isGroupRow ? styles.groupHeaderCell : undefined),

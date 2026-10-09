@@ -228,13 +228,13 @@ describe("VariantsPanel", () => {
     renderPanel([IN_AOU_ONLY, NOT_IN_AOU], []);
 
     const gene = screen.getByRole("columnheader", { name: /^Gene/ });
-    expect(gene).toHaveAttribute("aria-sort", "none");
+    expect(gene).not.toHaveAttribute("aria-sort");
     // Each sort button names its column, so the fourteen of them are told apart by name alone.
     fireEvent.click(screen.getByRole("button", { name: "Sort Gene" }));
     expect(gene).toHaveAttribute("aria-sort", "ascending");
     expect(screen.getByRole("button", { name: "Gene sorted ascending; change sort" })).toBeInTheDocument();
     // The variant column, not a sort key, keeps its resting state and name.
-    expect(screen.getByRole("columnheader", { name: /^Variant/ })).toHaveAttribute("aria-sort", "none");
+    expect(screen.getByRole("columnheader", { name: /^Variant/ })).not.toHaveAttribute("aria-sort");
     expect(screen.getByRole("button", { name: "Sort Variant" })).toBeInTheDocument();
   });
 
