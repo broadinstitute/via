@@ -379,11 +379,12 @@ function gutterStyle(columnId: string): CSSProperties | undefined {
   return undefined;
 }
 
-/** The tint a group header cell takes from its id: the source groups' ids are tint names, and the matched scope is matched. */
+/**
+ * The tint a group header cell takes from its id: the source groups' ids are tint names. The scope
+ * row above them is untinted on both sides, so the two scopes read as peers.
+ */
 function headerTint(columnId: string): Tint | null {
-  if (columnId in sourceTints) return columnId as Tint;
-  if (columnId === "matchedScope") return "matched";
-  return null;
+  return columnId in sourceTints ? (columnId as Tint) : null;
 }
 
 /**

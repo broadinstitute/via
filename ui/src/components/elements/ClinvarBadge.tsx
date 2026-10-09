@@ -76,7 +76,7 @@ export default function ClinvarBadge({ significance, stars = null, mode = "split
   const tooltip = useTooltip(
     ref,
     [significance, review, "Click to open ClinVar in a new tab."].filter((line) => line !== null).join("\n"),
-    "left",
+    "right",
   );
 
   const style: CSSProperties = {

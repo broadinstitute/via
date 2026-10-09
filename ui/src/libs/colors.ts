@@ -81,11 +81,17 @@ export default colors;
  * `soft` is for the population table nested inside an expanded row, where the same distinction
  * only needs a hint. Both share one `hover` value so a hovered row reads as a single band.
  */
+/** The accent's own tint: All of Us figures, wherever they sit. */
+const AOU_TINT = { strong: "#dfeaf2", soft: "#f6f9fc", hover: "#d4e3ee" } as const;
+
 export const sourceTints = {
-  aou: { strong: "#eaf2f8", soft: "#f6f9fc", hover: "#e1ecf4" },
+  aou: AOU_TINT,
   gnomad: { strong: "#f1f0ec", soft: "#fafbfb", hover: "#e9e8e3" },
-  /** The phenotype-matched column group in the merged table: the accent's own tint, a step deeper than aou's. */
-  matched: { strong: "#dfeaf2", hover: "#d4e3ee" },
+  /**
+   * The phenotype-matched column group in the merged table. Its figures are All of Us figures
+   * too, so it shares the tint; the scope row above says which participants they cover.
+   */
+  matched: { strong: AOU_TINT.strong, hover: AOU_TINT.hover },
 } as const;
 
 /** Marks the subpopulation with the highest allele frequency in the population table. */
