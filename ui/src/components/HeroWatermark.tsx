@@ -1,18 +1,19 @@
 import type { CSSProperties } from "react";
 import colors from "../libs/colors";
 
-// VIA's mark as a watermark: the lens from the favicon without its tile, large and faint in the
-// hero's top-right corner, cropped by the hero's edges. The one place the mark appears at scale;
-// the hero's overflow: hidden does the cropping. Decorative, so hidden from assistive technology.
+// VIA's mark as a watermark: the lens from the favicon without its tile, faint at the hero's
+// right end. Sized to the band so the whole lens and most of its handle show; only the handle's
+// tip runs past the bottom edge, which the hero's overflow: hidden crops. Decorative, so hidden
+// from assistive technology.
 
 const styles = {
   svg: {
     position: "absolute",
-    top: -30,
-    right: -40,
-    width: 300,
-    height: 300,
-    opacity: 0.1,
+    top: -8,
+    right: 36,
+    width: 136,
+    height: 136,
+    opacity: 0.12,
     pointerEvents: "none",
   },
 } as const satisfies Record<string, CSSProperties>;

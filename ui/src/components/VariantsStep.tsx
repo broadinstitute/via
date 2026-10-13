@@ -48,6 +48,7 @@ interface VariantsStepProps {
   minHeight: number;
   /** See StepPanel. */
   appearance?: StepPanelAppearance;
+  numbered?: boolean;
   /** Offers these in a "Try an example" menu while the field is empty. */
   examples?: UseCase[];
   onUseExample?: (example: UseCase) => void;
@@ -60,6 +61,7 @@ export default function VariantsStep({
   limit,
   minHeight,
   appearance,
+  numbered,
   examples = [],
   onUseExample,
 }: VariantsStepProps) {
@@ -67,7 +69,13 @@ export default function VariantsStep({
   const { count } = variantEntryStatus(value, limit);
 
   return (
-    <StepPanel stepNumber={1} title="Candidate variants" tags={countTags(count, limit)} appearance={appearance}>
+    <StepPanel
+      stepNumber={1}
+      title="Candidate variants"
+      tags={countTags(count, limit)}
+      appearance={appearance}
+      numbered={numbered}
+    >
       <textarea
         aria-label="Candidate variants"
         value={value}

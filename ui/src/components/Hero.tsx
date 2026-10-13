@@ -2,11 +2,13 @@ import type { CSSProperties, ReactNode } from "react";
 import colors, { alpha } from "../libs/colors";
 import HeroWatermark from "./HeroWatermark";
 
+// A band under the top bar that names the app and says in a line what it does, in the brand's
+// navy with the mark as a watermark. Short on purpose: the search form is what the page is for,
+// and it starts right beneath.
 const styles = {
   hero: {
     position: "relative",
-    // Bottom padding is what the search card overlaps; see SearchEntryPage.
-    padding: "56px 20px 116px",
+    padding: "22px 20px 24px",
     overflow: "hidden",
     // The favicon's navy, deepening upward, with a blue glow top-right and a teal one bottom-left.
     // Dark enough throughout for white text without a scrim or text shadows.
@@ -16,30 +18,25 @@ const styles = {
       `linear-gradient(180deg, ${colors.heroDeep} 0%, ${colors.textPrimary} 100%)`,
     ].join(", "),
   },
-  // Narrower than the hero, so the copy stays centered on wide viewports.
+  // The same width as the search card beneath, so the title and the card share a left edge.
   inner: {
     position: "relative",
-    maxWidth: 760,
+    maxWidth: 860,
     margin: "0 auto",
-    textAlign: "center",
   },
-  // Narrow enough that the title breaks after "variants" rather than inside "All of Us".
   title: {
-    maxWidth: 680,
-    margin: "0 auto 12px",
+    margin: "0 0 4px",
     color: colors.white,
-    fontSize: 34,
+    fontSize: 22,
     fontWeight: 800,
-    letterSpacing: -0.5,
-    lineHeight: 1.15,
+    letterSpacing: -0.3,
+    lineHeight: 1.2,
   },
-  // Wide enough that the one-sentence subtitle breaks after its full stop, not before it.
   subtitle: {
-    maxWidth: 640,
-    margin: "0 auto",
+    margin: 0,
     color: alpha(colors.white, 0.85),
-    fontSize: 15,
-    lineHeight: 1.6,
+    fontSize: 13.5,
+    lineHeight: 1.5,
   },
 } as const satisfies Record<string, CSSProperties>;
 

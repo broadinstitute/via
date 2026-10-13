@@ -12,6 +12,8 @@ import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
 import VariantsPanel, { VARIANTS_TABLE_MIN_HEIGHT } from "../components/results/VariantsPanel";
 import type { ResultsView } from "../components/results/ViewSwitcher";
+import type { ConditionConcept } from "../api/conditions";
+import { searchConceptId } from "../utils/phenotypes";
 import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
 
@@ -25,12 +27,11 @@ export default function SearchResultsPage() {
   const [view, setView] = useState<ResultsView>("table");
   const [reviewVariant, setReviewVariant] = useState<string | undefined>(undefined);
   const [drawerVariants, setDrawerVariants] = useState("");
-  const [drawerCondition, setDrawerCondition] = useState("");
-  // The concept behind drawerCondition while it's still a pick; cleared by any edit, as on the
-  // entry page, so re-running only filters by a condition the user actually chose.
-  const [drawerConceptId, setDrawerConceptId] = useState<number | null>(null);
-  // Remounts the popover on cancel, so its condition field goes back to showing the searched
-  // concept as picked instead of re-querying the restored name.
+  // The phenotypes the search was run with, as the drawer's starting point; only picked
+  // concepts are ever here, so re-running filters by exactly what the user chose.
+  const [drawerPhenotypes, setDrawerPhenotypes] = useState<ConditionConcept[]>([]);
+  // Remounts the popover on cancel, so anything typed into its condition field is dropped
+  // along with the rest of the edit.
   const [drawerKey, setDrawerKey] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -75,8 +76,8 @@ export default function SearchResultsPage() {
 
   function resetDrawer(data: SearchResults) {
     setDrawerVariants(data.searchSummary.variantsRaw);
-    setDrawerCondition(data.conditionSearch?.concept?.name ?? "");
-    setDrawerConceptId(data.conditionSearch?.concept?.conceptId ?? null);
+    const concept = data.conditionSearch?.concept;
+    setDrawerPhenotypes(concept ? [concept] : []);
     setDrawerKey((key) => key + 1);
   }
 
@@ -93,8 +94,9 @@ export default function SearchResultsPage() {
     for (const variant of variants) {
       nextParams.append("variants", variant);
     }
-    if (drawerConceptId !== null) {
-      nextParams.set("conditionConceptId", String(drawerConceptId));
+    const conceptId = searchConceptId(drawerPhenotypes);
+    if (conceptId !== null) {
+      nextParams.set("conditionConceptId", String(conceptId));
     }
     setSearchParams(nextParams);
     setDrawerOpen(false);
@@ -135,15 +137,10 @@ export default function SearchResultsPage() {
               key={drawerKey}
               open={drawerOpen}
               variantsText={drawerVariants}
-              conditionText={drawerCondition}
-              initialCondition={results.conditionSearch?.concept ?? null}
+              phenotypes={drawerPhenotypes}
               variantsLimit={results.searchSummary.variantsLimit}
               onVariantsChange={setDrawerVariants}
-              onConditionChange={(value) => {
-                setDrawerCondition(value);
-                setDrawerConceptId(null);
-              }}
-              onConditionSelect={(concept) => setDrawerConceptId(concept.conceptId)}
+              onPhenotypesChange={setDrawerPhenotypes}
               onCancel={handleCancelDrawer}
               onSearch={handleRerunSearch}
             />

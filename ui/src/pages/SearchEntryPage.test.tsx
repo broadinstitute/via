@@ -13,13 +13,18 @@ configure({ asyncUtilTimeout: 2500 });
 
 /**
  * Covers the wiring the component tests can't: that Step 2 really is the condition combobox,
- * and that a picked condition reaches the results URL.
+ * that it stays folded until asked for, and that a picked condition reaches the results URL.
  */
 
 /** Renders the URL the page navigated to, so the assertions can read it. */
 function LocationProbe() {
   const location = useLocation();
   return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
+}
+
+/** Opens the folded phenotype step, as a user who wants one would. */
+function openPhenotype() {
+  fireEvent.click(screen.getByRole("button", { name: /Add a phenotype/ }));
 }
 
 function renderPage() {
@@ -53,11 +58,20 @@ describe("SearchEntryPage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("offers a condition combobox for the phenotype step", () => {
+  it("keeps the phenotype step folded to a row until asked, then opens it into the condition combobox", () => {
     stubApi([], "");
     renderPage();
 
-    expect(screen.getByRole("combobox")).toHaveAttribute("placeholder", "e.g. tetralogy of fallot");
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    const row = screen.getByRole("button", { name: /Add a phenotype/ });
+    expect(row).toHaveAttribute("aria-expanded", "false");
+    expect(row).toHaveTextContent("Optional");
+
+    openPhenotype();
+    const combobox = screen.getByRole("combobox");
+    expect(combobox).toHaveAttribute("placeholder", "e.g. tetralogy of fallot");
+    expect(combobox).toHaveFocus();
+    expect(screen.queryByRole("button", { name: /Add a phenotype/ })).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("e.g. HP:0001636")).not.toBeInTheDocument();
   });
 
@@ -133,7 +147,12 @@ describe("SearchEntryPage", () => {
 
     expect(screen.getByPlaceholderText(/8-11708582-C-T/)).toHaveValue(hcm.variants.join("\n"));
     expect(screen.getByText(`${hcm.variants.length} entered`)).toBeInTheDocument();
-    expect(screen.getByRole("combobox")).toHaveValue("Hypertrophic cardiomyopathy");
+    // The example's condition opens the phenotype step with it already picked, which fills the
+    // one slot a search has.
+    expect(screen.getByRole("list", { name: "Picked phenotypes" })).toHaveTextContent("Hypertrophic cardiomyopathy");
+    expect(screen.queryByRole("button", { name: /Add a phenotype/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByText(/Searches support one phenotype for now/)).toBeInTheDocument();
     // The menu steps aside once the field has variants in it.
     expect(screen.queryByRole("button", { name: "Try an example" })).not.toBeInTheDocument();
 
@@ -201,6 +220,7 @@ describe("SearchEntryPage", () => {
     stubApi([], "");
     renderPage();
     fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), { target: { value: "8-11708582-C-T" } });
+    openPhenotype();
 
     fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter", ctrlKey: true });
 
@@ -211,6 +231,7 @@ describe("SearchEntryPage", () => {
     stubApi([TETRALOGY], "tetralogy");
     renderPage();
     fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), { target: { value: "8-11708582-C-T" } });
+    openPhenotype();
     const combobox = screen.getByRole("combobox");
     fireEvent.focus(combobox);
     fireEvent.change(combobox, { target: { value: "tetralogy" } });
@@ -219,9 +240,10 @@ describe("SearchEntryPage", () => {
 
     fireEvent.keyDown(combobox, { key: "Enter", ctrlKey: true });
     expect(screen.queryByTestId("location")).not.toBeInTheDocument();
-    expect(combobox).toHaveValue("Tetralogy of Fallot");
+    expect(screen.getByRole("list", { name: "Picked phenotypes" })).toHaveTextContent("Tetralogy of Fallot");
 
-    fireEvent.keyDown(combobox, { key: "Enter", ctrlKey: true });
+    // The field has stepped aside, so the shortcut comes from the variants box.
+    fireEvent.keyDown(screen.getByPlaceholderText(/8-11708582-C-T/), { key: "Enter", ctrlKey: true });
     expect(await screen.findByTestId("location")).toHaveTextContent(
       "/results?variants=8-11708582-C-T&conditionConceptId=9000010",
     );
@@ -279,6 +301,7 @@ describe("SearchEntryPage", () => {
     fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), {
       target: { value: "8-11708582-C-T" },
     });
+    openPhenotype();
     const combobox = screen.getByRole("combobox");
     fireEvent.focus(combobox);
     fireEvent.change(combobox, { target: { value: "tetralogy" } });
@@ -286,7 +309,12 @@ describe("SearchEntryPage", () => {
     // Fallot" (it's the description for HP:0001636), so a plain findByText picks up that
     // instead and the click silently does nothing.
     fireEvent.mouseDown(await screen.findByRole("option", { name: /Tetralogy of Fallot/ }));
-    fireEvent.click(screen.getByRole("button", { name: /search/i }));
+    // The pick becomes a chip, and the field steps aside until the chip is removed.
+    expect(screen.getByRole("list", { name: "Picked phenotypes" })).toHaveTextContent("Tetralogy of Fallot");
+    // With the estimate the dropdown showed for it.
+    expect(screen.getByRole("list", { name: "Picked phenotypes" })).toHaveTextContent("~47");
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^search$/i }));
 
     await waitFor(() =>
       expect(screen.getByTestId("location")).toHaveTextContent(
@@ -296,47 +324,29 @@ describe("SearchEntryPage", () => {
     expect(screen.getByTestId("location")).not.toHaveTextContent("condition=");
   });
 
-  /**
-   * Editing after picking invalidates the selection -- the text no longer necessarily names
-   * that concept, so sending its id would count something the user isn't looking at.
-   */
-  it("drops the concept id when the text is edited after picking", async () => {
+  it("drops a picked phenotype from the search when its chip is removed, and brings the field back", async () => {
     stubApi([TETRALOGY], "tetralogy");
     renderPage();
 
     fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), {
       target: { value: "8-11708582-C-T" },
     });
+    openPhenotype();
     const combobox = screen.getByRole("combobox");
     fireEvent.focus(combobox);
     fireEvent.change(combobox, { target: { value: "tetralogy" } });
     fireEvent.mouseDown(await screen.findByRole("option", { name: /Tetralogy of Fallot/ }));
-    fireEvent.change(combobox, { target: { value: "something else" } });
-    fireEvent.click(screen.getByRole("button", { name: /search/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove Tetralogy of Fallot" }));
 
+    expect(screen.queryByRole("list", { name: "Picked phenotypes" })).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: /^search$/i }));
     await waitFor(() =>
       expect(screen.getByTestId("location")).toHaveTextContent("/results?variants=8-11708582-C-T"),
     );
-    expect(screen.getByTestId("location")).not.toHaveTextContent("condition");
+    expect(screen.getByTestId("location")).not.toHaveTextContent("conditionConceptId");
   });
 
-  /** The condition is optional, so a variants-only search must still go through. */
-  it("searches without a condition", async () => {
-    stubApi([], "");
-    renderPage();
-
-    fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), {
-      target: { value: "8-11708582-C-T" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /search/i }));
-
-    await waitFor(() =>
-      expect(screen.getByTestId("location")).toHaveTextContent("/results?variants=8-11708582-C-T"),
-    );
-    expect(screen.getByTestId("location")).not.toHaveTextContent("condition");
-  });
-
-  /** Text that was never picked from the list doesn't filter, same as an empty field. */
   it("ignores typed-but-unpicked text", async () => {
     stubApi([], "");
     renderPage();
@@ -344,6 +354,7 @@ describe("SearchEntryPage", () => {
     fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), {
       target: { value: "8-11708582-C-T" },
     });
+    openPhenotype();
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "  diabetes  " } });
     fireEvent.click(screen.getByRole("button", { name: /search/i }));
 

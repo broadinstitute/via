@@ -64,6 +64,17 @@ describe("StepPanel", () => {
     expect(container.firstChild).toHaveStyle({ overflow: "visible" });
   });
 
+  it("keeps the step number in the plain look when numbered", () => {
+    render(
+      <StepPanel stepNumber={1} title="Candidate variants" appearance="plain" numbered>
+        <p>body</p>
+      </StepPanel>,
+    );
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Candidate variants" })).toBeInTheDocument();
+  });
+
   it("drops the card and step number when plain, keeping the title and tags", () => {
     const { container } = render(
       <StepPanel stepNumber={2} title="Phenotype" appearance="plain" tags={[{ label: "Optional", variant: "optional" }]}>

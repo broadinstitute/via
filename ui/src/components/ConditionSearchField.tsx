@@ -114,7 +114,7 @@ const EXACT_COUNT_NOTE = "The exact count is calculated when you search.";
  * explanation in a tooltip, plus a spoken form for screen readers, which don't get the icon.
  * est_count is nullable, and can be -1, in the real table; both mean there's no estimate.
  */
-function describeEstimate(estimate: number | null): { label: string; tooltip: string; spoken: string } {
+export function describeEstimate(estimate: number | null): { label: string; tooltip: string; spoken: string } {
   if (estimate === null || estimate < 0) {
     return {
       label: "—",
@@ -149,11 +149,6 @@ interface ConditionSearchFieldProps {
    * immediately after the onChange carrying the concept's name -- see applySelection.
    */
   onSelect?: (concept: ConditionConcept) => void;
-  /**
-   * A concept already picked before this field mounted, e.g. the one a results page was
-   * searched with. `value` should be its name. It's shown as picked, and isn't re-queried.
-   */
-  initialSelection?: ConditionConcept | null;
   placeholder?: string;
 }
 
@@ -169,7 +164,6 @@ export default function ConditionSearchField({
   value,
   onChange,
   onSelect,
-  initialSelection = null,
   placeholder,
 }: ConditionSearchFieldProps) {
   const [candidates, setCandidates] = useState<ConditionConcept[]>([]);
@@ -184,11 +178,10 @@ export default function ConditionSearchField({
   const [listboxMaxHeight, setListboxMaxHeight] = useState<number | undefined>(undefined);
 
   // Set while applying a pick, to stop the effect below from firing a fresh query for the name
-  // we just wrote into the field -- which would reopen the list the user just dismissed. Starts
-  // set for an initial selection, whose name is in the field on mount for the same reason.
-  const justSelected = useRef(initialSelection !== null);
+  // we just wrote into the field -- which would reopen the list the user just dismissed.
+  const justSelected = useRef(false);
   // Bumped to re-run the lookup for the text already in the field, when there's no list to
-  // reopen: e.g. an initial selection, whose query was skipped above.
+  // reopen: text that was in the field before its query could run.
   const [lookupRequest, setLookupRequest] = useState(0);
   // The term the current candidates are for, so reopening a list that came back empty doesn't
   // repeat a query whose answer is already known.
@@ -275,9 +268,8 @@ export default function ConditionSearchField({
     justSelected.current = true;
     setOpen(false);
     setActiveIndex(-1);
-    // Order matters. Callers that track the picked concept id clear it in onChange (so a
-    // plain edit invalidates the pick) and set it in onSelect, so onChange has to fire first
-    // or the id is cleared immediately after being set. See SearchEntryPage.
+    // Order matters. PhenotypeStep clears the field in onSelect, so onChange has to fire
+    // first or the name would be written back over the cleared field.
     onChange(concept.name);
     onSelect?.(concept);
   }
