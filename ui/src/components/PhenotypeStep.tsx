@@ -16,6 +16,18 @@ import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 // search's limit is reached, when it gives way to a line saying so. A list even while the
 // limit is one, so the form doesn't change shape when the backend takes more.
 
+/** What the step does for the search; the folded row says the same, so the step reads alike open or closed. */
+export const PHENOTYPE_STEP_DESCRIPTION =
+  "See how often each variant shows up among participants recorded with a condition.";
+
+/** The step's tags, the same on the folded row and the open step: optional, then the limit. */
+export function phenotypeTags(limit: number = PHENOTYPES_LIMIT): StepTag[] {
+  return [
+    { label: "Optional", variant: "optional" },
+    { label: `limit ${limit}`, variant: "limit", title: `A search takes up to ${limit} phenotype${limit === 1 ? "" : "s"}.` },
+  ];
+}
+
 const styles = {
   picked: {
     display: "flex",
@@ -76,6 +88,7 @@ interface PhenotypeStepProps {
   /** See StepPanel. */
   appearance?: StepPanelAppearance;
   numbered?: boolean;
+  description?: ReactNode;
   /** Extra content below the hint. */
   children?: ReactNode;
 }
@@ -98,17 +111,24 @@ export default function PhenotypeStep({
   limit = PHENOTYPES_LIMIT,
   appearance,
   numbered,
+  description,
   children,
 }: PhenotypeStepProps) {
   // What's typed in the field: transient, cleared by a pick. Only picked concepts filter a search,
   // so text left here without picking is ignored, the same as leaving the field empty.
   const [text, setText] = useState("");
   const atLimit = picked.length >= limit;
-  const tags: StepTag[] = [{ label: "Optional", variant: "optional" }];
-  if (limit > 1) tags.push({ label: `limit ${limit}`, variant: "limit" });
+  const tags = phenotypeTags(limit);
 
   return (
-    <StepPanel stepNumber={2} title="Phenotype" tags={tags} appearance={appearance} numbered={numbered}>
+    <StepPanel
+      stepNumber={2}
+      title="Phenotype"
+      tags={tags}
+      appearance={appearance}
+      numbered={numbered}
+      description={description}
+    >
       {picked.length > 0 && (
         <ul style={styles.picked} aria-label="Picked phenotypes">
           {picked.map((concept) => (

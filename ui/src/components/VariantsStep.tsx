@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useFocus } from "../libs/hooks";
 import * as Style from "../libs/style";
 import type { UseCase } from "../utils/useCases";
@@ -49,6 +49,7 @@ interface VariantsStepProps {
   /** See StepPanel. */
   appearance?: StepPanelAppearance;
   numbered?: boolean;
+  description?: ReactNode;
   /** Offers these in a "Try an example" menu while the field is empty. */
   examples?: UseCase[];
   onUseExample?: (example: UseCase) => void;
@@ -62,6 +63,7 @@ export default function VariantsStep({
   minHeight,
   appearance,
   numbered,
+  description,
   examples = [],
   onUseExample,
 }: VariantsStepProps) {
@@ -75,6 +77,7 @@ export default function VariantsStep({
       tags={countTags(count, limit)}
       appearance={appearance}
       numbered={numbered}
+      description={description}
     >
       <textarea
         aria-label="Candidate variants"

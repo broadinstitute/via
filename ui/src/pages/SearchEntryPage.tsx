@@ -8,8 +8,9 @@ import * as Style from "../libs/style";
 import Clickable from "../components/common/Clickable";
 import AllOfUs from "../components/common/AllOfUs";
 import Hero from "../components/Hero";
+// import HeroSources from "../components/HeroSources";
 import PhenotypeDisclosure from "../components/PhenotypeDisclosure";
-import PhenotypeStep from "../components/PhenotypeStep";
+import PhenotypeStep, { PHENOTYPE_STEP_DESCRIPTION } from "../components/PhenotypeStep";
 import RecentSearches from "../components/RecentSearches";
 import VariantsStep from "../components/VariantsStep";
 import { SearchIcon } from "../components/icons";
@@ -29,10 +30,11 @@ import { USE_CASES, type UseCase } from "../utils/useCases";
 const PHENOTYPE_PANEL_ID = "phenotype-step";
 const CONDITION_FIELD_ID = "condition";
 
-// The form in the order it's filled: the variants box across the whole card, with the example
-// searches a link beneath it while it's empty, then the phenotype as a row that opens into its field.
-// The required step is the big one and the optional step is small until it's wanted, and the
-// page starts with the form rather than a banner.
+// The hero says what VIA is and what it reads from; the card is the form in the order it's
+// filled: the variants box across the whole card, with the example searches a link beneath it
+// while it's empty, then the phenotype as a row that opens into its field. Each step says in a
+// line what it does for the search, so the hero doesn't have to. The required step is the big one
+// and the optional step is small until it's wanted.
 const styles = {
   main: {
     maxWidth: 860,
@@ -149,10 +151,13 @@ export default function SearchEntryPage() {
         }
         subtitle={
           <>
-            Enter a list of candidate variants and see how often each appears across the <AllOfUs /> cohort. Add a
-            phenotype to compare the participants who share it.
+            Variant frequencies across the <AllOfUs /> cohort and among participants with a condition, with gnomAD,
+            ClinVar and predicted impact beside them.
           </>
         }
+        // TODO: decide whether the data source versions belong in the hero. HeroSources renders them
+        // as a line under the subtitle, fetched from /api/sources; the settings dialog lists them too.
+        // facts={<HeroSources />}
       />
       <main style={styles.main}>
         <section
@@ -172,6 +177,11 @@ export default function SearchEntryPage() {
               minHeight={160}
               appearance="plain"
               numbered
+              description={
+                <>
+                  Paste the variants you're interpreting. Each is looked up across the whole <AllOfUs /> cohort.
+                </>
+              }
               examples={USE_CASES}
               onUseExample={fillExample}
             />
@@ -186,6 +196,7 @@ export default function SearchEntryPage() {
                   }
                   appearance="plain"
                   numbered
+                  description={PHENOTYPE_STEP_DESCRIPTION}
                 />
               </div>
             ) : (

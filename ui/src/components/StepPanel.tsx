@@ -49,6 +49,14 @@ const styles = {
     flexDirection: "column",
     padding: 16,
   },
+  // A line under the title saying what the step does for the search, before the control. The same
+  // text as the folded phenotype row's, so a step reads the same open or closed.
+  description: {
+    margin: "0 0 8px",
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 1.5,
+  },
   // The plain look: no card, just a label row over the content, for a form that already sits
   // on its own surface (the results page's edit-search popover, the entry page's search card).
   plainPanel: {
@@ -112,10 +120,21 @@ interface StepPanelProps {
   appearance?: StepPanelAppearance;
   /** Keeps the step number in the plain look, for steps that are the form's sections. */
   numbered?: boolean;
+  /** One line under the title on what the step does for the search. */
+  description?: ReactNode;
   children: ReactNode;
 }
 
 export type StepPanelAppearance = "card" | "plain";
+
+/** A step's tag as a small uppercase chip: "0 entered", "limit 50", "Optional". */
+export function StepTagBadge({ tag }: { tag: StepTag }) {
+  return (
+    <span style={{ ...styles.tag, ...TAG_VARIANT_STYLE[tag.variant] }} title={tag.title}>
+      {tag.label}
+    </span>
+  );
+}
 
 export default function StepPanel({
   stepNumber,
@@ -123,15 +142,12 @@ export default function StepPanel({
   tags = [],
   appearance = "card",
   numbered = false,
+  description,
   children,
 }: StepPanelProps) {
   const plain = appearance === "plain";
   const showNumber = !plain || numbered;
-  const tagBadges = tags.map((tag) => (
-    <span key={tag.label} style={{ ...styles.tag, ...TAG_VARIANT_STYLE[tag.variant] }} title={tag.title}>
-      {tag.label}
-    </span>
-  ));
+  const tagBadges = tags.map((tag) => <StepTagBadge key={tag.label} tag={tag} />);
 
   return (
     <div style={plain ? styles.plainPanel : styles.panel}>
@@ -142,7 +158,10 @@ export default function StepPanel({
         </h2>
         {tagBadges}
       </div>
-      <div style={plain ? styles.plainBody : styles.body}>{children}</div>
+      <div style={plain ? styles.plainBody : styles.body}>
+        {description && <p style={styles.description}>{description}</p>}
+        {children}
+      </div>
     </div>
   );
 }

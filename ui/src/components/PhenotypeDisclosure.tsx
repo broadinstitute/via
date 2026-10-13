@@ -3,6 +3,8 @@ import colors from "../libs/colors";
 import * as Style from "../libs/style";
 import Clickable from "./common/Clickable";
 import { ChevronDownIcon } from "./icons";
+import { PHENOTYPE_STEP_DESCRIPTION, phenotypeTags } from "./PhenotypeStep";
+import { StepTagBadge } from "./StepPanel";
 
 // Step 2 before it's opened: one row in the search card that says what adding a phenotype gets
 // you, and opens into the phenotype field on click. The optional step is visibly smaller than
@@ -37,18 +39,19 @@ const styles = {
     gap: 2,
     minWidth: 0,
   },
+  // The title with the step's tags after it, the same chips the open step shows in its label row.
   title: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    flexWrap: "wrap",
+    gap: 6,
     color: colors.textPrimary,
     fontSize: 13,
     fontWeight: 600,
   },
-  optional: {
-    color: colors.textSecondary,
-    fontSize: 11.5,
-    fontWeight: 500,
+  /** A little room before the first chip, like the open step's title before its tags. */
+  titleText: {
+    marginRight: 2,
   },
   description: {
     color: colors.textSecondary,
@@ -78,13 +81,12 @@ export default function PhenotypeDisclosure({ controls, onOpen }: PhenotypeDiscl
       <span style={Style.elements.stepNumber}>2</span>
       <span style={styles.text}>
         <span style={styles.title}>
-          Add a phenotype
-          <span style={styles.optional}>Optional</span>
+          <span style={styles.titleText}>Add a phenotype</span>
+          {phenotypeTags().map((tag) => (
+            <StepTagBadge key={tag.label} tag={tag} />
+          ))}
         </span>
-        <span style={styles.description}>
-          See how often each variant shows up among participants recorded with a condition, beside the
-          cohort-wide figure.
-        </span>
+        <span style={styles.description}>{PHENOTYPE_STEP_DESCRIPTION}</span>
       </span>
       <span style={styles.action}>
         Add

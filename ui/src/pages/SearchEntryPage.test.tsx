@@ -58,6 +58,19 @@ describe("SearchEntryPage", () => {
     vi.unstubAllGlobals();
   });
 
+  it("names the app and what it gives you above the form, and each step says its part", () => {
+    stubApi([], "");
+    renderPage();
+    const title = screen.getByRole("heading", { level: 1, name: "All of Us Variant Interpretation" });
+    // The Beta chip sits beside the name (the footer has one too).
+    expect(title.parentElement).toHaveTextContent(/^All of Us Variant InterpretationBeta$/);
+    // The hero positions; the instructions are the steps' own lines.
+    expect(screen.getByText(/Paste the variants you're interpreting/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add a phenotype/ })).toHaveTextContent(
+      "among participants recorded with a condition",
+    );
+  });
+
   it("keeps the phenotype step folded to a row until asked, then opens it into the condition combobox", () => {
     stubApi([], "");
     renderPage();
@@ -66,6 +79,7 @@ describe("SearchEntryPage", () => {
     const row = screen.getByRole("button", { name: /Add a phenotype/ });
     expect(row).toHaveAttribute("aria-expanded", "false");
     expect(row).toHaveTextContent("Optional");
+    expect(row).toHaveTextContent("limit 1");
 
     openPhenotype();
     const combobox = screen.getByRole("combobox");
