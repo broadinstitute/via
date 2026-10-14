@@ -5,9 +5,19 @@ import type { BreakdownSegment } from "../../types/results";
 import PhenotypeSummaryStrip from "./PhenotypeSummaryStrip";
 
 const CONDITION: ConditionSearch = {
-  conceptId: 9000010,
-  concept: { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47 },
+  conceptIds: [9000010],
+  concepts: [{ conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47, participantCount: 49 }],
   participantCount: 49,
+};
+
+/** Two conditions, three participants with both: the total is short of the sum. */
+const TWO_CONDITIONS: ConditionSearch = {
+  conceptIds: [9000010, 9000040],
+  concepts: [
+    { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47, participantCount: 49 },
+    { conceptId: 9000040, name: "Hypertrophic cardiomyopathy", estimatedParticipantCount: 212, participantCount: 214 },
+  ],
+  participantCount: 260,
 };
 
 const ANCESTRY: BreakdownSegment[] = [
@@ -80,13 +90,44 @@ describe("PhenotypeSummaryStrip", () => {
   });
 
   it("reports a picked concept the CDR doesn't have, and a condition that matched nobody", () => {
-    renderStrip({ conditionSearch: { conceptId: 123, concept: null, participantCount: null } });
+    renderStrip({ conditionSearch: { conceptIds: [123], concepts: [], participantCount: null } });
     expect(screen.getByText("Condition concept 123 wasn’t found in this CDR.")).toBeInTheDocument();
+    cleanup();
+
+    renderStrip({ conditionSearch: { conceptIds: [123, 456], concepts: [], participantCount: null } });
+    expect(screen.getByText("Condition concepts 123, 456 weren’t found in this CDR.")).toBeInTheDocument();
     cleanup();
 
     renderStrip({ conditionSearch: { ...CONDITION, participantCount: 0 } });
     expect(screen.getByText("0")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Review" })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("lists several conditions as alternatives, with each one's own count under the total", () => {
+    renderStrip({ conditionSearch: TWO_CONDITIONS, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+
+    expect(screen.getByTitle("Tetralogy of Fallot")).toHaveTextContent(/^Tetralogy of Fallot$/);
+    expect(screen.getByTitle("Hypertrophic cardiomyopathy")).toHaveTextContent(/^or Hypertrophic cardiomyopathy$/);
+    expect(screen.getByText("OMOP — 9000010")).toBeInTheDocument();
+    expect(screen.getByText("OMOP — 9000040")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy OMOP concept ID 9000040" })).toBeInTheDocument();
+    // The union is the headline; the per-condition counts show it isn't the sum.
+    expect(screen.getByText("260")).toBeInTheDocument();
+    const own = screen.getByLabelText("Participants with each condition");
+    expect(own).toHaveTextContent(/^49 Tetralogy of Fallot · 214 Hypertrophic cardiomyopathy$/);
+    expect(own).toHaveAttribute("title", "49 with Tetralogy of Fallot; 214 with Hypertrophic cardiomyopathy");
+  });
+
+  it("notes a condition that alone accounts for everyone matched, e.g. a parent picked beside its child", () => {
+    const parentAndChild: ConditionSearch = {
+      ...TWO_CONDITIONS,
+      concepts: [TWO_CONDITIONS.concepts[0], { ...TWO_CONDITIONS.concepts[1], participantCount: 260 }],
+    };
+    renderStrip({ conditionSearch: parentAndChild, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+
+    expect(screen.getByRole("button", { name: "More information" })).toHaveAccessibleDescription(
+      /each counted once.*Hypertrophic cardiomyopathy alone accounts for everyone matched\.$/,
+    );
   });
 
   it("shows a skeleton while results load", () => {

@@ -4,8 +4,10 @@ import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.QueryParameterValue;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -14,14 +16,15 @@ import static org.broadinstitute.variantinterpretation.util.BigQueryValues.intVa
 import org.broadinstitute.variantinterpretation.model.ConditionCandidates;
 import org.broadinstitute.variantinterpretation.model.ConditionConcept;
 import org.broadinstitute.variantinterpretation.model.ConditionSearch;
+import org.broadinstitute.variantinterpretation.model.MatchedConcept;
 import org.springframework.stereotype.Service;
 
 /**
- * Free text -> condition concepts (the type-ahead), and a picked concept -> participant count,
+ * Free text -> condition concepts (the type-ahead), and picked concepts -> participant count,
  * against the All of Us {@code cb_criteria}, {@code concept_ancestor} and
  * {@code condition_occurrence} tables.
  *
- * <p>Two things here are worth noting:
+ * <p>Three things here are worth noting:
  *
  * <ul>
  *   <li><b>Descendant expansion through {@code concept_ancestor}.</b> EHR data lands on
@@ -33,6 +36,11 @@ import org.springframework.stereotype.Service;
  *       standard, and have zero participants in this CDR — which is invisible in
  *       {@code concept}. Ranking by count puts the concepts someone is likely to mean at the
  *       top of the type-ahead.
+ *   <li><b>Several concepts are OR'd.</b> A participant matches a search if any of the picked
+ *       concepts, or a descendant of any of them, is recorded for them: the same rule one concept
+ *       already uses over its descendants, and the Cohort Builder's rule within a criteria group.
+ *       The union count is what the breakdowns are scaled to; each concept's own count is
+ *       returned beside it so the overlap is visible.
  * </ul>
  */
 @Service
@@ -83,11 +91,11 @@ public class ConditionLookupService {
       """;
 
   /**
-   * Resolves concepts the user actually picked. Filtered to standard condition concepts on
+   * Resolves the concepts the user actually picked. Filtered to standard condition concepts on
    * purpose: an id that isn't one is dropped rather than seeded on, so a stale or hand-edited
    * URL can't produce a cohort counted over something that isn't a condition.
    */
-  private static final String RESOLVE_CONCEPT_SQL =
+  private static final String RESOLVE_CONCEPTS_SQL =
       """
       SELECT DISTINCT
           concept_id,
@@ -96,9 +104,10 @@ public class ConditionLookupService {
       FROM %s
       WHERE is_standard = 1
         AND domain_id = "CONDITION"
-        AND concept_id = @conceptId
+        AND concept_id IN UNNEST(@conceptIds)
       """;
 
+  /** Participants with any of the concepts, or any descendant of any of them: the OR. */
   private static final String COHORT_COUNT_SQL =
       """
       SELECT COUNT(DISTINCT co.person_id) AS participants
@@ -106,8 +115,21 @@ public class ConditionLookupService {
       WHERE co.condition_concept_id IN (
           SELECT descendant_concept_id
           FROM %s
-          WHERE ancestor_concept_id = @conceptId
+          WHERE ancestor_concept_id IN UNNEST(@conceptIds)
       )
+      """;
+
+  /**
+   * Each concept's own count, over its descendants, in one query. A concept with no
+   * participants has no row here, and is read as 0.
+   */
+  private static final String PER_CONCEPT_COUNT_SQL =
+      """
+      SELECT ca.ancestor_concept_id AS concept_id, COUNT(DISTINCT co.person_id) AS participants
+      FROM %s co
+      JOIN %s ca ON ca.descendant_concept_id = co.condition_concept_id
+      WHERE ca.ancestor_concept_id IN UNNEST(@conceptIds)
+      GROUP BY ca.ancestor_concept_id
       """;
 
   private final BigQueryService bigQuery;
@@ -132,32 +154,62 @@ public class ConditionLookupService {
   }
 
   /**
-   * The participant count for a concept the user picked from the type-ahead.
+   * The participant count for the concepts the user picked from the type-ahead: how many have
+   * any of them, plus each concept's own count.
    *
    * <p>Returns null when nothing was picked, so the response field stays null, the same as
    * leaving the phenotype field empty. There's deliberately no free-text fallback: searching
    * typed text and choosing a match on the user's behalf can count a different concept than the
-   * one they meant.
+   * one they meant. Duplicates are dropped, keeping first-seen order; an id that isn't a
+   * standard condition concept is dropped too, and when none are left the count is null.
    */
-  public ConditionSearch search(Long conceptId) {
-    if (conceptId == null) {
+  public ConditionSearch search(List<Long> conceptIds) {
+    List<Long> requested = conceptIds == null ? List.of() : conceptIds.stream().filter(id -> id != null).distinct().toList();
+    if (requested.isEmpty()) {
       return null;
     }
-    ConditionConcept concept = resolveConcept(conceptId);
-    return new ConditionSearch()
-        .conceptId(conceptId)
-        .concept(concept)
-        .participantCount(concept == null ? null : countParticipants(conceptId));
+    List<ConditionConcept> resolved = resolveConcepts(requested);
+    if (resolved.isEmpty()) {
+      return new ConditionSearch().conceptIds(requested).concepts(List.of()).participantCount(null);
+    }
+    List<Long> resolvedIds = resolved.stream().map(ConditionConcept::getConceptId).toList();
+    Map<Long, Integer> ownCounts = countParticipantsPerConcept(resolvedIds);
+    List<MatchedConcept> matched =
+        resolved.stream()
+            .map(
+                concept ->
+                    new MatchedConcept()
+                        .conceptId(concept.getConceptId())
+                        .name(concept.getName())
+                        .estimatedParticipantCount(concept.getEstimatedParticipantCount().orElse(null))
+                        .participantCount(ownCounts.getOrDefault(concept.getConceptId(), 0)))
+            .toList();
+    // One concept's union is its own count: no second query.
+    Integer union = matched.size() == 1 ? matched.get(0).getParticipantCount() : countParticipants(resolvedIds);
+    return new ConditionSearch().conceptIds(requested).concepts(matched).participantCount(union);
   }
 
-  /** The concept, or null when the ID isn't a standard condition concept. */
-  private ConditionConcept resolveConcept(long conceptId) {
+  /** The standard condition concepts among the ids, in the ids' order; the rest are left out. */
+  private List<ConditionConcept> resolveConcepts(List<Long> conceptIds) {
     var query =
         QueryJobConfiguration.newBuilder(
-                RESOLVE_CONCEPT_SQL.formatted(properties.cdrTableRef(CB_CRITERIA)))
-            .addNamedParameter("conceptId", QueryParameterValue.int64(conceptId));
-    List<ConditionConcept> concepts = toConcepts(bigQuery.query(query));
-    return concepts.isEmpty() ? null : concepts.get(0);
+                RESOLVE_CONCEPTS_SQL.formatted(properties.cdrTableRef(CB_CRITERIA)))
+            .addNamedParameter("conceptIds", conceptIdsParameter(conceptIds));
+    Map<Long, ConditionConcept> byId = new HashMap<>();
+    for (ConditionConcept concept : toConcepts(bigQuery.query(query))) {
+      byId.putIfAbsent(concept.getConceptId(), concept);
+    }
+    return conceptIds.stream().map(byId::get).filter(concept -> concept != null).toList();
+  }
+
+  /**
+   * Sorted, whatever order they were picked in: BigQuery's result cache keys on the exact query
+   * and parameters, so the same set in another order would otherwise be a cache miss and a
+   * second scan. Nothing here depends on the order -- resolved concepts are put back in request
+   * order by {@link #resolveConcepts}, and the counts are keyed by id.
+   */
+  private static QueryParameterValue conceptIdsParameter(List<Long> conceptIds) {
+    return QueryParameterValue.array(conceptIds.stream().sorted().toArray(Long[]::new), Long.class);
   }
 
   /** Empty for a blank term, or one with no usable tokens. */
@@ -233,16 +285,32 @@ public class ConditionLookupService {
     return concepts;
   }
 
-  private Integer countParticipants(long conceptId) {
+  /** Distinct participants with any of the concepts or their descendants. */
+  private Integer countParticipants(List<Long> conceptIds) {
     var query =
         QueryJobConfiguration.newBuilder(
                 COHORT_COUNT_SQL.formatted(
                     properties.cdrTableRef(CONDITION_OCCURRENCE),
                     properties.cdrTableRef(CONCEPT_ANCESTOR)))
-            .addNamedParameter("conceptId", QueryParameterValue.int64(conceptId));
+            .addNamedParameter("conceptIds", conceptIdsParameter(conceptIds));
     for (FieldValueList row : bigQuery.query(query)) {
       return (int) row.get("participants").getLongValue();
     }
     return 0;
+  }
+
+  /** Each concept's own count, keyed by concept id; a concept matching nobody has no entry. */
+  private Map<Long, Integer> countParticipantsPerConcept(List<Long> conceptIds) {
+    var query =
+        QueryJobConfiguration.newBuilder(
+                PER_CONCEPT_COUNT_SQL.formatted(
+                    properties.cdrTableRef(CONDITION_OCCURRENCE),
+                    properties.cdrTableRef(CONCEPT_ANCESTOR)))
+            .addNamedParameter("conceptIds", conceptIdsParameter(conceptIds));
+    Map<Long, Integer> counts = new HashMap<>();
+    for (FieldValueList row : bigQuery.query(query)) {
+      counts.put(row.get("concept_id").getLongValue(), (int) row.get("participants").getLongValue());
+    }
+    return counts;
   }
 }

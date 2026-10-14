@@ -14,6 +14,7 @@ import type { ClinVarSignificance, CohortVariantRow, FilteredVariantRow } from "
 import { mergeVariantRows, type MergedVariantRow } from "../../utils/comparison";
 import { clinvarSearchUrl, gnomadVariantUrl } from "../../utils/externalLinks";
 import { exactAf, formatAcAn, formatAf, formatInt } from "../../utils/format";
+import { describeAlternatives } from "../../utils/phenotypes";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
@@ -590,8 +591,8 @@ interface VariantsPanelProps {
   /** Whether a phenotype filter matched anyone; without one the matched columns hold a prompt to add one. */
   hasPhenotypeFilter: boolean;
   participantCount: number;
-  /** The picked condition's name, for the matched header's tooltip; empty when none was picked. */
-  condition: string;
+  /** The picked conditions' names, for the matched header's tooltip; empty when none was picked. */
+  phenotypes: string[];
   /** Opens Review on the given variant. */
   onReview?: (variant: string) => void;
   /** Opens the search editor, from the prompt the matched columns show without a phenotype filter. */
@@ -603,7 +604,7 @@ export default function VariantsPanel({
   filteredVariants,
   hasPhenotypeFilter,
   participantCount,
-  condition,
+  phenotypes,
   onReview,
   onAddPhenotypeFilter,
 }: VariantsPanelProps) {
@@ -794,7 +795,9 @@ export default function VariantsPanel({
           <InfoLabel
             tooltip={
               hasPhenotypeFilter
-                ? `Statistics among the ${formatInt(participantCount)} participants matched by the phenotype filter (${condition}), beside the figures for all participants to their left.`
+                ? phenotypes.length > 1
+                  ? `Statistics among the ${formatInt(participantCount)} participants recorded with ${describeAlternatives(phenotypes)}, beside the figures for all participants to their left.`
+                  : `Statistics among the ${formatInt(participantCount)} participants matched by the phenotype filter (${phenotypes[0]}), beside the figures for all participants to their left.`
                 : "Add a phenotype filter to see these statistics among only the participants who have it, beside the figures for all participants to their left."
             }
           >
@@ -919,7 +922,7 @@ export default function VariantsPanel({
       }),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columnHelper, expandedVariants, onReview, participantCount, condition, hasPhenotypeFilter],
+    [columnHelper, expandedVariants, onReview, participantCount, phenotypes, hasPhenotypeFilter],
   );
 
   // Each pinned column sticks at the left edge plus the widths of the pinned columns before it.
@@ -1132,7 +1135,7 @@ export default function VariantsPanel({
                               onMouseLeave={rowHoverProps(row.id).onMouseEnter}
                             >
                               <PhenotypeFilterPrompt
-                                condition={condition}
+                                phenotypes={phenotypes}
                                 compact={bodyRows.length < COMPACT_PROMPT_BELOW_ROWS}
                                 onAddPhenotypeFilter={onAddPhenotypeFilter}
                               />

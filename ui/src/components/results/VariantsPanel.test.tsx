@@ -68,7 +68,7 @@ function renderPanel(
       filteredVariants={filteredVariants}
       hasPhenotypeFilter={filteredVariants.length > 0}
       participantCount={49}
-      condition="Tetralogy of Fallot"
+      phenotypes={["Tetralogy of Fallot"]}
       {...props}
     />,
   );
@@ -118,7 +118,7 @@ describe("VariantsPanel", () => {
 
   it("keeps the matched columns without a phenotype filter, holding a prompt to add one", () => {
     const onAddPhenotypeFilter = vi.fn();
-    renderPanel([IN_AOU_ONLY, NOT_IN_AOU], [], { condition: "", onAddPhenotypeFilter });
+    renderPanel([IN_AOU_ONLY, NOT_IN_AOU], [], { phenotypes: [], onAddPhenotypeFilter });
 
     const matchedHeader = screen.getByRole("columnheader", { name: /^Phenotype-matched participants/ });
     // No count to show yet.

@@ -16,6 +16,8 @@ import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
 // anatomy -- a small uppercase label over its content -- divided by hairlines the way the top bar
 // divides its parts: what the phenotype filter is, how many it matched, how they break down, and
 // which view is showing. Being a band rather than a side panel, it leaves the table the full width.
+// A filter of several conditions lists them, "or" between, and under the matched count gives each
+// condition's own, so the overlap -- the total is not the sum -- is visible where the total is.
 const BLOCK_GAP = 20;
 
 const styles = {
@@ -68,12 +70,36 @@ const styles = {
     textOverflow: "ellipsis",
     maxWidth: 320,
   },
-  // The condition's name over its OMOP code.
+  // The conditions, each its name over its OMOP code.
+  conditionList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    minWidth: 0,
+  },
   conditionText: {
     display: "flex",
     flexDirection: "column",
     gap: 2,
     minWidth: 0,
+  },
+  // Before the second condition on: the filter matches participants with any of them.
+  or: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: 500,
+  },
+  // Each condition's own count under the total, for a filter of several. Wraps rather than
+  // truncates: the names are the point of the line.
+  ownCounts: {
+    maxWidth: 320,
+    color: colors.textSecondary,
+    fontSize: 11.5,
+    lineHeight: 1.4,
+  },
+  ownCount: {
+    fontWeight: 600,
+    fontVariantNumeric: "tabular-nums",
   },
   codeLine: {
     display: "inline-flex",
@@ -232,9 +258,25 @@ export default function PhenotypeSummaryStrip({
     );
   }
 
-  const concept = conditionSearch.concept;
+  const concepts = conditionSearch.concepts;
   const participantCount = conditionSearch.participantCount ?? 0;
   const hasBreakdown = ancestryBreakdown.length > 0;
+  // With several conditions, one whose own count is the total adds nobody the others didn't:
+  // a parent picked beside its child, say. Noted, not blocked -- it's harmless.
+  const coversAll =
+    concepts.length > 1 && participantCount > 0
+      ? concepts.find((concept) => concept.participantCount === participantCount)
+      : undefined;
+  const countTooltip =
+    concepts.length > 1
+      ? participantCount
+        ? "Participants recorded with any of these conditions, or a more specific form of one, each counted once." +
+          " Beneath is each condition's own count; they overlap, so they add up to more than the total." +
+          (coversAll ? ` ${coversAll.name} alone accounts for everyone matched.` : "")
+        : "No participants are recorded with any of these conditions or a more specific form of one."
+      : participantCount
+        ? "Participant counts include anyone recorded with this condition or any more specific form of it."
+        : "No participants are recorded with this condition or any more specific form of it.";
 
   return (
     <div style={styles.strip}>
@@ -243,18 +285,30 @@ export default function PhenotypeSummaryStrip({
           <span style={styles.eyebrow}>Phenotype</span>
         </div>
         <div style={styles.blockContent}>
-          {concept ? (
-            <div style={styles.conditionText}>
-              <span style={styles.conditionName} title={concept.name}>
-                {concept.name}
-              </span>
-              <span style={styles.codeLine}>
-                <span style={styles.code}>OMOP — {concept.conceptId}</span>
-                <CopyButton getText={() => String(concept.conceptId)} label="Copy OMOP concept ID" />
-              </span>
+          {concepts.length > 0 ? (
+            <div style={styles.conditionList}>
+              {concepts.map((concept, index) => (
+                <div key={concept.conceptId} style={styles.conditionText}>
+                  <span style={styles.conditionName} title={concept.name}>
+                    {index > 0 && <span style={styles.or}>or </span>}
+                    {concept.name}
+                  </span>
+                  <span style={styles.codeLine}>
+                    <span style={styles.code}>OMOP — {concept.conceptId}</span>
+                    <CopyButton
+                      getText={() => String(concept.conceptId)}
+                      label={concepts.length > 1 ? `Copy OMOP concept ID ${concept.conceptId}` : "Copy OMOP concept ID"}
+                    />
+                  </span>
+                </div>
+              ))}
             </div>
           ) : (
-            <span style={styles.noMatch}>Condition concept {conditionSearch.conceptId} wasn’t found in this CDR.</span>
+            <span style={styles.noMatch}>
+              Condition concept{conditionSearch.conceptIds.length === 1 ? "" : "s"}{" "}
+              {conditionSearch.conceptIds.join(", ")} {conditionSearch.conceptIds.length === 1 ? "wasn’t" : "weren’t"}{" "}
+              found in this CDR.
+            </span>
           )}
         </div>
       </div>
@@ -263,20 +317,27 @@ export default function PhenotypeSummaryStrip({
         <div style={styles.blockLabel}>
           <span style={styles.eyebrow}>
             Participants
-            <InfoTooltip
-              text={
-                participantCount
-                  ? "Participant counts include anyone recorded with this condition or any more specific form of it."
-                  : "No participants are recorded with this condition or any more specific form of it."
-              }
-              style={{ marginTop: -4, marginBottom: -4 }}
-            />
+            <InfoTooltip text={countTooltip} style={{ marginTop: -4, marginBottom: -4 }} />
           </span>
         </div>
         <div style={styles.blockContent}>
           <span style={styles.count}>{formatInt(participantCount)}</span>
           <span style={styles.countUnit}>matched</span>
         </div>
+        {concepts.length > 1 && (
+          <span
+            style={styles.ownCounts}
+            aria-label="Participants with each condition"
+            title={concepts.map((concept) => `${formatInt(concept.participantCount)} with ${concept.name}`).join("; ")}
+          >
+            {concepts.map((concept, index) => (
+              <span key={concept.conceptId}>
+                {index > 0 && <span aria-hidden="true"> · </span>}
+                <span style={styles.ownCount}>{formatInt(concept.participantCount)}</span> {concept.name}
+              </span>
+            ))}
+          </span>
+        )}
       </div>
 
       <div style={{ ...styles.block, ...styles.blockDivided }}>

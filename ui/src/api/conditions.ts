@@ -18,19 +18,32 @@ export interface ConditionCandidates {
   candidates: ConditionConcept[];
 }
 
+/** A concept a search resolved, with its own real participant count beside the estimate. */
+export interface MatchedConcept extends ConditionConcept {
+  /**
+   * Distinct participants recorded with this concept or any descendant of it. With several
+   * concepts these overlap, so they don't sum to the search's participantCount.
+   */
+  participantCount: number;
+}
+
 /**
  * The condition half of a /api/search response. Null there when no concept was picked.
  *
- * Note the two counts are different things and will not agree: the concept's
- * `estimatedParticipantCount` is All of Us's estimate for that concept alone, while
- * `participantCount` is a real count over the concept *and all its descendants*.
+ * A participant is matched by *any* of the picked concepts (or a descendant of any), not all of
+ * them. Note the two kinds of count are different things and will not agree: a concept's
+ * `estimatedParticipantCount` is All of Us's estimate for that concept alone, while the
+ * participant counts are real counts over the concept *and all its descendants*.
  */
 export interface ConditionSearch {
-  /** The concept ID that was requested. */
-  conceptId: number;
-  /** Null when conceptId isn't a standard condition concept in this CDR. */
-  concept: ConditionConcept | null;
-  /** Null when concept is null. */
+  /** Every concept ID that was requested, in request order. */
+  conceptIds: number[];
+  /**
+   * The requested concepts that are standard condition concepts in this CDR, in request order.
+   * Empty when none is.
+   */
+  concepts: MatchedConcept[];
+  /** Participants with any of the resolved concepts, each counted once. Null when concepts is empty. */
   participantCount: number | null;
 }
 
@@ -39,7 +52,7 @@ export interface ConditionSearch {
  *
  * This is the cheap half of the condition pipeline: one query against cb_criteria, with no
  * descendant expansion and no participant count, which is why a type-ahead can call it per
- * keystroke. Use fetchSearchResults with a `conditionConceptId` for the count.
+ * keystroke. Use fetchSearchResults with `conditionConceptIds` for the count.
  *
  * Deliberately not cached, unlike fetchSearchResults: every keystroke is a distinct term, so a
  * cache would grow one entry per prefix and almost never hit.

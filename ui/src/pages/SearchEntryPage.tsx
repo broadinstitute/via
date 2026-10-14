@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchProfile } from "../api/profile";
@@ -9,7 +9,6 @@ import Clickable from "../components/common/Clickable";
 import AllOfUs from "../components/common/AllOfUs";
 import Hero from "../components/Hero";
 // import HeroSources from "../components/HeroSources";
-import PhenotypeDisclosure from "../components/PhenotypeDisclosure";
 import PhenotypeStep, { PHENOTYPE_STEP_DESCRIPTION } from "../components/PhenotypeStep";
 import RecentSearches from "../components/RecentSearches";
 import VariantsStep from "../components/VariantsStep";
@@ -24,17 +23,16 @@ import {
   VARIANTS_LIMIT,
   variantEntryStatus,
 } from "../utils/variants";
-import { describePhenotypes, searchConceptId } from "../utils/phenotypes";
+import { describeAlternatives, searchConceptIds } from "../utils/phenotypes";
 import { USE_CASES, type UseCase } from "../utils/useCases";
 
-const PHENOTYPE_PANEL_ID = "phenotype-step";
 const CONDITION_FIELD_ID = "condition";
 
 // The hero says what VIA is and what it reads from; the card is the form in the order it's
 // filled: the variants box across the whole card, with the example searches a link beneath it
-// while it's empty, then the phenotype as a row that opens into its field. Each step says in a
-// line what it does for the search, so the hero doesn't have to. The required step is the big one
-// and the optional step is small until it's wanted.
+// while it's empty, then the phenotype step, open from the start -- nearly every search adds one,
+// so it isn't folded behind a click. Each step says in a line what it does for the search, so the
+// hero doesn't have to.
 const styles = {
   main: {
     maxWidth: 860,
@@ -52,12 +50,12 @@ const styles = {
   cardBody: {
     padding: "20px 20px 18px",
   },
-  // The opened phenotype step, boxed so it reads as the row it replaced grown into a section.
+  // The second step, divided from the first by a hairline: both steps sit bare in the card, which
+  // is the one container the form needs. A box around either would nest it inside the other.
   phenotype: {
-    marginTop: 16,
-    padding: "14px 16px",
-    border: `1px solid ${colors.border}`,
-    borderRadius: Style.radius,
+    marginTop: 18,
+    paddingTop: 18,
+    borderTop: `1px solid ${colors.border}`,
   },
   cardFooter: {
     display: "flex",
@@ -105,10 +103,6 @@ export default function SearchEntryPage() {
   // exactly what the user chose instead of re-resolving a name -- which matters for concepts a
   // text path would skip, e.g. ones with a zero participant estimate.
   const [phenotypes, setPhenotypes] = useState<ConditionConcept[]>([]);
-  // The phenotype step starts folded to a row; it opens when asked for, or when an example
-  // brings a condition with it. Opened by the row, the field takes focus so typing can start.
-  const [phenotypeOpen, setPhenotypeOpen] = useState(false);
-  const focusConditionOnOpen = useRef(false);
   const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
@@ -117,27 +111,15 @@ export default function SearchEntryPage() {
       .catch((err: Error) => console.error("Failed to load profile", err));
   }, []);
 
-  useEffect(() => {
-    if (!phenotypeOpen || !focusConditionOnOpen.current) return;
-    focusConditionOnOpen.current = false;
-    document.getElementById(CONDITION_FIELD_ID)?.focus();
-  }, [phenotypeOpen]);
-
   const { count: variantCount, overLimit, canSearch } = variantEntryStatus(variants, VARIANTS_LIMIT);
-
-  function openPhenotype() {
-    focusConditionOnOpen.current = true;
-    setPhenotypeOpen(true);
-  }
 
   function fillExample(example: UseCase) {
     setVariants(example.variants.join("\n"));
     setPhenotypes([example.condition]);
-    setPhenotypeOpen(true);
   }
 
   function handleSearch() {
-    navigate(resultsPath(parseVariantsText(variants), searchConceptId(phenotypes)));
+    navigate(resultsPath(parseVariantsText(variants), searchConceptIds(phenotypes)));
   }
 
   return (
@@ -179,29 +161,25 @@ export default function SearchEntryPage() {
               numbered
               description={
                 <>
-                  Paste the variants you're interpreting. Each is looked up across the whole <AllOfUs /> cohort.
+                  Enter the variants you're interpreting. Each is looked up across the entire <AllOfUs /> cohort.
                 </>
               }
               examples={USE_CASES}
               onUseExample={fillExample}
             />
-            {phenotypeOpen ? (
-              <div id={PHENOTYPE_PANEL_ID} style={styles.phenotype}>
-                <PhenotypeStep
-                  id={CONDITION_FIELD_ID}
-                  picked={phenotypes}
-                  onPick={(concept) => setPhenotypes((current) => [...current, concept])}
-                  onRemove={(conceptId) =>
-                    setPhenotypes((current) => current.filter((concept) => concept.conceptId !== conceptId))
-                  }
-                  appearance="plain"
-                  numbered
-                  description={PHENOTYPE_STEP_DESCRIPTION}
-                />
-              </div>
-            ) : (
-              <PhenotypeDisclosure controls={PHENOTYPE_PANEL_ID} onOpen={openPhenotype} />
-            )}
+            <div style={styles.phenotype}>
+              <PhenotypeStep
+                id={CONDITION_FIELD_ID}
+                picked={phenotypes}
+                onPick={(concept) => setPhenotypes((current) => [...current, concept])}
+                onRemove={(conceptId) =>
+                  setPhenotypes((current) => current.filter((concept) => concept.conceptId !== conceptId))
+                }
+                appearance="plain"
+                numbered
+                description={PHENOTYPE_STEP_DESCRIPTION}
+              />
+            </div>
           </div>
 
           <div style={styles.cardFooter}>
@@ -216,7 +194,8 @@ export default function SearchEntryPage() {
                   <span style={styles.statusReady}>
                     {variantCount} variant{variantCount === 1 ? "" : "s"} ready
                   </span>
-                  {phenotypes.length > 0 && ` · filtered by ${describePhenotypes(phenotypes)}`}
+                  {phenotypes.length > 0 &&
+                    ` · filtered by ${describeAlternatives(phenotypes.map((phenotype) => phenotype.name))}`}
                   <span style={styles.shortcut}>{SUBMIT_SHORTCUT_LABEL} to search</span>
                 </>
               )}

@@ -151,7 +151,8 @@ const INTERACTIVE_SELECTOR =
 interface ReviewViewProps {
   cohortVariants: CohortVariantRow[];
   filteredVariants: FilteredVariantRow[];
-  condition: string;
+  /** The picked conditions' names; the matched participants have any of them. */
+  phenotypes: string[];
   participantCount: number;
   ancestryBreakdown: BreakdownSegment[];
   /** Which variant to open on; the best-supported signal when omitted or unknown. */
@@ -168,7 +169,7 @@ interface ReviewViewProps {
 export default function ReviewView({
   cohortVariants,
   filteredVariants,
-  condition,
+  phenotypes,
   participantCount,
   ancestryBreakdown,
   initialVariant,
@@ -306,7 +307,7 @@ export default function ReviewView({
             <ReviewDetail
               key={selected.variant}
               row={selected}
-              condition={condition}
+              phenotypes={phenotypes}
               participantCount={participantCount}
               ancestryBreakdown={ancestryBreakdown}
               candidateCount={testedCount}

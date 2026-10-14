@@ -149,6 +149,8 @@ interface ConditionSearchFieldProps {
    * immediately after the onChange carrying the concept's name -- see applySelection.
    */
   onSelect?: (concept: ConditionConcept) => void;
+  /** Concepts to leave out of the list, e.g. ones already picked. */
+  excludeConceptIds?: number[];
   placeholder?: string;
 }
 
@@ -164,9 +166,15 @@ export default function ConditionSearchField({
   value,
   onChange,
   onSelect,
+  excludeConceptIds,
   placeholder,
 }: ConditionSearchFieldProps) {
-  const [candidates, setCandidates] = useState<ConditionConcept[]>([]);
+  const [allCandidates, setCandidates] = useState<ConditionConcept[]>([]);
+  // Filtered at render rather than when stored, so a pick made while a list is held (the
+  // caller keeps the field open for the next one) drops out of it straight away.
+  const candidates = excludeConceptIds?.length
+    ? allCandidates.filter((concept) => !excludeConceptIds.includes(concept.conceptId))
+    : allCandidates;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [open, setOpen] = useState(false);

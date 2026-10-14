@@ -12,13 +12,15 @@ import { CloseIcon, UserIcon } from "./icons";
 import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
 // Step 2 of a search: the phenotypes to filter by, as a list. Each picked condition is a chip
-// with its participant estimate and a remove control; the type-ahead beneath adds the next one until the
-// search's limit is reached, when it gives way to a line saying so. A list even while the
-// limit is one, so the form doesn't change shape when the backend takes more.
+// with its participant estimate and a remove control, with "or" between chips, since a
+// participant is matched by any of them; the type-ahead beneath adds the next one until the
+// search's limit is reached, when it gives way to a line saying so.
 
 /** What the step does for the search; the folded row says the same, so the step reads alike open or closed. */
 export const PHENOTYPE_STEP_DESCRIPTION =
-  "See how often each variant shows up among participants recorded with a condition.";
+  <>
+    See how often each variant shows up among <AllOfUs /> participants recorded with a condition.
+  </>;
 
 /** The step's tags, the same on the folded row and the open step: optional, then the limit. */
 export function phenotypeTags(limit: number = PHENOTYPES_LIMIT): StepTag[] {
@@ -32,10 +34,23 @@ const styles = {
   picked: {
     display: "flex",
     flexWrap: "wrap",
+    alignItems: "center",
     gap: 8,
     margin: "0 0 8px",
     padding: 0,
     listStyle: "none",
+  },
+  // A pick and, from the second on, the "or" before it: one item, so the word wraps with its chip.
+  pick: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  // The semantics, said where the choice is made. Quiet: it's a conjunction, not a control.
+  or: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: 500,
   },
   chip: {
     display: "inline-flex",
@@ -131,18 +146,21 @@ export default function PhenotypeStep({
     >
       {picked.length > 0 && (
         <ul style={styles.picked} aria-label="Picked phenotypes">
-          {picked.map((concept) => (
-            <li key={concept.conceptId} style={styles.chip}>
-              {concept.name}
-              <ChipEstimate estimate={concept.estimatedParticipantCount} />
-              <Clickable
-                style={styles.remove}
-                hoverStyle={styles.removeHover}
-                aria-label={`Remove ${concept.name}`}
-                onClick={() => onRemove(concept.conceptId)}
-              >
-                <CloseIcon size={12} strokeWidth={2.5} aria-hidden="true" />
-              </Clickable>
+          {picked.map((concept, index) => (
+            <li key={concept.conceptId} style={styles.pick}>
+              {index > 0 && <span style={styles.or}>or</span>}
+              <span style={styles.chip}>
+                {concept.name}
+                <ChipEstimate estimate={concept.estimatedParticipantCount} />
+                <Clickable
+                  style={styles.remove}
+                  hoverStyle={styles.removeHover}
+                  aria-label={`Remove ${concept.name}`}
+                  onClick={() => onRemove(concept.conceptId)}
+                >
+                  <CloseIcon size={12} strokeWidth={2.5} aria-hidden="true" />
+                </Clickable>
+              </span>
             </li>
           ))}
         </ul>
@@ -150,8 +168,8 @@ export default function PhenotypeStep({
       {atLimit ? (
         <p style={styles.atLimit}>
           {limit === 1
-            ? "Searches support one phenotype for now. Remove it to pick another."
-            : `Searches support up to ${limit} phenotypes.`}
+            ? "Search has a maximum of one phenotype. Remove it to pick another."
+            : `Search has a maximum of ${limit} phenotypes. Remove one to pick another.`}
         </p>
       ) : (
         <>
@@ -163,11 +181,19 @@ export default function PhenotypeStep({
               setText("");
               if (!picked.some((other) => other.conceptId === concept.conceptId)) onPick(concept);
             }}
+            // A concept already picked is left out of the list, rather than picked again to no effect.
+            excludeConceptIds={picked.map((concept) => concept.conceptId)}
             placeholder={picked.length === 0 ? "e.g. tetralogy of fallot" : "Add another condition"}
           />
           <FieldHint>
-            Start typing a condition and pick one from the list. Matched against the <AllOfUs /> condition
-            vocabulary.
+            {picked.length === 0 ? (
+              <>
+                Start typing a condition and pick one from the list. Matched against the <AllOfUs /> condition
+                vocabulary.
+              </>
+            ) : (
+              "Add another condition. Participants recorded with any of them are matched."
+            )}
           </FieldHint>
         </>
       )}

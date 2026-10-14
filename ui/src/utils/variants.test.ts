@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { overLimitMessage, parseVariantsText, variantEntryStatus } from "./variants";
+import { overLimitMessage, parseVariantsText, resultsPath, variantEntryStatus } from "./variants";
 
 describe("parseVariantsText", () => {
   it("returns an empty list for empty input", () => {
@@ -48,6 +48,17 @@ describe("variantEntryStatus", () => {
 
   it("can't search above the limit", () => {
     expect(variantEntryStatus("a\nb\nc", 2)).toEqual({ count: 3, overLimit: true, canSearch: false });
+  });
+});
+
+describe("resultsPath", () => {
+  it("repeats the variants param, then one conditionConceptIds param per picked condition", () => {
+    expect(resultsPath(["1-1-A-G", "2-2-C-T"], [])).toBe("/results?variants=1-1-A-G&variants=2-2-C-T");
+    expect(resultsPath(["1-1-A-G"], [9000010])).toBe("/results?variants=1-1-A-G&conditionConceptIds=9000010");
+    // In the order picked, which the results page keeps.
+    expect(resultsPath(["1-1-A-G"], [9000040, 9000010])).toBe(
+      "/results?variants=1-1-A-G&conditionConceptIds=9000040&conditionConceptIds=9000010",
+    );
   });
 });
 

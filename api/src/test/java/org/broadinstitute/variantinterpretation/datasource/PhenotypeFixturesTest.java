@@ -41,6 +41,18 @@ class PhenotypeFixturesTest {
     assertThat(new PhenotypeFixtures(List.of(USE_CASE)).forCondition(9000030L, 1200)).isEmpty();
   }
 
+  /** A use case describes one condition's participants, so it applies to a search for that condition alone. */
+  @Test
+  void forConditions_appliesToExactlyOneResolvedCondition() {
+    PhenotypeFixtures fixtures = new PhenotypeFixtures(List.of(USE_CASE));
+
+    assertThat(fixtures.forConditions(List.of(9000040L), 10)).isPresent();
+    // The union of two conditions isn't the use case's cohort, even when one of them is its condition.
+    assertThat(fixtures.forConditions(List.of(9000040L, 9000030L), 10)).isEmpty();
+    assertThat(fixtures.forConditions(List.of(9000040L, 9000030L), 20)).isEmpty();
+    assertThat(fixtures.forConditions(List.of(), 10)).isEmpty();
+  }
+
   /** Written for a different count than the tables return: its numbers wouldn't add up, so skip it. */
   @Test
   void forCondition_skipsAUseCaseWrittenForADifferentParticipantCount() {

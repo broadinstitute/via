@@ -7,6 +7,7 @@ import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
 import { GearIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
 import SettingsDialog from "../settings/SettingsDialog";
+import { describeAlternatives } from "../../utils/phenotypes";
 
 /** Exported for what has to sit just below the bar, e.g. the edit-search popover's backdrop. */
 export const TOP_BAR_HEIGHT = 41;
@@ -196,6 +197,20 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
+/**
+ * The phenotype badge is 240px wide at most. Up to about this many characters of 12px text fit
+ * in it, so a short list is shown whole and a long one as its first name and how many more.
+ */
+const BADGE_CHARS = 34;
+
+/** What the badge says for the picked conditions, and the full list for its tooltip. */
+export function describePhenotypeBadge(phenotypes: string[]): { label: string; title: string | undefined } {
+  if (phenotypes.length === 0) return { label: "None entered", title: undefined };
+  const full = describeAlternatives(phenotypes);
+  if (phenotypes.length === 1 || full.length <= BADGE_CHARS) return { label: full, title: full };
+  return { label: `${phenotypes[0]} +${phenotypes.length - 1} more`, title: full };
+}
+
 const compactStyles = {
   topbar: { padding: "0 12px" },
   leading: { gap: 10, marginRight: 10 },
@@ -207,8 +222,8 @@ const compactStyles = {
 interface TopBarProps {
   loading?: boolean;
   variantsEnteredCount?: number;
-  /** The picked condition's name. */
-  condition?: string;
+  /** The picked conditions' names, in the order they were picked. */
+  phenotypes?: string[];
   userEmail: string;
   onModifySearch?: () => void;
   /** Whether the edit-search popover is open, which the search box shows as focused. */
@@ -220,7 +235,7 @@ interface TopBarProps {
 export default function TopBar({
   loading,
   variantsEnteredCount,
-  condition,
+  phenotypes = [],
   userEmail,
   onModifySearch,
   modifyOpen = false,
@@ -233,7 +248,8 @@ export default function TopBar({
   const compact = useMediaQuery(COMPACT_QUERY);
   const compactStyle = (key: keyof typeof compactStyles) => (compact ? compactStyles[key] : undefined);
   const fieldLabel = compact ? Style.elements.visuallyHidden : undefined;
-  const hidePhenotype = compact && !loading && !condition;
+  const hidePhenotype = compact && !loading && phenotypes.length === 0;
+  const badge = describePhenotypeBadge(phenotypes);
   const searchBoxRef = useRef<HTMLButtonElement>(null);
 
   // When the edit-search popover closes, hand focus back to the box that opened it; otherwise it
@@ -298,8 +314,8 @@ export default function TopBar({
                   {loading ? (
                     <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
                   ) : (
-                    <span style={styles.valueBadge} title={condition || undefined}>
-                      {condition || "None entered"}
+                    <span style={styles.valueBadge} title={badge.title}>
+                      {badge.label}
                     </span>
                   )}
                 </span>

@@ -3,6 +3,7 @@ import colors from "../../libs/colors";
 import { useCenterAboveFold } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
+import { describeAlternatives } from "../../utils/phenotypes";
 import { PlusIcon } from "../icons";
 import PhenotypeFilterIllustration from "./PhenotypeFilterIllustration";
 import { TOP_BAR_HEIGHT } from "./TopBar";
@@ -66,18 +67,19 @@ const styles = {
 } as const satisfies Record<string, CSSProperties>;
 
 interface PhenotypeFilterPromptProps {
-  /** The picked condition's name when one was picked but matched nobody; empty when none was picked. */
-  condition: string;
+  /** The picked conditions' names when some were picked but matched nobody; empty when none was picked. */
+  phenotypes: string[];
   /** Absent where there's nothing to open, which leaves the button out. */
   onAddPhenotypeFilter?: () => void;
   /** The one-line layout, for a table too short for the full one. */
   compact?: boolean;
 }
 
-export default function PhenotypeFilterPrompt({ condition, onAddPhenotypeFilter, compact = false }: PhenotypeFilterPromptProps) {
+export default function PhenotypeFilterPrompt({ phenotypes, onAddPhenotypeFilter, compact = false }: PhenotypeFilterPromptProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   useCenterAboveFold(frameRef, TOP_BAR_HEIGHT);
 
+  const condition = describeAlternatives(phenotypes);
   const title = condition ? "No matched participants" : "Compare with a phenotype";
   const message = condition
     ? `Nobody is recorded with ${condition}. Try a broader or different phenotype.`

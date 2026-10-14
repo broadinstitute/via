@@ -12,6 +12,7 @@ import {
   type RecentSearch,
   type RecentSearchGroup,
 } from "../utils/recentSearches";
+import { describeAlternatives } from "../utils/phenotypes";
 import { resultsPath } from "../utils/variants";
 import Clickable from "./common/Clickable";
 import { ChevronDownIcon, ChevronRightIcon, SearchIcon, UserIcon } from "./icons";
@@ -178,6 +179,9 @@ function previewVariants(variants: string[]): string {
 const variantCount = (search: RecentSearch) =>
   `${search.variants.length} variant${search.variants.length === 1 ? "" : "s"}`;
 
+/** The row's title: the conditions as the search treats them, "A or B". */
+const conditionNames = (search: RecentSearch) => describeAlternatives(search.conditions.map((c) => c.name));
+
 /**
  * The searches run in this browser (see utils/recentSearches), each re-run with a click, grouped
  * by when: today, this week, and earlier, which starts folded so a long history doesn't push the
@@ -247,22 +251,29 @@ export default function RecentSearches() {
                     <Clickable
                       style={{ ...styles.row, ...(index === 0 ? styles.rowFirst : undefined) }}
                       hoverStyle={styles.rowHover}
-              onClick={() => navigate(resultsPath(search.variants, search.condition?.conceptId ?? null))}
+              onClick={() =>
+                navigate(
+                  resultsPath(
+                    search.variants,
+                    search.conditions.map((condition) => condition.conceptId),
+                  ),
+                )
+              }
               aria-label={`Run again: ${variantCount(search)}, ${
-                search.condition?.name ?? "no phenotype"
+                search.conditions.length > 0 ? conditionNames(search) : "no phenotype"
               }, ${describeSearchedAt(search.searchedAt)}`}
             >
               <span style={styles.kind} aria-hidden="true">
-                {search.condition ? (
+                {search.conditions.length > 0 ? (
                   <UserIcon size={14} strokeWidth={2.2} />
                 ) : (
                   <SearchIcon size={14} strokeWidth={2.2} />
                 )}
               </span>
               <span style={styles.summary}>
-                {search.condition ? (
-                  <span style={styles.title} title={search.condition.name}>
-                    {search.condition.name}
+                {search.conditions.length > 0 ? (
+                  <span style={styles.title} title={conditionNames(search)}>
+                    {conditionNames(search)}
                   </span>
                 ) : (
                   <span style={{ ...styles.title, ...styles.titleNone }}>No phenotype</span>

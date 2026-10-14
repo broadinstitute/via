@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearRecentSearches, describeSearchedAt, groupRecentSearches, loadRecentSearches, recordRecentSearch } from "./recentSearches";
 
 const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot" };
+const HCM = { conceptId: 9000040, name: "Hypertrophic cardiomyopathy" };
 
 describe("recent searches", () => {
   afterEach(() => {
@@ -14,19 +15,19 @@ describe("recent searches", () => {
   });
 
   it("keeps searches newest first", () => {
-    recordRecentSearch({ variants: ["1-1-A-G"], condition: null }, 1000);
-    recordRecentSearch({ variants: ["2-2-C-T"], condition: TETRALOGY }, 2000);
+    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [] }, 1000);
+    recordRecentSearch({ variants: ["2-2-C-T"], conditions: [TETRALOGY] }, 2000);
 
     expect(loadRecentSearches()).toEqual([
-      { variants: ["2-2-C-T"], condition: TETRALOGY, searchedAt: 2000 },
-      { variants: ["1-1-A-G"], condition: null, searchedAt: 1000 },
+      { variants: ["2-2-C-T"], conditions: [TETRALOGY], searchedAt: 2000 },
+      { variants: ["1-1-A-G"], conditions: [], searchedAt: 1000 },
     ]);
   });
 
   it("moves a re-run of the same criteria to the top instead of repeating it", () => {
-    recordRecentSearch({ variants: ["1-1-A-G", "2-2-C-T"], condition: TETRALOGY }, 1000);
-    recordRecentSearch({ variants: ["3-3-G-A"], condition: null }, 2000);
-    recordRecentSearch({ variants: ["2-2-C-T", "1-1-A-G"], condition: TETRALOGY }, 3000);
+    recordRecentSearch({ variants: ["1-1-A-G", "2-2-C-T"], conditions: [TETRALOGY] }, 1000);
+    recordRecentSearch({ variants: ["3-3-G-A"], conditions: [] }, 2000);
+    recordRecentSearch({ variants: ["2-2-C-T", "1-1-A-G"], conditions: [TETRALOGY] }, 3000);
 
     const searches = loadRecentSearches();
     expect(searches).toHaveLength(2);
@@ -34,15 +35,45 @@ describe("recent searches", () => {
   });
 
   it("treats a different condition as a different search", () => {
-    recordRecentSearch({ variants: ["1-1-A-G"], condition: TETRALOGY }, 1000);
-    recordRecentSearch({ variants: ["1-1-A-G"], condition: null }, 2000);
+    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [TETRALOGY] }, 1000);
+    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [] }, 2000);
+    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [TETRALOGY, HCM] }, 3000);
 
-    expect(loadRecentSearches()).toHaveLength(2);
+    expect(loadRecentSearches()).toHaveLength(3);
+  });
+
+  /** Conditions are OR'd, so the same set in another order is the same search. */
+  it("treats the same conditions in another order as the same search", () => {
+    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [TETRALOGY, HCM] }, 1000);
+    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [HCM, TETRALOGY] }, 2000);
+
+    const searches = loadRecentSearches();
+    expect(searches).toHaveLength(1);
+    expect(searches[0]).toMatchObject({ conditions: [HCM, TETRALOGY], searchedAt: 2000 });
+  });
+
+  /** The v1 shape held one `condition`; it's under its own key, so it's simply no longer read. */
+  it("ignores history in the old one-condition shape", () => {
+    window.localStorage.setItem(
+      "via.recentSearches.v1",
+      JSON.stringify([{ variants: ["1-1-A-G"], condition: TETRALOGY, searchedAt: 5 }]),
+    );
+    expect(loadRecentSearches()).toEqual([]);
+
+    window.localStorage.setItem(
+      "via.recentSearches.v2",
+      JSON.stringify([
+        { variants: ["1-1-A-G"], condition: TETRALOGY, searchedAt: 5 },
+        { variants: ["2-2-C-T"], conditions: [{ conceptId: "x", name: "y" }], searchedAt: 6 },
+        { variants: ["3-3-G-A"], conditions: [TETRALOGY, HCM], searchedAt: 7 },
+      ]),
+    );
+    expect(loadRecentSearches()).toEqual([{ variants: ["3-3-G-A"], conditions: [TETRALOGY, HCM], searchedAt: 7 }]);
   });
 
   it("keeps only the twenty most recent", () => {
     for (let i = 1; i <= 23; i++) {
-      recordRecentSearch({ variants: [`${i}-1-A-G`], condition: null }, i);
+      recordRecentSearch({ variants: [`${i}-1-A-G`], conditions: [] }, i);
     }
 
     const kept = loadRecentSearches().map((search) => search.variants[0]);
@@ -55,7 +86,7 @@ describe("recent searches", () => {
     // Mid-afternoon, so "today" has hours either side of it.
     const now = new Date(2026, 9, 8, 15, 0).getTime();
     const hour = 60 * 60 * 1000, day = 24 * hour;
-    const at = (ms: number, id: string) => ({ variants: [id], condition: null, searchedAt: ms });
+    const at = (ms: number, id: string) => ({ variants: [id], conditions: [], searchedAt: ms });
     const groups = groupRecentSearches(
       [at(now - hour, "a"), at(now - 14 * hour, "b"), at(now - 20 * hour, "c"), at(now - 3 * day, "d"), at(now - 9 * day, "e")],
       now,
@@ -71,27 +102,27 @@ describe("recent searches", () => {
   });
 
   it("ignores a search with no variants", () => {
-    recordRecentSearch({ variants: [], condition: null });
+    recordRecentSearch({ variants: [], conditions: [] });
 
     expect(loadRecentSearches()).toEqual([]);
   });
 
   it("clears", () => {
-    recordRecentSearch({ variants: ["1-1-A-G"], condition: null });
+    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [] });
     clearRecentSearches();
 
     expect(loadRecentSearches()).toEqual([]);
   });
 
   it("drops unreadable or malformed data instead of failing", () => {
-    window.localStorage.setItem("via.recentSearches.v1", "not json");
+    window.localStorage.setItem("via.recentSearches.v2", "not json");
     expect(loadRecentSearches()).toEqual([]);
 
     window.localStorage.setItem(
-      "via.recentSearches.v1",
-      JSON.stringify([{ variants: "oops" }, { variants: ["1-1-A-G"], condition: null, searchedAt: 5 }]),
+      "via.recentSearches.v2",
+      JSON.stringify([{ variants: "oops" }, { variants: ["1-1-A-G"], conditions: [], searchedAt: 5 }]),
     );
-    expect(loadRecentSearches()).toEqual([{ variants: ["1-1-A-G"], condition: null, searchedAt: 5 }]);
+    expect(loadRecentSearches()).toEqual([{ variants: ["1-1-A-G"], conditions: [], searchedAt: 5 }]);
   });
 
   it("treats blocked storage as no history", () => {
@@ -102,7 +133,7 @@ describe("recent searches", () => {
       throw new Error("SecurityError");
     });
 
-    expect(() => recordRecentSearch({ variants: ["1-1-A-G"], condition: null })).not.toThrow();
+    expect(() => recordRecentSearch({ variants: ["1-1-A-G"], conditions: [] })).not.toThrow();
     expect(loadRecentSearches()).toEqual([]);
   });
 });
