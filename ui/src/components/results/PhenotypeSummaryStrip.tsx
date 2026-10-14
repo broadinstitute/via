@@ -16,8 +16,10 @@ import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
 // anatomy -- a small uppercase label over its content -- divided by hairlines the way the top bar
 // divides its parts: what the phenotype filter is, how many it matched, how they break down, and
 // which view is showing. Being a band rather than a side panel, it leaves the table the full width.
-// A filter of several conditions lists them, "or" between, and under the matched count gives each
-// condition's own, so the overlap -- the total is not the sum -- is visible where the total is.
+// A filter of several conditions becomes a small table in the first block: each condition with its
+// code trailing and its own matched count in a column, under a "participants" label at the end of
+// the block's label row. The column is what makes the overlap visible: the counts plainly add up
+// to more than the total beside them.
 const BLOCK_GAP = 20;
 
 const styles = {
@@ -70,36 +72,69 @@ const styles = {
     textOverflow: "ellipsis",
     maxWidth: 320,
   },
-  // The conditions, each its name over its OMOP code.
-  conditionList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-    minWidth: 0,
-  },
+  // One condition: its name over its OMOP code.
   conditionText: {
     display: "flex",
     flexDirection: "column",
     gap: 2,
     minWidth: 0,
   },
-  // Before the second condition on: the filter matches participants with any of them.
-  or: {
+  // Several: a two-column list, name (code trailing) and that condition's own matched count.
+  conditionList: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+    alignItems: "baseline",
+    gap: "3px 16px",
+    margin: 0,
+    padding: 0,
+    listStyle: "none",
+    minWidth: 0,
+  },
+  conditionRow: {
+    display: "contents",
+  },
+  // A flex row, so the copy button (itself a flex box) sits inline after the code.
+  conditionRowName: {
+    display: "flex",
+    alignItems: "center",
+    gap: 2,
+    minWidth: 0,
+    maxWidth: 300,
+    fontSize: 12.5,
+    fontWeight: 600,
+    lineHeight: 1.3,
+    color: colors.textPrimary,
+  },
+  conditionRowText: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  // The code after the name, quieter than on its own line; still copyable.
+  trailingCode: {
+    flexShrink: 0,
+    marginLeft: 6,
     color: colors.textMuted,
-    fontSize: 11,
+    fontFamily: "monospace",
+    fontSize: 10.5,
     fontWeight: 500,
   },
-  // Each condition's own count under the total, for a filter of several. Wraps rather than
-  // truncates: the names are the point of the line.
-  ownCounts: {
-    maxWidth: 320,
-    color: colors.textSecondary,
-    fontSize: 11.5,
-    lineHeight: 1.4,
-  },
-  ownCount: {
+  conditionCount: {
+    fontSize: 12.5,
     fontWeight: 600,
+    color: colors.textPrimary,
     fontVariantNumeric: "tabular-nums",
+    textAlign: "right",
+  },
+  // Qualifiers in the label row: "any of" after the eyebrow, "participants" over the count column.
+  labelQualifier: {
+    fontWeight: 500,
+    letterSpacing: 0,
+    textTransform: "none",
+    color: colors.textMuted,
+  },
+  labelRowSplit: {
+    justifyContent: "space-between",
   },
   codeLine: {
     display: "inline-flex",
@@ -261,18 +296,13 @@ export default function PhenotypeSummaryStrip({
   const concepts = conditionSearch.concepts;
   const participantCount = conditionSearch.participantCount ?? 0;
   const hasBreakdown = ancestryBreakdown.length > 0;
-  // With several conditions, one whose own count is the total adds nobody the others didn't:
-  // a parent picked beside its child, say. Noted, not blocked -- it's harmless.
-  const coversAll =
-    concepts.length > 1 && participantCount > 0
-      ? concepts.find((concept) => concept.participantCount === participantCount)
-      : undefined;
+  // The union counts a participant once however many of the conditions they have, so the
+  // per-condition counts beside the names can sum to more than it.
   const countTooltip =
     concepts.length > 1
       ? participantCount
-        ? "Participants recorded with any of these conditions, or a more specific form of one, each counted once." +
-          " Beneath is each condition's own count; they overlap, so they add up to more than the total." +
-          (coversAll ? ` ${coversAll.name} alone accounts for everyone matched.` : "")
+        ? "Participants recorded with any of these conditions, or a more specific form of one. " +
+          "A participant with more than one is counted once here, so the counts beside the conditions may add up to more than this total."
         : "No participants are recorded with any of these conditions or a more specific form of one."
       : participantCount
         ? "Participant counts include anyone recorded with this condition or any more specific form of it."
@@ -281,27 +311,42 @@ export default function PhenotypeSummaryStrip({
   return (
     <div style={styles.strip}>
       <div style={styles.block}>
-        <div style={styles.blockLabel}>
-          <span style={styles.eyebrow}>Phenotype</span>
+        <div style={{ ...styles.blockLabel, ...(concepts.length > 1 ? styles.labelRowSplit : undefined) }}>
+          <span style={styles.eyebrow}>
+            Phenotype
+            {concepts.length > 1 && <span style={styles.labelQualifier}>&nbsp;· any of</span>}
+          </span>
+          {concepts.length > 1 && (
+            <span style={{ ...styles.eyebrow, ...styles.labelQualifier }} aria-hidden="true">
+              participants
+            </span>
+          )}
         </div>
         <div style={styles.blockContent}>
-          {concepts.length > 0 ? (
-            <div style={styles.conditionList}>
-              {concepts.map((concept, index) => (
-                <div key={concept.conceptId} style={styles.conditionText}>
-                  <span style={styles.conditionName} title={concept.name}>
-                    {index > 0 && <span style={styles.or}>or </span>}
-                    {concept.name}
+          {concepts.length > 1 ? (
+            <ul style={styles.conditionList} aria-label="Conditions, any of, with participants matched by each">
+              {concepts.map((concept) => (
+                <li key={concept.conceptId} style={styles.conditionRow}>
+                  <span style={styles.conditionRowName} title={`${concept.name} · OMOP ${concept.conceptId}`}>
+                    <span style={styles.conditionRowText}>{concept.name}</span>
+                    <span style={styles.trailingCode}>{concept.conceptId}</span>
+                    <CopyButton getText={() => String(concept.conceptId)} label={`Copy OMOP concept ID ${concept.conceptId}`} />
                   </span>
-                  <span style={styles.codeLine}>
-                    <span style={styles.code}>OMOP — {concept.conceptId}</span>
-                    <CopyButton
-                      getText={() => String(concept.conceptId)}
-                      label={concepts.length > 1 ? `Copy OMOP concept ID ${concept.conceptId}` : "Copy OMOP concept ID"}
-                    />
+                  <span style={styles.conditionCount} aria-label={`${formatInt(concept.participantCount)} participants`}>
+                    {formatInt(concept.participantCount)}
                   </span>
-                </div>
+                </li>
               ))}
+            </ul>
+          ) : concepts.length === 1 ? (
+            <div style={styles.conditionText}>
+              <span style={styles.conditionName} title={concepts[0].name}>
+                {concepts[0].name}
+              </span>
+              <span style={styles.codeLine}>
+                <span style={styles.code}>OMOP — {concepts[0].conceptId}</span>
+                <CopyButton getText={() => String(concepts[0].conceptId)} label="Copy OMOP concept ID" />
+              </span>
             </div>
           ) : (
             <span style={styles.noMatch}>
@@ -324,20 +369,6 @@ export default function PhenotypeSummaryStrip({
           <span style={styles.count}>{formatInt(participantCount)}</span>
           <span style={styles.countUnit}>matched</span>
         </div>
-        {concepts.length > 1 && (
-          <span
-            style={styles.ownCounts}
-            aria-label="Participants with each condition"
-            title={concepts.map((concept) => `${formatInt(concept.participantCount)} with ${concept.name}`).join("; ")}
-          >
-            {concepts.map((concept, index) => (
-              <span key={concept.conceptId}>
-                {index > 0 && <span aria-hidden="true"> · </span>}
-                <span style={styles.ownCount}>{formatInt(concept.participantCount)}</span> {concept.name}
-              </span>
-            ))}
-          </span>
-        )}
       </div>
 
       <div style={{ ...styles.block, ...styles.blockDivided }}>

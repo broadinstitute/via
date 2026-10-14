@@ -103,30 +103,32 @@ describe("PhenotypeSummaryStrip", () => {
     expect(screen.getByRole("button", { name: "Review" })).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("lists several conditions as alternatives, with each one's own count under the total", () => {
+  it("lists several conditions as a table: name, code and each one's own count under a participants label", () => {
     renderStrip({ conditionSearch: TWO_CONDITIONS, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
 
-    expect(screen.getByTitle("Tetralogy of Fallot")).toHaveTextContent(/^Tetralogy of Fallot$/);
-    expect(screen.getByTitle("Hypertrophic cardiomyopathy")).toHaveTextContent(/^or Hypertrophic cardiomyopathy$/);
-    expect(screen.getByText("OMOP — 9000010")).toBeInTheDocument();
-    expect(screen.getByText("OMOP — 9000040")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copy OMOP concept ID 9000040" })).toBeInTheDocument();
-    // The union is the headline; the per-condition counts show it isn't the sum.
+    // The label row says the rule and names the count column.
+    expect(screen.getByText("Phenotype")).toHaveTextContent(/any of/);
+    expect(screen.getByText("participants")).toBeInTheDocument();
+    const rows = within(screen.getByRole("list", { name: /Conditions, any of/ })).getAllByRole("listitem");
+    expect(rows.map((row) => row.textContent)).toEqual(["Tetralogy of Fallot900001049", "Hypertrophic cardiomyopathy9000040214"]);
+    expect(within(rows[0]).getByLabelText("49 participants")).toBeInTheDocument();
+    expect(within(rows[1]).getByRole("button", { name: "Copy OMOP concept ID 9000040" })).toBeInTheDocument();
+    // The union stays the headline; the per-condition line under it is gone.
     expect(screen.getByText("260")).toBeInTheDocument();
-    const own = screen.getByLabelText("Participants with each condition");
-    expect(own).toHaveTextContent(/^49 Tetralogy of Fallot · 214 Hypertrophic cardiomyopathy$/);
-    expect(own).toHaveAttribute("title", "49 with Tetralogy of Fallot; 214 with Hypertrophic cardiomyopathy");
+    expect(screen.queryByLabelText("Participants with each condition")).not.toBeInTheDocument();
+    // One condition keeps the stacked name-over-code look, without the column label.
+    cleanup();
+    renderStrip({ conditionSearch: CONDITION, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+    expect(screen.getByText("OMOP — 9000010")).toBeInTheDocument();
+    expect(screen.queryByText("participants")).not.toBeInTheDocument();
   });
 
-  it("notes a condition that alone accounts for everyone matched, e.g. a parent picked beside its child", () => {
-    const parentAndChild: ConditionSearch = {
-      ...TWO_CONDITIONS,
-      concepts: [TWO_CONDITIONS.concepts[0], { ...TWO_CONDITIONS.concepts[1], participantCount: 260 }],
-    };
-    renderStrip({ conditionSearch: parentAndChild, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+  it("explains in the total's tooltip that the per-condition counts may add up to more than it", () => {
+    renderStrip({ conditionSearch: TWO_CONDITIONS, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
 
     expect(screen.getByRole("button", { name: "More information" })).toHaveAccessibleDescription(
-      /each counted once.*Hypertrophic cardiomyopathy alone accounts for everyone matched\.$/,
+      "Participants recorded with any of these conditions, or a more specific form of one. " +
+        "A participant with more than one is counted once here, so the counts beside the conditions may add up to more than this total.",
     );
   });
 

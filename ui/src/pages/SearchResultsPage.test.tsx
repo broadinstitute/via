@@ -69,10 +69,10 @@ describe("SearchResultsPage", () => {
       "Tetralogy of Fallot or Hypertrophic cardiomyopathy",
     );
     expect(searches).toEqual(["/api/search?variants=1-1-A-G&conditionConceptIds=9000010&conditionConceptIds=9000040"]);
-    // The strip lists both, with each one's own count under the total.
+    // The strip lists both, each with its own count beside it.
     expect(screen.getAllByText("260").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Participants with each condition")).toHaveTextContent(
-      "49 Tetralogy of Fallot · 214 Hypertrophic cardiomyopathy",
+    expect(screen.getByRole("list", { name: /Conditions, any of/ })).toHaveTextContent(
+      "Tetralogy of Fallot900001049Hypertrophic cardiomyopathy9000040214",
     );
     // And the search goes into history with both.
     expect(JSON.parse(window.localStorage.getItem("via.recentSearches.v2")!)[0]).toMatchObject({
@@ -100,6 +100,6 @@ describe("SearchResultsPage", () => {
     await waitFor(() => expect(searches).toHaveLength(2));
     expect(searches[1]).toBe("/api/search?variants=2-2-C-T&conditionConceptIds=9000040");
     await waitFor(() => expect(screen.getByRole("button", { name: "Edit search" })).toHaveAccessibleDescription(/Phenotype\s*Hypertrophic cardiomyopathy$/));
-    expect(screen.queryByLabelText("Participants with each condition")).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: /Conditions, any of/ })).not.toBeInTheDocument();
   });
 });
