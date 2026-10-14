@@ -378,7 +378,7 @@ describe("SearchEntryPage", () => {
     // The third pick fills the search; the field gives way to the limit line until one is removed.
     await pick(/Fallot tetralogy, repaired/, "fallot");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-    expect(screen.getByText("Searches take up to 3 phenotypes. Remove one to pick another.")).toBeInTheDocument();
+    expect(screen.getByText("Search has a maximum of 3 phenotypes. Remove one to pick another.")).toBeInTheDocument();
     expect(screen.getByText("1 variant ready").parentElement).toHaveTextContent(
       "filtered by Tetralogy of Fallot, Pentalogy of Fallot or Fallot tetralogy, repaired",
     );
