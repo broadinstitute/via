@@ -204,7 +204,7 @@ public class ConditionLookupService {
                 RESOLVE_CONCEPTS_SQL.formatted(properties.cdrTableRef(CB_CRITERIA)))
             .addNamedParameter("conceptIds", conceptIdsParameter(conceptIds));
     Map<Long, ConditionConcept> byId = new HashMap<>();
-    for (ConditionConcept concept : toConcepts(bigQuery.query(query))) {
+    for (ConditionConcept concept : toConcepts(bigQuery.query(query, "Resolve concepts"))) {
       byId.putIfAbsent(concept.getConceptId(), concept);
     }
     return conceptIds.stream().map(byId::get).filter(concept -> concept != null).toList();
@@ -278,7 +278,7 @@ public class ConditionLookupService {
       builder.addNamedParameter("term" + i, QueryParameterValue.string(likePattern(terms.get(i))));
     }
 
-    return toConcepts(bigQuery.query(builder));
+    return toConcepts(bigQuery.query(builder, "Condition candidates"));
   }
 
   private static List<ConditionConcept> toConcepts(Iterable<FieldValueList> rows) {
@@ -306,7 +306,7 @@ public class ConditionLookupService {
                     properties.cdrTableRef(CONCEPT_ANCESTOR)))
             .addNamedParameter("conceptIds", conceptIdsParameter(conceptIds));
     List<ConditionOverlapCell> cells = new ArrayList<>();
-    for (FieldValueList row : bigQuery.query(query)) {
+    for (FieldValueList row : bigQuery.query(query, "Cohort overlap")) {
       Set<Long> inCell =
           Stream.of(row.get("cell").getStringValue().split(",")).map(Long::valueOf).collect(Collectors.toSet());
       cells.add(

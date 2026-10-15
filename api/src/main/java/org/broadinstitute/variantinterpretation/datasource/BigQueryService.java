@@ -49,17 +49,23 @@ public class BigQueryService {
     this(bigQuery, new QueryUsageMeter());
   }
 
+  /** See {@link #query(QueryJobConfiguration.Builder, String)}; for a query with no better name. */
+  public Iterable<FieldValueList> query(QueryJobConfiguration.Builder builder) {
+    return query(builder, "Query");
+  }
+
   /**
    * Takes the builder rather than a built configuration so the cost cap and the labels can't be
-   * skipped. Each query's statistics go to the usage meter once it has run.
+   * skipped. Each query's statistics go to the usage meter once it has run, under {@code name},
+   * which is how the usage log describes it to the user ("Cohort count", "VAT lookup").
    */
-  public Iterable<FieldValueList> query(QueryJobConfiguration.Builder builder) {
+  public Iterable<FieldValueList> query(QueryJobConfiguration.Builder builder, String name) {
     QueryJobConfiguration configuration =
         builder.setMaximumBytesBilled(MAXIMUM_BYTES_BILLED).setLabels(JOB_LABELS).build();
     log.info("Running BigQuery query: {}", configuration.getQuery());
     try {
       TableResult result = bigQuery.query(configuration);
-      meter(result.getJobId());
+      meter(name, result.getJobId());
       return result.iterateAll();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -72,15 +78,15 @@ public class BigQueryService {
    * lookup failure) is still counted as a query; the figures BigQuery would have given are
    * accounting, not results, so they never fail a search.
    */
-  private void meter(JobId jobId) {
+  private void meter(String name, JobId jobId) {
     try {
       Job job = jobId == null ? null : bigQuery.getJob(jobId);
       JobStatistics.QueryStatistics statistics = job == null ? null : job.getStatistics();
       if (statistics == null) {
-        usage.recordUnknown();
+        usage.recordUnknown(name);
         return;
       }
-      usage.record(statistics);
+      usage.record(name, statistics);
       log.info(
           "BigQuery job {}: {} bytes billed, cache hit {}",
           jobId.getJob(),
@@ -88,7 +94,7 @@ public class BigQueryService {
           statistics.getCacheHit());
     } catch (RuntimeException e) {
       log.warn("Couldn't read statistics for BigQuery job {}", jobId, e);
-      usage.recordUnknown();
+      usage.recordUnknown(name);
     }
   }
 

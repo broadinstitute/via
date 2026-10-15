@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { describeError } from "../../api/client";
-import { fetchQueryUsage, type QueryUsage } from "../../api/usage";
+import { fetchQueryUsage, type QueryUsage, type SearchUsage } from "../../api/usage";
 import colors from "../../libs/colors";
+import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import { formatBytes, formatInt, formatUsd } from "../../utils/format";
 import Clickable from "../common/Clickable";
+import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, UserIcon } from "../icons";
 
-// What this VIA instance has spent on BigQuery since it started: the figures BigQuery reports on
-// each job, added up by the backend. Four facts in a row, the cost last, with the one caveat
-// that matters (the cost assumes on-demand pricing) under them.
+// What this VIA instance has spent on BigQuery since it started, as a receipt: the totals in one
+// line, then the last searches newest first, each a row that opens into the queries it ran. The
+// per-query rows are where the two things worth knowing show up: a repeated search is answered
+// from BigQuery's cache for nothing, and anything else is billed at least 10 MB however little it
+// reads. Every search starts closed. Ten searches to a page, with the rest behind a pager, so
+// the dialog doesn't grow with the log.
 
 const styles = {
   heading: {
@@ -19,37 +24,158 @@ const styles = {
     gap: 12,
     marginBottom: 6,
   },
-  // Two by two: four facts never fit a row at the dialog's width, and a lone fourth leaves a hole.
-  facts: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 1,
+  totals: {
+    ...Style.elements.panelIntro,
+  },
+  totalsFigures: {
+    color: colors.textPrimary,
+    fontWeight: 600,
+    fontVariantNumeric: "tabular-nums",
+  },
+  list: {
     margin: 0,
+    padding: 0,
+    listStyle: "none",
     border: `1px solid ${colors.border}`,
     borderRadius: Style.radius,
     overflow: "hidden",
-    background: colors.border,
   },
-  fact: {
+  // A search's row: the toggle, when, what, and its cost at the right.
+  search: {
     display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    padding: "12px 14px",
-    background: colors.surface2,
-  },
-  label: {
-    ...Style.elements.eyebrow,
-  },
-  value: {
-    fontSize: 20,
-    fontWeight: 700,
-    lineHeight: 1.1,
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+    padding: "8px 10px",
+    border: "none",
+    borderTop: `1px solid ${colors.border}`,
+    background: "none",
     color: colors.textPrimary,
-    fontVariantNumeric: "tabular-nums",
+    font: "inherit",
+    textAlign: "left",
+    cursor: "pointer",
   },
-  detail: {
+  searchFirst: {
+    borderTop: "none",
+  },
+  searchHovered: {
+    background: colors.surface1,
+  },
+  chevron: {
+    flexShrink: 0,
+    color: colors.textMuted,
+  },
+  when: {
+    flexShrink: 0,
+    width: 62,
     fontSize: 11.5,
     color: colors.textSecondary,
+    fontVariantNumeric: "tabular-nums",
+  },
+  what: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+    minWidth: 0,
+  },
+  variants: {
+    ...Style.elements.mono,
+    overflow: "hidden",
+    fontSize: 11,
+    color: colors.textBody,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  phenotype: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 0,
+    maxWidth: 180,
+    padding: "1px 7px",
+    borderRadius: 6,
+    background: colors.bgAccent,
+    color: colors.textAccent,
+    fontSize: 11,
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  cost: {
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: 11.5,
+    color: colors.textSecondary,
+    fontVariantNumeric: "tabular-nums",
+  },
+  costBilled: {
+    fontWeight: 600,
+    color: colors.textPrimary,
+  },
+  tag: {
+    padding: "1px 7px",
+    borderRadius: 999,
+    fontSize: 10.5,
+    fontWeight: 600,
+  },
+  tagCached: {
+    background: colors.bgSuccess,
+    color: colors.textSuccess,
+  },
+  tagBilled: {
+    background: colors.bgAccent,
+    color: colors.textAccent,
+  },
+  // The opened search's queries, a small table in the panel's tint.
+  jobs: {
+    width: "100%",
+    borderCollapse: "collapse",
+    background: colors.surface1,
+    borderTop: `1px solid ${colors.border}`,
+    fontSize: 11.5,
+  },
+  jobsHead: {
+    padding: "5px 10px 5px 40px",
+    textAlign: "left",
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: colors.textSecondary,
+  },
+  jobCell: {
+    padding: "5px 10px 5px 40px",
+    borderTop: `1px solid ${colors.border}`,
+    color: colors.textBody,
+    verticalAlign: "middle",
+  },
+  jobCellRight: {
+    textAlign: "right",
+    fontVariantNumeric: "tabular-nums",
+    paddingLeft: 10,
+  },
+  empty: {
+    padding: "14px 12px",
+    fontSize: 12.5,
+    color: colors.textSecondary,
+  },
+  // Which searches are showing, and the arrows to the ones before and after.
+  pager: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 4,
+    marginTop: 8,
+    fontSize: 11.5,
+    color: colors.textSecondary,
+    fontVariantNumeric: "tabular-nums",
+  },
+  pagerRange: {
+    marginRight: 6,
   },
   note: {
     margin: "12px 0 0",
@@ -59,22 +185,56 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
-const SKELETON_FACTS = 4;
+const SKELETON_ROWS = 3;
+/** Searches shown at once; the pager steps through the rest. */
+export const SEARCHES_PER_PAGE = 10;
+/** Variant IDs shown in a search's row before the rest are summarised as "+N more". */
+const PREVIEW_VARIANTS = 2;
 
 /** "since 3:12 PM" today, or "since Oct 14, 3:12 PM" on another day. */
-function describeSince(iso: string): string {
+export function describeSince(iso: string, now = new Date()): string {
   const since = new Date(iso);
-  const today = new Date();
   const sameDay =
-    since.getFullYear() === today.getFullYear() && since.getMonth() === today.getMonth() && since.getDate() === today.getDate();
+    since.getFullYear() === now.getFullYear() && since.getMonth() === now.getMonth() && since.getDate() === now.getDate();
   const time = since.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   return sameDay ? `since ${time}` : `since ${since.toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${time}`;
+}
+
+/** Slot time as the console shows it: milliseconds below a second, then seconds or minutes. */
+export function formatSlotTime(milliseconds: number): string {
+  if (milliseconds < 1000) return `${formatInt(milliseconds)} ms`;
+  const seconds = milliseconds / 1000;
+  if (seconds < 60) return `${seconds.toLocaleString("en-US", { maximumFractionDigits: 1 })} s`;
+  return `${(seconds / 60).toLocaleString("en-US", { maximumFractionDigits: 1 })} min`;
+}
+
+const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+const clockSeconds = (iso: string) =>
+  new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+
+function previewVariants(variants: string[]): string {
+  const shown = variants.slice(0, PREVIEW_VARIANTS).join(", ");
+  const rest = variants.length - PREVIEW_VARIANTS;
+  return rest > 0 ? `${shown} +${rest} more` : shown;
+}
+
+/** "cached" when every query came from the cache (a repeat), else "billed". */
+function CostTag({ search }: { search: SearchUsage }) {
+  const cached = search.queries.length > 0 && search.cacheHits === search.queries.length;
+  return (
+    <span style={{ ...styles.tag, ...(cached ? styles.tagCached : styles.tagBilled) }}>{cached ? "cached" : "billed"}</span>
+  );
 }
 
 export default function UsagePanel() {
   const [usage, setUsage] = useState<QueryUsage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Which searches are open, by id. All start closed.
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  // Zero-based; clamped below so a refresh that shortens the log can't leave it past the end.
+  const [page, setPage] = useState(0);
+  const { hoveredKey, hoverProps } = useHoveredKey<number>();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -86,6 +246,20 @@ export default function UsagePanel() {
   }, []);
 
   useEffect(load, [load]);
+
+  const pageCount = usage ? Math.max(1, Math.ceil(usage.searches.length / SEARCHES_PER_PAGE)) : 1;
+  const currentPage = Math.min(page, pageCount - 1);
+  const first = currentPage * SEARCHES_PER_PAGE;
+  const shown = usage ? usage.searches.slice(first, first + SEARCHES_PER_PAGE) : [];
+
+  function toggle(id: number) {
+    setOpen((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   return (
     <>
@@ -101,65 +275,149 @@ export default function UsagePanel() {
           {loading ? "Refreshing..." : "Refresh"}
         </Clickable>
       </div>
-      <p style={Style.elements.panelIntro}>
-        What this session's searches have cost in BigQuery, from BigQuery's own figures for each query
-        {usage ? `, ${describeSince(usage.since)}` : ""}.
-      </p>
 
       {error ? (
         <div role="alert" style={Style.elements.errorNote}>
           {error}
         </div>
       ) : loading || !usage ? (
-        <dl style={styles.facts} aria-busy="true">
-          {Array.from({ length: SKELETON_FACTS }, (_, index) => (
-            <div key={index} style={styles.fact}>
-              <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 60, height: 8 }} />
-              <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 80, height: 20 }} />
-            </div>
-          ))}
-        </dl>
+        <>
+          <p style={styles.totals}>
+            <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 260, height: 10 }} />
+          </p>
+          <div style={styles.list} aria-busy="true">
+            {Array.from({ length: SKELETON_ROWS }, (_, index) => (
+              <div key={index} style={{ ...styles.search, ...(index === 0 ? styles.searchFirst : undefined), cursor: "default" }}>
+                <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: `${70 - index * 8}%` }} />
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <>
-          <dl style={styles.facts}>
-            <div style={styles.fact}>
-              <dt style={styles.label}>Queries</dt>
-              <dd style={{ ...styles.value, margin: 0 }}>{formatInt(usage.queries)}</dd>
-              <span style={styles.detail}>
-                {usage.cacheHits} from cache
+          <p style={styles.totals}>
+            <span style={styles.totalsFigures}>
+              {formatInt(usage.queries)} {usage.queries === 1 ? "query" : "queries"} · {formatBytes(usage.bytesBilled)} billed ·{" "}
+              {formatUsd(usage.estimatedCostUsd)}
+            </span>{" "}
+            this session, {describeSince(usage.since)}. {formatInt(usage.cacheHits)} from cache, {formatSlotTime(usage.slotMilliseconds)} of
+            slot time. The last {usage.searches.length === 1 ? "search" : `${usage.searches.length} searches`} below.
+          </p>
+          {usage.searches.length === 0 ? (
+            <div style={{ ...styles.list, ...styles.empty }}>No searches yet this session.</div>
+          ) : (
+            <ul style={styles.list} aria-label="Searches this session, newest first">
+              {shown.map((search, index) => {
+                const expanded = open.has(search.id);
+                const jobsId = `usage-search-${search.id}`;
+                return (
+                  <li key={search.id}>
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={jobsId}
+                      onClick={() => toggle(search.id)}
+                      {...hoverProps(search.id)}
+                      style={{
+                        ...styles.search,
+                        ...(index === 0 ? styles.searchFirst : undefined),
+                        ...(hoveredKey === search.id ? styles.searchHovered : undefined),
+                      }}
+                    >
+                      {expanded ? (
+                        <ChevronDownIcon size={12} strokeWidth={2.5} style={styles.chevron} aria-hidden="true" />
+                      ) : (
+                        <ChevronRightIcon size={12} strokeWidth={2.5} style={styles.chevron} aria-hidden="true" />
+                      )}
+                      <span style={styles.when}>{clock(search.at)}</span>
+                      <span style={styles.what}>
+                        <span style={styles.variants} title={search.variants.join("\n")}>
+                          {previewVariants(search.variants)}
+                        </span>
+                        {search.phenotype && (
+                          <span style={styles.phenotype} title={search.phenotype}>
+                            <UserIcon size={10} strokeWidth={2.5} aria-hidden="true" />
+                            {search.phenotype}
+                          </span>
+                        )}
+                      </span>
+                      <span style={styles.cost}>
+                        <span>
+                          {search.queries.length} {search.queries.length === 1 ? "query" : "queries"}
+                        </span>
+                        <span style={styles.costBilled}>{formatBytes(search.bytesBilled)}</span>
+                        <CostTag search={search} />
+                      </span>
+                    </button>
+                    {expanded && (
+                      <table id={jobsId} style={styles.jobs} aria-label={`Queries run by search ${search.id}`}>
+                        <thead>
+                          <tr>
+                            <th style={styles.jobsHead}>When</th>
+                            <th style={{ ...styles.jobsHead, paddingLeft: 10 }}>Query</th>
+                            <th style={{ ...styles.jobsHead, ...styles.jobCellRight }}>Read</th>
+                            <th style={{ ...styles.jobsHead, ...styles.jobCellRight }}>Billed</th>
+                            <th style={{ ...styles.jobsHead, paddingLeft: 10 }} />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {search.queries.map((job, jobIndex) => (
+                            <tr key={jobIndex}>
+                              <td style={{ ...styles.jobCell, fontVariantNumeric: "tabular-nums" }}>{clockSeconds(job.at)}</td>
+                              <td style={{ ...styles.jobCell, paddingLeft: 10 }}>{job.name}</td>
+                              <td style={{ ...styles.jobCell, ...styles.jobCellRight }}>{formatBytes(job.bytesProcessed)}</td>
+                              <td style={{ ...styles.jobCell, ...styles.jobCellRight }}>{job.cacheHit ? "0" : formatBytes(job.bytesBilled)}</td>
+                              <td style={{ ...styles.jobCell, paddingLeft: 10 }}>
+                                <span style={{ ...styles.tag, ...(job.cacheHit ? styles.tagCached : styles.tagBilled) }}>
+                                  {job.cacheHit ? "cache" : "billed"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {usage.searches.length > SEARCHES_PER_PAGE && (
+            <nav style={styles.pager} aria-label="Searches, by page">
+              <span style={styles.pagerRange}>
+                {first + 1}–{first + shown.length} of {usage.searches.length}
               </span>
-            </div>
-            <div style={styles.fact}>
-              <dt style={styles.label}>Data billed</dt>
-              <dd style={{ ...styles.value, margin: 0 }}>{formatBytes(usage.bytesBilled)}</dd>
-              <span style={styles.detail}>{formatBytes(usage.bytesProcessed)} read</span>
-            </div>
-            <div style={styles.fact}>
-              <dt style={styles.label}>Slot time</dt>
-              <dd style={{ ...styles.value, margin: 0 }}>{formatSlotTime(usage.slotMilliseconds)}</dd>
-              <span style={styles.detail}>what a reservation bills for</span>
-            </div>
-            <div style={styles.fact}>
-              <dt style={styles.label}>Estimated cost</dt>
-              <dd style={{ ...styles.value, margin: 0 }}>{formatUsd(usage.estimatedCostUsd)}</dd>
-              <span style={styles.detail}>on-demand, $6.25 per TB</span>
-            </div>
-          </dl>
+              <Clickable
+                style={Style.buttons.icon}
+                hoverStyle={Style.buttons.iconHover}
+                disabledStyle={Style.buttons.disabled}
+                onClick={() => setPage(currentPage - 1)}
+                disabled={currentPage === 0}
+                aria-label="Newer searches"
+                title="Newer searches"
+              >
+                <ArrowLeftIcon size={14} strokeWidth={2.5} aria-hidden="true" />
+              </Clickable>
+              <Clickable
+                style={Style.buttons.icon}
+                hoverStyle={Style.buttons.iconHover}
+                disabledStyle={Style.buttons.disabled}
+                onClick={() => setPage(currentPage + 1)}
+                disabled={currentPage >= pageCount - 1}
+                aria-label="Older searches"
+                title="Older searches"
+              >
+                <ArrowRightIcon size={14} strokeWidth={2.5} aria-hidden="true" />
+              </Clickable>
+            </nav>
+          )}
           <p style={styles.note}>
-            Counts every query this instance has run since it started, and resets when it restarts. A query
-            BigQuery answers from its cache bills nothing; any other is billed at least 10 MB. The cost is an
-            estimate at on-demand pricing: a project on a reservation pays for slot time instead.
+            Resets when this instance restarts. A search repeated within 24 hours is answered from BigQuery's cache and
+            costs nothing; any other query is billed at least 10 MB, however little it reads. The cost is an estimate at
+            on-demand pricing ($6.25 per TB): a project on a reservation pays for slot time instead.
           </p>
         </>
       )}
     </>
   );
-}
-
-/** Slot time as the console shows it: milliseconds below a second, then seconds or minutes. */
-export function formatSlotTime(milliseconds: number): string {
-  if (milliseconds < 1000) return `${formatInt(milliseconds)} ms`;
-  const seconds = milliseconds / 1000;
-  if (seconds < 60) return `${seconds.toLocaleString("en-US", { maximumFractionDigits: 1 })} s`;
-  return `${(seconds / 60).toLocaleString("en-US", { maximumFractionDigits: 1 })} min`;
 }

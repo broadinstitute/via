@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.broadinstitute.variantinterpretation.datasource.ConditionLookupService;
 import org.broadinstitute.variantinterpretation.datasource.MockPhenotypeData;
 import org.broadinstitute.variantinterpretation.datasource.PhenotypeFixtures;
+import org.broadinstitute.variantinterpretation.datasource.QueryUsageMeter;
 import org.broadinstitute.variantinterpretation.datasource.VatLookupService;
 import org.broadinstitute.variantinterpretation.api.SearchApi;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
@@ -26,12 +27,17 @@ public class SearchResultsController implements SearchApi {
   private final VatLookupService vatLookup;
   private final ConditionLookupService conditionLookup;
   private final PhenotypeFixtures phenotypeFixtures;
+  private final QueryUsageMeter usage;
 
   public SearchResultsController(
-      VatLookupService vatLookup, ConditionLookupService conditionLookup, PhenotypeFixtures phenotypeFixtures) {
+      VatLookupService vatLookup,
+      ConditionLookupService conditionLookup,
+      PhenotypeFixtures phenotypeFixtures,
+      QueryUsageMeter usage) {
     this.vatLookup = vatLookup;
     this.conditionLookup = conditionLookup;
     this.phenotypeFixtures = phenotypeFixtures;
+    this.usage = usage;
   }
 
   // cohortVariants and conditionSearch are the parts of this response backed by real queries:
@@ -47,8 +53,22 @@ public class SearchResultsController implements SearchApi {
   public ResponseEntity<SearchResultsResponse> searchResults(
       List<String> variants, List<Long> conditionConceptIds) {
     List<String> requested = normalizeVariants(variants);
+    // Every BigQuery job between here and the finally is logged under this search (QueryUsageMeter).
+    usage.beginSearch(requested);
+    try {
+      return ResponseEntity.ok(search(requested, conditionConceptIds));
+    } finally {
+      usage.endSearch();
+    }
+  }
+
+  private SearchResultsResponse search(List<String> requested, List<Long> conditionConceptIds) {
     List<CohortVariant> cohortVariants = vatLookup.lookup(requested);
     ConditionSearch conditionSearch = conditionLookup.search(conditionConceptIds);
+    if (conditionSearch != null && !conditionSearch.getConcepts().isEmpty()) {
+      usage.describeSearchPhenotype(
+          String.join(", ", conditionSearch.getConcepts().stream().map(MatchedConcept::getName).toList()));
+    }
     // Null both when no condition was picked and when none of the picked concepts was found.
     Integer participants = conditionSearch == null ? null : conditionSearch.getParticipantCount().orElse(null);
     boolean phenotypeFiltered = participants != null && participants > 0;
@@ -58,24 +78,23 @@ public class SearchResultsController implements SearchApi {
             .conditionSearch(conditionSearch)
             .cohortVariants(cohortVariants);
     if (!phenotypeFiltered) {
-      return ResponseEntity.ok(response.ancestryBreakdown(List.of()).ageBreakdown(List.of()).filteredVariants(List.of()));
+      return response.ancestryBreakdown(List.of()).ageBreakdown(List.of()).filteredVariants(List.of());
     }
 
     List<Long> matchedIds = conditionSearch.getConcepts().stream().map(MatchedConcept::getConceptId).toList();
     Optional<PhenotypeFixtures.UseCase> useCase = phenotypeFixtures.forConditions(matchedIds, participants);
     Map<String, MockPhenotypeData.CuratedCounts> curated =
         useCase.map(PhenotypeFixtures.UseCase::variants).orElse(Map.of());
-    return ResponseEntity.ok(
-        response
-            .ancestryBreakdown(
-                useCase
-                    .map(u -> MockPhenotypeData.ancestryBreakdown(u.ancestry(), participants))
-                    .orElseGet(() -> MockPhenotypeData.ancestryBreakdown(participants)))
-            .ageBreakdown(
-                useCase
-                    .map(u -> MockPhenotypeData.ageBreakdown(u.age(), participants))
-                    .orElseGet(() -> MockPhenotypeData.ageBreakdown(participants)))
-            .filteredVariants(MockPhenotypeData.filteredVariants(cohortVariants, participants, curated)));
+    return response
+        .ancestryBreakdown(
+            useCase
+                .map(u -> MockPhenotypeData.ancestryBreakdown(u.ancestry(), participants))
+                .orElseGet(() -> MockPhenotypeData.ancestryBreakdown(participants)))
+        .ageBreakdown(
+            useCase
+                .map(u -> MockPhenotypeData.ageBreakdown(u.age(), participants))
+                .orElseGet(() -> MockPhenotypeData.ageBreakdown(participants)))
+        .filteredVariants(MockPhenotypeData.filteredVariants(cohortVariants, participants, curated));
   }
 
   // Trims, drops blanks, dedupes (keeping the first occurrence's position), and caps num

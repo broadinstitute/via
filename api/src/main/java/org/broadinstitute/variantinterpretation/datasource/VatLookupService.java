@@ -105,7 +105,7 @@ public class VatLookupService {
             .addNamedParameter(
                 "vids", QueryParameterValue.array(vids.toArray(new String[0]), StandardSQLTypeName.STRING));
     Map<String, CohortVariant> byVid = new LinkedHashMap<>();
-    for (FieldValueList row : bigQuery.query(query)) {
+    for (FieldValueList row : bigQuery.query(query, "VAT lookup")) {
       CohortVariant variant = vatRowToCohortVariant(row);
       byVid.put(variant.getVariant(), variant);
     }

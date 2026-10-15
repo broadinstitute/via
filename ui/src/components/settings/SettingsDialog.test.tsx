@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsDialog from "./SettingsDialog";
 
@@ -16,6 +16,8 @@ function mockStatus(body: unknown, ok = true) {
   );
 }
 
+const NOW = new Date();
+const minutesAgo = (minutes: number) => new Date(NOW.getTime() - minutes * 60_000).toISOString();
 const USAGE = {
   queries: 14,
   cacheHits: 5,
@@ -23,7 +25,35 @@ const USAGE = {
   bytesBilled: 2516582400,
   slotMilliseconds: 48211,
   estimatedCostUsd: 0.0146,
-  since: new Date().toISOString(),
+  since: NOW.toISOString(),
+  searches: [
+    {
+      id: 2,
+      at: minutesAgo(1),
+      variants: ["14-23424218-G-A", "11-47332274-G-A", "1-156134903-A-G"],
+      phenotype: "Hypertrophic cardiomyopathy",
+      queries: [
+        { name: "VAT lookup", at: minutesAgo(1), cacheHit: true, bytesProcessed: 26000, bytesBilled: 0, slotMilliseconds: 0 },
+        { name: "Resolve concept", at: minutesAgo(1), cacheHit: true, bytesProcessed: 4000, bytesBilled: 0, slotMilliseconds: 0 },
+        { name: "Cohort count", at: minutesAgo(1), cacheHit: true, bytesProcessed: 23000, bytesBilled: 0, slotMilliseconds: 0 },
+      ],
+      cacheHits: 3,
+      bytesProcessed: 53000,
+      bytesBilled: 0,
+      estimatedCostUsd: 0,
+    },
+    {
+      id: 1,
+      at: minutesAgo(2),
+      variants: ["14-23424218-G-A", "11-47332274-G-A", "1-156134903-A-G"],
+      phenotype: null,
+      queries: [{ name: "VAT lookup", at: minutesAgo(2), cacheHit: false, bytesProcessed: 26000, bytesBilled: 10485760, slotMilliseconds: 30 }],
+      cacheHits: 0,
+      bytesProcessed: 26000,
+      bytesBilled: 10485760,
+      estimatedCostUsd: 0.00006,
+    },
+  ],
 };
 
 function openStatusPanel() {
@@ -106,19 +136,96 @@ describe("SettingsDialog", () => {
     expect(await screen.findByText("All tables accessible")).toBeInTheDocument();
   });
 
-  it("shows this session's BigQuery usage, with the cost marked as an on-demand estimate", async () => {
+  it("shows this session's BigQuery usage as totals and a log of searches, each opening into its queries", async () => {
     render(<SettingsDialog onClose={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Usage" }));
 
-    expect(await screen.findByText("14")).toBeInTheDocument();
-    expect(screen.getByText("5 from cache")).toBeInTheDocument();
-    expect(screen.getByText("2.3 GB")).toBeInTheDocument();
-    expect(screen.getByText("2.3 GB read")).toBeInTheDocument();
-    expect(screen.getByText("48.2 s")).toBeInTheDocument();
-    expect(screen.getByText("$0.01")).toBeInTheDocument();
-    expect(screen.getByText(/on-demand, \$6\.25 per TB/)).toBeInTheDocument();
-    expect(screen.getByText(/since \d{1,2}:\d{2} [AP]M\.$/)).toBeInTheDocument();
+    expect(await screen.findByText("14 queries · 2.3 GB billed · $0.01")).toBeInTheDocument();
+    expect(screen.getByText(/this session, since \d{1,2}:\d{2} [AP]M\. 5 from cache, 48\.2 s of slot time\. The last 2 searches below\./)).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith("/api/usage");
+
+    const rows = within(screen.getByRole("list", { name: /Searches this session/ })).getAllByRole("button");
+    expect(rows).toHaveLength(2);
+    // Newest first, closed; opening it lists its three cached queries, and the repeat is marked as such.
+    expect(rows[0]).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("table", { name: "Queries run by search 2" })).not.toBeInTheDocument();
+    fireEvent.click(rows[0]);
+    expect(rows[0]).toHaveAttribute("aria-expanded", "true");
+    expect(rows[0]).toHaveTextContent("14-23424218-G-A, 11-47332274-G-A +1 more");
+    expect(rows[0]).toHaveTextContent("Hypertrophic cardiomyopathy");
+    expect(rows[0]).toHaveTextContent(/3 queries0 Bcached$/);
+    const jobs = screen.getByRole("table", { name: "Queries run by search 2" });
+    expect(within(jobs).getAllByRole("row").map((row) => row.textContent)).toEqual([
+      "WhenQueryReadBilled",
+      expect.stringMatching(/VAT lookup25 KB0cache$/),
+      expect.stringMatching(/Resolve concept4 KB0cache$/),
+      expect.stringMatching(/Cohort count22 KB0cache$/),
+    ]);
+    // The older one is closed and billed; opening it lists its one billed query.
+    expect(rows[1]).toHaveAttribute("aria-expanded", "false");
+    expect(rows[1]).toHaveTextContent(/1 query10 MBbilled$/);
+    expect(screen.queryByRole("table", { name: "Queries run by search 1" })).not.toBeInTheDocument();
+    fireEvent.click(rows[1]);
+    expect(within(screen.getByRole("table", { name: "Queries run by search 1" })).getAllByRole("row")[1]).toHaveTextContent(/VAT lookup25 KB10 MBbilled$/);
+    fireEvent.click(rows[0]);
+    expect(screen.queryByRole("table", { name: "Queries run by search 2" })).not.toBeInTheDocument();
+  });
+
+  it("pages through the searches ten at a time, newest first", async () => {
+    const searches = Array.from({ length: 13 }, (_, index) => ({
+      ...USAGE.searches[1],
+      id: 13 - index,
+      variants: [`${13 - index}-1-A-G`],
+    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        url === "/api/usage"
+          ? Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...USAGE, searches }) })
+          : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(SOURCES) }),
+      ),
+    );
+    render(<SettingsDialog onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+    await screen.findByText("1–10 of 13");
+
+    const list = () => within(screen.getByRole("list", { name: /Searches this session/ })).getAllByRole("button");
+    expect(list()).toHaveLength(10);
+    expect(list()[0]).toHaveTextContent("13-1-A-G");
+    expect(list()[9]).toHaveTextContent("4-1-A-G");
+    expect(screen.getByRole("button", { name: "Newer searches" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Older searches" }));
+    expect(screen.getByText("11–13 of 13")).toBeInTheDocument();
+    expect(list()).toHaveLength(3);
+    expect(list()[0]).toHaveTextContent("3-1-A-G");
+    expect(screen.getByRole("button", { name: "Older searches" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Newer searches" }));
+    expect(screen.getByText("1–10 of 13")).toBeInTheDocument();
+  });
+
+  it("has no pager for ten searches or fewer", async () => {
+    render(<SettingsDialog onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+    await screen.findByText(/The last 2 searches below/);
+
+    expect(screen.queryByRole("navigation", { name: "Searches, by page" })).not.toBeInTheDocument();
+  });
+
+  it("says when no search has run yet", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        url === "/api/usage"
+          ? Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...USAGE, queries: 0, searches: [] }) })
+          : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(SOURCES) }),
+      ),
+    );
+    render(<SettingsDialog onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+
+    expect(await screen.findByText("No searches yet this session.")).toBeInTheDocument();
   });
 
   it("closes from the close button, Escape, and the backdrop", async () => {

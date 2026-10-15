@@ -54,11 +54,15 @@ class BigQueryServiceTest {
     when(job.getStatistics()).thenReturn(statistics);
     when(bigQuery.getJob(JobId.of("job-1"))).thenReturn(job);
 
-    service.query(QueryJobConfiguration.newBuilder("SELECT 1"));
+    meter.beginSearch(List.of("1-1-A-G"));
+    service.query(QueryJobConfiguration.newBuilder("SELECT 1"), "VAT lookup");
+    meter.endSearch();
 
     assertThat(meter.snapshot().getQueries()).isEqualTo(1);
     assertThat(meter.snapshot().getBytesBilled()).isEqualTo(10_485_760L);
     assertThat(meter.snapshot().getSlotMilliseconds()).isEqualTo(120L);
+    // Named, and logged under the search that was running.
+    assertThat(meter.snapshot().getSearches().get(0).getQueries()).extracting(q -> q.getName()).containsExactly("VAT lookup");
   }
 
   /** Accounting never fails a search: a job that can't be looked up still counts as one query. */

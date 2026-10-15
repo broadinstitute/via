@@ -209,6 +209,91 @@ components:
           type: string
           format: date-time
           description: When the backend started counting.
+        searches:
+          type: array
+          description: >-
+            The last 20 searches, newest first, each with the queries it ran.
+            Only /api/search runs count as searches; the condition type-ahead's
+            queries are in the totals above but belong to no search.
+          items:
+            $ref: "#/components/schemas/SearchUsage"
+    SearchUsage:
+      type: object
+      description: One /api/search run and the BigQuery queries it made.
+      required:
+        - id
+        - at
+        - variants
+        - phenotype
+        - queries
+        - cacheHits
+        - bytesProcessed
+        - bytesBilled
+        - estimatedCostUsd
+      properties:
+        id:
+          type: integer
+          description: Counts up from 1 within the session.
+        at:
+          type: string
+          format: date-time
+          description: When the search started.
+        variants:
+          type: array
+          description: The variant IDs searched, as sent.
+          items:
+            type: string
+        phenotype:
+          type: string
+          nullable: true
+          description: The picked condition's name; null when none was picked or it wasn't found.
+          example: "Hypertrophic cardiomyopathy"
+        queries:
+          type: array
+          description: The search's BigQuery jobs, in the order they ran.
+          items:
+            $ref: "#/components/schemas/QueryJob"
+        cacheHits:
+          type: integer
+        bytesProcessed:
+          type: integer
+          format: int64
+        bytesBilled:
+          type: integer
+          format: int64
+        estimatedCostUsd:
+          type: number
+          format: double
+          description: bytesBilled at on-demand pricing; see QueryUsage.estimatedCostUsd.
+    QueryJob:
+      type: object
+      description: One BigQuery job, as the service names its query shapes.
+      required:
+        - name
+        - at
+        - cacheHit
+        - bytesProcessed
+        - bytesBilled
+        - slotMilliseconds
+      properties:
+        name:
+          type: string
+          example: "Cohort count"
+        at:
+          type: string
+          format: date-time
+        cacheHit:
+          type: boolean
+          description: Answered from BigQuery's result cache, which bills nothing.
+        bytesProcessed:
+          type: integer
+          format: int64
+        bytesBilled:
+          type: integer
+          format: int64
+        slotMilliseconds:
+          type: integer
+          format: int64
     TableStatus:
       type: object
       required:
