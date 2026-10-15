@@ -105,6 +105,27 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DataSourceVersion"
+  /api/usage:
+    get:
+      operationId: queryUsage
+      summary: >-
+        Reports the BigQuery usage this VIA instance has accumulated since it
+        started
+      description: >-
+        Totals from BigQuery's own job statistics for every query VIA has run
+        since the backend started, which for a Workbench app is the user's
+        session. Resets when the backend restarts. Every VIA job is also
+        labelled app=via, so the same totals (and older ones) can be found in
+        the project's INFORMATION_SCHEMA.JOBS.
+      tags:
+        - system
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryUsage"
   /api/status:
     get:
       operationId: bigQueryStatus
@@ -139,6 +160,55 @@ components:
           description: Every table VIA queries, in the order they were checked.
           items:
             $ref: "#/components/schemas/TableStatus"
+    QueryUsage:
+      type: object
+      required:
+        - queries
+        - cacheHits
+        - bytesProcessed
+        - bytesBilled
+        - slotMilliseconds
+        - estimatedCostUsd
+        - since
+      properties:
+        queries:
+          type: integer
+          description: Queries run since `since`, including ones answered from BigQuery's cache.
+          example: 14
+        cacheHits:
+          type: integer
+          description: Of those, how many BigQuery answered from its result cache, which bills nothing.
+          example: 5
+        bytesProcessed:
+          type: integer
+          format: int64
+          description: Bytes BigQuery read across all queries.
+          example: 2415919104
+        bytesBilled:
+          type: integer
+          format: int64
+          description: >-
+            Bytes BigQuery billed, which is what on-demand pricing charges
+            for: rounded up to 10 MB per query, and zero for a cache hit.
+          example: 2516582400
+        slotMilliseconds:
+          type: integer
+          format: int64
+          description: >-
+            Slot time consumed, the measure that matters for a project billed
+            by reservation rather than on demand.
+          example: 48211
+        estimatedCostUsd:
+          type: number
+          format: double
+          description: >-
+            bytesBilled at on-demand pricing (US$6.25 per TiB). An estimate:
+            a project on a reservation is charged by slot time, not bytes.
+          example: 0.0146
+        since:
+          type: string
+          format: date-time
+          description: When the backend started counting.
     TableStatus:
       type: object
       required:

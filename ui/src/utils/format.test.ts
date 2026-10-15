@@ -1,4 +1,24 @@
 import { describe, expect, it } from "vitest";
+import { formatBytes, formatUsd } from "./format";
+
+describe("formatBytes", () => {
+  it("uses binary units with one decimal from MB up", () => {
+    expect(formatBytes(0)).toBe("0 B");
+    expect(formatBytes(512)).toBe("512 B");
+    expect(formatBytes(10 * 1024 * 1024)).toBe("10 MB");
+    expect(formatBytes(2516582400)).toBe("2.3 GB");
+    expect(formatBytes(1.5 * 1024 ** 4)).toBe("1.5 TB");
+  });
+});
+
+describe("formatUsd", () => {
+  it("shows cents, and says when there is less than one", () => {
+    expect(formatUsd(0)).toBe("$0.00");
+    expect(formatUsd(0.0146)).toBe("$0.01");
+    expect(formatUsd(0.004)).toBe("< $0.01");
+    expect(formatUsd(12.5)).toBe("$12.50");
+  });
+});
 import {
   exactAf,
   formatAcAn,

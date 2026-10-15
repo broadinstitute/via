@@ -12,6 +12,7 @@ import com.google.cloud.bigquery.TableId;
 import org.broadinstitute.variantinterpretation.controller.SystemController;
 import org.broadinstitute.variantinterpretation.datasource.BigQueryProperties;
 import org.broadinstitute.variantinterpretation.datasource.BigQueryService;
+import org.broadinstitute.variantinterpretation.datasource.QueryUsageMeter;
 import org.broadinstitute.variantinterpretation.model.BigQueryStatus;
 import org.broadinstitute.variantinterpretation.model.TableStatus;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ class SystemControllerTest {
     when(bigQuery.getTable(any(TableId.class))).thenReturn(mock(Table.class));
 
     ResponseEntity<BigQueryStatus> response =
-        new SystemController(new BigQueryService(bigQuery), properties).bigQueryStatus();
+        new SystemController(new BigQueryService(bigQuery), properties, new QueryUsageMeter()).bigQueryStatus();
 
     assertThat(response.getStatusCode().value()).isEqualTo(200);
     assertThat(response.getBody()).isNotNull();
@@ -52,7 +53,8 @@ class SystemControllerTest {
     when(bigQuery.getTable(properties.cdrTable("concept_ancestor")))
         .thenThrow(new RuntimeException("Access Denied"));
 
-    BigQueryStatus status = new SystemController(new BigQueryService(bigQuery), properties).bigQueryStatus().getBody();
+    BigQueryStatus status =
+        new SystemController(new BigQueryService(bigQuery), properties, new QueryUsageMeter()).bigQueryStatus().getBody();
 
     assertThat(status).isNotNull();
     assertThat(status.getAccessible()).isFalse();

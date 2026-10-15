@@ -2,17 +2,29 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsDialog from "./SettingsDialog";
 
-/** Answers /api/status with the given body and /api/sources with SOURCES. */
+/** Answers /api/status with the given body, /api/sources with SOURCES and /api/usage with USAGE. */
 function mockStatus(body: unknown, ok = true) {
   vi.stubGlobal(
     "fetch",
     vi.fn((url: string) =>
       url === "/api/sources"
         ? Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(SOURCES) })
-        : Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) }),
+        : url === "/api/usage"
+          ? Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(USAGE) })
+          : Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) }),
     ),
   );
 }
+
+const USAGE = {
+  queries: 14,
+  cacheHits: 5,
+  bytesProcessed: 2415919104,
+  bytesBilled: 2516582400,
+  slotMilliseconds: 48211,
+  estimatedCostUsd: 0.0146,
+  since: new Date().toISOString(),
+};
 
 function openStatusPanel() {
   fireEvent.click(screen.getByRole("button", { name: "System status" }));
@@ -92,6 +104,21 @@ describe("SettingsDialog", () => {
 
     expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/status")).toHaveLength(2);
     expect(await screen.findByText("All tables accessible")).toBeInTheDocument();
+  });
+
+  it("shows this session's BigQuery usage, with the cost marked as an on-demand estimate", async () => {
+    render(<SettingsDialog onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+
+    expect(await screen.findByText("14")).toBeInTheDocument();
+    expect(screen.getByText("5 from cache")).toBeInTheDocument();
+    expect(screen.getByText("2.3 GB")).toBeInTheDocument();
+    expect(screen.getByText("2.3 GB read")).toBeInTheDocument();
+    expect(screen.getByText("48.2 s")).toBeInTheDocument();
+    expect(screen.getByText("$0.01")).toBeInTheDocument();
+    expect(screen.getByText(/on-demand, \$6\.25 per TB/)).toBeInTheDocument();
+    expect(screen.getByText(/since \d{1,2}:\d{2} [AP]M\.$/)).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith("/api/usage");
   });
 
   it("closes from the close button, Escape, and the backdrop", async () => {
