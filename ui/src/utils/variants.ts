@@ -25,17 +25,18 @@ export function overLimitMessage(count: number, limit: number): string {
 }
 
 /**
- * The results page's URL for a search: one `variants` param per variant, plus the picked
- * condition's concept id if there is one. Typed-but-unpicked condition text never gets here --
- * only a concept picked from the list filters a search.
+ * The results page's URL for a search: one `variants` param per variant, then one
+ * `conditionConceptIds` param per picked condition, in the order they were picked.
+ * Typed-but-unpicked condition text never gets here -- only a concept picked from the list
+ * filters a search.
  */
-export function resultsPath(variants: string[], conditionConceptId: number | null): string {
+export function resultsPath(variants: string[], conditionConceptIds: number[]): string {
   const params = new URLSearchParams();
   for (const variant of variants) {
     params.append("variants", variant);
   }
-  if (conditionConceptId !== null) {
-    params.set("conditionConceptId", String(conditionConceptId));
+  for (const conceptId of conditionConceptIds) {
+    params.append("conditionConceptIds", String(conceptId));
   }
   return `/results?${params.toString()}`;
 }

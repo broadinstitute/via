@@ -5,6 +5,7 @@ import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
 import { ancestryContext, largestMatchedAncestry, type ComparisonRow } from "../../utils/comparison";
 import { clinvarSearchUrl } from "../../utils/externalLinks";
+import { describeAlternatives } from "../../utils/phenotypes";
 import {
   exactAf,
   formatAcAn,
@@ -285,7 +286,8 @@ const styles = {
 
 interface ReviewDetailProps {
   row: ComparisonRow;
-  condition: string;
+  /** The picked conditions' names; the matched participants have any of them. */
+  phenotypes: string[];
   participantCount: number;
   ancestryBreakdown: BreakdownSegment[];
   /** How many candidates actually ran a test, for the Bonferroni note on the p-value. */
@@ -294,7 +296,7 @@ interface ReviewDetailProps {
 
 export default function ReviewDetail({
   row,
-  condition,
+  phenotypes,
   participantCount,
   ancestryBreakdown,
   candidateCount,
@@ -393,7 +395,7 @@ export default function ReviewDetail({
               <span style={styles.verdictRatio}>{formatRatio(enrichment.ratio)}</span>
             )}
           </div>
-          <p style={styles.verdictSentence}>{verdictSentence(row, condition)}</p>
+          <p style={styles.verdictSentence}>{verdictSentence(row, describeAlternatives(phenotypes))}</p>
         </div>
       </section>
 
@@ -415,7 +417,7 @@ export default function ReviewDetail({
                   : "one test"
               }
               tooltip={
-                "The chance of seeing a split of alternate alleles between matched participants and the rest of the cohort at least this uneven, if the condition made no difference. " +
+                "The chance of seeing a split of alternate alleles between matched participants and the rest of the cohort at least this uneven, if the phenotype filter made no difference. " +
                 "Smaller is stronger evidence. Exact rather than approximate, so it holds up at the small counts typical here. " +
                 "The figure underneath is the same p-value multiplied by the number of variants under review (Bonferroni), " +
                 "the bar it must clear once you allow for having tested every candidate."
@@ -449,7 +451,7 @@ export default function ReviewDetail({
                 "Alternate alleles actually seen among matched participants, against how many the cohort-wide frequency predicts for a group this size. " +
                 "The gap between the two is the signal in its most direct form. " +
                 "The adjusted figure underneath re-weights that expectation by the matched cohort's ancestry makeup, using the variant's frequency in each All of Us ancestry group; " +
-                "if it differs much from the cohort-wide expectation, ancestry rather than the condition may explain part of the gap."
+                "if it differs much from the cohort-wide expectation, ancestry rather than the phenotype filter may explain part of the gap."
               }
             />
             <StatTile
@@ -618,7 +620,10 @@ export default function ReviewDetail({
   );
 }
 
-/** One or two lines under the verdict: what the numbers mean for this condition, with the counts they rest on. */
+/**
+ * One or two lines under the verdict: what the numbers mean for this phenotype filter, with the
+ * counts they rest on. `condition` is the filter's conditions as alternatives, "A or B".
+ */
 function verdictSentence(row: ComparisonRow, condition: string): ReactNode {
   const { cohort, matched, enrichment } = row;
   if (!cohort) return "This variant has no cohort-wide frequency, so there is nothing to compare against.";

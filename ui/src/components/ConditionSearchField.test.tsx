@@ -147,20 +147,6 @@ describe("ConditionSearchField", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("looks up the initial selection's name when focused, since there's no list yet to reopen", async () => {
-    const fetchMock = mockCandidates("Tetralogy of Fallot", [TETRALOGY, REPAIRED]);
-    vi.stubGlobal("fetch", fetchMock);
-    renderField({ value: "Tetralogy of Fallot", initialSelection: TETRALOGY });
-    await wait(PAST_DEBOUNCE_MS);
-    expect(fetchMock).not.toHaveBeenCalled();
-
-    fireEvent.focus(screen.getByRole("combobox"));
-
-    expect(screen.getByText("Searching…")).toBeInTheDocument();
-    expect(await screen.findAllByRole("option")).toHaveLength(2);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
   it("doesn't repeat a lookup that found nothing when the field is refocused", async () => {
     const fetchMock = mockCandidates("zzzz", []);
     vi.stubGlobal("fetch", fetchMock);

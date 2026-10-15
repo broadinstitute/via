@@ -28,7 +28,7 @@ describe("TopBar", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 17,
-      condition: "Seizure",
+      phenotypes: ["Seizure"],
       onModifySearch: vi.fn(),
     });
 
@@ -43,7 +43,7 @@ describe("TopBar", () => {
     const { rerender } = renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 17,
-      condition: "Seizure",
+      phenotypes: ["Seizure"],
       onModifySearch,
     });
     const searchBox = screen.getByRole("button", { name: "Edit search" });
@@ -59,7 +59,7 @@ describe("TopBar", () => {
         <TopBar
           userEmail="user@example.org"
           variantsEnteredCount={17}
-          condition="Seizure"
+          phenotypes={["Seizure"]}
           onModifySearch={onModifySearch}
           modifyOpen
         />
@@ -69,7 +69,7 @@ describe("TopBar", () => {
   });
 
   it("returns focus to the search box when the drawer closes", () => {
-    const props = { userEmail: "user@example.org", variantsEnteredCount: 3, condition: "", onModifySearch: vi.fn() };
+    const props = { userEmail: "user@example.org", variantsEnteredCount: 3, phenotypes: [], onModifySearch: vi.fn() };
     const { rerender } = renderTopBar({ ...props, modifyOpen: true });
     const searchBox = screen.getByRole("button", { name: "Edit search" });
     expect(searchBox).not.toHaveFocus();
@@ -84,7 +84,7 @@ describe("TopBar", () => {
   });
 
   it("doesn't take focus on first render with the drawer closed", () => {
-    renderTopBar({ userEmail: "user@example.org", variantsEnteredCount: 3, condition: "", onModifySearch: vi.fn() });
+    renderTopBar({ userEmail: "user@example.org", variantsEnteredCount: 3, phenotypes: [], onModifySearch: vi.fn() });
 
     expect(screen.getByRole("button", { name: "Edit search" })).not.toHaveFocus();
   });
@@ -95,7 +95,7 @@ describe("TopBar", () => {
    * fell back to the text colour, a near-black outline.
    */
   it("goes back to its grey border after a hover or the drawer closing", () => {
-    const props = { userEmail: "user@example.org", variantsEnteredCount: 3, condition: "", onModifySearch: vi.fn() };
+    const props = { userEmail: "user@example.org", variantsEnteredCount: 3, phenotypes: [], onModifySearch: vi.fn() };
     const { rerender } = renderTopBar({ ...props, modifyOpen: true });
     const searchBox = screen.getByRole("button", { name: "Edit search" });
     const grey = "rgb(199, 198, 192)";
@@ -124,11 +124,24 @@ describe("TopBar", () => {
     expect(container.firstChild).toHaveStyle({ position: "sticky", top: "0px" });
   });
 
+  it("names two conditions as alternatives, and a long list by its first and how many more", () => {
+    renderTopBar({ userEmail: "user@example.org", variantsEnteredCount: 2, phenotypes: ["Seizure", "Ataxia"], onModifySearch: vi.fn() });
+    expect(screen.getByText("Seizure or Ataxia")).toHaveAttribute("title", "Seizure or Ataxia");
+    cleanup();
+
+    const long = ["Hypertrophic cardiomyopathy", "Long QT syndrome", "Familial hypercholesterolemia"];
+    renderTopBar({ userEmail: "user@example.org", variantsEnteredCount: 2, phenotypes: long, onModifySearch: vi.fn() });
+    expect(screen.getByText("Hypertrophic cardiomyopathy +2 more")).toHaveAttribute(
+      "title",
+      "Hypertrophic cardiomyopathy, Long QT syndrome or Familial hypercholesterolemia",
+    );
+  });
+
   it("renders the fallback phenotype label when no condition is set", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 4,
-      condition: "",
+      phenotypes: [],
       onModifySearch: vi.fn(),
     });
 
@@ -152,7 +165,7 @@ describe("TopBar", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 9,
-      condition: "Ataxia",
+      phenotypes: ["Ataxia"],
       onModifySearch: vi.fn(),
     });
 
@@ -167,7 +180,7 @@ describe("TopBar", () => {
     renderTopBar({
       userEmail: "user@example.org",
       variantsEnteredCount: 9,
-      condition: "Ataxia",
+      phenotypes: ["Ataxia"],
       onModifySearch,
     });
 
@@ -208,14 +221,14 @@ describe("TopBar", () => {
     const props = { userEmail: "user@example.org", onModifySearch: vi.fn() };
 
     it("moves the email into the user icon's tooltip, still readable by screen readers", () => {
-      const { container } = renderTopBar({ ...props, variantsEnteredCount: 3, condition: "" });
+      const { container } = renderTopBar({ ...props, variantsEnteredCount: 3, phenotypes: [] });
 
       expect(container.querySelector('[title="user@example.org"]')).toBeInTheDocument();
       expect(screen.getByText("user@example.org").style.position).toBe("absolute");
     });
 
     it("shows a variant count without its label, and drops an empty phenotype", () => {
-      renderTopBar({ ...props, variantsEnteredCount: 1, condition: "" });
+      renderTopBar({ ...props, variantsEnteredCount: 1, phenotypes: [] });
       const searchBox = screen.getByRole("button", { name: "Edit search" });
 
       expect(screen.getByText("1 variant")).toBeInTheDocument();
@@ -225,7 +238,7 @@ describe("TopBar", () => {
     });
 
     it("keeps a picked phenotype, pluralizing the count", () => {
-      renderTopBar({ ...props, variantsEnteredCount: 2, condition: "Tetralogy of Fallot" });
+      renderTopBar({ ...props, variantsEnteredCount: 2, phenotypes: ["Tetralogy of Fallot"] });
 
       expect(screen.getByText("2 variants")).toBeInTheDocument();
       expect(screen.getByText("Tetralogy of Fallot")).toHaveAttribute("title", "Tetralogy of Fallot");

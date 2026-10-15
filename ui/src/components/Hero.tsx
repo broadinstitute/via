@@ -1,12 +1,16 @@
 import type { CSSProperties, ReactNode } from "react";
 import colors, { alpha } from "../libs/colors";
+import { IS_BETA } from "../libs/version";
 import HeroWatermark from "./HeroWatermark";
 
+// A band under the top bar in the brand's navy with the mark as a watermark. A line for each job:
+// the app's name (identity), a sentence on what it gives you (purpose), and optionally a line of
+// facts such as the data it reads from (provenance). What to do is the form's job, and the form
+// starts right beneath.
 const styles = {
   hero: {
     position: "relative",
-    // Bottom padding is what the search card overlaps; see SearchEntryPage.
-    padding: "56px 20px 116px",
+    padding: "20px 20px 22px",
     overflow: "hidden",
     // The favicon's navy, deepening upward, with a blue glow top-right and a teal one bottom-left.
     // Dark enough throughout for white text without a scrim or text shadows.
@@ -16,45 +20,69 @@ const styles = {
       `linear-gradient(180deg, ${colors.heroDeep} 0%, ${colors.textPrimary} 100%)`,
     ].join(", "),
   },
-  // Narrower than the hero, so the copy stays centered on wide viewports.
+  // The same width as the search card beneath, so the title and the card share a left edge.
   inner: {
     position: "relative",
-    maxWidth: 760,
+    maxWidth: 860,
     margin: "0 auto",
-    textAlign: "center",
   },
-  // Narrow enough that the title breaks after "variants" rather than inside "All of Us".
+  // The name and the Beta chip on one line; the chip beside the heading, not in it, so the
+  // heading's name is the app's.
+  titleRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 4,
+  },
   title: {
-    maxWidth: 680,
-    margin: "0 auto 12px",
+    margin: 0,
     color: colors.white,
-    fontSize: 34,
+    fontSize: 22,
     fontWeight: 800,
-    letterSpacing: -0.5,
-    lineHeight: 1.15,
+    letterSpacing: -0.3,
+    lineHeight: 1.2,
   },
-  // Wide enough that the one-sentence subtitle breaks after its full stop, not before it.
+  // The footer's Beta chip, on navy: a label for the product's stage beside its name.
+  beta: {
+    padding: "2px 7px",
+    borderRadius: 999,
+    background: alpha(colors.white, 0.16),
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
   subtitle: {
-    maxWidth: 640,
-    margin: "0 auto",
+    margin: 0,
     color: alpha(colors.white, 0.85),
-    fontSize: 15,
-    lineHeight: 1.6,
+    fontSize: 13.5,
+    lineHeight: 1.5,
   },
 } as const satisfies Record<string, CSSProperties>;
 
 interface HeroProps {
   title: ReactNode;
   subtitle: ReactNode;
+  /** A line of facts under the subtitle, e.g. the data sources. */
+  facts?: ReactNode;
 }
 
-export default function Hero({ title, subtitle }: HeroProps) {
+export default function Hero({ title, subtitle, facts }: HeroProps) {
   return (
     <div style={styles.hero}>
       <HeroWatermark />
       <div style={styles.inner}>
-        <h1 style={styles.title}>{title}</h1>
+        <div style={styles.titleRow}>
+          <h1 style={styles.title}>{title}</h1>
+          {IS_BETA && (
+            <span style={styles.beta} title="VIA is in beta: features are subject to change.">
+              Beta
+            </span>
+          )}
+        </div>
         <p style={styles.subtitle}>{subtitle}</p>
+        {facts}
       </div>
     </div>
   );

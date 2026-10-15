@@ -31,19 +31,6 @@ const styles = {
     borderTopLeftRadius: Style.panelRadius - 1,
     borderTopRightRadius: Style.panelRadius - 1,
   },
-  number: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    width: 20,
-    height: 20,
-    borderRadius: "50%",
-    background: colors.textAccent,
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: 700,
-  },
   title: {
     ...Style.elements.panelTitle,
     flex: 1,
@@ -62,8 +49,16 @@ const styles = {
     flexDirection: "column",
     padding: 16,
   },
+  // A line under the title saying what the step does for the search, before the control. The same
+  // text as the folded phenotype row's, so a step reads the same open or closed.
+  description: {
+    margin: "0 0 8px",
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 1.5,
+  },
   // The plain look: no card, just a label row over the content, for a form that already sits
-  // on its own surface (the results page's edit-search popover).
+  // on its own surface (the results page's edit-search popover, the entry page's search card).
   plainPanel: {
     display: "flex",
     flexDirection: "column",
@@ -80,6 +75,11 @@ const styles = {
     color: colors.textPrimary,
     fontSize: 12,
     fontWeight: 600,
+  },
+  // With its number, the plain title steps up to read as a section rather than a field label.
+  plainTitleNumbered: {
+    marginLeft: 2,
+    fontSize: 13,
   },
   plainBody: {
     flex: 1,
@@ -114,32 +114,54 @@ interface StepPanelProps {
   /** Shown at the right of the header, in order. */
   tags?: StepTag[];
   /**
-   * "card" (the default) is the entry page's numbered, raised card. "plain" drops the card and
-   * the step number, leaving the title and tags as a label row, for a form already on its own
-   * surface.
+   * "card" (the default) is a numbered, raised card. "plain" drops the card and the step number,
+   * leaving the title and tags as a label row, for a form already on its own surface.
    */
   appearance?: StepPanelAppearance;
+  /** Keeps the step number in the plain look, for steps that are the form's sections. */
+  numbered?: boolean;
+  /** One line under the title on what the step does for the search. */
+  description?: ReactNode;
   children: ReactNode;
 }
 
 export type StepPanelAppearance = "card" | "plain";
 
-export default function StepPanel({ stepNumber, title, tags = [], appearance = "card", children }: StepPanelProps) {
-  const plain = appearance === "plain";
-  const tagBadges = tags.map((tag) => (
-    <span key={tag.label} style={{ ...styles.tag, ...TAG_VARIANT_STYLE[tag.variant] }} title={tag.title}>
+/** A step's tag as a small uppercase chip: "0 entered", "limit 50", "Optional". */
+export function StepTagBadge({ tag }: { tag: StepTag }) {
+  return (
+    <span style={{ ...styles.tag, ...TAG_VARIANT_STYLE[tag.variant] }} title={tag.title}>
       {tag.label}
     </span>
-  ));
+  );
+}
+
+export default function StepPanel({
+  stepNumber,
+  title,
+  tags = [],
+  appearance = "card",
+  numbered = false,
+  description,
+  children,
+}: StepPanelProps) {
+  const plain = appearance === "plain";
+  const showNumber = !plain || numbered;
+  const tagBadges = tags.map((tag) => <StepTagBadge key={tag.label} tag={tag} />);
 
   return (
     <div style={plain ? styles.plainPanel : styles.panel}>
       <div style={plain ? styles.plainHeader : styles.header}>
-        {!plain && <div style={styles.number}>{stepNumber}</div>}
-        <h2 style={plain ? styles.plainTitle : styles.title}>{title}</h2>
+        {showNumber && <div style={Style.elements.stepNumber}>{stepNumber}</div>}
+        <h2 style={plain ? { ...styles.plainTitle, ...(numbered ? styles.plainTitleNumbered : undefined) } : styles.title}>
+          {title}
+        </h2>
         {tagBadges}
       </div>
-      <div style={plain ? styles.plainBody : styles.body}>{children}</div>
+      <div style={plain ? styles.plainBody : styles.body}>
+        {description && <p style={styles.description}>{description}</p>}
+        {children}
+      </div>
     </div>
   );
 }

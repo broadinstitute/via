@@ -1,32 +1,42 @@
 // The entry page's "Recent searches": the criteria of the last few searches that loaded, kept in
-// this browser's localStorage. Only what was searched for (variant IDs and a condition concept)
+// this browser's localStorage. Only what was searched for (variant IDs and condition concepts)
 // is stored -- never results or participant counts. A per-browser convenience: storage can be
 // empty, full, blocked or cleared, and every read and write here tolerates that by treating it
 // as "no history" rather than failing.
 
-const STORAGE_KEY = "via.recentSearches.v1";
+// Bumped when the shape changes: entries in an older shape fail validation and are dropped, which
+// is simpler than migrating a convenience. v1 held one `condition` where v2 holds `conditions`.
+const STORAGE_KEY = "via.recentSearches.v2";
 const MAX_SEARCHES = 20;
+
+export interface RecentSearchCondition {
+  conceptId: number;
+  name: string;
+}
 
 export interface RecentSearch {
   variants: string[];
-  /** The picked condition, if the search had one. */
-  condition: { conceptId: number; name: string } | null;
+  /** The picked conditions, in the order they were picked; empty when the search had none. */
+  conditions: RecentSearchCondition[];
   /** When it was last run, as epoch milliseconds. */
   searchedAt: number;
+}
+
+function isCondition(value: unknown): value is RecentSearchCondition {
+  if (typeof value !== "object" || value === null) return false;
+  const condition = value as Record<string, unknown>;
+  return typeof condition.conceptId === "number" && typeof condition.name === "string";
 }
 
 function isRecentSearch(value: unknown): value is RecentSearch {
   if (typeof value !== "object" || value === null) return false;
   const search = value as Record<string, unknown>;
-  const condition = search.condition as Record<string, unknown> | null | undefined;
   return (
     Array.isArray(search.variants) &&
     search.variants.every((variant) => typeof variant === "string") &&
     typeof search.searchedAt === "number" &&
-    (condition === null ||
-      (typeof condition === "object" &&
-        typeof condition.conceptId === "number" &&
-        typeof condition.name === "string"))
+    Array.isArray(search.conditions) &&
+    search.conditions.every(isCondition)
   );
 }
 
@@ -48,10 +58,18 @@ function save(searches: RecentSearch[]) {
   }
 }
 
-/** Same variants (in any order) and same condition: re-running a search moves it to the top. */
+/**
+ * Same variants and same conditions, each in any order: re-running a search moves it to the top.
+ * Conditions are OR'd, so their order doesn't change the search.
+ */
 function sameCriteria(a: Omit<RecentSearch, "searchedAt">, b: Omit<RecentSearch, "searchedAt">) {
   const variants = (search: typeof a) => [...search.variants].sort().join("\n");
-  return variants(a) === variants(b) && (a.condition?.conceptId ?? null) === (b.condition?.conceptId ?? null);
+  const conditions = (search: typeof a) =>
+    search.conditions
+      .map((condition) => condition.conceptId)
+      .sort((x, y) => x - y)
+      .join(",");
+  return variants(a) === variants(b) && conditions(a) === conditions(b);
 }
 
 /** Adds a search that just loaded, at the top, replacing an earlier run of the same criteria. */

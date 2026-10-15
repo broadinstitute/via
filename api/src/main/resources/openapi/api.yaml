@@ -37,18 +37,24 @@ paths:
               type: string
           description: >-
             Candidate variant IDs, VAT `vid` format (e.g. "8-11708582-C-T").
-        - name: conditionConceptId
+        - name: conditionConceptIds
           in: query
           required: false
+          style: form
+          explode: true
           schema:
-            type: integer
-            format: int64
+            type: array
+            items:
+              type: integer
+              format: int64
           description: >-
-            The condition concept ID the user picked from /api/condition.
-            There's deliberately no free-text alternative: re-searching typed
-            text and choosing a match for the user could count a different
-            concept than the one they meant. When absent, conditionSearch is
-            null.
+            The condition concept IDs the user picked from /api/condition, one
+            parameter per concept. A participant is matched by any of them (or
+            a descendant of any of them), not all of them. There's deliberately
+            no free-text alternative: re-searching typed text and choosing a
+            match for the user could count a different concept than the one
+            they meant. Duplicates are ignored; the UI sends up to three. When
+            absent or empty, conditionSearch is null.
       responses:
         "200":
           description: Successful response
@@ -190,7 +196,7 @@ components:
         conditionSearch:
           nullable: true
           description: >-
-            Null when no conditionConceptId was given. Unlike the breakdowns
+            Null when no conditionConceptIds were given. Unlike the breakdowns
             and filteredVariants, this is backed by real queries against
             cb_criteria, concept_ancestor and condition_occurrence.
           allOf:
@@ -260,31 +266,98 @@ components:
             $ref: "#/components/schemas/ConditionConcept"
     ConditionSearch:
       type: object
+      description: >-
+        The phenotype filter a search was run with: the concepts that were
+        asked for, the ones that resolved, and how many participants have any
+        of them.
+      required:
+        - conceptIds
+        - concepts
+        - participantCount
+        - conditionOverlap
+      properties:
+        conceptIds:
+          type: array
+          description: Every concept ID that was requested, in request order, without duplicates.
+          items:
+            type: integer
+            format: int64
+          example: [9000010, 9000040]
+        concepts:
+          type: array
+          description: >-
+            The requested concepts that are standard condition concepts in
+            this CDR, in request order, each with its own participant count.
+            An ID that isn't one is left out, so it can't contribute to the
+            cohort. Empty when none resolved.
+          items:
+            $ref: "#/components/schemas/MatchedConcept"
+        participantCount:
+          type: integer
+          nullable: true
+          description: >-
+            Distinct participants having ANY of the resolved concepts, or any
+            of their descendants, recorded in condition_occurrence. A
+            participant with more than one of them is counted once, so this
+            is not the sum of the concepts' own counts. Null when concepts is
+            empty. A real count, which will not match the concepts'
+            estimatedParticipantCounts exactly.
+          example: 260
+        conditionOverlap:
+          type: array
+          description: >-
+            How the matched participants divide among the resolved concepts:
+            one cell per combination of concepts that at least one
+            participant has (or a descendant of each). The cells are
+            disjoint and their counts sum to participantCount; a concept's
+            own participantCount is the sum of the cells that contain it.
+            Unlike ancestryBreakdown and ageBreakdown this is a real count,
+            from the same query as participantCount. Empty when concepts is.
+          items:
+            $ref: "#/components/schemas/ConditionOverlapCell"
+    ConditionOverlapCell:
+      type: object
+      description: Participants recorded with exactly this set of the search's concepts.
+      required:
+        - conceptIds
+        - count
+      properties:
+        conceptIds:
+          type: array
+          description: The concepts, in request order; one for participants with only that concept.
+          items:
+            type: integer
+            format: int64
+          example: [9000040, 9000060]
+        count:
+          type: integer
+          example: 11
+    MatchedConcept:
+      type: object
+      description: A ConditionConcept the search resolved, with its own real participant count.
       required:
         - conceptId
-        - concept
+        - name
         - participantCount
       properties:
         conceptId:
           type: integer
           format: int64
-          description: The concept ID that was requested.
           example: 9000010
-        concept:
-          nullable: true
-          description: >-
-            The requested concept. Null when conceptId isn't a standard
-            condition concept in this CDR.
-          allOf:
-            - $ref: "#/components/schemas/ConditionConcept"
-        participantCount:
+        name:
+          type: string
+          example: "Tetralogy of Fallot"
+        estimatedParticipantCount:
           type: integer
           nullable: true
+          description: See ConditionConcept.estimatedParticipantCount.
+          example: 47
+        participantCount:
+          type: integer
           description: >-
-            Distinct participants having the concept or any of its
-            descendants recorded in condition_occurrence. Null when concept
-            is null. This is a real count, and will not match the concept's
-            estimatedParticipantCount exactly.
+            Distinct participants having this concept or any of its
+            descendants recorded in condition_occurrence. With several
+            concepts, these overlap: see ConditionSearch.participantCount.
           example: 49
     ConditionConcept:
       type: object

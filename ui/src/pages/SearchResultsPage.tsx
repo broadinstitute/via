@@ -12,6 +12,8 @@ import SectionLoadingPanel from "../components/results/SectionLoadingPanel";
 import TopBar from "../components/results/TopBar";
 import VariantsPanel, { VARIANTS_TABLE_MIN_HEIGHT } from "../components/results/VariantsPanel";
 import type { ResultsView } from "../components/results/ViewSwitcher";
+import type { ConditionConcept } from "../api/conditions";
+import { searchConceptIds } from "../utils/phenotypes";
 import { recordRecentSearch } from "../utils/recentSearches";
 import { parseVariantsText } from "../utils/variants";
 
@@ -25,12 +27,11 @@ export default function SearchResultsPage() {
   const [view, setView] = useState<ResultsView>("table");
   const [reviewVariant, setReviewVariant] = useState<string | undefined>(undefined);
   const [drawerVariants, setDrawerVariants] = useState("");
-  const [drawerCondition, setDrawerCondition] = useState("");
-  // The concept behind drawerCondition while it's still a pick; cleared by any edit, as on the
-  // entry page, so re-running only filters by a condition the user actually chose.
-  const [drawerConceptId, setDrawerConceptId] = useState<number | null>(null);
-  // Remounts the popover on cancel, so its condition field goes back to showing the searched
-  // concept as picked instead of re-querying the restored name.
+  // The phenotypes the search was run with, as the drawer's starting point; only picked
+  // concepts are ever here, so re-running filters by exactly what the user chose.
+  const [drawerPhenotypes, setDrawerPhenotypes] = useState<ConditionConcept[]>([]);
+  // Remounts the popover on cancel, so anything typed into its condition field is dropped
+  // along with the rest of the edit.
   const [drawerKey, setDrawerKey] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -45,7 +46,7 @@ export default function SearchResultsPage() {
   // Depending on searchParams.toString() would re-run this on every such change, wiping results
   // and flashing every section's loading state for a fetch that's a cache hit anyway.
   const variantsKey = searchParams.getAll("variants").join("\n");
-  const conditionConceptIdKey = searchParams.get("conditionConceptId") ?? "";
+  const conditionConceptIdsKey = searchParams.getAll("conditionConceptIds").join("\n");
 
   // Re-runs whenever the URL's search criteria change -- both the initial load (e.g. arriving
   // from SearchEntryPage with ?variants=...) and an edit-search re-search (which updates the URL rather
@@ -57,26 +58,25 @@ export default function SearchResultsPage() {
     setReviewVariant(undefined);
     fetchSearchResults({
       variants: variantsKey ? variantsKey.split("\n") : [],
-      conditionConceptId: conditionConceptIdKey ? Number(conditionConceptIdKey) : undefined,
+      conditionConceptIds: conditionConceptIdsKey ? conditionConceptIdsKey.split("\n").map(Number) : undefined,
     })
       .then((data) => {
         setResults(data);
         resetDrawer(data);
-        // Only searches that actually loaded go into the entry page's history
-        const concept = data.conditionSearch?.concept;
+        // Only searches that actually loaded go into the entry page's history, and only the
+        // concepts that resolved: an id the CDR doesn't have isn't worth re-running.
         recordRecentSearch({
           variants: parseVariantsText(data.searchSummary.variantsRaw),
-          condition: concept ? { conceptId: concept.conceptId, name: concept.name } : null,
+          conditions: (data.conditionSearch?.concepts ?? []).map(({ conceptId, name }) => ({ conceptId, name })),
         });
       })
       .catch((err: unknown) => setError(describeError(err)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variantsKey, conditionConceptIdKey]);
+  }, [variantsKey, conditionConceptIdsKey]);
 
   function resetDrawer(data: SearchResults) {
     setDrawerVariants(data.searchSummary.variantsRaw);
-    setDrawerCondition(data.conditionSearch?.concept?.name ?? "");
-    setDrawerConceptId(data.conditionSearch?.concept?.conceptId ?? null);
+    setDrawerPhenotypes(data.conditionSearch?.concepts ?? []);
     setDrawerKey((key) => key + 1);
   }
 
@@ -93,8 +93,8 @@ export default function SearchResultsPage() {
     for (const variant of variants) {
       nextParams.append("variants", variant);
     }
-    if (drawerConceptId !== null) {
-      nextParams.set("conditionConceptId", String(drawerConceptId));
+    for (const conceptId of searchConceptIds(drawerPhenotypes)) {
+      nextParams.append("conditionConceptIds", String(conceptId));
     }
     setSearchParams(nextParams);
     setDrawerOpen(false);
@@ -103,9 +103,9 @@ export default function SearchResultsPage() {
   // One rule for "there are matched participants to compare with": it shows the table's matched
   // columns, enables Review in the strip, and offers each row's Review button.
   const hasPhenotypeFilter = (results?.ancestryBreakdown.length ?? 0) > 0;
-  const conditionName = results?.conditionSearch
-    ? (results.conditionSearch.concept?.name ?? `concept ${results.conditionSearch.conceptId}`)
-    : "";
+  // The resolved conditions' names, for every line that says who the matched participants are.
+  // Empty when no phenotype was picked, and when none of the picked ids was found.
+  const phenotypeNames = (results?.conditionSearch?.concepts ?? []).map((concept) => concept.name);
 
   function openReview(variant?: string) {
     setReviewVariant(variant);
@@ -125,7 +125,7 @@ export default function SearchResultsPage() {
       <TopBar
         loading={!results}
         variantsEnteredCount={results?.searchSummary.variantsEnteredCount ?? 0}
-        condition={results?.conditionSearch?.concept?.name ?? ""}
+        phenotypes={phenotypeNames}
         userEmail={userEmail}
         onModifySearch={() => setDrawerOpen((open) => !open)}
         modifyOpen={drawerOpen}
@@ -135,15 +135,10 @@ export default function SearchResultsPage() {
               key={drawerKey}
               open={drawerOpen}
               variantsText={drawerVariants}
-              conditionText={drawerCondition}
-              initialCondition={results.conditionSearch?.concept ?? null}
+              phenotypes={drawerPhenotypes}
               variantsLimit={results.searchSummary.variantsLimit}
               onVariantsChange={setDrawerVariants}
-              onConditionChange={(value) => {
-                setDrawerCondition(value);
-                setDrawerConceptId(null);
-              }}
-              onConditionSelect={(concept) => setDrawerConceptId(concept.conceptId)}
+              onPhenotypesChange={setDrawerPhenotypes}
               onCancel={handleCancelDrawer}
               onSearch={handleRerunSearch}
             />
@@ -168,7 +163,7 @@ export default function SearchResultsPage() {
             initialVariant={reviewVariant}
             cohortVariants={results.cohortVariants}
             filteredVariants={results.filteredVariants}
-            condition={conditionName}
+            phenotypes={phenotypeNames}
             participantCount={results.conditionSearch.participantCount ?? 0}
             ancestryBreakdown={results.ancestryBreakdown}
           />
@@ -180,7 +175,7 @@ export default function SearchResultsPage() {
                 filteredVariants={results.filteredVariants}
                 hasPhenotypeFilter={hasPhenotypeFilter}
                 participantCount={results.conditionSearch?.participantCount ?? 0}
-                condition={conditionName}
+                phenotypes={phenotypeNames}
                 onReview={hasPhenotypeFilter ? openReview : undefined}
                 onAddPhenotypeFilter={() => setDrawerOpen(true)}
               />

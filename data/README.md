@@ -46,6 +46,12 @@ Three tables backing free-text → condition `concept_id` → `person_id`.
 The counts include the three conditions the demo use cases add (below). They come after the
 fixture's own rows in every table, so the fixture described here is unchanged by them.
 
+A search can filter by several conditions at once, matching participants recorded with any of
+them, and shows each condition's own count beside the union. So that the union isn't always the
+sum, 13 of long QT syndrome's 131 participants are also hypertrophic cardiomyopathy participants
+(`SHARED_PARTICIPANTS` in the generator): searching on both matches 214 + 131 − 13 = 332. Each
+condition's own count is unchanged, so the use case fixtures still apply.
+
 `cb_criteria` is the All of Us cohort-builder table the text search runs against;
 `concept_ancestor` expands a concept to its descendants; `condition_occurrence` is standard
 OMOP and is where the participants come from.

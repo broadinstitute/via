@@ -67,6 +67,19 @@ public class PhenotypeFixtures {
   }
 
   /**
+   * The use case for a search's resolved conditions: {@link #forCondition} when exactly one
+   * resolved, and nothing otherwise. A use case is written for one condition's participants; a
+   * search over several conditions matches a union those numbers don't describe, so it gets the
+   * made-up ones, scaled to the union count.
+   */
+  public Optional<UseCase> forConditions(List<Long> conceptIds, int participants) {
+    if (conceptIds.size() != 1) {
+      return Optional.empty();
+    }
+    return forCondition(conceptIds.get(0), participants);
+  }
+
+  /**
    * The use case for this condition, if there is one and it was written for the participant count
    * the condition tables actually return. A mismatch means the fixture and the loaded tables are
    * from different generator runs, and its breakdowns wouldn't add up to the count shown beside

@@ -140,6 +140,20 @@ export const elements = {
     color: colors.textDanger,
     fontSize: 12,
   },
+  /** The numbered disc that labels a search step, on the step's header and on the row that opens one. */
+  stepNumber: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    width: 20,
+    height: 20,
+    borderRadius: "50%",
+    background: colors.textAccent,
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: 700,
+  },
   /** Explanatory line under a form field. */
   fieldHint: {
     marginTop: 6,

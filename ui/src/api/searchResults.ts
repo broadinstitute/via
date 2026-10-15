@@ -58,11 +58,11 @@ interface RawFilteredVariant {
 
 interface RawSearchResultsResponse {
   searchSummary: SearchSummary;
-  // Null when neither a condition term nor concept ids were given. Unlike the phenotype
-  // fields below, this is backed by real queries.
+  // Null when no concept ids were given. Unlike the phenotype fields below, this is backed by
+  // real queries.
   conditionSearch: ConditionSearch | null;
   // Mock data: there's no participant-level source behind them yet. They're scaled to the picked
-  // condition's real participant count (the breakdowns sum to it), and empty when it's zero or no
+  // conditions' real participant count (the breakdowns sum to it), and empty when it's zero or no
   // condition was found.
   ancestryBreakdown: BreakdownSegment[];
   ageBreakdown: BreakdownSegment[];
@@ -137,40 +137,47 @@ function toFilteredVariantRow(raw: RawFilteredVariant): FilteredVariantRow {
 export interface SearchResultsQuery {
   variants: string[];
   /**
-   * The concept the user picked from the dropdown. There's no free-text alternative: typed text
-   * that was never picked doesn't filter anything.
+   * The concepts the user picked from the dropdown; a participant is matched by any of them.
+   * There's no free-text alternative: typed text that was never picked doesn't filter anything.
    */
-  conditionConceptId?: number;
+  conditionConceptIds?: number[];
 }
 
-// Keyed by request URL (which fully encodes every search criterion). Caching the in-flight promise
-// -- not just the resolved result -- means two calls for the same query made back-to-back (e.g.
-// React StrictMode's double-invoked mount effect in dev) share one network request instead of
-// firing the BigQuery query twice. Successful results stay cached for the rest of the session;
-// failures are evicted so a retry actually retries.
+// Keyed by the request URL, which fully encodes every search criterion -- except that the concept
+// ids are sorted in the key, since the same set in another order is the same search. Caching the
+// in-flight promise -- not just the resolved result -- means two calls for the same query made
+// back-to-back (e.g. React StrictMode's double-invoked mount effect in dev) share one network
+// request instead of firing the BigQuery query twice. Successful results stay cached for the rest
+// of the session; failures are evicted so a retry actually retries.
 const cache = new Map<string, Promise<SearchResults>>();
 
-// With no variants (or an empty list), the backend returns an empty cohortVariants -- there's
-// no default browse listing.
-export async function fetchSearchResults(query?: SearchResultsQuery): Promise<SearchResults> {
+function searchUrl(query: SearchResultsQuery | undefined, conceptIds: number[]): string {
   const params = new URLSearchParams();
   for (const variant of query?.variants ?? []) {
     params.append("variants", variant);
   }
-  if (query?.conditionConceptId !== undefined) {
-    params.set("conditionConceptId", String(query.conditionConceptId));
+  for (const conceptId of conceptIds) {
+    params.append("conditionConceptIds", String(conceptId));
   }
   const queryString = params.toString();
-  const url = queryString ? `/search?${queryString}` : "/search";
+  return queryString ? `/search?${queryString}` : "/search";
+}
 
-  const cached = cache.get(url);
+// With no variants (or an empty list), the backend returns an empty cohortVariants -- there's
+// no default browse listing.
+export async function fetchSearchResults(query?: SearchResultsQuery): Promise<SearchResults> {
+  const conceptIds = query?.conditionConceptIds ?? [];
+  const key = searchUrl(query, [...conceptIds].sort((a, b) => a - b));
+
+  const cached = cache.get(key);
   if (cached) {
     return cached;
   }
 
-  const request = fetchAndParse(url);
-  request.catch(() => cache.delete(url));
-  cache.set(url, request);
+  // Sent in the order given, so the response (and the chips it fills) keep the user's order.
+  const request = fetchAndParse(searchUrl(query, conceptIds));
+  request.catch(() => cache.delete(key));
+  cache.set(key, request);
   return request;
 }
 

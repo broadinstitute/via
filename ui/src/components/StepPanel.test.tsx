@@ -17,6 +17,20 @@ describe("StepPanel", () => {
     expect(screen.getByText("body")).toBeInTheDocument();
   });
 
+  it("puts a description between the title and the body when given one", () => {
+    render(
+      <StepPanel stepNumber={1} title="Candidate variants" description="What this step does.">
+        <p>body</p>
+      </StepPanel>,
+    );
+
+    const description = screen.getByText("What this step does.");
+    expect(description.compareDocumentPosition(screen.getByText("body"))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(
+      screen.getByRole("heading", { name: "Candidate variants" }).compareDocumentPosition(description),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it("renders an optional tag", () => {
     render(
       <StepPanel stepNumber={2} title="Phenotype" tags={[{ label: "Optional", variant: "optional" }]}>
@@ -62,6 +76,17 @@ describe("StepPanel", () => {
     );
 
     expect(container.firstChild).toHaveStyle({ overflow: "visible" });
+  });
+
+  it("keeps the step number in the plain look when numbered", () => {
+    render(
+      <StepPanel stepNumber={1} title="Candidate variants" appearance="plain" numbered>
+        <p>body</p>
+      </StepPanel>,
+    );
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Candidate variants" })).toBeInTheDocument();
   });
 
   it("drops the card and step number when plain, keeping the title and tags", () => {

@@ -11,6 +11,7 @@ import org.broadinstitute.variantinterpretation.datasource.VatLookupService;
 import org.broadinstitute.variantinterpretation.api.SearchApi;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
 import org.broadinstitute.variantinterpretation.model.ConditionSearch;
+import org.broadinstitute.variantinterpretation.model.MatchedConcept;
 import org.broadinstitute.variantinterpretation.model.SearchResultsResponse;
 import org.broadinstitute.variantinterpretation.model.SearchSummary;
 import org.springframework.http.ResponseEntity;
@@ -38,16 +39,17 @@ public class SearchResultsController implements SearchApi {
   // condition_occurrence. The VAT holds only variant-level annotation -- no phenotype,
   // participant, ancestry or age data -- so the breakdowns and filteredVariants are still served
   // from MockPhenotypeData until a genotype-level data source exists. They're scaled to the
-  // picked condition's real participant count, standing in for data about those participants,
-  // and left empty when it matched nobody. A demo use case's condition gets its own curated
-  // breakdowns and per-variant counts instead (PhenotypeFixtures).
+  // picked conditions' real participant count -- participants with any of them -- standing in
+  // for data about those participants, and left empty when they matched nobody. A demo use
+  // case's condition, picked on its own, gets its own curated breakdowns and per-variant counts
+  // instead (PhenotypeFixtures).
   @Override
   public ResponseEntity<SearchResultsResponse> searchResults(
-      List<String> variants, Long conditionConceptId) {
+      List<String> variants, List<Long> conditionConceptIds) {
     List<String> requested = normalizeVariants(variants);
     List<CohortVariant> cohortVariants = vatLookup.lookup(requested);
-    ConditionSearch conditionSearch = conditionLookup.search(conditionConceptId);
-    // Null both when no condition was picked and when the picked concept wasn't found.
+    ConditionSearch conditionSearch = conditionLookup.search(conditionConceptIds);
+    // Null both when no condition was picked and when none of the picked concepts was found.
     Integer participants = conditionSearch == null ? null : conditionSearch.getParticipantCount().orElse(null);
     boolean phenotypeFiltered = participants != null && participants > 0;
     SearchResultsResponse response =
@@ -59,7 +61,8 @@ public class SearchResultsController implements SearchApi {
       return ResponseEntity.ok(response.ancestryBreakdown(List.of()).ageBreakdown(List.of()).filteredVariants(List.of()));
     }
 
-    Optional<PhenotypeFixtures.UseCase> useCase = phenotypeFixtures.forCondition(conditionConceptId, participants);
+    List<Long> matchedIds = conditionSearch.getConcepts().stream().map(MatchedConcept::getConceptId).toList();
+    Optional<PhenotypeFixtures.UseCase> useCase = phenotypeFixtures.forConditions(matchedIds, participants);
     Map<String, MockPhenotypeData.CuratedCounts> curated =
         useCase.map(PhenotypeFixtures.UseCase::variants).orElse(Map.of());
     return ResponseEntity.ok(

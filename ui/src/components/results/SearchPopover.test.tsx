@@ -5,8 +5,7 @@ import SearchPopover, { placePopover } from "./SearchPopover";
 function renderPopover(props: Partial<Parameters<typeof SearchPopover>[0]> = {}) {
   const handlers = {
     onVariantsChange: vi.fn(),
-    onConditionChange: vi.fn(),
-    onConditionSelect: vi.fn(),
+    onPhenotypesChange: vi.fn(),
     onCancel: vi.fn(),
     onSearch: vi.fn(),
   };
@@ -14,8 +13,7 @@ function renderPopover(props: Partial<Parameters<typeof SearchPopover>[0]> = {})
     <SearchPopover
       open
       variantsText=""
-      conditionText=""
-      initialCondition={null}
+      phenotypes={[]}
       variantsLimit={50}
       {...handlers}
       {...props}
@@ -179,12 +177,10 @@ describe("SearchPopover", () => {
       <SearchPopover
         open={open}
         variantsText=""
-        conditionText=""
-        initialCondition={null}
+        phenotypes={[]}
         variantsLimit={50}
         onVariantsChange={vi.fn()}
-        onConditionChange={vi.fn()}
-        onConditionSelect={vi.fn()}
+        onPhenotypesChange={vi.fn()}
         onCancel={vi.fn()}
         onSearch={vi.fn()}
       />

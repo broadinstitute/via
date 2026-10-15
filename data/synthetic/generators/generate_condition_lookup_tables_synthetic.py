@@ -172,6 +172,21 @@ for _i, _case in enumerate([c for c in USE_CASES if c.condition.generate], start
     _start = _i * USE_CASE_PERSON_BLOCK
     PERSON_RANGES[_c.concept_id] = range(_start, _start + _c.participants)
 
+# ---------------------------------------------------------------------------
+# Overlap between use cases
+# ---------------------------------------------------------------------------
+# A search can filter by several conditions, matching participants recorded with any of them,
+# and shows each condition's own count beside the union. With every use case on its own block
+# of participants the union would always equal the sum and that display would show nothing, so
+# some of one use case's participants are drawn from another's instead of its own block:
+# (condition, condition it shares with, how many). Each condition's own count is unchanged --
+# the shared participants replace, rather than add to, its own -- so the fixtures still apply.
+#
+#   cohort([9000040, 9000060]) -> 214 + 131 - 13 = 332
+SHARED_PARTICIPANTS = [
+    (9000060, 9000040, 13),   # a tenth of long QT syndrome's participants also have HCM
+]
+
 FIRST_DATE = date(2015, 1, 1)
 LAST_DATE = date(2024, 12, 31)
 
@@ -285,6 +300,12 @@ def assign_persons(rng):
     t2dm = sorted(rng.sample(list(T2DM_POOL), T2DM_N))
     assignment[T2DM] = t2dm
     assignment[T2DM_RENAL] = sorted(rng.sample(t2dm, T2DM_RENAL_N))
+    for concept_id, shared_with, n in SHARED_PARTICIPANTS:
+        own, other = assignment[concept_id], assignment[shared_with]
+        if n > len(own) or n > len(other):
+            raise SystemExit(f"ERROR: {concept_id} can't share {n} participants with {shared_with}")
+        # The first n of the other's stand in for the first n of its own, keeping its count.
+        assignment[concept_id] = sorted(other[:n] + own[n:])
     return assignment
 
 

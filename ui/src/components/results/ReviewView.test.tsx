@@ -90,7 +90,7 @@ function renderView(initialVariant?: string) {
     <ReviewView
       cohortVariants={[FLAT, ENRICHED, UNSEEN]}
       filteredVariants={MATCHED}
-      condition="Familial hypercholesterolemia"
+      phenotypes={["Familial hypercholesterolemia"]}
       participantCount={100}
       ancestryBreakdown={ANCESTRY}
       initialVariant={initialVariant}
@@ -214,6 +214,21 @@ describe("ReviewView", () => {
     expect(second).toHaveFocus();
   });
 
+  it("names several conditions as alternatives in the verdict sentence", () => {
+    render(
+      <ReviewView
+        cohortVariants={[ENRICHED]}
+        filteredVariants={[MATCHED[0]]}
+        phenotypes={["Familial hypercholesterolemia", "Hypertrophic cardiomyopathy"]}
+        participantCount={100}
+        ancestryBreakdown={ANCESTRY}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /among participants with Familial hypercholesterolemia or Hypertrophic cardiomyopathy/,
+    );
+  });
+
   it("explains a row whose matched counts exceed the cohort-wide ones instead of comparing them", () => {
     // Six matched carriers against three cohort-wide: impossible if the matched are part of the
     // cohort, so the sources disagree. No test runs, and the row says why.
@@ -221,7 +236,7 @@ describe("ReviewView", () => {
       <ReviewView
         cohortVariants={[{ ...ENRICHED, aouAllAc: 3 }]}
         filteredVariants={[MATCHED[0]]}
-        condition="Familial hypercholesterolemia"
+        phenotypes={["Familial hypercholesterolemia"]}
         participantCount={100}
         ancestryBreakdown={ANCESTRY}
       />,

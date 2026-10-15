@@ -71,14 +71,11 @@ const FOCUSABLE = 'button:not([disabled]), textarea:not([disabled]), input:not([
 interface SearchPopoverProps {
   open: boolean;
   variantsText: string;
-  conditionText: string;
-  /** The concept the page was searched with, shown as already picked. */
-  initialCondition: ConditionConcept | null;
+  /** The phenotypes to filter by, starting as the ones the page was searched with. */
+  phenotypes: ConditionConcept[];
   variantsLimit: number;
   onVariantsChange: (value: string) => void;
-  /** Same contract as ConditionSearchField: fires before onConditionSelect on a pick. */
-  onConditionChange: (value: string) => void;
-  onConditionSelect: (concept: ConditionConcept) => void;
+  onPhenotypesChange: (phenotypes: ConditionConcept[]) => void;
   /** Also fired by Escape and by clicking the backdrop. */
   onCancel: () => void;
   onSearch: () => void;
@@ -92,12 +89,10 @@ interface SearchPopoverProps {
 export default function SearchPopover({
   open,
   variantsText,
-  conditionText,
-  initialCondition,
+  phenotypes,
   variantsLimit,
   onVariantsChange,
-  onConditionChange,
-  onConditionSelect,
+  onPhenotypesChange,
   onCancel,
   onSearch,
 }: SearchPopoverProps) {
@@ -188,10 +183,9 @@ export default function SearchPopover({
           />
           <PhenotypeStep
             id="editSearchCondition"
-            value={conditionText}
-            initialSelection={initialCondition}
-            onChange={onConditionChange}
-            onSelect={onConditionSelect}
+            picked={phenotypes}
+            onPick={(concept) => onPhenotypesChange([...phenotypes, concept])}
+            onRemove={(conceptId) => onPhenotypesChange(phenotypes.filter((concept) => concept.conceptId !== conceptId))}
             appearance="plain"
           />
         </SearchSteps>

@@ -5,9 +5,25 @@ import type { BreakdownSegment } from "../../types/results";
 import PhenotypeSummaryStrip from "./PhenotypeSummaryStrip";
 
 const CONDITION: ConditionSearch = {
-  conceptId: 9000010,
-  concept: { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47 },
+  conceptIds: [9000010],
+  concepts: [{ conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47, participantCount: 49 }],
   participantCount: 49,
+  conditionOverlap: [{ conceptIds: [9000010], count: 49 }],
+};
+
+/** Two conditions, three participants with both: the total is short of the sum. */
+const TWO_CONDITIONS: ConditionSearch = {
+  conceptIds: [9000010, 9000040],
+  concepts: [
+    { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47, participantCount: 49 },
+    { conceptId: 9000040, name: "Hypertrophic cardiomyopathy", estimatedParticipantCount: 212, participantCount: 214 },
+  ],
+  participantCount: 260,
+  conditionOverlap: [
+    { conceptIds: [9000010], count: 46 },
+    { conceptIds: [9000040], count: 211 },
+    { conceptIds: [9000010, 9000040], count: 3 },
+  ],
 };
 
 const ANCESTRY: BreakdownSegment[] = [
@@ -80,13 +96,68 @@ describe("PhenotypeSummaryStrip", () => {
   });
 
   it("reports a picked concept the CDR doesn't have, and a condition that matched nobody", () => {
-    renderStrip({ conditionSearch: { conceptId: 123, concept: null, participantCount: null } });
+    renderStrip({ conditionSearch: { conceptIds: [123], concepts: [], participantCount: null, conditionOverlap: [] } });
     expect(screen.getByText("Condition concept 123 wasn’t found in this CDR.")).toBeInTheDocument();
+    cleanup();
+
+    renderStrip({ conditionSearch: { conceptIds: [123, 456], concepts: [], participantCount: null, conditionOverlap: [] } });
+    expect(screen.getByText("Condition concepts 123, 456 weren’t found in this CDR.")).toBeInTheDocument();
     cleanup();
 
     renderStrip({ conditionSearch: { ...CONDITION, participantCount: 0 } });
     expect(screen.getByText("0")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Review" })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("lists several conditions as a table: name, code and each one's own count under a participants label", () => {
+    renderStrip({ conditionSearch: TWO_CONDITIONS, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+
+    // The label row says the rule and names the count column.
+    expect(screen.getByText("Phenotype")).toHaveTextContent(/any of/);
+    expect(screen.getByText("participants")).toBeInTheDocument();
+    const rows = within(screen.getByRole("list", { name: /Conditions, any of/ })).getAllByRole("listitem");
+    expect(rows.map((row) => row.textContent)).toEqual(["Tetralogy of Fallot900001049", "Hypertrophic cardiomyopathy9000040214"]);
+    expect(within(rows[0]).getByLabelText("49 participants")).toBeInTheDocument();
+    expect(within(rows[1]).getByRole("button", { name: "Copy OMOP concept ID 9000040" })).toBeInTheDocument();
+    // The union stays the headline; the per-condition line under it is gone.
+    expect(screen.getByText("260")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Participants with each condition")).not.toBeInTheDocument();
+    // One condition keeps the stacked name-over-code look, without the column label.
+    cleanup();
+    renderStrip({ conditionSearch: CONDITION, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+    expect(screen.getByText("OMOP — 9000010")).toBeInTheDocument();
+    expect(screen.queryByText("participants")).not.toBeInTheDocument();
+  });
+
+  it("adds a Condition tab for several conditions: who has only each, and who has more than one", () => {
+    renderStrip({ conditionSearch: TWO_CONDITIONS, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+
+    const toggle = screen.getByRole("group", { name: "Participant breakdown" });
+    fireEvent.click(within(toggle).getByRole("button", { name: "Condition", pressed: false }));
+
+    expect(within(toggle).getByRole("button", { name: "Condition", pressed: true })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "Condition breakdown: Tetralogy of Fallot only: 46 participants (18%); Hypertrophic cardiomyopathy only: 211 participants (81%); More than one: 3 participants (1%)",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("More than one")).toBeInTheDocument();
+  });
+
+  it("has no Condition tab for one condition", () => {
+    renderStrip({ conditionSearch: CONDITION, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+
+    const toggle = screen.getByRole("group", { name: "Participant breakdown" });
+    expect(within(toggle).getAllByRole("button").map((button) => button.textContent)).toEqual(["Ancestry", "Age"]);
+  });
+
+  it("explains in the total's tooltip that the per-condition counts may add up to more than it", () => {
+    renderStrip({ conditionSearch: TWO_CONDITIONS, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+
+    expect(screen.getByRole("button", { name: "More information" })).toHaveAccessibleDescription(
+      "Participants recorded with any of these conditions, or a more specific form of one. " +
+        "A participant with more than one is counted once here, so the counts beside the conditions may add up to more than this total.",
+    );
   });
 
   it("shows a skeleton while results load", () => {

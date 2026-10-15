@@ -11,7 +11,6 @@ export { default as EyeOffIcon } from "./EyeOffIcon";
 export { default as GearIcon } from "./GearIcon";
 export { default as GlobeIcon } from "./GlobeIcon";
 export { default as InfoIcon } from "./InfoIcon";
-export { default as LightbulbIcon } from "./LightbulbIcon";
 export { default as PencilIcon } from "./PencilIcon";
 export { default as PlusIcon } from "./PlusIcon";
 export { default as SearchIcon } from "./SearchIcon";
