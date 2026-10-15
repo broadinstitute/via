@@ -81,6 +81,8 @@ class QueryUsageMeterTest {
     assertThat(usage.getSearches()).hasSize(1);
     SearchUsage search = usage.getSearches().get(0);
     assertThat(search.getId()).isEqualTo(1);
+    assertThat(search.getKind()).isEqualTo(SearchUsage.KindEnum.SEARCH);
+    assertThat(search.getTerm().orElse(null)).isNull();
     assertThat(search.getAt().toInstant()).isEqualTo(START);
     assertThat(search.getVariants()).containsExactly("1-1-A-G", "2-2-C-T");
     assertThat(search.getPhenotype().orElse(null)).isEqualTo("Tetralogy of Fallot");
@@ -92,6 +94,29 @@ class QueryUsageMeterTest {
     assertThat(search.getBytesBilled()).isEqualTo(10 * mib);
     assertThat(search.getBytesProcessed()).isEqualTo(30_000L);
     assertThat(search.getEstimatedCostUsd()).isCloseTo(10.0 / 1024 / 1024 * 6.25, within(1e-12));
+  }
+
+  /** A type-ahead lookup is logged like a search, with its term; one that ran no query is dropped. */
+  @Test
+  void logsConditionLookupsThatQueried() {
+    QueryUsageMeter meter = new QueryUsageMeter(Clock.fixed(START, ZoneOffset.UTC));
+
+    meter.beginConditionLookup("long qt");
+    meter.record("Condition candidates", stats(4096L, 10L * 1024 * 1024, false, 20L));
+    meter.endSearch();
+    // A blank term never reaches BigQuery; nothing to account for.
+    meter.beginConditionLookup("");
+    meter.endSearch();
+
+    QueryUsage usage = meter.snapshot();
+    assertThat(usage.getSearches()).hasSize(1);
+    SearchUsage lookup = usage.getSearches().get(0);
+    assertThat(lookup.getKind()).isEqualTo(SearchUsage.KindEnum.CONDITION);
+    assertThat(lookup.getTerm().orElse(null)).isEqualTo("long qt");
+    assertThat(lookup.getVariants()).isEmpty();
+    assertThat(lookup.getPhenotype().orElse(null)).isNull();
+    assertThat(lookup.getQueries()).extracting(QueryJob::getName).containsExactly("Condition candidates");
+    assertThat(lookup.getBytesBilled()).isEqualTo(10L * 1024 * 1024);
   }
 
   /** The log keeps the newest twenty, newest first; the totals keep everything. */
@@ -117,6 +142,7 @@ class QueryUsageMeterTest {
   void leavesThePhenotypeNullWhenNoneWasNamed() {
     QueryUsageMeter meter = new QueryUsageMeter();
     meter.beginSearch(List.of("1-1-A-G"));
+    meter.record("VAT lookup", stats(1L, 1L, false, 1L));
     meter.endSearch();
     // Naming outside a search does nothing.
     meter.describeSearchPhenotype("Ignored");

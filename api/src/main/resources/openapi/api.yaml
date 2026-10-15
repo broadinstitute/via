@@ -212,19 +212,22 @@ components:
         searches:
           type: array
           description: >-
-            The last 20 searches, newest first, each with the queries it ran.
-            Only /api/search runs count as searches; the condition type-ahead's
-            queries are in the totals above but belong to no search.
+            The last 20 requests that queried BigQuery, newest first, each
+            with the queries it ran: /api/search runs and the condition
+            type-ahead's lookups. A request that ran no query (a blank term)
+            isn't logged.
           items:
             $ref: "#/components/schemas/SearchUsage"
     SearchUsage:
       type: object
-      description: One /api/search run and the BigQuery queries it made.
+      description: One request that queried BigQuery, and the queries it made.
       required:
         - id
+        - kind
         - at
         - variants
         - phenotype
+        - term
         - queries
         - cacheHits
         - bytesProcessed
@@ -234,20 +237,29 @@ components:
         id:
           type: integer
           description: Counts up from 1 within the session.
+        kind:
+          type: string
+          enum: [search, condition]
+          description: A search (/api/search) or a condition lookup for the type-ahead (/api/condition).
         at:
           type: string
           format: date-time
-          description: When the search started.
+          description: When the request started.
         variants:
           type: array
-          description: The variant IDs searched, as sent.
+          description: For a search, the variant IDs searched, as sent. Empty for a condition lookup.
           items:
             type: string
         phenotype:
           type: string
           nullable: true
-          description: The picked condition's name; null when none was picked or it wasn't found.
+          description: For a search, the picked condition's name; null when none was picked or it wasn't found.
           example: "Hypertrophic cardiomyopathy"
+        term:
+          type: string
+          nullable: true
+          description: For a condition lookup, the text looked up. Null for a search.
+          example: "long qt"
         queries:
           type: array
           description: The search's BigQuery jobs, in the order they ran.

@@ -16,13 +16,14 @@ import org.springframework.stereotype.Component;
 
 /**
  * Running totals of this instance's BigQuery usage, from the statistics BigQuery reports on each
- * job, plus the last few searches with the jobs each one ran. One per process: a Workbench app
- * serves one user, so the process's lifetime is their session, and the totals reset with it.
+ * job, plus a log of the last few requests that queried BigQuery (searches and the condition
+ * type-ahead's lookups) with the jobs each one ran. One per process: a Workbench app serves one
+ * user, so the process's lifetime is their session, and the totals reset with it.
  *
- * <p>A search is attributed by thread: the controller brackets its work with {@link #beginSearch}
- * and {@link #endSearch}, and every job metered on that thread in between belongs to it. Spring
- * handles a request on one thread, so that's exact; a job metered outside a search (the condition
- * type-ahead, say) goes into the totals only.
+ * <p>A request is attributed by thread: its controller brackets the work with {@link #beginSearch}
+ * or {@link #beginConditionLookup} and {@link #endSearch}, and every job metered on that thread in
+ * between belongs to it. Spring handles a request on one thread, so that's exact. A request that
+ * ran no job (a blank type-ahead term) is dropped from the log at the end, since it cost nothing.
  */
 @Component
 public class QueryUsageMeter {
@@ -35,31 +36,41 @@ public class QueryUsageMeter {
 
   private static final double BYTES_PER_TIB = 1024.0 * 1024 * 1024 * 1024;
 
-  /** One search's jobs, filled in while it runs. Mutations are guarded by the record itself. */
+  /** One request's jobs, filled in while it runs. Mutations are guarded by the record itself. */
   private static final class SearchRecord {
     final int id;
+    final SearchUsage.KindEnum kind;
     final OffsetDateTime at;
     final List<String> variants;
+    final String term;
     String phenotype;
     final List<QueryJob> jobs = new ArrayList<>();
 
-    SearchRecord(int id, OffsetDateTime at, List<String> variants) {
+    SearchRecord(int id, SearchUsage.KindEnum kind, OffsetDateTime at, List<String> variants, String term) {
       this.id = id;
+      this.kind = kind;
       this.at = at;
       this.variants = List.copyOf(variants);
+      this.term = term;
     }
 
     synchronized void add(QueryJob job) {
       jobs.add(job);
     }
 
+    synchronized boolean ranNothing() {
+      return jobs.isEmpty();
+    }
+
     synchronized SearchUsage snapshot() {
       long billed = jobs.stream().mapToLong(QueryJob::getBytesBilled).sum();
       return new SearchUsage()
           .id(id)
+          .kind(kind)
           .at(at)
           .variants(variants)
           .phenotype(phenotype)
+          .term(term)
           .queries(List.copyOf(jobs))
           .cacheHits((int) jobs.stream().filter(QueryJob::getCacheHit).count())
           .bytesProcessed(jobs.stream().mapToLong(QueryJob::getBytesProcessed).sum())
@@ -91,14 +102,22 @@ public class QueryUsageMeter {
 
   /** Starts attributing this thread's jobs to a new search, the newest in the log. */
   public void beginSearch(List<String> variants) {
-    SearchRecord search = new SearchRecord(searchIds.incrementAndGet(), OffsetDateTime.now(clock), variants);
+    begin(new SearchRecord(searchIds.incrementAndGet(), SearchUsage.KindEnum.SEARCH, OffsetDateTime.now(clock), variants, null));
+  }
+
+  /** Starts attributing this thread's jobs to a condition lookup for the type-ahead. */
+  public void beginConditionLookup(String term) {
+    begin(new SearchRecord(searchIds.incrementAndGet(), SearchUsage.KindEnum.CONDITION, OffsetDateTime.now(clock), List.of(), term));
+  }
+
+  private void begin(SearchRecord record) {
     synchronized (searches) {
-      searches.addFirst(search);
+      searches.addFirst(record);
       while (searches.size() > SEARCHES_KEPT) {
         searches.removeLast();
       }
     }
-    current.set(search);
+    current.set(record);
   }
 
   /** Names the current search's condition, once the search has resolved it. No-op outside a search. */
@@ -111,9 +130,18 @@ public class QueryUsageMeter {
     }
   }
 
-  /** Stops attributing this thread's jobs. Always called, so a failed search can't leak into the next. */
+  /**
+   * Stops attributing this thread's jobs. Always called, so a failed request can't leak into the
+   * next. A request that ran no job is taken out of the log: nothing to account for.
+   */
   public void endSearch() {
+    SearchRecord record = current.get();
     current.remove();
+    if (record != null && record.ranNothing()) {
+      synchronized (searches) {
+        searches.remove(record);
+      }
+    }
   }
 
   /** Adds one finished query's statistics. Any figure BigQuery left out counts as zero. */

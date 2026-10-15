@@ -10,7 +10,8 @@ import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, UserIcon } from "../icons";
 
 // What this VIA instance has spent on BigQuery since it started, as a receipt: the totals in one
-// line, then the last searches newest first, each a row that opens into the queries it ran. The
+// line, then the last requests newest first (searches, and the phenotype type-ahead's lookups,
+// which bill too), each a row that opens into the queries it ran. The
 // per-query rows are where the two things worth knowing show up: a repeated search is answered
 // from BigQuery's cache for nothing, and anything else is billed at least 10 MB however little it
 // reads. Every search starts closed. Ten searches to a page, with the rest behind a pager, so
@@ -86,6 +87,18 @@ const styles = {
     color: colors.textBody,
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+  },
+  // A type-ahead lookup: what it is, then the typed text in quotes.
+  lookup: {
+    overflow: "hidden",
+    fontSize: 12,
+    color: colors.textSecondary,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  lookupTerm: {
+    color: colors.textBody,
+    fontWeight: 600,
   },
   phenotype: {
     display: "inline-flex",
@@ -301,12 +314,13 @@ export default function UsagePanel() {
               {formatUsd(usage.estimatedCostUsd)}
             </span>{" "}
             this session, {describeSince(usage.since)}. {formatInt(usage.cacheHits)} from cache, {formatSlotTime(usage.slotMilliseconds)} of
-            slot time. The last {usage.searches.length === 1 ? "search" : `${usage.searches.length} searches`} below.
+            slot time. The last {usage.searches.length === 1 ? "request" : `${usage.searches.length} requests`} below: searches, and
+            the phenotype box's lookups, which bill too.
           </p>
           {usage.searches.length === 0 ? (
-            <div style={{ ...styles.list, ...styles.empty }}>No searches yet this session.</div>
+            <div style={{ ...styles.list, ...styles.empty }}>Nothing has queried BigQuery yet this session.</div>
           ) : (
-            <ul style={styles.list} aria-label="Searches this session, newest first">
+            <ul style={styles.list} aria-label="Requests this session, newest first">
               {shown.map((search, index) => {
                 const expanded = open.has(search.id);
                 const jobsId = `usage-search-${search.id}`;
@@ -331,14 +345,22 @@ export default function UsagePanel() {
                       )}
                       <span style={styles.when}>{clock(search.at)}</span>
                       <span style={styles.what}>
-                        <span style={styles.variants} title={search.variants.join("\n")}>
-                          {previewVariants(search.variants)}
-                        </span>
-                        {search.phenotype && (
-                          <span style={styles.phenotype} title={search.phenotype}>
-                            <UserIcon size={10} strokeWidth={2.5} aria-hidden="true" />
-                            {search.phenotype}
+                        {search.kind === "condition" ? (
+                          <span style={styles.lookup}>
+                            Condition lookup <span style={styles.lookupTerm}>“{search.term}”</span>
                           </span>
+                        ) : (
+                          <>
+                            <span style={styles.variants} title={search.variants.join("\n")}>
+                              {previewVariants(search.variants)}
+                            </span>
+                            {search.phenotype && (
+                              <span style={styles.phenotype} title={search.phenotype}>
+                                <UserIcon size={10} strokeWidth={2.5} aria-hidden="true" />
+                                {search.phenotype}
+                              </span>
+                            )}
+                          </>
                         )}
                       </span>
                       <span style={styles.cost}>
@@ -350,7 +372,7 @@ export default function UsagePanel() {
                       </span>
                     </button>
                     {expanded && (
-                      <table id={jobsId} style={styles.jobs} aria-label={`Queries run by search ${search.id}`}>
+                      <table id={jobsId} style={styles.jobs} aria-label={`Queries run by request ${search.id}`}>
                         <thead>
                           <tr>
                             <th style={styles.jobsHead}>When</th>
@@ -383,7 +405,7 @@ export default function UsagePanel() {
             </ul>
           )}
           {usage.searches.length > SEARCHES_PER_PAGE && (
-            <nav style={styles.pager} aria-label="Searches, by page">
+            <nav style={styles.pager} aria-label="Requests, by page">
               <span style={styles.pagerRange}>
                 {first + 1}–{first + shown.length} of {usage.searches.length}
               </span>
@@ -393,8 +415,8 @@ export default function UsagePanel() {
                 disabledStyle={Style.buttons.disabled}
                 onClick={() => setPage(currentPage - 1)}
                 disabled={currentPage === 0}
-                aria-label="Newer searches"
-                title="Newer searches"
+                aria-label="Newer requests"
+                title="Newer requests"
               >
                 <ArrowLeftIcon size={14} strokeWidth={2.5} aria-hidden="true" />
               </Clickable>
@@ -404,8 +426,8 @@ export default function UsagePanel() {
                 disabledStyle={Style.buttons.disabled}
                 onClick={() => setPage(currentPage + 1)}
                 disabled={currentPage >= pageCount - 1}
-                aria-label="Older searches"
-                title="Older searches"
+                aria-label="Older requests"
+                title="Older requests"
               >
                 <ArrowRightIcon size={14} strokeWidth={2.5} aria-hidden="true" />
               </Clickable>

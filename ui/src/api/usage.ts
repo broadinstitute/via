@@ -11,14 +11,19 @@ export interface QueryJob {
   slotMilliseconds: number;
 }
 
-/** One search this session and the BigQuery jobs it ran. */
+/** One request that queried BigQuery this session, and the jobs it ran. */
 export interface SearchUsage {
   /** Counts up from 1 within the session. */
   id: number;
+  /** A search, or a condition lookup for the phenotype type-ahead. */
+  kind: "search" | "condition";
   at: string;
+  /** For a search, the variant IDs searched; empty for a condition lookup. */
   variants: string[];
-  /** The picked condition's name; null when none was picked or it wasn't found. */
+  /** For a search, the picked condition's name; null when none was picked or it wasn't found. */
   phenotype: string | null;
+  /** For a condition lookup, the text looked up; null for a search. */
+  term: string | null;
   /** In the order they ran. */
   queries: QueryJob[];
   cacheHits: number;
@@ -41,8 +46,8 @@ export interface QueryUsage {
   /** When the backend started counting, as an ISO date-time. */
   since: string;
   /**
-   * The last 20 searches, newest first. Only /api/search runs count; the condition type-ahead's
-   * queries are in the totals but belong to no search.
+   * The last 20 requests that queried BigQuery, newest first: searches and the condition
+   * type-ahead's lookups. A request that ran no query isn't logged.
    */
   searches: SearchUsage[];
 }
