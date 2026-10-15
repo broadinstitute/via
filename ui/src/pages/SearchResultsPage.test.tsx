@@ -13,9 +13,20 @@ const HCM = { conceptId: 9000040, name: "Hypertrophic cardiomyopathy", estimated
 
 function response(variants: string[], concepts: typeof TETRALOGY[]) {
   const participantCount = concepts.length ? 260 : null;
+  // Three participants have both when both are picked; alone, each concept's cell is its own count.
+  const conditionOverlap =
+    concepts.length === 2
+      ? [
+          { conceptIds: [9000010], count: 46 },
+          { conceptIds: [9000040], count: 211 },
+          { conceptIds: [9000010, 9000040], count: 3 },
+        ]
+      : concepts.map((c) => ({ conceptIds: [c.conceptId], count: c.participantCount }));
   return {
     searchSummary: { variantsRaw: variants.join("\n"), variantsEnteredCount: variants.length, variantsLimit: 50 },
-    conditionSearch: concepts.length ? { conceptIds: concepts.map((c) => c.conceptId), concepts, participantCount } : null,
+    conditionSearch: concepts.length
+      ? { conceptIds: concepts.map((c) => c.conceptId), concepts, participantCount, conditionOverlap }
+      : null,
     ancestryBreakdown: concepts.length ? [{ label: "EUR", count: 260, percent: 100, color: "#F9C854" }] : [],
     ageBreakdown: concepts.length ? [{ label: "40–49", count: 260, percent: 100, color: "#5FAEDA" }] : [],
     cohortVariants: variants.map((variant) => ({ variant, annotated: false })),

@@ -27,6 +27,13 @@ export interface MatchedConcept extends ConditionConcept {
   participantCount: number;
 }
 
+/** Participants recorded with exactly this set of the search's concepts (or a descendant of each). */
+export interface ConditionOverlapCell {
+  /** The concepts, in request order; one for participants with only that concept. */
+  conceptIds: number[];
+  count: number;
+}
+
 /**
  * The condition half of a /api/search response. Null there when no concept was picked.
  *
@@ -45,6 +52,12 @@ export interface ConditionSearch {
   concepts: MatchedConcept[];
   /** Participants with any of the resolved concepts, each counted once. Null when concepts is empty. */
   participantCount: number | null;
+  /**
+   * How the matched participants divide among the concepts: disjoint cells that sum to
+   * participantCount. A real count from the same query, unlike the ancestry and age breakdowns.
+   * Empty when concepts is.
+   */
+  conditionOverlap: ConditionOverlapCell[];
 }
 
 /**

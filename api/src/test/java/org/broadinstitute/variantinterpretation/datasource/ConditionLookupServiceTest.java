@@ -15,6 +15,7 @@ import com.google.cloud.bigquery.StandardSQLTypeName;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.broadinstitute.variantinterpretation.model.ConditionOverlapCell;
 import org.broadinstitute.variantinterpretation.model.ConditionSearch;
 import org.broadinstitute.variantinterpretation.model.MatchedConcept;
 import org.junit.jupiter.api.Test;
@@ -35,11 +36,10 @@ class ConditionLookupServiceTest {
     Field.of("name", StandardSQLTypeName.STRING),
     Field.of("est_count", StandardSQLTypeName.INT64),
   };
-  private static final Field[] COUNT_ROW = {
-    Field.of("concept_id", StandardSQLTypeName.INT64),
+  private static final Field[] CELL_ROW = {
+    Field.of("cell", StandardSQLTypeName.STRING),
     Field.of("participants", StandardSQLTypeName.INT64),
   };
-  private static final Field[] UNION_ROW = {Field.of("participants", StandardSQLTypeName.INT64)};
 
   private static FieldValueList row(Field[] schema, Object... values) {
     List<FieldValue> cells = new ArrayList<>();
@@ -50,13 +50,12 @@ class ConditionLookupServiceTest {
   }
 
   /**
-   * A BigQuery that answers the service's three condition queries from fixed rows, told apart
-   * by their SQL, and keeps the concept ids each was asked about.
+   * A BigQuery that answers the service's two condition queries from fixed rows, told apart by
+   * their SQL, and keeps the concept ids each was asked about.
    */
   private static final class ScriptedBigQuery {
     final List<FieldValueList> concepts = new ArrayList<>();
-    final List<FieldValueList> ownCounts = new ArrayList<>();
-    final List<FieldValueList> union = new ArrayList<>();
+    final List<FieldValueList> cells = new ArrayList<>();
     final List<String> queriesRun = new ArrayList<>();
     final List<List<Long>> idsAsked = new ArrayList<>();
 
@@ -69,13 +68,9 @@ class ConditionLookupServiceTest {
                 String sql = config.getQuery();
                 QueryParameterValue ids = config.getNamedParameters().get("conceptIds");
                 idsAsked.add(ids.getArrayValues().stream().map(v -> Long.valueOf(v.getValue())).toList());
-                if (sql.contains("GROUP BY")) {
-                  queriesRun.add("own");
-                  return ownCounts;
-                }
-                if (sql.contains("COUNT(DISTINCT")) {
-                  queriesRun.add("union");
-                  return union;
+                if (sql.contains("GROUP BY cell")) {
+                  queriesRun.add("cells");
+                  return cells;
                 }
                 queriesRun.add("resolve");
                 return concepts;
@@ -156,17 +151,20 @@ class ConditionLookupServiceTest {
     assertThat(service.search(Arrays.asList((Long) null))).isNull();
   }
 
-  /** Two concepts: the count is participants with either, and each concept keeps its own. */
+  /**
+   * Two concepts: the cells say who has which. The union is their sum, each concept's own count
+   * is the sum of the cells containing it, and the cells come back with fewer concepts first.
+   */
   @Test
   void search_countsParticipantsWithAnyOfTheConcepts() {
     ScriptedBigQuery bigQuery = new ScriptedBigQuery();
     // Resolved in the other order, to show the response keeps the request's.
     bigQuery.concepts.add(row(CONCEPT_ROW, TETRALOGY, "Tetralogy of Fallot", 47));
     bigQuery.concepts.add(row(CONCEPT_ROW, HCM, "Hypertrophic cardiomyopathy", 212));
-    bigQuery.ownCounts.add(row(COUNT_ROW, TETRALOGY, 49));
-    bigQuery.ownCounts.add(row(COUNT_ROW, HCM, 214));
-    // Three participants have both, so the union is short of the sum.
-    bigQuery.union.add(row(UNION_ROW, 260));
+    // BigQuery keys each cell by its sorted ids; three participants have both.
+    bigQuery.cells.add(row(CELL_ROW, TETRALOGY + "," + HCM, 3));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(TETRALOGY), 46));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(HCM), 211));
 
     ConditionSearch search = bigQuery.service().search(List.of(HCM, TETRALOGY));
 
@@ -180,7 +178,11 @@ class ConditionLookupServiceTest {
         .containsExactly(
             tuple(HCM, "Hypertrophic cardiomyopathy", 212, 214), tuple(TETRALOGY, "Tetralogy of Fallot", 47, 49));
     assertThat(search.getParticipantCount().orElse(null)).isEqualTo(260);
-    assertThat(bigQuery.queriesRun).containsExactly("resolve", "own", "union");
+    // Singles in request order, then the pair, whose ids are in request order too.
+    assertThat(search.getConditionOverlap())
+        .extracting(ConditionOverlapCell::getConceptIds, ConditionOverlapCell::getCount)
+        .containsExactly(tuple(List.of(HCM), 211), tuple(List.of(TETRALOGY), 46), tuple(List.of(HCM, TETRALOGY), 3));
+    assertThat(bigQuery.queriesRun).containsExactly("resolve", "cells");
   }
 
   /**
@@ -193,28 +195,29 @@ class ConditionLookupServiceTest {
     ScriptedBigQuery bigQuery = new ScriptedBigQuery();
     bigQuery.concepts.add(row(CONCEPT_ROW, TETRALOGY, "Tetralogy of Fallot", 47));
     bigQuery.concepts.add(row(CONCEPT_ROW, HCM, "Hypertrophic cardiomyopathy", 212));
-    bigQuery.ownCounts.add(row(COUNT_ROW, TETRALOGY, 49));
-    bigQuery.ownCounts.add(row(COUNT_ROW, HCM, 214));
-    bigQuery.union.add(row(UNION_ROW, 260));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(TETRALOGY), 49));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(HCM), 214));
 
     ConditionSearch search = bigQuery.service().search(List.of(HCM, TETRALOGY));
 
-    assertThat(bigQuery.idsAsked).hasSize(3).allSatisfy(ids -> assertThat(ids).containsExactly(TETRALOGY, HCM));
+    assertThat(bigQuery.idsAsked).hasSize(2).allSatisfy(ids -> assertThat(ids).containsExactly(TETRALOGY, HCM));
     assertThat(search.getConceptIds()).containsExactly(HCM, TETRALOGY);
     assertThat(search.getConcepts()).extracting(MatchedConcept::getConceptId).containsExactly(HCM, TETRALOGY);
   }
 
-  /** One concept's union is its own count, so the union query isn't run. */
+  /** One concept: one cell, which is its own count and the union. */
   @Test
-  void search_skipsTheUnionQueryForOneConcept() {
+  void search_hasOneCellForOneConcept() {
     ScriptedBigQuery bigQuery = new ScriptedBigQuery();
     bigQuery.concepts.add(row(CONCEPT_ROW, TETRALOGY, "Tetralogy of Fallot", 47));
-    bigQuery.ownCounts.add(row(COUNT_ROW, TETRALOGY, 49));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(TETRALOGY), 49));
 
     ConditionSearch search = bigQuery.service().search(List.of(TETRALOGY));
 
     assertThat(search.getParticipantCount().orElse(null)).isEqualTo(49);
-    assertThat(bigQuery.queriesRun).containsExactly("resolve", "own");
+    assertThat(search.getConcepts().get(0).getParticipantCount()).isEqualTo(49);
+    assertThat(search.getConditionOverlap()).extracting(ConditionOverlapCell::getCount).containsExactly(49);
+    assertThat(bigQuery.queriesRun).containsExactly("resolve", "cells");
   }
 
   /**
@@ -225,7 +228,7 @@ class ConditionLookupServiceTest {
   void search_dropsAnIdThatIsntAConditionAndCountsTheRest() {
     ScriptedBigQuery bigQuery = new ScriptedBigQuery();
     bigQuery.concepts.add(row(CONCEPT_ROW, TETRALOGY, "Tetralogy of Fallot", null));
-    bigQuery.ownCounts.add(row(COUNT_ROW, TETRALOGY, 49));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(TETRALOGY), 49));
 
     ConditionSearch search = bigQuery.service().search(List.of(123L, TETRALOGY));
 
@@ -233,7 +236,7 @@ class ConditionLookupServiceTest {
     assertThat(search.getConcepts()).extracting(MatchedConcept::getConceptId).containsExactly(TETRALOGY);
     assertThat(search.getConcepts().get(0).getEstimatedParticipantCount().orElse(null)).isNull();
     assertThat(search.getParticipantCount().orElse(null)).isEqualTo(49);
-    // The counts are asked about the resolved concept only.
+    // The cells are asked about the resolved concept only.
     assertThat(bigQuery.idsAsked.get(1)).containsExactly(TETRALOGY);
   }
 
@@ -246,6 +249,7 @@ class ConditionLookupServiceTest {
 
     assertThat(search.getConceptIds()).containsExactly(123L);
     assertThat(search.getConcepts()).isEmpty();
+    assertThat(search.getConditionOverlap()).isEmpty();
     assertThat(search.getParticipantCount().isPresent()).isTrue();
     assertThat(search.getParticipantCount().orElse(null)).isNull();
     assertThat(bigQuery.queriesRun).containsExactly("resolve");
@@ -256,7 +260,7 @@ class ConditionLookupServiceTest {
   void search_collapsesDuplicateIds() {
     ScriptedBigQuery bigQuery = new ScriptedBigQuery();
     bigQuery.concepts.add(row(CONCEPT_ROW, TETRALOGY, "Tetralogy of Fallot", 47));
-    bigQuery.ownCounts.add(row(COUNT_ROW, TETRALOGY, 49));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(TETRALOGY), 49));
 
     ConditionSearch search = bigQuery.service().search(List.of(TETRALOGY, TETRALOGY));
 
@@ -265,20 +269,50 @@ class ConditionLookupServiceTest {
     assertThat(bigQuery.idsAsked.get(0)).containsExactly(TETRALOGY);
   }
 
-  /** A resolved concept nobody is recorded with has no count row, and reads as 0. */
+  /** A resolved concept nobody is recorded with is in no cell, and reads as 0. */
   @Test
-  void search_readsAMissingOwnCountAsZero() {
+  void search_readsAConceptInNoCellAsZero() {
     ScriptedBigQuery bigQuery = new ScriptedBigQuery();
     bigQuery.concepts.add(row(CONCEPT_ROW, TETRALOGY, "Tetralogy of Fallot", 47));
     bigQuery.concepts.add(row(CONCEPT_ROW, HCM, "Hypertrophic cardiomyopathy", 0));
-    bigQuery.ownCounts.add(row(COUNT_ROW, TETRALOGY, 49));
-    bigQuery.union.add(row(UNION_ROW, 49));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(TETRALOGY), 49));
 
     ConditionSearch search = bigQuery.service().search(List.of(TETRALOGY, HCM));
 
     assertThat(search.getConcepts())
         .extracting(MatchedConcept::getConceptId, MatchedConcept::getParticipantCount)
         .containsExactly(tuple(TETRALOGY, 49), tuple(HCM, 0));
+    assertThat(search.getParticipantCount().orElse(null)).isEqualTo(49);
+  }
+
+  /** Three concepts: cells of every size, ordered by size then by the first concept's request position. */
+  @Test
+  void search_ordersCellsBySizeThenRequestOrder() {
+    ScriptedBigQuery bigQuery = new ScriptedBigQuery();
+    long lqt = 9000060L;
+    bigQuery.concepts.add(row(CONCEPT_ROW, HCM, "Hypertrophic cardiomyopathy", 212));
+    bigQuery.concepts.add(row(CONCEPT_ROW, lqt, "Long QT syndrome", 128));
+    bigQuery.concepts.add(row(CONCEPT_ROW, TETRALOGY, "Tetralogy of Fallot", 47));
+    bigQuery.cells.add(row(CELL_ROW, TETRALOGY + "," + HCM + "," + lqt, 1));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(lqt), 119));
+    bigQuery.cells.add(row(CELL_ROW, HCM + "," + lqt, 11));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(HCM), 201));
+    bigQuery.cells.add(row(CELL_ROW, TETRALOGY + "," + HCM, 1));
+    bigQuery.cells.add(row(CELL_ROW, String.valueOf(TETRALOGY), 47));
+
+    ConditionSearch search = bigQuery.service().search(List.of(HCM, lqt, TETRALOGY));
+
+    assertThat(search.getConditionOverlap())
+        .extracting(ConditionOverlapCell::getConceptIds, ConditionOverlapCell::getCount)
+        .containsExactly(
+            tuple(List.of(HCM), 201),
+            tuple(List.of(lqt), 119),
+            tuple(List.of(TETRALOGY), 47),
+            tuple(List.of(HCM, lqt), 11),
+            tuple(List.of(HCM, TETRALOGY), 1),
+            tuple(List.of(HCM, lqt, TETRALOGY), 1));
+    assertThat(search.getParticipantCount().orElse(null)).isEqualTo(380);
+    assertThat(search.getConcepts()).extracting(MatchedConcept::getParticipantCount).containsExactly(214, 131, 49);
   }
 
   /**

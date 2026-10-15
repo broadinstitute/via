@@ -274,6 +274,7 @@ components:
         - conceptIds
         - concepts
         - participantCount
+        - conditionOverlap
       properties:
         conceptIds:
           type: array
@@ -302,6 +303,35 @@ components:
             empty. A real count, which will not match the concepts'
             estimatedParticipantCounts exactly.
           example: 260
+        conditionOverlap:
+          type: array
+          description: >-
+            How the matched participants divide among the resolved concepts:
+            one cell per combination of concepts that at least one
+            participant has (or a descendant of each). The cells are
+            disjoint and their counts sum to participantCount; a concept's
+            own participantCount is the sum of the cells that contain it.
+            Unlike ancestryBreakdown and ageBreakdown this is a real count,
+            from the same query as participantCount. Empty when concepts is.
+          items:
+            $ref: "#/components/schemas/ConditionOverlapCell"
+    ConditionOverlapCell:
+      type: object
+      description: Participants recorded with exactly this set of the search's concepts.
+      required:
+        - conceptIds
+        - count
+      properties:
+        conceptIds:
+          type: array
+          description: The concepts, in request order; one for participants with only that concept.
+          items:
+            type: integer
+            format: int64
+          example: [9000040, 9000060]
+        count:
+          type: integer
+          example: 11
     MatchedConcept:
       type: object
       description: A ConditionConcept the search resolved, with its own real participant count.

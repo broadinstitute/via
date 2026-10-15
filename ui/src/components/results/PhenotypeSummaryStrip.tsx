@@ -4,6 +4,7 @@ import type { ConditionSearch } from "../../api/conditions";
 import colors from "../../libs/colors";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
+import { conditionBreakdown } from "../../utils/conditionBreakdown";
 import { formatInt } from "../../utils/format";
 import Clickable from "../common/Clickable";
 import InfoTooltip from "../common/InfoTooltip";
@@ -16,6 +17,8 @@ import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
 // anatomy -- a small uppercase label over its content -- divided by hairlines the way the top bar
 // divides its parts: what the phenotype filter is, how many it matched, how they break down, and
 // which view is showing. Being a band rather than a side panel, it leaves the table the full width.
+// With several conditions the breakdown gains a Condition tab: who has only each one, and who has
+// more than one. Unlike the ancestry and age breakdowns, that one is a real count.
 // A filter of several conditions becomes a small table in the first block: each condition with its
 // code trailing and its own matched count in a column, under a "participants" label at the end of
 // the block's label row. The column is what makes the overlap visible: the counts plainly add up
@@ -198,11 +201,12 @@ const styles = {
   },
 } as const satisfies Record<string, CSSProperties>;
 
-type BreakdownTab = "ancestry" | "age";
+type BreakdownTab = "ancestry" | "age" | "condition";
 
 const TABS: { id: BreakdownTab; label: string }[] = [
   { id: "ancestry", label: "Ancestry" },
   { id: "age", label: "Age" },
+  { id: "condition", label: "Condition" },
 ];
 
 interface PhenotypeSummaryStripProps {
@@ -296,6 +300,19 @@ export default function PhenotypeSummaryStrip({
   const concepts = conditionSearch.concepts;
   const participantCount = conditionSearch.participantCount ?? 0;
   const hasBreakdown = ancestryBreakdown.length > 0;
+  // One condition has nothing to split, so its tab stays away; a re-run that drops to one
+  // condition while the tab is active falls back to ancestry.
+  const hasConditionTab = concepts.length > 1;
+  const tabs = TABS.filter((tab) => tab.id !== "condition" || hasConditionTab);
+  const tab = activeTab === "condition" && !hasConditionTab ? "ancestry" : activeTab;
+  const breakdowns: Record<BreakdownTab, { segments: BreakdownSegment[]; label: string }> = {
+    ancestry: { segments: ancestryBreakdown, label: "Ancestry" },
+    age: { segments: ageBreakdown, label: "Age" },
+    condition: {
+      segments: conditionBreakdown(concepts, conditionSearch.conditionOverlap, participantCount),
+      label: "Condition",
+    },
+  };
   // The union counts a participant once however many of the conditions they have, so the
   // per-condition counts beside the names can sum to more than it.
   const countTooltip =
@@ -376,15 +393,15 @@ export default function PhenotypeSummaryStrip({
           <span style={styles.eyebrow}>Breakdown</span>
           {hasBreakdown && (
             <div style={styles.tabs} role="group" aria-label="Participant breakdown">
-              {TABS.map((tab) => (
+              {tabs.map((candidate) => (
                 <Clickable
-                  key={tab.id}
-                  aria-pressed={activeTab === tab.id}
-                  style={{ ...styles.tab, ...(activeTab === tab.id ? styles.tabActive : undefined) }}
+                  key={candidate.id}
+                  aria-pressed={tab === candidate.id}
+                  style={{ ...styles.tab, ...(tab === candidate.id ? styles.tabActive : undefined) }}
                   hoverStyle={{ color: colors.textAccent }}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => setActiveTab(candidate.id)}
                 >
-                  {tab.label}
+                  {candidate.label}
                 </Clickable>
               ))}
             </div>
@@ -393,11 +410,7 @@ export default function PhenotypeSummaryStrip({
         <div style={{ ...styles.blockContent, alignItems: "stretch" }}>
           {hasBreakdown ? (
             // Keyed by tab so switching remounts the bar, replaying its entrance.
-            <BreakdownBar
-              key={activeTab}
-              segments={activeTab === "ancestry" ? ancestryBreakdown : ageBreakdown}
-              label={activeTab === "ancestry" ? "Ancestry" : "Age"}
-            />
+            <BreakdownBar key={tab} segments={breakdowns[tab].segments} label={breakdowns[tab].label} />
           ) : (
             <span style={styles.emptyMessage}>No participants to break down.</span>
           )}

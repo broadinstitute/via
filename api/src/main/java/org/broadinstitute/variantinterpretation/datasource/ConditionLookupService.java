@@ -4,17 +4,20 @@ import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.QueryParameterValue;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.broadinstitute.variantinterpretation.util.BigQueryValues.intValue;
 
 import org.broadinstitute.variantinterpretation.model.ConditionCandidates;
 import org.broadinstitute.variantinterpretation.model.ConditionConcept;
+import org.broadinstitute.variantinterpretation.model.ConditionOverlapCell;
 import org.broadinstitute.variantinterpretation.model.ConditionSearch;
 import org.broadinstitute.variantinterpretation.model.MatchedConcept;
 import org.springframework.stereotype.Service;
@@ -39,8 +42,8 @@ import org.springframework.stereotype.Service;
  *   <li><b>Several concepts are OR'd.</b> A participant matches a search if any of the picked
  *       concepts, or a descendant of any of them, is recorded for them: the same rule one concept
  *       already uses over its descendants, and the Cohort Builder's rule within a criteria group.
- *       The union count is what the breakdowns are scaled to; each concept's own count is
- *       returned beside it so the overlap is visible.
+ *       One query counts participants by the exact set of picked concepts they have; the union,
+ *       each concept's own count and the overlap between them all fall out of those cells.
  * </ul>
  */
 @Service
@@ -107,29 +110,27 @@ public class ConditionLookupService {
         AND concept_id IN UNNEST(@conceptIds)
       """;
 
-  /** Participants with any of the concepts, or any descendant of any of them: the OR. */
-  private static final String COHORT_COUNT_SQL =
-      """
-      SELECT COUNT(DISTINCT co.person_id) AS participants
-      FROM %s co
-      WHERE co.condition_concept_id IN (
-          SELECT descendant_concept_id
-          FROM %s
-          WHERE ancestor_concept_id IN UNNEST(@conceptIds)
-      )
-      """;
-
   /**
-   * Each concept's own count, over its descendants, in one query. A concept with no
-   * participants has no row here, and is read as 0.
+   * Matched participants grouped by the exact set of picked concepts they have, each concept
+   * taken over its descendants. One row per non-empty combination, at most 2^n - 1 of them: the
+   * cells are disjoint, their sum is the union (the OR), and a concept's own count is the sum of
+   * the cells that contain it. Grouping by person first and the set second keeps person ids
+   * inside BigQuery. The set is keyed as a string because BigQuery can't group by an array.
    */
-  private static final String PER_CONCEPT_COUNT_SQL =
+  private static final String OVERLAP_CELLS_SQL =
       """
-      SELECT ca.ancestor_concept_id AS concept_id, COUNT(DISTINCT co.person_id) AS participants
-      FROM %s co
-      JOIN %s ca ON ca.descendant_concept_id = co.condition_concept_id
-      WHERE ca.ancestor_concept_id IN UNNEST(@conceptIds)
-      GROUP BY ca.ancestor_concept_id
+      WITH per_person AS (
+          SELECT co.person_id,
+                 ARRAY_AGG(DISTINCT ca.ancestor_concept_id ORDER BY ca.ancestor_concept_id) AS concept_ids
+          FROM %s co
+          JOIN %s ca ON ca.descendant_concept_id = co.condition_concept_id
+          WHERE ca.ancestor_concept_id IN UNNEST(@conceptIds)
+          GROUP BY co.person_id
+      )
+      SELECT ARRAY_TO_STRING(ARRAY(SELECT CAST(c AS STRING) FROM UNNEST(concept_ids) c), ',') AS cell,
+             COUNT(*) AS participants
+      FROM per_person
+      GROUP BY cell
       """;
 
   private final BigQueryService bigQuery;
@@ -173,7 +174,7 @@ public class ConditionLookupService {
       return new ConditionSearch().conceptIds(requested).concepts(List.of()).participantCount(null);
     }
     List<Long> resolvedIds = resolved.stream().map(ConditionConcept::getConceptId).toList();
-    Map<Long, Integer> ownCounts = countParticipantsPerConcept(resolvedIds);
+    List<ConditionOverlapCell> cells = overlapCells(resolvedIds);
     List<MatchedConcept> matched =
         resolved.stream()
             .map(
@@ -182,11 +183,18 @@ public class ConditionLookupService {
                         .conceptId(concept.getConceptId())
                         .name(concept.getName())
                         .estimatedParticipantCount(concept.getEstimatedParticipantCount().orElse(null))
-                        .participantCount(ownCounts.getOrDefault(concept.getConceptId(), 0)))
+                        .participantCount(
+                            cells.stream()
+                                .filter(cell -> cell.getConceptIds().contains(concept.getConceptId()))
+                                .mapToInt(ConditionOverlapCell::getCount)
+                                .sum()))
             .toList();
-    // One concept's union is its own count: no second query.
-    Integer union = matched.size() == 1 ? matched.get(0).getParticipantCount() : countParticipants(resolvedIds);
-    return new ConditionSearch().conceptIds(requested).concepts(matched).participantCount(union);
+    int union = cells.stream().mapToInt(ConditionOverlapCell::getCount).sum();
+    return new ConditionSearch()
+        .conceptIds(requested)
+        .concepts(matched)
+        .participantCount(union)
+        .conditionOverlap(cells);
   }
 
   /** The standard condition concepts among the ids, in the ids' order; the rest are left out. */
@@ -285,32 +293,29 @@ public class ConditionLookupService {
     return concepts;
   }
 
-  /** Distinct participants with any of the concepts or their descendants. */
-  private Integer countParticipants(List<Long> conceptIds) {
+  /**
+   * The matched participants by the exact set of concepts they have, in a stable order: cells
+   * with fewer concepts first, then by the concepts' request order. Each cell's ids are in
+   * request order too, so the UI can name it without sorting.
+   */
+  private List<ConditionOverlapCell> overlapCells(List<Long> conceptIds) {
     var query =
         QueryJobConfiguration.newBuilder(
-                COHORT_COUNT_SQL.formatted(
+                OVERLAP_CELLS_SQL.formatted(
                     properties.cdrTableRef(CONDITION_OCCURRENCE),
                     properties.cdrTableRef(CONCEPT_ANCESTOR)))
             .addNamedParameter("conceptIds", conceptIdsParameter(conceptIds));
+    List<ConditionOverlapCell> cells = new ArrayList<>();
     for (FieldValueList row : bigQuery.query(query)) {
-      return (int) row.get("participants").getLongValue();
+      Set<Long> inCell =
+          Stream.of(row.get("cell").getStringValue().split(",")).map(Long::valueOf).collect(Collectors.toSet());
+      cells.add(
+          new ConditionOverlapCell()
+              .conceptIds(conceptIds.stream().filter(inCell::contains).toList())
+              .count((int) row.get("participants").getLongValue()));
     }
-    return 0;
-  }
-
-  /** Each concept's own count, keyed by concept id; a concept matching nobody has no entry. */
-  private Map<Long, Integer> countParticipantsPerConcept(List<Long> conceptIds) {
-    var query =
-        QueryJobConfiguration.newBuilder(
-                PER_CONCEPT_COUNT_SQL.formatted(
-                    properties.cdrTableRef(CONDITION_OCCURRENCE),
-                    properties.cdrTableRef(CONCEPT_ANCESTOR)))
-            .addNamedParameter("conceptIds", conceptIdsParameter(conceptIds));
-    Map<Long, Integer> counts = new HashMap<>();
-    for (FieldValueList row : bigQuery.query(query)) {
-      counts.put(row.get("concept_id").getLongValue(), (int) row.get("participants").getLongValue());
-    }
-    return counts;
+    Comparator<ConditionOverlapCell> bySize = Comparator.comparingInt(cell -> cell.getConceptIds().size());
+    cells.sort(bySize.thenComparingInt(cell -> conceptIds.indexOf(cell.getConceptIds().get(0))));
+    return cells;
   }
 }

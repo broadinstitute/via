@@ -70,9 +70,23 @@ const colors = {
   subpopFin: "#6B4226",
   subpopNfe: "#E67E22",
   subpopAsj: "#7B2D8E",
+
+  /**
+   * The Condition breakdown's series: one hue per picked condition, in the order picked, then a
+   * neutral for participants with more than one. Navy, teal and amber rather than the brand's
+   * green: green and the neutral are near-identical under red-green colour blindness. Checked
+   * pairwise for colour-vision separation (OKLab distance x100 >= 8 simulated, >= 15 normal).
+   */
+  conditionA: "#074770",
+  conditionB: "#2aa198",
+  conditionC: "#cf8a1f",
+  conditionOverlap: "#dedcd5",
 } as const;
 
 export default colors;
+
+/** The Condition breakdown's hues by position in the search's concept list; see conditionA. */
+export const CONDITION_SERIES = [colors.conditionA, colors.conditionB, colors.conditionC];
 
 /**
  * Background tints that mark which source a table's column group reports -- All of Us or gnomAD.
