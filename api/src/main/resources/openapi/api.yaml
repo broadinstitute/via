@@ -189,7 +189,8 @@ components:
           format: int64
           description: >-
             Bytes BigQuery billed, which is what on-demand pricing charges
-            for: rounded up to 10 MB per query, and zero for a cache hit.
+            for: rounded up to the nearest MB with a minimum of 10 MB per
+            table the query references, and zero for a cache hit.
           example: 2516582400
         slotMilliseconds:
           type: integer

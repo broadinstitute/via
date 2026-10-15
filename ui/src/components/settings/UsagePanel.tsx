@@ -9,12 +9,13 @@ import { formatBytes, formatInt, formatUsd } from "../../utils/format";
 import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, UserIcon } from "../icons";
 
-// What this VIA instance has spent on BigQuery since it started, as a receipt: the totals in one
-// line, then the last requests newest first (searches, and the phenotype type-ahead's lookups,
-// which bill too), each a row that opens into the queries it ran. The
+// What this VIA instance has spent on BigQuery since it started, as a receipt: the totals as a
+// strip of four labelled stats, then the last requests newest first (searches, and the phenotype
+// type-ahead's lookups, which bill too), each a row that opens into the queries it ran. The
 // per-query rows are where the two things worth knowing show up: a repeated search is answered
-// from BigQuery's cache for nothing, and anything else is billed at least 10 MB however little it
-// reads. Every search starts closed. Ten searches to a page, with the rest behind a pager, so
+// from BigQuery's cache for nothing, and anything else is billed at least 10 MB per table it reads
+// (so the two-table overlap query bills 20 MB on an empty read; see "On-demand compute pricing" at
+// cloud.google.com/bigquery/pricing). Every search starts closed. Ten searches to a page, with the rest behind a pager, so
 // the dialog doesn't grow with the log.
 
 const styles = {
@@ -25,13 +26,55 @@ const styles = {
     gap: 12,
     marginBottom: 6,
   },
-  totals: {
-    ...Style.elements.panelIntro,
+  // The session's totals, one labelled cell each, in a bar.
+  strip: {
+    display: "flex",
+    border: `1px solid ${colors.border}`,
+    borderRadius: Style.radius,
+    background: colors.surface1,
+    overflow: "hidden",
   },
-  totalsFigures: {
-    color: colors.textPrimary,
+  stat: {
+    flex: 1,
+    minWidth: 0,
+    padding: "8px 12px",
+    borderLeft: `1px solid ${colors.border}`,
+  },
+  statFirst: {
+    borderLeft: "none",
+  },
+  statLabel: {
+    fontSize: 10.5,
     fontWeight: 600,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    color: colors.textMuted,
+  },
+  statValue: {
+    fontSize: 15,
+    fontWeight: 600,
+    lineHeight: 1.3,
+    color: colors.textPrimary,
     fontVariantNumeric: "tabular-nums",
+  },
+  statSub: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  // Over the list: what it holds, and since when.
+  caption: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: 12,
+    margin: "16px 0 6px",
+    fontSize: 11.5,
+    color: colors.textSecondary,
+  },
+  captionTitle: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: colors.textBody,
   },
   list: {
     margin: 0,
@@ -190,15 +233,22 @@ const styles = {
   pagerRange: {
     marginRight: 6,
   },
-  note: {
-    margin: "12px 0 0",
-    fontSize: 11.5,
-    lineHeight: 1.5,
-    color: colors.textSecondary,
-  },
 } as const satisfies Record<string, CSSProperties>;
 
 const SKELETON_ROWS = 3;
+const STATS = 4;
+
+function Stat({ label, value, sub, first }: { label: string; value: string; sub?: string; first?: boolean }) {
+  return (
+    <div style={{ ...styles.stat, ...(first ? styles.statFirst : undefined) }}>
+      <dt style={styles.statLabel}>{label}</dt>
+      <dd style={{ margin: 0 }}>
+        <div style={styles.statValue}>{value}</div>
+        {sub && <div style={styles.statSub}>{sub}</div>}
+      </dd>
+    </div>
+  );
+}
 /** Searches shown at once; the pager steps through the rest. */
 export const SEARCHES_PER_PAGE = 10;
 /** Variant IDs shown in a search's row before the rest are summarised as "+N more". */
@@ -295,9 +345,16 @@ export default function UsagePanel() {
         </div>
       ) : loading || !usage ? (
         <>
-          <p style={styles.totals}>
-            <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 260, height: 10 }} />
-          </p>
+          <div style={styles.strip} aria-busy="true">
+            {Array.from({ length: STATS }, (_, index) => (
+              <div key={index} style={{ ...styles.stat, ...(index === 0 ? styles.statFirst : undefined) }}>
+                <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: "60%", height: 10 }} />
+              </div>
+            ))}
+          </div>
+          <div style={styles.caption}>
+            <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 120, height: 10 }} />
+          </div>
           <div style={styles.list} aria-busy="true">
             {Array.from({ length: SKELETON_ROWS }, (_, index) => (
               <div key={index} style={{ ...styles.search, ...(index === 0 ? styles.searchFirst : undefined), cursor: "default" }}>
@@ -308,15 +365,16 @@ export default function UsagePanel() {
         </>
       ) : (
         <>
-          <p style={styles.totals}>
-            <span style={styles.totalsFigures}>
-              {formatInt(usage.queries)} {usage.queries === 1 ? "query" : "queries"} · {formatBytes(usage.bytesBilled)} billed ·{" "}
-              {formatUsd(usage.estimatedCostUsd)}
-            </span>{" "}
-            this session, {describeSince(usage.since)}. {formatInt(usage.cacheHits)} from cache, {formatSlotTime(usage.slotMilliseconds)} of
-            slot time. The last {usage.searches.length === 1 ? "request" : `${usage.searches.length} requests`} below: searches, and
-            the phenotype box's lookups, which bill too.
-          </p>
+          <dl role="group" style={styles.strip} aria-label="This session's totals">
+            <Stat first label="Billed" value={formatBytes(usage.bytesBilled)} />
+            <Stat label="Est. cost" value={formatUsd(usage.estimatedCostUsd)} sub="on-demand" />
+            <Stat label="Queries" value={formatInt(usage.queries)} sub={`${formatInt(usage.cacheHits)} from cache`} />
+            <Stat label="Slot time" value={formatSlotTime(usage.slotMilliseconds)} />
+          </dl>
+          <div style={styles.caption}>
+            <span style={styles.captionTitle}>Recent requests</span>
+            <span>Searches and phenotype lookups {describeSince(usage.since)}, newest first</span>
+          </div>
           {usage.searches.length === 0 ? (
             <div style={{ ...styles.list, ...styles.empty }}>Nothing has queried BigQuery yet this session.</div>
           ) : (
@@ -433,11 +491,6 @@ export default function UsagePanel() {
               </Clickable>
             </nav>
           )}
-          <p style={styles.note}>
-            Resets when this instance restarts. A search repeated within 24 hours is answered from BigQuery's cache and
-            costs nothing; any other query is billed at least 10 MB, however little it reads. The cost is an estimate at
-            on-demand pricing ($6.25 per TB): a project on a reservation pays for slot time instead.
-          </p>
         </>
       )}
     </>

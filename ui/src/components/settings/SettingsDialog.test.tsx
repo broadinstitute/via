@@ -157,8 +157,16 @@ describe("SettingsDialog", () => {
     render(<SettingsDialog onClose={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Usage" }));
 
-    expect(await screen.findByText("14 queries · 2.3 GB billed · $0.01")).toBeInTheDocument();
-    expect(screen.getByText(/this session, since \d{1,2}:\d{2} [AP]M\. 5 from cache, 48\.2 s of slot time\. The last 3 requests below/)).toBeInTheDocument();
+    const totals = await screen.findByRole("group", { name: "This session's totals" });
+    expect(within(totals).getAllByRole("term").map((term) => term.textContent)).toEqual(["Billed", "Est. cost", "Queries", "Slot time"]);
+    expect(within(totals).getAllByRole("definition").map((cell) => cell.textContent)).toEqual([
+      "2.3 GB",
+      "$0.01on-demand",
+      "145 from cache",
+      "48.2 s",
+    ]);
+    expect(screen.getByText("Recent requests")).toBeInTheDocument();
+    expect(screen.getByText(/^Searches and phenotype lookups since \d{1,2}:\d{2} [AP]M, newest first$/)).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith("/api/usage");
 
     const rows = within(screen.getByRole("list", { name: /Requests this session/ })).getAllByRole("button");
@@ -228,7 +236,7 @@ describe("SettingsDialog", () => {
   it("has no pager for ten searches or fewer", async () => {
     render(<SettingsDialog onClose={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Usage" }));
-    await screen.findByText(/The last 3 requests below/);
+    await screen.findByText("Recent requests");
 
     expect(screen.queryByRole("navigation", { name: "Requests, by page" })).not.toBeInTheDocument();
   });
