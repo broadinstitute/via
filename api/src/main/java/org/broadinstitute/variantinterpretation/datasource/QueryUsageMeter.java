@@ -7,8 +7,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import org.broadinstitute.variantinterpretation.model.QueryJob;
 import org.broadinstitute.variantinterpretation.model.QueryUsage;
 import org.broadinstitute.variantinterpretation.model.SearchUsage;
@@ -24,6 +22,11 @@ import org.springframework.stereotype.Component;
  * or {@link #beginConditionLookup} and {@link #endSearch}, and every job metered on that thread in
  * between belongs to it. Spring handles a request on one thread, so that's exact. A request that
  * ran no job (a blank type-ahead term) is dropped from the log at the end, since it cost nothing.
+ *
+ * <p>Every read and write of the totals and the log holds the meter's own monitor, so a snapshot
+ * describes one state: its totals always equal the sum of its log. Separate counters, however
+ * atomic each, could be read half-way through a job being recorded. A few operations a second
+ * never contend for it.
  */
 @Component
 public class QueryUsageMeter {
@@ -36,7 +39,7 @@ public class QueryUsageMeter {
 
   private static final double BYTES_PER_TIB = 1024.0 * 1024 * 1024 * 1024;
 
-  /** One request's jobs, filled in while it runs. Mutations are guarded by the record itself. */
+  /** One request's jobs, filled in while it runs. Guarded by the meter's monitor. */
   private static final class SearchRecord {
     final int id;
     final SearchUsage.KindEnum kind;
@@ -54,15 +57,7 @@ public class QueryUsageMeter {
       this.term = term;
     }
 
-    synchronized void add(QueryJob job) {
-      jobs.add(job);
-    }
-
-    synchronized boolean ranNothing() {
-      return jobs.isEmpty();
-    }
-
-    synchronized SearchUsage snapshot() {
+    SearchUsage snapshot() {
       long billed = jobs.stream().mapToLong(QueryJob::getBytesBilled).sum();
       return new SearchUsage()
           .id(id)
@@ -81,14 +76,16 @@ public class QueryUsageMeter {
 
   private final Clock clock;
   private final OffsetDateTime since;
-  private final AtomicInteger queries = new AtomicInteger();
-  private final AtomicInteger cacheHits = new AtomicInteger();
-  private final AtomicLong bytesProcessed = new AtomicLong();
-  private final AtomicLong bytesBilled = new AtomicLong();
-  private final AtomicLong slotMilliseconds = new AtomicLong();
-  private final AtomicInteger searchIds = new AtomicInteger();
-  /** Newest first; guarded by itself. */
+  // All guarded by this.
+  private int queries;
+  private int cacheHits;
+  private long bytesProcessed;
+  private long bytesBilled;
+  private long slotMilliseconds;
+  private int searchIds;
+  /** Newest first. */
   private final Deque<SearchRecord> searches = new ArrayDeque<>();
+  /** The request this thread is in; per-thread, so unguarded. */
   private final ThreadLocal<SearchRecord> current = new ThreadLocal<>();
 
   public QueryUsageMeter() {
@@ -101,32 +98,28 @@ public class QueryUsageMeter {
   }
 
   /** Starts attributing this thread's jobs to a new search, the newest in the log. */
-  public void beginSearch(List<String> variants) {
-    begin(new SearchRecord(searchIds.incrementAndGet(), SearchUsage.KindEnum.SEARCH, OffsetDateTime.now(clock), variants, null));
+  public synchronized void beginSearch(List<String> variants) {
+    begin(new SearchRecord(++searchIds, SearchUsage.KindEnum.SEARCH, OffsetDateTime.now(clock), variants, null));
   }
 
   /** Starts attributing this thread's jobs to a condition lookup for the type-ahead. */
-  public void beginConditionLookup(String term) {
-    begin(new SearchRecord(searchIds.incrementAndGet(), SearchUsage.KindEnum.CONDITION, OffsetDateTime.now(clock), List.of(), term));
+  public synchronized void beginConditionLookup(String term) {
+    begin(new SearchRecord(++searchIds, SearchUsage.KindEnum.CONDITION, OffsetDateTime.now(clock), List.of(), term));
   }
 
   private void begin(SearchRecord record) {
-    synchronized (searches) {
-      searches.addFirst(record);
-      while (searches.size() > SEARCHES_KEPT) {
-        searches.removeLast();
-      }
+    searches.addFirst(record);
+    while (searches.size() > SEARCHES_KEPT) {
+      searches.removeLast();
     }
     current.set(record);
   }
 
   /** Names the current search's condition, once the search has resolved it. No-op outside a search. */
-  public void describeSearchPhenotype(String phenotype) {
+  public synchronized void describeSearchPhenotype(String phenotype) {
     SearchRecord search = current.get();
     if (search != null) {
-      synchronized (search) {
-        search.phenotype = phenotype;
-      }
+      search.phenotype = phenotype;
     }
   }
 
@@ -134,29 +127,27 @@ public class QueryUsageMeter {
    * Stops attributing this thread's jobs. Always called, so a failed request can't leak into the
    * next. A request that ran no job is taken out of the log: nothing to account for.
    */
-  public void endSearch() {
+  public synchronized void endSearch() {
     SearchRecord record = current.get();
     current.remove();
-    if (record != null && record.ranNothing()) {
-      synchronized (searches) {
-        searches.remove(record);
-      }
+    if (record != null && record.jobs.isEmpty()) {
+      searches.remove(record);
     }
   }
 
   /** Adds one finished query's statistics. Any figure BigQuery left out counts as zero. */
-  public void record(String name, JobStatistics.QueryStatistics statistics) {
+  public synchronized void record(String name, JobStatistics.QueryStatistics statistics) {
     boolean cacheHit = Boolean.TRUE.equals(statistics.getCacheHit());
     long processed = zeroIfNull(statistics.getTotalBytesProcessed());
     long billed = zeroIfNull(statistics.getTotalBytesBilled());
     long slotMs = zeroIfNull(statistics.getTotalSlotMs());
-    queries.incrementAndGet();
+    queries++;
     if (cacheHit) {
-      cacheHits.incrementAndGet();
+      cacheHits++;
     }
-    bytesProcessed.addAndGet(processed);
-    bytesBilled.addAndGet(billed);
-    slotMilliseconds.addAndGet(slotMs);
+    bytesProcessed += processed;
+    bytesBilled += billed;
+    slotMilliseconds += slotMs;
     attach(
         new QueryJob()
             .name(name)
@@ -168,8 +159,8 @@ public class QueryUsageMeter {
   }
 
   /** A query that ran but whose statistics couldn't be fetched: counted, with nothing to add. */
-  public void recordUnknown(String name) {
-    queries.incrementAndGet();
+  public synchronized void recordUnknown(String name) {
+    queries++;
     attach(
         new QueryJob().name(name).at(OffsetDateTime.now(clock)).cacheHit(false).bytesProcessed(0L).bytesBilled(0L).slotMilliseconds(0L));
   }
@@ -177,25 +168,20 @@ public class QueryUsageMeter {
   private void attach(QueryJob job) {
     SearchRecord search = current.get();
     if (search != null) {
-      search.add(job);
+      search.jobs.add(job);
     }
   }
 
-  public QueryUsage snapshot() {
-    long billed = bytesBilled.get();
-    List<SearchUsage> log;
-    synchronized (searches) {
-      log = searches.stream().map(SearchRecord::snapshot).toList();
-    }
+  public synchronized QueryUsage snapshot() {
     return new QueryUsage()
-        .queries(queries.get())
-        .cacheHits(cacheHits.get())
-        .bytesProcessed(bytesProcessed.get())
-        .bytesBilled(billed)
-        .slotMilliseconds(slotMilliseconds.get())
-        .estimatedCostUsd(cost(billed))
+        .queries(queries)
+        .cacheHits(cacheHits)
+        .bytesProcessed(bytesProcessed)
+        .bytesBilled(bytesBilled)
+        .slotMilliseconds(slotMilliseconds)
+        .estimatedCostUsd(cost(bytesBilled))
         .since(since)
-        .searches(log);
+        .searches(searches.stream().map(SearchRecord::snapshot).toList());
   }
 
   private static double cost(long bytesBilled) {

@@ -11,6 +11,11 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.broadinstitute.variantinterpretation.model.QueryJob;
 import org.broadinstitute.variantinterpretation.model.QueryUsage;
 import org.broadinstitute.variantinterpretation.model.SearchUsage;
@@ -162,5 +167,56 @@ class QueryUsageMeterTest {
     assertThat(usage.getQueries()).isEqualTo(2);
     assertThat(usage.getCacheHits()).isZero();
     assertThat(usage.getBytesBilled()).isZero();
+  }
+
+  /**
+   * A snapshot taken while searches are being recorded on other threads describes one state: its
+   * totals are the sums of its log, never a job ahead of or behind it. Several threads each run a
+   * stream of one-job searches while this one snapshots as fast as it can.
+   */
+  @Test
+  void snapshotsAreConsistentUnderConcurrentRecording() throws Exception {
+    QueryUsageMeter meter = new QueryUsageMeter(Clock.fixed(START, ZoneOffset.UTC));
+    long mib = 1024L * 1024;
+    int writers = 4;
+    int searchesEach = 500;
+    CountDownLatch go = new CountDownLatch(1);
+    ExecutorService pool = Executors.newFixedThreadPool(writers);
+    try {
+      List<Future<?>> done = new java.util.ArrayList<>();
+      for (int w = 0; w < writers; w++) {
+        done.add(
+            pool.submit(
+                () -> {
+                  go.await();
+                  for (int i = 0; i < searchesEach; i++) {
+                    meter.beginSearch(List.of("1-1-A-C"));
+                    meter.record("VAT lookup", stats(mib, 10 * mib, false, 7L));
+                    meter.endSearch();
+                  }
+                  return null;
+                }));
+      }
+      go.countDown();
+      int snapshots = 0;
+      while (done.stream().anyMatch(f -> !f.isDone())) {
+        QueryUsage usage = meter.snapshot();
+        snapshots++;
+        // Each query bills 10 MiB, so the totals must agree with the count exactly. A search in the
+        // log has either recorded its one job or not begun it yet; never a job half-recorded.
+        assertThat(usage.getBytesBilled()).isEqualTo(10 * mib * usage.getQueries());
+        assertThat(usage.getBytesProcessed()).isEqualTo(mib * usage.getQueries());
+        assertThat(usage.getSlotMilliseconds()).isEqualTo(7L * usage.getQueries());
+        assertThat(usage.getSearches())
+            .allSatisfy(search -> assertThat(search.getBytesBilled()).isEqualTo(10 * mib * search.getQueries().size()));
+      }
+      for (Future<?> f : done) {
+        f.get(10, TimeUnit.SECONDS);
+      }
+      assertThat(snapshots).isPositive();
+      assertThat(meter.snapshot().getQueries()).isEqualTo(writers * searchesEach);
+    } finally {
+      pool.shutdownNow();
+    }
   }
 }
