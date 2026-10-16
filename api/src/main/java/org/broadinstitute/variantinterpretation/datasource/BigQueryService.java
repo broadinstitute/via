@@ -12,12 +12,11 @@ import java.util.Map;
 import org.broadinstitute.variantinterpretation.model.TableStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * All of this app's calls to BigQuery go through here, so query cost caps, logging, error
- * handling and usage accounting are applied in one place.
+ * All of VIA's calls to BigQuery go through here, so query cost caps, logging, error
+ * handling and usage tracking are applied in one place.
  */
 @Service
 public class BigQueryService {
@@ -29,7 +28,7 @@ public class BigQueryService {
   private static final long MAXIMUM_BYTES_BILLED = 100L * 1024 * 1024;
 
   /**
-   * On every job VIA submits, so its usage can be told apart from the workspace's other queries
+   * Add these to every job VIA submits, so usage can be told apart from the workspace's other queries
    * in INFORMATION_SCHEMA.JOBS.
    */
   static final Map<String, String> JOB_LABELS = Map.of("app", "via");
@@ -37,20 +36,9 @@ public class BigQueryService {
   private final BigQuery bigQuery;
   private final QueryUsageMeter usage;
 
-  @Autowired
   public BigQueryService(BigQuery bigQuery, QueryUsageMeter usage) {
     this.bigQuery = bigQuery;
     this.usage = usage;
-  }
-
-  /** With its own, unshared meter; for callers that don't report usage. */
-  public BigQueryService(BigQuery bigQuery) {
-    this(bigQuery, new QueryUsageMeter());
-  }
-
-  /** See {@link #query(QueryJobConfiguration.Builder, String)}; for a query with no better name. */
-  public Iterable<FieldValueList> query(QueryJobConfiguration.Builder builder) {
-    return query(builder, "Query");
   }
 
   /**
@@ -75,7 +63,7 @@ public class BigQueryService {
   /**
    * Reads the finished job's statistics into the meter. A job we can't look up (no id, or a
    * lookup failure) is still counted as a query; the figures BigQuery would have given are
-   * accounting, not results, so they never fail a search.
+   * accounting, not results, so they should never fail a search.
    */
   private void meter(String name, JobId jobId) {
     try {

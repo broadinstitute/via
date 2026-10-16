@@ -23,7 +23,6 @@ public class ConditionController implements ConditionApi {
 
   @Override
   public ResponseEntity<ConditionCandidates> conditionCandidates(String condition) {
-    // Logged in the usage meter like a search: each keystroke that reaches BigQuery is billed.
     usage.beginConditionLookup(condition == null ? "" : condition.trim());
     try {
       return ResponseEntity.ok(conditionLookup.candidates(condition));

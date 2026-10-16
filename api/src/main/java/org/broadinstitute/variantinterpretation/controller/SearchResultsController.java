@@ -53,7 +53,6 @@ public class SearchResultsController implements SearchApi {
   public ResponseEntity<SearchResultsResponse> searchResults(
       List<String> variants, List<Long> conditionConceptIds) {
     List<String> requested = normalizeVariants(variants);
-    // Every BigQuery job between here and the finally is logged under this search (QueryUsageMeter).
     usage.beginSearch(requested);
     try {
       return ResponseEntity.ok(search(requested, conditionConceptIds));

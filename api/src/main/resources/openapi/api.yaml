@@ -113,10 +113,7 @@ paths:
         started
       description: >-
         Totals from BigQuery's own job statistics for every query VIA has run
-        since the backend started, which for a Workbench app is the user's
-        session. Resets when the backend restarts. Every VIA job is also
-        labelled app=via, so the same totals (and older ones) can be found in
-        the project's INFORMATION_SCHEMA.JOBS.
+        since the VIA session started.
       tags:
         - system
       responses:

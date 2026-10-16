@@ -1,7 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-// A dial: an arc open at the bottom with a needle part way round. The top bar's usage meter,
-// where it stands for "how much has been used" without naming a unit.
 export default function GaugeIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>

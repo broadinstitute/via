@@ -5,8 +5,6 @@ interface SortIconProps extends IconProps {
   direction: "none" | "asc" | "desc";
 }
 
-// Filled triangles rather than stroked chevrons: at the 11px this is drawn at, two chevrons close
-// into a diamond, while two solid triangles with a gap between them still read as "sort".
 export default function SortIcon({ direction, ...props }: SortIconProps) {
   return (
     <svg {...baseIconProps(props)} fill="currentColor" stroke="none">

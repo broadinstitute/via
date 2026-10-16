@@ -29,8 +29,9 @@ class SystemControllerTest {
     BigQuery bigQuery = mock(BigQuery.class);
     when(bigQuery.getTable(any(TableId.class))).thenReturn(mock(Table.class));
 
+    QueryUsageMeter usage = new QueryUsageMeter();
     ResponseEntity<BigQueryStatus> response =
-        new SystemController(new BigQueryService(bigQuery), properties, new QueryUsageMeter()).bigQueryStatus();
+        new SystemController(new BigQueryService(bigQuery, usage), properties, usage).bigQueryStatus();
 
     assertThat(response.getStatusCode().value()).isEqualTo(200);
     assertThat(response.getBody()).isNotNull();
@@ -53,8 +54,9 @@ class SystemControllerTest {
     when(bigQuery.getTable(properties.cdrTable("concept_ancestor")))
         .thenThrow(new RuntimeException("Access Denied"));
 
+    QueryUsageMeter usage = new QueryUsageMeter();
     BigQueryStatus status =
-        new SystemController(new BigQueryService(bigQuery), properties, new QueryUsageMeter()).bigQueryStatus().getBody();
+        new SystemController(new BigQueryService(bigQuery, usage), properties, usage).bigQueryStatus().getBody();
 
     assertThat(status).isNotNull();
     assertThat(status.getAccessible()).isFalse();

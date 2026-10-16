@@ -1,6 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-/** A globe with its meridian and equator: a population, grouped by where its ancestry traces to. */
 export default function GlobeIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>

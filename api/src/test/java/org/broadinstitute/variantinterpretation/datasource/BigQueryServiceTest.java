@@ -34,7 +34,7 @@ class BigQueryServiceTest {
   void query_capsBytesBilledAndLabelsTheJob() throws InterruptedException {
     resultWithJob(null);
 
-    service.query(QueryJobConfiguration.newBuilder("SELECT 1"));
+    service.query(QueryJobConfiguration.newBuilder("SELECT 1"), "VAT lookup");
 
     ArgumentCaptor<QueryJobConfiguration> sent = ArgumentCaptor.forClass(QueryJobConfiguration.class);
     org.mockito.Mockito.verify(bigQuery).query(sent.capture());
@@ -71,7 +71,7 @@ class BigQueryServiceTest {
     resultWithJob("job-2");
     when(bigQuery.getJob(JobId.of("job-2"))).thenThrow(new RuntimeException("gone"));
 
-    Iterable<?> rows = service.query(QueryJobConfiguration.newBuilder("SELECT 1"));
+    Iterable<?> rows = service.query(QueryJobConfiguration.newBuilder("SELECT 1"), "VAT lookup");
 
     assertThat(rows).isEmpty();
     assertThat(meter.snapshot().getQueries()).isEqualTo(1);

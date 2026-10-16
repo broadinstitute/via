@@ -1,8 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-// A six-tooth cog. Fewer, wider teeth than the usual eight-tooth outline, so it still reads as a
-// cog at the 15px the top bar draws it at, where narrow teeth merge into a bumpy ring. The outline
-// is a plain polygon (tooth tips and roots at two radii); the round joins soften its corners.
 export default function GearIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>
