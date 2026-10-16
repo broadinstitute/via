@@ -15,25 +15,16 @@ import { usePreference } from "../../utils/preferences";
 /** Exported for what has to sit just below the bar, e.g. the edit-search popover's backdrop. */
 export const TOP_BAR_HEIGHT = 41;
 
-// Below this the email no longer fits beside a readable search box, so the bar goes compact: the
-// email moves into the user icon's tooltip, the search box drops its field labels, an empty
-// phenotype and the Edit hint's text, and the spacing tightens. Hidden text stays in the
-// accessibility tree.
+// Below this width the bar's contents are compressed to fit
 const COMPACT_QUERY = "(max-width: 860px)";
 
-/** How often the usage meter re-reads the backend's total while it's shown. */
+/** How often the usage meter re-reads the backend's total (if it's shown). */
 export const USAGE_REFRESH_MS = 60_000;
 
 const styles = {
   topbar: {
-    // Pinned to the top of the window. The edit-search popover's backdrop is fixed to the window
-    // and starts TOP_BAR_HEIGHT down, so it only lines up with the bar if the bar can't scroll
-    // away; otherwise an undimmed strip is left over the results. Keeps the search summary in
-    // view while scrolling, too.
     position: "sticky",
     top: 0,
-    // Above the page, so the edit-search popover and its backdrop, rendered in here, cover
-    // the results -- including their own stacked bits, like the tables' sticky headers.
     zIndex: 50,
     display: "flex",
     alignItems: "center",
@@ -54,10 +45,6 @@ const styles = {
     minWidth: 0,
     marginRight: 20,
   },
-  // Links home on every page. On the results page it's the way to a new search, in place of the
-  // back arrow it replaced: the same destination, read as "home" rather than "previous page".
-  // The padding gives the hover fill room around the mark and name, and the negative margin takes
-  // it back out of the layout, so the brand sits where it would without it.
   brand: {
     display: "inline-flex",
     alignItems: "center",
@@ -194,8 +181,6 @@ const styles = {
     flexShrink: 0,
     color: colors.textAccent,
   },
-  // The session's BigQuery usage, as a dial beside the figure it summarises: a quiet pill that
-  // opens the Usage panel for the rest. Tabular digits, so the bar doesn't jiggle as it counts.
   meter: {
     display: "inline-flex",
     alignItems: "center",
@@ -219,8 +204,6 @@ const styles = {
     flexShrink: 0,
     color: colors.textAccent,
   },
-  // Between the meter's figures. They're bare numbers (scanned, billed, cost, in that order); the
-  // tooltip names them, and the compact bar keeps only the cost.
   meterDot: {
     color: colors.textMuted,
     fontWeight: 400,
