@@ -13,28 +13,22 @@ import org.broadinstitute.variantinterpretation.model.SearchUsage;
 import org.springframework.stereotype.Component;
 
 /**
- * Running totals of this instance's BigQuery usage, from the statistics BigQuery reports on each
- * job, plus a log of the last few requests that queried BigQuery (searches and the condition
- * type-ahead's lookups) with the jobs each one ran. One per process: a Workbench app serves one
- * user, so the process's lifetime is their session, and the totals reset with it.
+ * This instance's BigQuery usage: running totals from each job's statistics, plus a log of the
+ * last few requests (searches and type-ahead lookups) with the jobs each ran. One per process,
+ * which in a Workbench app is one user's session.
  *
- * <p>A request is attributed by thread: its controller brackets the work with {@link #beginSearch}
- * or {@link #beginConditionLookup} and {@link #endSearch}, and every job metered on that thread in
- * between belongs to it. Spring handles a request on one thread, so that's exact. A request that
- * ran no job (a blank type-ahead term) is dropped from the log at the end, since it cost nothing.
+ * <p>Jobs are attributed to a request by thread: the controller brackets its work with {@link
+ * #beginSearch} or {@link #beginConditionLookup} and {@link #endSearch}. A request that ran no job
+ * is dropped from the log.
  *
- * <p>Every read and write of the totals and the log holds the meter's own monitor, so a snapshot
- * describes one state: its totals always equal the sum of its log. Separate counters, however
- * atomic each, could be read half-way through a job being recorded. A few operations a second
- * never contend for it.
  */
 @Component
 public class QueryUsageMeter {
 
-  /** BigQuery on-demand analysis pricing, US dollars per TiB billed. */
+  /** BigQuery on-demand analysis pricing, US dollars per TiB billed (as of Oct 16 2026) */
   static final double USD_PER_TIB = 6.25;
 
-  /** How many searches are kept for the log; older ones fall off the end. */
+  /** How many searches are kept for the log; older ones are dropped. */
   static final int SEARCHES_KEPT = 20;
 
   private static final double BYTES_PER_TIB = 1024.0 * 1024 * 1024 * 1024;
@@ -76,7 +70,6 @@ public class QueryUsageMeter {
 
   private final Clock clock;
   private final OffsetDateTime since;
-  // All guarded by this.
   private int queries;
   private int cacheHits;
   private long bytesProcessed;

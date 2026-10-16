@@ -30,8 +30,7 @@ public class BigQueryService {
 
   /**
    * On every job VIA submits, so its usage can be told apart from the workspace's other queries
-   * in INFORMATION_SCHEMA.JOBS and the billing export. BigQuery allows only lowercase letters,
-   * digits, "_" and "-" in label values, which rules out the user's email.
+   * in INFORMATION_SCHEMA.JOBS.
    */
   static final Map<String, String> JOB_LABELS = Map.of("app", "via");
 
