@@ -1,13 +1,16 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { fetchQueryUsage, type QueryUsage } from "../../api/usage";
 import colors from "../../libs/colors";
 import { useHover, useMediaQuery } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
-import { GearIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
+import { GaugeIcon, GearIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
 import SettingsDialog from "../settings/SettingsDialog";
+import { formatBytes, formatUsd } from "../../utils/format";
 import { describeAlternatives } from "../../utils/phenotypes";
+import { usePreference } from "../../utils/preferences";
 
 /** Exported for what has to sit just below the bar, e.g. the edit-search popover's backdrop. */
 export const TOP_BAR_HEIGHT = 41;
@@ -17,6 +20,9 @@ export const TOP_BAR_HEIGHT = 41;
 // phenotype and the Edit hint's text, and the spacing tightens. Hidden text stays in the
 // accessibility tree.
 const COMPACT_QUERY = "(max-width: 860px)";
+
+/** How often the usage meter re-reads the backend's total while it's shown. */
+export const USAGE_REFRESH_MS = 60_000;
 
 const styles = {
   topbar: {
@@ -188,6 +194,37 @@ const styles = {
     flexShrink: 0,
     color: colors.textAccent,
   },
+  // The session's BigQuery usage, as a dial beside the figure it summarises: a quiet pill that
+  // opens the Usage panel for the rest. Tabular digits, so the bar doesn't jiggle as it counts.
+  meter: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "3px 8px",
+    border: "none",
+    borderRadius: 999,
+    background: "none",
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: 600,
+    fontVariantNumeric: "tabular-nums",
+    whiteSpace: "nowrap",
+    cursor: "pointer",
+  },
+  meterHover: {
+    background: colors.bgAccent,
+    color: colors.textAccent,
+  },
+  meterIcon: {
+    flexShrink: 0,
+    color: colors.textAccent,
+  },
+  // Between the meter's figures. They're bare numbers (scanned, billed, cost, in that order); the
+  // tooltip names them, and the compact bar keeps only the cost.
+  meterDot: {
+    color: colors.textMuted,
+    fontWeight: 400,
+  },
   /** Same rule as the back button's right border, between the email and the gear. */
   userDivider: {
     width: 1,
@@ -241,7 +278,9 @@ export default function TopBar({
   modifyOpen = false,
   editSearchPanel,
 }: TopBarProps) {
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Which settings panel is open, or null for none: the gear opens the first, the meter opens Usage.
+  const [settingsPanel, setSettingsPanel] = useState<string | null>(null);
+  const [usage, setUsage] = useState<QueryUsage | null>(null);
   const { hovered: brandHovered, hoverProps: brandHoverProps } = useHover();
   const { hovered: searchHovered, hoverProps: searchHoverProps } = useHover();
   const termsId = useId();
@@ -259,6 +298,37 @@ export default function TopBar({
     if (wasModifyOpen.current && !modifyOpen) searchBoxRef.current?.focus();
     wasModifyOpen.current = modifyOpen;
   }, [modifyOpen]);
+
+  // The meter is opt-in, from the Usage panel. While it's on it reads the backend's running total
+  // when switched on or mounted, each time a search finishes loading (a search is what moves it),
+  // when the settings dialog closes (its Usage panel may have shown newer numbers), and otherwise
+  // every minute. Reads can overlap, so only the newest one's reply is kept. If it can't be read
+  // the meter stays off the bar; the Usage panel is where that failure is explained.
+  const [showMeter] = usePreference("showUsageMeter");
+  const usageRead = useRef(0);
+  const readUsage = useCallback(() => {
+    const read = ++usageRead.current;
+    fetchQueryUsage()
+      .then((next) => {
+        if (read === usageRead.current) setUsage(next);
+      })
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!showMeter || loading) return;
+    readUsage();
+    const timer = window.setInterval(readUsage, USAGE_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [showMeter, loading, readUsage]);
+
+  const meter =
+    showMeter && usage
+      ? {
+          scanned: formatBytes(usage.bytesProcessed),
+          billed: formatBytes(usage.bytesBilled),
+          cost: formatUsd(usage.estimatedCostUsd),
+        }
+      : null;
 
   return (
     <div style={{ ...styles.topbar, ...compactStyle("topbar") }}>
@@ -334,14 +404,42 @@ export default function TopBar({
           </div>
         )}
       </div>
-      <div style={styles.user} title={compact ? userEmail : undefined}>
-        <UserIcon size={16} style={styles.userIcon} />
-        <span style={compact ? Style.elements.visuallyHidden : undefined}>{userEmail}</span>
+      <div style={styles.user}>
+        {meter && (
+          <>
+            <Clickable
+              style={styles.meter}
+              hoverStyle={styles.meterHover}
+              onClick={() => setSettingsPanel("usage")}
+              aria-label={`BigQuery usage this session: ${meter.scanned} scanned, ${meter.billed} billed, ${meter.cost} estimated. Open usage details`}
+              aria-haspopup="dialog"
+              title={`BigQuery this session: ${meter.scanned} scanned · ${meter.billed} billed · ${meter.cost} estimated`}
+            >
+              <GaugeIcon size={14} strokeWidth={2.2} style={styles.meterIcon} aria-hidden="true" />
+              {compact ? (
+                <span>{meter.cost}</span>
+              ) : (
+                <>
+                  <span>{meter.scanned}</span>
+                  <span style={styles.meterDot} aria-hidden="true">·</span>
+                  <span>{meter.billed}</span>
+                  <span style={styles.meterDot} aria-hidden="true">·</span>
+                  <span>{meter.cost}</span>
+                </>
+              )}
+            </Clickable>
+            <span style={{ ...styles.userDivider, ...compactStyle("userDivider") }} aria-hidden="true" />
+          </>
+        )}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }} title={compact ? userEmail : undefined}>
+          <UserIcon size={16} style={styles.userIcon} />
+          <span style={compact ? Style.elements.visuallyHidden : undefined}>{userEmail}</span>
+        </span>
         <span style={{ ...styles.userDivider, ...compactStyle("userDivider") }} aria-hidden="true" />
         <Clickable
           style={Style.buttons.icon}
           hoverStyle={Style.buttons.iconHover}
-          onClick={() => setSettingsOpen(true)}
+          onClick={() => setSettingsPanel("sources")}
           aria-label="Settings"
           aria-haspopup="dialog"
           title="Settings"
@@ -349,7 +447,15 @@ export default function TopBar({
           <GearIcon size={15} />
         </Clickable>
       </div>
-      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+      {settingsPanel && (
+        <SettingsDialog
+          initialPanel={settingsPanel}
+          onClose={() => {
+            setSettingsPanel(null);
+            if (showMeter) readUsage();
+          }}
+        />
+      )}
     </div>
   );
 }

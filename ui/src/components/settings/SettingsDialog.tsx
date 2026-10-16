@@ -84,10 +84,12 @@ const styles = {
 
 interface SettingsDialogProps {
   onClose: () => void;
+  /** The panel to open on, by id; the first one when omitted. */
+  initialPanel?: string;
 }
 
-export default function SettingsDialog({ onClose }: SettingsDialogProps) {
-  const [selectedId, setSelectedId] = useState(PANELS[0].id);
+export default function SettingsDialog({ onClose, initialPanel }: SettingsDialogProps) {
+  const [selectedId, setSelectedId] = useState(initialPanel ?? PANELS[0].id);
   const { hoveredKey, hoverProps } = useHoveredKey<string>();
   const dialogRef = useRef<HTMLDivElement>(null);
   const selected = PANELS.find((panel) => panel.id === selectedId) ?? PANELS[0];

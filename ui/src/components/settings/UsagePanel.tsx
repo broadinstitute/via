@@ -6,6 +6,7 @@ import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import { formatBytes, formatInt, formatUsd } from "../../utils/format";
+import { usePreference } from "../../utils/preferences";
 import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, UserIcon } from "../icons";
 
@@ -25,6 +26,22 @@ const styles = {
     justifyContent: "space-between",
     gap: 12,
     marginBottom: 6,
+  },
+  // The one setting here: whether the top bar carries the meter. A checkbox with its label, in
+  // the intro's slot under the title.
+  option: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+    fontSize: 12,
+    color: colors.textBody,
+    cursor: "pointer",
+  },
+  optionBox: {
+    margin: 0,
+    accentColor: colors.textAccent,
+    cursor: "pointer",
   },
   // The session's totals, one labelled cell each, in a bar.
   strip: {
@@ -298,6 +315,7 @@ export default function UsagePanel() {
   // Zero-based; clamped below so a refresh that shortens the log can't leave it past the end.
   const [page, setPage] = useState(0);
   const { hoveredKey, hoverProps } = useHoveredKey<number>();
+  const [showMeter, setShowMeter] = usePreference("showUsageMeter");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -338,6 +356,15 @@ export default function UsagePanel() {
           {loading ? "Refreshing..." : "Refresh"}
         </Clickable>
       </div>
+      <label style={styles.option}>
+        <input
+          type="checkbox"
+          style={styles.optionBox}
+          checked={showMeter}
+          onChange={(event) => setShowMeter(event.target.checked)}
+        />
+        <span>Show usage in the top bar</span>
+      </label>
 
       {error ? (
         <div role="alert" style={Style.elements.errorNote}>

@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readPreferences } from "../../utils/preferences";
 import SettingsDialog from "./SettingsDialog";
 
 /** Answers /api/status with the given body, /api/sources with SOURCES and /api/usage with USAGE. */
@@ -95,6 +96,23 @@ describe("SettingsDialog", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    window.localStorage.clear();
+  });
+
+  it("offers the top bar's usage meter as a checkbox, off by default, and keeps the choice", async () => {
+    render(<SettingsDialog onClose={vi.fn()} initialPanel="usage" />);
+
+    const box = await screen.findByRole("checkbox", { name: /Show usage in the top bar/ });
+    expect(box).not.toBeChecked();
+    expect(readPreferences().showUsageMeter).toBe(false);
+
+    fireEvent.click(box);
+    expect(box).toBeChecked();
+    expect(readPreferences().showUsageMeter).toBe(true);
+
+    cleanup();
+    render(<SettingsDialog onClose={vi.fn()} initialPanel="usage" />);
+    expect(await screen.findByRole("checkbox", { name: /Show usage in the top bar/ })).toBeChecked();
   });
 
   it("opens on the data sources panel", async () => {
