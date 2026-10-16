@@ -261,8 +261,8 @@ export default function TopBar({
   modifyOpen = false,
   editSearchPanel,
 }: TopBarProps) {
-  // Which settings panel is open, or null for none: the gear opens the first, the meter opens Usage.
-  const [settingsPanel, setSettingsPanel] = useState<string | null>(null);
+  // The settings dialog: closed, open on its default panel, or open on a named one (the meter opens Usage).
+  const [settings, setSettings] = useState<{ panel?: string } | null>(null);
   const [usage, setUsage] = useState<QueryUsage | null>(null);
   const { hovered: brandHovered, hoverProps: brandHoverProps } = useHover();
   const { hovered: searchHovered, hoverProps: searchHoverProps } = useHover();
@@ -393,7 +393,7 @@ export default function TopBar({
             <Clickable
               style={styles.meter}
               hoverStyle={styles.meterHover}
-              onClick={() => setSettingsPanel("usage")}
+              onClick={() => setSettings({ panel: "usage" })}
               aria-label={`BigQuery usage this session: ${meter.scanned} scanned, ${meter.billed} billed, ${meter.cost} estimated. Open usage details`}
               aria-haspopup="dialog"
               title={`BigQuery this session: ${meter.scanned} scanned · ${meter.billed} billed · ${meter.cost} estimated`}
@@ -422,7 +422,7 @@ export default function TopBar({
         <Clickable
           style={Style.buttons.icon}
           hoverStyle={Style.buttons.iconHover}
-          onClick={() => setSettingsPanel("sources")}
+          onClick={() => setSettings({})}
           aria-label="Settings"
           aria-haspopup="dialog"
           title="Settings"
@@ -430,11 +430,11 @@ export default function TopBar({
           <GearIcon size={15} />
         </Clickable>
       </div>
-      {settingsPanel && (
+      {settings && (
         <SettingsDialog
-          initialPanel={settingsPanel}
+          initialPanel={settings.panel}
           onClose={() => {
-            setSettingsPanel(null);
+            setSettings(null);
             if (showMeter) readUsage();
           }}
         />

@@ -474,7 +474,7 @@ export default function UsagePanel() {
                               <td style={{ ...styles.jobCell, fontVariantNumeric: "tabular-nums" }}>{clockSeconds(job.at)}</td>
                               <td style={{ ...styles.jobCell, paddingLeft: 10 }}>{job.name}</td>
                               <td style={{ ...styles.jobCell, ...styles.jobCellRight }}>{formatBytes(job.bytesProcessed)}</td>
-                              <td style={{ ...styles.jobCell, ...styles.jobCellRight }}>{job.cacheHit ? "0" : formatBytes(job.bytesBilled)}</td>
+                              <td style={{ ...styles.jobCell, ...styles.jobCellRight }}>{formatBytes(job.bytesBilled)}</td>
                               <td style={{ ...styles.jobCell, paddingLeft: 10 }}>
                                 <span style={{ ...styles.tag, ...(job.cacheHit ? styles.tagCached : styles.tagBilled) }}>
                                   {job.cacheHit ? "cache" : "billed"}

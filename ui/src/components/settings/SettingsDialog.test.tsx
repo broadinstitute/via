@@ -203,9 +203,9 @@ describe("SettingsDialog", () => {
     const jobs = screen.getByRole("table", { name: "Queries run by request 2" });
     expect(within(jobs).getAllByRole("row").map((row) => row.textContent)).toEqual([
       "WhenQueryReadBilled",
-      expect.stringMatching(/VAT lookup25 KB0cache$/),
-      expect.stringMatching(/Resolve concept4 KB0cache$/),
-      expect.stringMatching(/Cohort count22 KB0cache$/),
+      expect.stringMatching(/VAT lookup25 KB0 Bcache$/),
+      expect.stringMatching(/Resolve concept4 KB0 Bcache$/),
+      expect.stringMatching(/Cohort count22 KB0 Bcache$/),
     ]);
     // The oldest is closed and billed; opening it lists its one billed query.
     expect(rows[2]).toHaveAttribute("aria-expanded", "false");

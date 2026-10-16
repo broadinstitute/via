@@ -167,6 +167,7 @@ components:
         - slotMilliseconds
         - estimatedCostUsd
         - since
+        - searches
       properties:
         queries:
           type: integer
