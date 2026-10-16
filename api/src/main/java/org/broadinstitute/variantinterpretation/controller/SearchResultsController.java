@@ -64,9 +64,8 @@ public class SearchResultsController implements SearchApi {
   private SearchResultsResponse search(List<String> requested, List<Long> conditionConceptIds) {
     List<CohortVariant> cohortVariants = vatLookup.lookup(requested);
     ConditionSearch conditionSearch = conditionLookup.search(conditionConceptIds);
-    if (conditionSearch != null && !conditionSearch.getConcepts().isEmpty()) {
-      usage.describeSearchPhenotype(
-          String.join(", ", conditionSearch.getConcepts().stream().map(MatchedConcept::getName).toList()));
+    if (conditionSearch != null) {
+      usage.describeSearchPhenotypes(conditionSearch.getConcepts().stream().map(MatchedConcept::getName).toList());
     }
     // Null both when no condition was picked and when none of the picked concepts was found.
     Integer participants = conditionSearch == null ? null : conditionSearch.getParticipantCount().orElse(null);

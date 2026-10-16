@@ -6,6 +6,7 @@ import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import { formatBytes, formatInt, formatUsd } from "../../utils/format";
+import { describeAlternatives } from "../../utils/phenotypes";
 import { usePreference } from "../../utils/preferences";
 import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, UserIcon } from "../icons";
@@ -439,10 +440,10 @@ export default function UsagePanel() {
                             <span style={styles.variants} title={search.variants.join("\n")}>
                               {previewVariants(search.variants)}
                             </span>
-                            {search.phenotype && (
-                              <span style={styles.phenotype} title={search.phenotype}>
+                            {search.phenotypes.length > 0 && (
+                              <span style={styles.phenotype} title={describeAlternatives(search.phenotypes)}>
                                 <UserIcon size={10} strokeWidth={2.5} aria-hidden="true" />
-                                {search.phenotype}
+                                {describeAlternatives(search.phenotypes)}
                               </span>
                             )}
                           </>

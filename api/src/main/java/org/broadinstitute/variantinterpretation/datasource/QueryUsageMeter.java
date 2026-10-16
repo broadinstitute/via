@@ -40,7 +40,7 @@ public class QueryUsageMeter {
     final OffsetDateTime at;
     final List<String> variants;
     final String term;
-    String phenotype;
+    List<String> phenotypes = List.of();
     final List<QueryJob> jobs = new ArrayList<>();
 
     SearchRecord(int id, SearchUsage.KindEnum kind, OffsetDateTime at, List<String> variants, String term) {
@@ -58,7 +58,7 @@ public class QueryUsageMeter {
           .kind(kind)
           .at(at)
           .variants(variants)
-          .phenotype(phenotype)
+          .phenotypes(phenotypes)
           .term(term)
           .queries(List.copyOf(jobs))
           .cacheHits((int) jobs.stream().filter(QueryJob::getCacheHit).count())
@@ -108,11 +108,14 @@ public class QueryUsageMeter {
     current.set(record);
   }
 
-  /** Names the current search's condition, once the search has resolved it. No-op outside a search. */
-  public synchronized void describeSearchPhenotype(String phenotype) {
+  /**
+   * Names the current search's conditions, once it has resolved them; the UI words the list, so
+   * it reads the same as everywhere else. No-op outside a search.
+   */
+  public synchronized void describeSearchPhenotypes(List<String> phenotypes) {
     SearchRecord search = current.get();
     if (search != null) {
-      search.phenotype = phenotype;
+      search.phenotypes = List.copyOf(phenotypes);
     }
   }
 

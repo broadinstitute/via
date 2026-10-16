@@ -20,8 +20,11 @@ export interface SearchUsage {
   at: string;
   /** For a search, the variant IDs searched; empty for a condition lookup. */
   variants: string[];
-  /** For a search, the picked condition's name; null when none was picked or it wasn't found. */
-  phenotype: string | null;
+  /**
+   * For a search, the names of the conditions it resolved, in request order; a participant is
+   * matched by any of them. Empty when none was picked or found, and for a condition lookup.
+   */
+  phenotypes: string[];
   /** For a condition lookup, the text looked up; null for a search. */
   term: string | null;
   /** In the order they ran. */

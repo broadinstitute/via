@@ -75,7 +75,7 @@ class QueryUsageMeterTest {
     meter.beginSearch(List.of("1-1-A-G", "2-2-C-T"));
     meter.record("VAT lookup", stats(26_000L, 10 * mib, false, 30L));
     meter.record("Resolve concept", stats(4_000L, 0L, true, 0L));
-    meter.describeSearchPhenotype("Tetralogy of Fallot");
+    meter.describeSearchPhenotypes(List.of("Tetralogy of Fallot", "Long QT syndrome"));
     meter.recordUnknown("Cohort count");
     meter.endSearch();
     // After the search ends, a job is in the totals but belongs to nothing.
@@ -90,7 +90,7 @@ class QueryUsageMeterTest {
     assertThat(search.getTerm().orElse(null)).isNull();
     assertThat(search.getAt().toInstant()).isEqualTo(START);
     assertThat(search.getVariants()).containsExactly("1-1-A-G", "2-2-C-T");
-    assertThat(search.getPhenotype().orElse(null)).isEqualTo("Tetralogy of Fallot");
+    assertThat(search.getPhenotypes()).containsExactly("Tetralogy of Fallot", "Long QT syndrome");
     assertThat(search.getQueries())
         .extracting(QueryJob::getName, QueryJob::getBytesBilled, QueryJob::getCacheHit)
         .containsExactly(
@@ -119,7 +119,7 @@ class QueryUsageMeterTest {
     assertThat(lookup.getKind()).isEqualTo(SearchUsage.KindEnum.CONDITION);
     assertThat(lookup.getTerm().orElse(null)).isEqualTo("long qt");
     assertThat(lookup.getVariants()).isEmpty();
-    assertThat(lookup.getPhenotype().orElse(null)).isNull();
+    assertThat(lookup.getPhenotypes()).isEmpty();
     assertThat(lookup.getQueries()).extracting(QueryJob::getName).containsExactly("Condition candidates");
     assertThat(lookup.getBytesBilled()).isEqualTo(10L * 1024 * 1024);
   }
@@ -150,9 +150,9 @@ class QueryUsageMeterTest {
     meter.record("VAT lookup", stats(1L, 1L, false, 1L));
     meter.endSearch();
     // Naming outside a search does nothing.
-    meter.describeSearchPhenotype("Ignored");
+    meter.describeSearchPhenotypes(List.of("Ignored"));
 
-    assertThat(meter.snapshot().getSearches().get(0).getPhenotype().orElse(null)).isNull();
+    assertThat(meter.snapshot().getSearches().get(0).getPhenotypes()).isEmpty();
   }
 
   /** BigQuery leaves figures null on some jobs (a dry run, a failed one); they count as nothing. */

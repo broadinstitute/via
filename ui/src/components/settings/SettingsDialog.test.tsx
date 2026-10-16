@@ -33,7 +33,7 @@ const USAGE = {
       kind: "condition",
       at: minutesAgo(0.5),
       variants: [],
-      phenotype: null,
+      phenotypes: [],
       term: "long qt",
       queries: [{ name: "Condition candidates", at: minutesAgo(0.5), cacheHit: false, bytesProcessed: 4096, bytesBilled: 10485760, slotMilliseconds: 20 }],
       cacheHits: 0,
@@ -46,7 +46,7 @@ const USAGE = {
       kind: "search",
       at: minutesAgo(1),
       variants: ["14-23424218-G-A", "11-47332274-G-A", "1-156134903-A-G"],
-      phenotype: "Hypertrophic cardiomyopathy",
+      phenotypes: ["Hypertrophic cardiomyopathy", "Long QT syndrome"],
       term: null,
       queries: [
         { name: "VAT lookup", at: minutesAgo(1), cacheHit: true, bytesProcessed: 26000, bytesBilled: 0, slotMilliseconds: 0 },
@@ -63,7 +63,7 @@ const USAGE = {
       kind: "search",
       at: minutesAgo(2),
       variants: ["14-23424218-G-A", "11-47332274-G-A", "1-156134903-A-G"],
-      phenotype: null,
+      phenotypes: [],
       term: null,
       queries: [{ name: "VAT lookup", at: minutesAgo(2), cacheHit: false, bytesProcessed: 26000, bytesBilled: 10485760, slotMilliseconds: 30 }],
       cacheHits: 0,
@@ -198,7 +198,7 @@ describe("SettingsDialog", () => {
     fireEvent.click(rows[1]);
     expect(rows[1]).toHaveAttribute("aria-expanded", "true");
     expect(rows[1]).toHaveTextContent("14-23424218-G-A, 11-47332274-G-A +1 more");
-    expect(rows[1]).toHaveTextContent("Hypertrophic cardiomyopathy");
+    expect(rows[1]).toHaveTextContent("Hypertrophic cardiomyopathy or Long QT syndrome");
     expect(rows[1]).toHaveTextContent(/3 queries0 Bcached$/);
     const jobs = screen.getByRole("table", { name: "Queries run by request 2" });
     expect(within(jobs).getAllByRole("row").map((row) => row.textContent)).toEqual([

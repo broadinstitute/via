@@ -224,7 +224,7 @@ components:
         - kind
         - at
         - variants
-        - phenotype
+        - phenotypes
         - term
         - queries
         - cacheHits
@@ -248,11 +248,15 @@ components:
           description: For a search, the variant IDs searched, as sent. Empty for a condition lookup.
           items:
             type: string
-        phenotype:
-          type: string
-          nullable: true
-          description: For a search, the picked condition's name; null when none was picked or it wasn't found.
-          example: "Hypertrophic cardiomyopathy"
+        phenotypes:
+          type: array
+          description: >-
+            For a search, the names of the conditions it resolved, in request
+            order; a participant is matched by any of them. Empty when none was
+            picked or found, and for a condition lookup.
+          items:
+            type: string
+          example: ["Hypertrophic cardiomyopathy", "Long QT syndrome"]
         term:
           type: string
           nullable: true
