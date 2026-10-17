@@ -35,13 +35,19 @@ function renderPage() {
   );
 }
 
-/** Routes /api/profile and /api/condition, which the page hits for different reasons. */
+/** The top bar's usage meter reads this on mount. */
+const USAGE = { queries: 0, cacheHits: 0, bytesProcessed: 0, bytesBilled: 0, slotMilliseconds: 0, estimatedCostUsd: 0, since: new Date().toISOString(), searches: [] };
+
+/** Routes /api/profile, /api/usage and /api/condition, which the page hits for different reasons. */
 function stubApi(candidates: unknown[], term: string) {
   vi.stubGlobal(
     "fetch",
     vi.fn((url: string) => {
       if (url.startsWith("/api/condition")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ term, candidates }) });
+      }
+      if (url === "/api/usage") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(USAGE) });
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ userEmail: "x@example.org" }) });
     }),

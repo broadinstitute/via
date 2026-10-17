@@ -1,3 +1,25 @@
+/**
+ * A byte count the way BigQuery's console shows one: binary units (1 GB = 1,024 MB), one decimal
+ * from MB up, whole numbers below. "0 B" for nothing.
+ */
+export function formatBytes(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const digits = unit >= 2 ? 1 : 0;
+  return `${value.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: digits })} ${units[unit]}`;
+}
+
+/** US dollars to the cent, with amounts under a cent shown as such rather than as $0.00. */
+export function formatUsd(amount: number): string {
+  if (amount > 0 && amount < 0.005) return "< $0.01";
+  return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function formatInt(value: number): string {
   return value.toLocaleString("en-US");
 }

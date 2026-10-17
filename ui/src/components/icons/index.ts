@@ -8,6 +8,7 @@ export { default as CloseIcon } from "./CloseIcon";
 export { default as CompareIcon } from "./CompareIcon";
 export { default as CopyIcon } from "./CopyIcon";
 export { default as EyeOffIcon } from "./EyeOffIcon";
+export { default as GaugeIcon } from "./GaugeIcon";
 export { default as GearIcon } from "./GearIcon";
 export { default as GlobeIcon } from "./GlobeIcon";
 export { default as InfoIcon } from "./InfoIcon";

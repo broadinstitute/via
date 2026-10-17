@@ -61,7 +61,7 @@ class ConditionLookupServiceTest {
 
     ConditionLookupService service() {
       BigQueryService bigQuery = mock(BigQueryService.class);
-      when(bigQuery.query(any()))
+      when(bigQuery.query(any(), any()))
           .thenAnswer(
               invocation -> {
                 QueryJobConfiguration config = invocation.<QueryJobConfiguration.Builder>getArgument(0).build();

@@ -7,9 +7,11 @@ import java.util.List;
 import org.broadinstitute.variantinterpretation.datasource.BigQueryProperties;
 import org.broadinstitute.variantinterpretation.datasource.BigQueryService;
 import org.broadinstitute.variantinterpretation.datasource.ConditionLookupService;
+import org.broadinstitute.variantinterpretation.datasource.QueryUsageMeter;
 import org.broadinstitute.variantinterpretation.api.SystemApi;
 import org.broadinstitute.variantinterpretation.model.BigQueryStatus;
 import org.broadinstitute.variantinterpretation.model.DataSourceVersion;
+import org.broadinstitute.variantinterpretation.model.QueryUsage;
 import org.broadinstitute.variantinterpretation.model.TableStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,10 +21,18 @@ public class SystemController implements SystemApi {
 
   private final BigQueryService bigQuery;
   private final BigQueryProperties properties;
+  private final QueryUsageMeter usage;
 
-  public SystemController(BigQueryService bigQuery, BigQueryProperties properties) {
+  public SystemController(BigQueryService bigQuery, BigQueryProperties properties, QueryUsageMeter usage) {
     this.bigQuery = bigQuery;
     this.properties = properties;
+    this.usage = usage;
+  }
+
+  /** What this instance has spent on BigQuery since it started; see QueryUsageMeter. */
+  @Override
+  public ResponseEntity<QueryUsage> queryUsage() {
+    return ResponseEntity.ok(usage.snapshot());
   }
 
   /**

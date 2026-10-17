@@ -8,6 +8,9 @@ import SearchResultsPage from "./SearchResultsPage";
  * resolved concepts name the search everywhere, and an edit re-runs with the list that's left.
  */
 
+/** The top bar's usage meter reads this once results have loaded. */
+const USAGE = { queries: 0, cacheHits: 0, bytesProcessed: 0, bytesBilled: 0, slotMilliseconds: 0, estimatedCostUsd: 0, since: new Date().toISOString(), searches: [] };
+
 const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47, participantCount: 49 };
 const HCM = { conceptId: 9000040, name: "Hypertrophic cardiomyopathy", estimatedParticipantCount: 212, participantCount: 214 };
 
@@ -46,6 +49,9 @@ function stubApi() {
         const ids = params.getAll("conditionConceptIds").map(Number);
         const concepts = [TETRALOGY, HCM].filter((c) => ids.includes(c.conceptId));
         return Promise.resolve({ ok: true, json: () => Promise.resolve(response(params.getAll("variants"), concepts)) });
+      }
+      if (url === "/api/usage") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(USAGE) });
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ userEmail: "x@example.org" }) });
     }),

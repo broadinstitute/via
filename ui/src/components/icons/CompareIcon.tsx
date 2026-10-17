@@ -1,6 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-/** A frame split down the middle with rows on either side: the head-to-head comparison, in miniature. */
 export default function CompareIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>

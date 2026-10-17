@@ -1,6 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-/** A grid with a header row: the table view. */
 export default function TableIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>

@@ -1,7 +1,23 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import TopBar from "./TopBar";
+import { updatePreferences } from "../../utils/preferences";
+import TopBar, { USAGE_REFRESH_MS } from "./TopBar";
+
+/** The meter is opt-in; these tests turn it on. */
+const showMeter = () => updatePreferences({ showUsageMeter: true });
+
+/** What /api/usage answers: 2.25 GiB scanned ("2.3 GB"), 2.5 GiB billed ("2.5 GB"). */
+const USAGE = {
+  queries: 14,
+  cacheHits: 5,
+  bytesProcessed: 2415919104,
+  bytesBilled: 2684354560,
+  slotMilliseconds: 48211,
+  estimatedCostUsd: 0.0146,
+  since: new Date().toISOString(),
+  searches: [],
+};
 
 function renderTopBar(props: Parameters<typeof TopBar>[0]) {
   return render(
@@ -14,6 +30,7 @@ function renderTopBar(props: Parameters<typeof TopBar>[0]) {
 describe("TopBar", () => {
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
   });
 
   it("renders the user email even without search controls", () => {
@@ -189,13 +206,23 @@ describe("TopBar", () => {
     expect(onModifySearch).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the settings dialog from the gear button", async () => {
+  /** Answers the settings panels' requests and the bar's own usage read. */
+  function stubBackend(usage: unknown = USAGE) {
+    const json = (body: unknown) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
     vi.stubGlobal(
       "fetch",
-      vi.fn(() =>
-        Promise.resolve({ ok: true, json: () => Promise.resolve([{ name: "gnomAD", version: "v3.1.2", url: null }]) }),
+      vi.fn((url: string) =>
+        url === "/api/usage"
+          ? json(usage)
+          : url === "/api/status"
+            ? json({ accessible: true, tables: [] })
+            : json([{ name: "gnomAD", version: "v3.1.2", url: null }]),
       ),
     );
+  }
+
+  it("opens the settings dialog from the gear button", async () => {
+    stubBackend();
     renderTopBar({ userEmail: "user@example.org" });
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -209,6 +236,134 @@ describe("TopBar", () => {
     vi.unstubAllGlobals();
   });
 
+  it("keeps the meter off the bar by default, without reading usage", async () => {
+    stubBackend();
+    renderTopBar({ userEmail: "user@example.org" });
+
+    expect(screen.queryByRole("button", { name: /BigQuery usage/ })).not.toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalledWith("/api/usage");
+
+    // Switched on from the Usage panel, it appears without a reload.
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /Show usage in the top bar/ }));
+    expect(await screen.findByRole("button", { name: /BigQuery usage this session: 2.3 GB scanned/ })).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the session's bytes scanned and opens the Usage panel from the meter", async () => {
+    showMeter();
+    stubBackend();
+    renderTopBar({ userEmail: "user@example.org" });
+
+    const meter = await screen.findByRole("button", {
+      name: "BigQuery usage this session: 2.3 GB scanned, 2.5 GB billed, $0.01 estimated. Open usage details",
+    });
+    expect(meter).toHaveTextContent("2.3 GB·2.5 GB·$0.01");
+    expect(meter).toHaveAttribute("title", "BigQuery this session: 2.3 GB scanned · 2.5 GB billed · $0.01 estimated");
+
+    fireEvent.click(meter);
+    const dialog = screen.getByRole("dialog", { name: "Settings" });
+    expect(within(dialog).getByRole("button", { name: "Usage" })).toHaveAttribute("aria-current", "page");
+    expect(await within(dialog).findByRole("heading", { name: "BigQuery usage" })).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("leaves the meter off the bar when usage can't be read", async () => {
+    showMeter();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: false, status: 503, statusText: "Service Unavailable", text: () => Promise.resolve("") })),
+    );
+    renderTopBar({ userEmail: "user@example.org" });
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/usage"));
+    expect(screen.queryByRole("button", { name: /BigQuery usage/ })).not.toBeInTheDocument();
+    expect(screen.getByText("user@example.org")).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("takes the meter down when a later read fails", async () => {
+    showMeter();
+    let down = false;
+    const json = (body: unknown) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        url === "/api/usage" && down
+          ? Promise.resolve({ ok: false, status: 503, statusText: "Service Unavailable", text: () => Promise.resolve("") })
+          : json(url === "/api/usage" ? USAGE : []),
+      ),
+    );
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      renderTopBar({ userEmail: "user@example.org" });
+      expect(await screen.findByText("2.3 GB")).toBeInTheDocument();
+
+      down = true;
+      act(() => vi.advanceTimersByTime(USAGE_REFRESH_MS));
+      await waitFor(() => expect(screen.queryByRole("button", { name: /BigQuery usage/ })).not.toBeInTheDocument());
+
+      // Back up on the next tick.
+      down = false;
+      act(() => vi.advanceTimersByTime(USAGE_REFRESH_MS));
+      expect(await screen.findByText("2.3 GB")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+    vi.unstubAllGlobals();
+  });
+
+  it("re-reads usage every minute while shown, and stops when switched off", async () => {
+    showMeter();
+    let bytes = USAGE.bytesProcessed;
+    const json = (body: unknown) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => (url === "/api/usage" ? json({ ...USAGE, bytesProcessed: bytes }) : json([]))),
+    );
+    // Only the interval is faked, so fetch's promises and findBy's polling still run for real.
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      renderTopBar({ userEmail: "user@example.org" });
+      expect(await screen.findByText("2.3 GB")).toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      // Another 2.25 GiB scanned since the first read; the meter catches up on its next tick.
+      bytes *= 2;
+      act(() => vi.advanceTimersByTime(USAGE_REFRESH_MS - 1));
+      expect(fetch).toHaveBeenCalledTimes(1);
+      act(() => vi.advanceTimersByTime(1));
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(await screen.findByText("4.5 GB")).toBeInTheDocument();
+
+      // Off again: the meter goes, and so do the reads.
+      act(() => updatePreferences({ showUsageMeter: false }));
+      expect(screen.queryByRole("button", { name: /BigQuery usage/ })).not.toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(USAGE_REFRESH_MS * 3));
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+    vi.unstubAllGlobals();
+  });
+
+  it("re-reads usage once a search has loaded", async () => {
+    showMeter();
+    stubBackend();
+    const { rerender } = renderTopBar({ userEmail: "user@example.org", loading: true, onModifySearch: vi.fn() });
+
+    expect(fetch).not.toHaveBeenCalledWith("/api/usage");
+    rerender(
+      <MemoryRouter>
+        <TopBar userEmail="user@example.org" loading={false} variantsEnteredCount={1} onModifySearch={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("2.3 GB")).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
   describe("at narrow width", () => {
     const matchMedia = window.matchMedia;
     beforeEach(() => {
@@ -219,6 +374,18 @@ describe("TopBar", () => {
     });
 
     const props = { userEmail: "user@example.org", onModifySearch: vi.fn() };
+
+    it("shows only the estimated cost in the usage meter, with the rest in its tooltip", async () => {
+      showMeter();
+      stubBackend();
+      renderTopBar(props);
+
+      const meter = await screen.findByRole("button", { name: /BigQuery usage this session/ });
+      expect(meter).toHaveTextContent("$0.01");
+      expect(meter).not.toHaveTextContent("GB");
+      expect(meter).toHaveAttribute("title", expect.stringContaining("2.3 GB scanned"));
+      vi.unstubAllGlobals();
+    });
 
     it("moves the email into the user icon's tooltip, still readable by screen readers", () => {
       const { container } = renderTopBar({ ...props, variantsEnteredCount: 3, phenotypes: [] });
