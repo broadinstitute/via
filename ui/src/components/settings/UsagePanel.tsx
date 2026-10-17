@@ -11,15 +11,6 @@ import { usePreference } from "../../utils/preferences";
 import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, UserIcon } from "../icons";
 
-// What this VIA instance has spent on BigQuery since it started, as a receipt: the totals as a
-// strip of four labelled stats, then the last requests newest first (searches, and the phenotype
-// type-ahead's lookups, which bill too), each a row that opens into the queries it ran. The
-// per-query rows are where the two things worth knowing show up: a repeated search is answered
-// from BigQuery's cache for nothing, and anything else is billed at least 10 MB per table it reads
-// (so the two-table overlap query bills 20 MB on an empty read; see "On-demand compute pricing" at
-// cloud.google.com/bigquery/pricing). Every search starts closed. Ten searches to a page, with the rest behind a pager, so
-// the dialog doesn't grow with the log.
-
 const styles = {
   heading: {
     display: "flex",
@@ -28,8 +19,6 @@ const styles = {
     gap: 12,
     marginBottom: 6,
   },
-  // The one setting here: whether the top bar carries the meter. A checkbox with its label, in
-  // the intro's slot under the title.
   option: {
     display: "flex",
     alignItems: "center",
@@ -79,7 +68,6 @@ const styles = {
     fontSize: 11,
     color: colors.textSecondary,
   },
-  // Over the list: what it holds, and since when.
   caption: {
     display: "flex",
     justifyContent: "space-between",
@@ -102,7 +90,6 @@ const styles = {
     borderRadius: Style.radius,
     overflow: "hidden",
   },
-  // A search's row: the toggle, when, what, and its cost at the right.
   search: {
     display: "flex",
     alignItems: "center",
@@ -149,7 +136,6 @@ const styles = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  // A type-ahead lookup: what it is, then the typed text in quotes.
   lookup: {
     overflow: "hidden",
     fontSize: 12,
@@ -204,7 +190,6 @@ const styles = {
     background: colors.bgAccent,
     color: colors.textAccent,
   },
-  // The opened search's queries, a small table in the panel's tint.
   jobs: {
     width: "100%",
     borderCollapse: "collapse",
@@ -237,7 +222,6 @@ const styles = {
     fontSize: 12.5,
     color: colors.textSecondary,
   },
-  // Which searches are showing, and the arrows to the ones before and after.
   pager: {
     display: "flex",
     alignItems: "center",

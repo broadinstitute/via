@@ -295,7 +295,10 @@ export default function TopBar({
       .then((next) => {
         if (read === usageRead.current) setUsage(next);
       })
-      .catch(() => {});
+      .catch(() => {
+        // Stale figures would look authoritative exactly when the backend is unreachable.
+        if (read === usageRead.current) setUsage(null);
+      });
   }, []);
   useEffect(() => {
     if (!showMeter || loading) return;

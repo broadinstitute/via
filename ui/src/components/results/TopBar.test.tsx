@@ -283,6 +283,37 @@ describe("TopBar", () => {
     vi.unstubAllGlobals();
   });
 
+  it("takes the meter down when a later read fails", async () => {
+    showMeter();
+    let down = false;
+    const json = (body: unknown) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        url === "/api/usage" && down
+          ? Promise.resolve({ ok: false, status: 503, statusText: "Service Unavailable", text: () => Promise.resolve("") })
+          : json(url === "/api/usage" ? USAGE : []),
+      ),
+    );
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      renderTopBar({ userEmail: "user@example.org" });
+      expect(await screen.findByText("2.3 GB")).toBeInTheDocument();
+
+      down = true;
+      act(() => vi.advanceTimersByTime(USAGE_REFRESH_MS));
+      await waitFor(() => expect(screen.queryByRole("button", { name: /BigQuery usage/ })).not.toBeInTheDocument());
+
+      // Back up on the next tick.
+      down = false;
+      act(() => vi.advanceTimersByTime(USAGE_REFRESH_MS));
+      expect(await screen.findByText("2.3 GB")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+    vi.unstubAllGlobals();
+  });
+
   it("re-reads usage every minute while shown, and stops when switched off", async () => {
     showMeter();
     let bytes = USAGE.bytesProcessed;
