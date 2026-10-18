@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>All of Us Variant Interpretation Application</title>
+  <meta name="description" content="Interpret candidate variants using the full All of Us participant cohort, with no coding required." />
+  <link rel="icon" type="image/svg+xml" href="img/via-mark.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500;1,600;1,700&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- Hero -->
+  <header id="hero">
+    <div class="hero-art" aria-hidden="true"><svg class="hero-watermark" viewBox="10 10 44 44">
+      <line x1="20" y1="21" x2="34" y2="21" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+      <line x1="18" y1="27" x2="36" y2="27" stroke="#5cc88d" stroke-width="3.8" stroke-linecap="round"/>
+      <line x1="20" y1="33" x2="34" y2="33" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+      <circle cx="27" cy="27" r="14" fill="none" stroke="#fff" stroke-width="4"/>
+      <line x1="37.5" y1="37.5" x2="50" y2="50" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/>
+    </svg></div>
+    <div class="top-logos">
+      <img src="img/all-of-us-research-program-logo-white.png" alt="All of Us Research Program" class="logo-aou" />
+      <span class="top-vertical-bar" aria-hidden="true"></span>
+      <span class="via-lockup">
+        <img src="img/via-mark-light.svg" alt="" class="logo-via" />
+        <span>VIA</span>
+      </span>
+    </div>
+
+    <div class="hero-body">
+      <p class="hero-eyebrow">Variant Interpretation Application</p>
+      <h1 class="hero-title">Interpret candidate variants <span class="green">using the full <i>All of Us</i> cohort</span></h1>
+      <p class="hero-description">
+        Paste a list of candidate variants and see how often each one appears across <i>All of Us</i> participants,
+        beside gnomAD, ClinVar and predicted impact. Add a phenotype to compare participants who share the
+        condition with everyone else. No coding required.
+      </p>
+      <div class="hero-actions">
+        <!-- TODO: point at the Researcher Workbench launch URL once VIA is published there. -->
+        <a class="btn-primary" href="#get-started">
+          Open VIA in the Researcher Workbench
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a class="btn-ghost" href="#how">See how it works</a>
+      </div>
+      <!-- Figures from NIH's 2025 release; see readme.md before changing them. -->
+      <a class="scale-callout" href="https://www.nih.gov/news-events/news-releases/nihs-all-us-research-program-now-largest-integrated-genomics-health-database-world" target="_blank" rel="noopener">
+        <span class="scale-figure">1.3B+</span>
+        <span class="scale-label"><b>variants</b><span class="scale-text">from the world's largest integrated genomics and health&nbsp;database&nbsp;<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg></span></span>
+      </a>
+    </div>
+
+    <!-- A product frame that overlaps the hero's bottom edge. Illustrative data. -->
+    <div class="hero-product" aria-hidden="true">
+      <div class="app-window">
+        <div class="app-topbar">
+          <span class="tb-brand"><img src="img/via-mark.svg" alt="" />VIA</span>
+          <span class="tb-divider"></span>
+          <span class="tb-search">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="tb-term">Variants <span class="tb-badge">6 entered</span></span>
+            <span class="tb-term-divider"></span>
+            <span class="tb-term">Phenotype <span class="tb-badge">Familial hypercholesterolemia</span></span>
+            <span class="tb-edit"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</span>
+          </span>
+          <span class="tb-user"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg><span class="tb-divider"></span><span class="tb-gear"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span></span>
+        </div>
+        <div class="app-strip">
+          <div class="strip-block">
+            <span class="strip-label">Phenotype</span>
+            <span class="strip-condition">
+            <span class="strip-value">Familial hypercholesterolemia</span>
+            <span class="strip-code">OMOP — 9000050 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span>
+            </span>
+          </div>
+          <div class="strip-block">
+            <span class="strip-label">Participants <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 17v-5.5" stroke-width="2.6"/><path d="M12 7.5h.01" stroke-width="3"/></svg></span>
+            <span class="strip-value"><b>391</b> <span class="strip-unit">matched</span></span>
+          </div>
+          <div class="strip-block strip-breakdown">
+            <span class="strip-label">Breakdown <span class="strip-tabs"><span class="on">Ancestry</span><span>Age</span></span></span>
+            <span class="breakdown-bar">
+              <span style="flex:53;background:var(--sub-eur)"></span><span style="flex:19;background:var(--sub-afr)"></span><span style="flex:16;background:var(--sub-amr)"></span><span style="flex:7;background:var(--sub-oth)"></span><span style="flex:3;background:var(--sub-eas)"></span><span style="flex:2;background:var(--sub-sas)"></span>
+            </span>
+            <span class="breakdown-legend"><span><i style="background:var(--sub-eur)"></i>EUR <small>53%</small></span><span><i style="background:var(--sub-afr)"></i>AFR <small>19%</small></span><span><i style="background:var(--sub-amr)"></i>AMR <small>16%</small></span><span><i style="background:var(--sub-oth)"></i>OTH <small>7%</small></span><span><i style="background:var(--sub-eas)"></i>EAS <small>3%</small></span><span><i style="background:var(--sub-sas)"></i>SAS <small>2%</small></span></span>
+          </div>
+          <div class="strip-block strip-view">
+            <span class="strip-label">View</span>
+            <span class="view-switch"><span class="on"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>Table</span><span><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><path d="M6 9h3M6 12h3M6 15h3M15 9h3M15 12h3M15 15h3"/></svg>Review</span></span>
+          </div>
+        </div>
+        <div class="app-panel">
+          <div class="panel-header">
+            <span class="panel-title">Candidate variants</span>
+            <span class="panel-right"><span class="panel-sub">Showing 6 results</span><span class="mini-btn">Export TSV</span></span>
+          </div>
+          <div class="app-table-scroll">
+            <table class="app-table" id="hero-table"></table>
+          </div>
+        </div>
+      </div>
+      <p class="illustrative">Illustrative data</p>
+    </div>
+  </header>
+
+  <!-- Why use VIA? -->
+  <section id="why">
+    <h2 class="section-title">Why use VIA?</h2>
+    <div class="why-grid">
+      <article class="why-box">
+        <span class="why-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 15l2 2 4-4"/></svg>
+        </span>
+        <div>
+          <h3>No coding required</h3>
+          <p>A purpose-built interface over <i>All of Us</i> genomic data. Paste variants, pick a phenotype and read the results, with no notebooks or SQL.</p>
+        </div>
+      </article>
+      <article class="why-box">
+        <span class="why-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4.5 4.5 0 0 1 8 0"/></svg>
+        </span>
+        <div>
+          <h3>The full <i>All of Us</i> cohort</h3>
+          <p>Look up any of more than a billion variants called from <i>All of Us</i> whole genomes, with frequencies overall and for each genetic ancestry group, beside gnomAD for reference.</p>
+        </div>
+      </article>
+      <article class="why-box">
+        <span class="why-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg>
+        </span>
+        <div>
+          <h3>Phenotype-matched comparison</h3>
+          <p>Because every genome is linked to its participant's health records, VIA can find everyone recorded with a condition and show each variant's frequency among them next to the cohort-wide figure.</p>
+        </div>
+      </article>
+      <article class="why-box">
+        <span class="why-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        </span>
+        <div>
+          <h3>Stays inside your workspace</h3>
+          <p>VIA runs as an app in your Researcher Workbench workspace and reads the curated data repository read-only. It stores no credentials of its own.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Two views -->
+  <section id="views">
+    <div class="views-intro">
+      <h2><span class="green">Two views</span> of the same evidence</h2>
+      <p>Scan every candidate in one table, then open Review to weigh one variant at a time.</p>
+    </div>
+    <!-- Mirrors the app's own Table / Review switcher. Sits on the band's bottom edge. -->
+    <div class="view-switcher" role="tablist" aria-label="VIA views">
+      <span class="switch-thumb" aria-hidden="true"></span>
+      <button class="switch-btn active" role="tab" id="tab-table" aria-selected="true" aria-controls="panel-table" data-view="table">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>
+        <span class="switch-text">
+          <span class="switch-name">Table</span>
+          <span class="switch-desc">Every figure side by side</span>
+        </span>
+      </button>
+      <button class="switch-btn" role="tab" id="tab-review" aria-selected="false" aria-controls="panel-review" data-view="review" tabindex="-1">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M6 9h3M6 13h3M15 9h3M15 13h3"/></svg>
+        <span class="switch-text">
+          <span class="switch-name">Review</span>
+          <span class="switch-desc">The evidence behind each call</span>
+        </span>
+      </button>
+    </div>
+  </section>
+
+  <div id="view-content">
+    <section class="view-panel wide" id="panel-table" role="tabpanel" aria-labelledby="tab-table">
+      <div class="view-copy">
+        <h3>Every candidate in one row</h3>
+        <p>Each variant's frequency across all participants sits right beside its frequency among the phenotype-matched, so the comparison that matters takes a glance.</p>
+        <ul class="feature-list">
+          <li><i>All of Us</i> and gnomAD allele frequencies, with the ancestry group where each variant is most common</li>
+          <li>Homozygous and heterozygous carriers among matched participants, and ClinVar pathogenic variants in trans</li>
+          <li>ClinVar classification with review stars, SpliceAI scores and LOFTEE loss-of-function calls</li>
+          <li>Expand any row for the variant's frequency in each ancestry group</li>
+        </ul>
+      </div>
+      <div class="view-figure" aria-hidden="true">
+        <div class="app-window compact">
+          <div class="panel-header">
+            <span class="panel-title">Candidate variants</span>
+            <span class="panel-right"><span class="panel-sub">Showing 6 results</span><span class="mini-btn">Export TSV</span></span>
+          </div>
+          <div class="app-table-scroll">
+            <table class="app-table" id="feature-table"></table>
+          </div>
+        </div>
+        <p class="illustrative">Illustrative data</p>
+      </div>
+    </section>
+
+    <section class="view-panel wide" id="panel-review" role="tabpanel" aria-labelledby="tab-review" hidden>
+      <div class="view-copy">
+        <h3>A verdict, and the evidence for it</h3>
+        <p>Review compares matched participants with the rest of the cohort, one variant at a time, and says plainly what the numbers support.</p>
+        <ul class="feature-list">
+          <li>A verdict for each variant: enriched, depleted, similar or inconclusive</li>
+          <li>Fisher's exact test, with a correction for testing many variants at once</li>
+          <li>An exact odds-ratio interval that holds up at the small counts typical of rare disease</li>
+          <li>Observed against expected carriers, adjusted for the matched group's ancestry</li>
+          <li>Candidates grouped by verdict and ranked by strength of signal, so the strongest leads come first</li>
+        </ul>
+      </div>
+      <div class="view-figure" aria-hidden="true">
+        <div class="app-window review">
+          <div class="panel-header">
+            <span class="panel-title">Review</span>
+            <span class="stepper"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg><span class="mono">2 of 6</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+          </div>
+          <div class="review-body">
+            <div class="review-rail">
+              <div class="rail-group"><span>Departs from cohort-wide</span><span>4</span></div>
+              <div class="rail-item"><span class="glyph enriched"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span><span class="rail-text"><b>LDLR</b><span class="mono">19-11120425-C-A</span></span><span class="rail-ratio">610×</span></div>
+              <div class="rail-item selected"><span class="glyph enriched solid"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span><span class="rail-text"><b>LDLR</b><span class="mono">19-11116928-G-A</span></span><span class="rail-ratio">20×</span></div>
+              <div class="rail-item"><span class="glyph enriched"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span><span class="rail-text"><b>APOB</b><span class="mono">2-21006288-C-T</span></span><span class="rail-ratio">19×</span></div>
+              <div class="rail-item"><span class="glyph depleted"><svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span><span class="rail-text"><b>PCSK9</b><span class="mono">1-55039974-G-T</span></span><span class="rail-ratio">0.33×</span></div>
+              <div class="rail-group"><span>Similar frequency</span><span>1</span></div>
+              <div class="rail-item"><span class="glyph similar"><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/></svg></span><span class="rail-text"><b>LDLR</b><span class="mono">19-11120205-T-C</span></span><span class="rail-ratio">0.92×</span></div>
+              <div class="rail-group"><span>Too few alleles</span><span>1</span></div>
+              <div class="rail-item"><span class="glyph none"><svg viewBox="0 0 24 24"><path d="M7 12h10"/></svg></span><span class="rail-text"><b>PCSK9</b><span class="mono">1-55046549-C-G</span></span></div>
+            </div>
+            <div class="review-detail">
+              <div class="review-head">
+                <div class="review-id">
+                  <div class="review-name"><b>LDLR</b><span class="mono">p.Gly592Glu</span></div>
+                  <div class="review-desc"><span>Missense</span><span>·</span><span class="mono">19-11116928-G-A</span></div>
+                </div>
+                <dl class="facts">
+                  <div class="fact"><dt>ClinVar</dt><dd><span class="cv p"><span class="code">P</span><span class="stars">3★</span></span></dd></div>
+                  <div class="fact"><dt>SpliceAI</dt><dd>0.00</dd></div>
+                  <div class="fact"><dt>pLOF</dt><dd>—</dd></div>
+                </dl>
+              </div>
+
+              <span class="review-eyebrow">Verdict</span>
+              <div class="verdict-strip enriched">
+                <div class="verdict-line"><span class="glyph enriched"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span><b>Enriched</b><span class="verdict-ratio">20×</span></div>
+                <p>5 alleles observed among participants with Familial hypercholesterolemia, 0.24 expected at the cohort-wide rate: more than chance can explain.</p>
+              </div>
+
+              <span class="review-eyebrow">Evidence</span>
+              <div class="evidence-grid">
+                <div class="evidence">
+                  <span class="ev-label">Fisher's exact p</span>
+                  <span class="ev-value">&lt; 0.001</span>
+                  <span class="ev-note">&lt; 0.001 after Bonferroni, 16 tests</span>
+                </div>
+                <div class="evidence">
+                  <span class="ev-label">Odds ratio</span>
+                  <span class="ev-value">21</span>
+                  <span class="ev-note">95% CI 6.8 – 51</span>
+                </div>
+                <div class="evidence">
+                  <span class="ev-label">Observed vs expected</span>
+                  <span class="ev-value">5 <span class="ev-vs">vs</span> 0.24</span>
+                  <span class="ev-note">0.31 expected adjusting for ancestry</span>
+                </div>
+                <div class="evidence">
+                  <span class="ev-label">Matched carriers</span>
+                  <span class="ev-value">5 <span class="ev-vs">of</span> 391</span>
+                  <span class="ev-note">0 hom · 5 het · 0 P/LP in trans</span>
+                </div>
+              </div>
+
+              <div class="review-columns">
+                <div>
+                  <span class="review-eyebrow">Head to head</span>
+                  <table class="compare">
+                    <thead><tr><th>Measure</th><th>All participants</th><th>Phenotype-matched</th></tr></thead>
+                    <tbody>
+                      <tr><td>Participants</td><td class="mono">239,930</td><td class="mono">391</td></tr>
+                      <tr><td>Allele frequency</td><td class="mono strong">0.0003</td><td class="mono strong">0.0064</td></tr>
+                      <tr><td>AC / AN</td><td class="mono">150 / 479,860</td><td class="mono">5 / 782</td></tr>
+                      <tr><td>Highest ancestry</td><td><span class="pop"><span class="dot" style="background:var(--sub-eur)"></span>EUR <span class="mono">0.0004</span></span></td><td><span class="pop"><span class="dot" style="background:var(--sub-eur)"></span>EUR <span class="mono">53% of matched</span></span></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <span class="review-eyebrow">Ancestry context</span>
+                  <table class="compare ancestry">
+                    <thead><tr><th>Ancestry</th><th>Share of matched</th><th><i>All of Us</i> AF</th><th><i>All of Us</i> AC / AN</th></tr></thead>
+                    <tbody>
+                      <tr class=popmax><td><span class="pop"><span class="dot" style="background:var(--sub-eur)"></span>EUR</span></td><td class="mono"><span class="share" style="width:32px"></span>53% (207)</td><td class="mono">0.0004</td><td class="mono">95 / 235,286</td></tr>
+                      <tr><td><span class="pop"><span class="dot" style="background:var(--sub-afr)"></span>AFR</span></td><td class="mono"><span class="share" style="width:11px"></span>19% (74)</td><td class="mono">0.0001</td><td class="mono">12 / 102,500</td></tr>
+                      <tr><td><span class="pop"><span class="dot" style="background:var(--sub-amr)"></span>AMR</span></td><td class="mono"><span class="share" style="width:10px"></span>16% (63)</td><td class="mono">0.0002</td><td class="mono">14 / 84,522</td></tr>
+                      <tr><td><span class="pop"><span class="dot" style="background:var(--sub-oth)"></span>OTH</span></td><td class="mono"><span class="share" style="width:4px"></span>7% (27)</td><td class="mono">0.0003</td><td class="mono">5 / 16,118</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="illustrative">Illustrative data</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- How it works -->
+  <section id="how">
+    <h2 class="section-title">How does VIA work?</h2>
+    <p class="section-sub">From a list of candidate variants to a short list worth a closer look.</p>
+    <ol class="steps">
+      <li class="step">
+        <div class="step-copy">
+          <h3>Open VIA in your workspace</h3>
+          <p>Launch VIA from a Researcher Workbench workspace with Controlled Tier access, which is where <i>All of Us</i> genomic data lives. There's nothing to install or configure.</p>
+        </div>
+        <div class="step-visual" aria-hidden="true">
+          <div class="mini-launch">
+            <img src="img/via-mark.svg" alt="" />
+            <span><b>VIA</b><small>Variant Interpretation</small></span>
+            <span class="mini-btn">Open</span>
+          </div>
+        </div>
+      </li>
+      <li class="step">
+        <div class="step-copy">
+          <h3>Enter candidate variants</h3>
+          <p>Paste them one per line as chromosome, position, reference and alternate allele, the way they come out of most pipelines.</p>
+        </div>
+        <div class="step-visual" aria-hidden="true">
+          <div class="mini-textarea mono">19-11116928-G-A<br />2-21006288-C-T<br />1-55039974-G-T<br /><span class="caret">19-11120436-C-T</span></div>
+        </div>
+      </li>
+      <li class="step">
+        <div class="step-copy">
+          <h3>Add a phenotype <span class="optional">Optional</span></h3>
+          <p>Start typing a condition and pick it from the list. VIA counts the participants recorded with it and shows their breakdown by ancestry and age.</p>
+        </div>
+        <div class="step-visual" aria-hidden="true">
+          <div class="mini-search">
+            <span class="mini-field"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>hypercholest</span>
+            <span class="mini-options">
+              <span class="mini-option active"><span>Familial hypercholesterolemia</span><span class="estimate"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>~386</span></span>
+              <span class="mini-option"><span>Hypercholesterolemia</span><span class="estimate"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>~12,800</span></span>
+            </span>
+          </div>
+        </div>
+      </li>
+      <li class="step">
+        <div class="step-copy">
+          <h3>Compare in the table</h3>
+          <p>Read each variant's frequency across all participants beside its frequency among matched participants, with annotations alongside.</p>
+        </div>
+        <div class="step-visual" aria-hidden="true">
+          <div class="mini-compare">
+            <span class="mc-cell aou"><small>All participants</small>0.0003</span>
+            <span class="mc-arrow">→</span>
+            <span class="mc-cell matched"><small>Phenotype-matched</small>0.0064</span>
+          </div>
+        </div>
+      </li>
+      <li class="step">
+        <div class="step-copy">
+          <h3>Review the evidence</h3>
+          <p>Open Review on any variant for a verdict, the statistics behind it and its ancestry context. Export the table as TSV to share.</p>
+        </div>
+        <div class="step-visual" aria-hidden="true">
+          <div class="mini-verdicts">
+            <span class="verdict-chip enriched"><span class="glyph enriched"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span>Enriched</span>
+            <span class="verdict-chip similar"><span class="glyph similar"><svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/></svg></span>Similar</span>
+            <span class="verdict-chip none"><span class="glyph none"><svg viewBox="0 0 24 24"><path d="M7 12h10"/></svg></span>Inconclusive</span>
+            <span class="verdict-chip depleted"><span class="glyph depleted"><svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span>Depleted</span>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- The engine: genomes linked to health records -->
+  <section id="engine">
+    <p class="engine-eyebrow">Genomes linked to health records</p>
+    <h2 class="section-title">Powered by the world's largest integrated genomics and health database</h2>
+    <p class="section-sub"><i>All of Us</i> links each participant's whole genome to their health records. That link is what lets VIA turn a condition into a comparison.</p>
+
+    <ol class="engine-flow">
+      <li class="engine-step">
+        <span class="engine-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM9 11h6M9 15h4"/></svg></span>
+        <h3>Health records</h3>
+        <p>Conditions recorded in participants' electronic health records</p>
+        <div class="engine-visual" aria-hidden="true">
+          <span class="mini-field"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>Familial hypercholesterolemia</span>
+        </div>
+      </li>
+      <li class="engine-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></li>
+      <li class="engine-step">
+        <span class="engine-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4.5 4.5 0 0 1 8 0"/></svg></span>
+        <h3>Matched participants</h3>
+        <p>Everyone recorded with the condition, and their ancestry and age</p>
+        <div class="engine-visual" aria-hidden="true">
+          <span class="engine-count"><b>391</b> participants</span>
+          <span class="breakdown-bar">
+            <span style="flex:53;background:var(--sub-eur)"></span><span style="flex:19;background:var(--sub-afr)"></span><span style="flex:16;background:var(--sub-amr)"></span><span style="flex:7;background:var(--sub-oth)"></span><span style="flex:3;background:var(--sub-eas)"></span><span style="flex:2;background:var(--sub-sas)"></span>
+          </span>
+        </div>
+      </li>
+      <li class="engine-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></li>
+      <li class="engine-step">
+        <span class="engine-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/><path d="M9.5 7h5M9.5 17h5"/></svg></span>
+        <h3>Their genomes</h3>
+        <p>Each candidate variant's frequency among them, beside the whole cohort</p>
+        <div class="engine-visual" aria-hidden="true">
+          <span class="mc-cell aou"><small>All participants</small>0.0003</span>
+          <span class="mc-cell matched"><small>Matched</small>0.0064</span>
+        </div>
+      </li>
+    </ol>
+
+    <p class="engine-close">A frequency database tells you how common a variant is. Linked health records let VIA tell you how common it is among the people who have the condition you're investigating.</p>
+  </section>
+
+  <!-- Data sources -->
+  <section id="sources">
+    <h2 class="section-title">Built on the sources you already trust</h2>
+    <div class="sources-grid">
+      <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/><path d="M9.5 7h5M9.5 17h5"/></svg></span><div><b><i>All of Us</i> genomic data</b><span>Whole-genome allele counts and frequencies, overall and by genetic ancestry</span></div></div>
+      <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM9 11h6M9 15h4"/></svg></span><div><b><i>All of Us</i> phenotypes</b><span>Conditions recorded for participants, for the phenotype-matched cohort</span></div></div>
+      <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 0 1 0 18a13.5 13.5 0 0 1 0-18z"/></svg></span><div><b>gnomAD</b><span>Population frequencies from an external reference</span></div></div>
+      <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span><div><b>ClinVar</b><span>Clinical classification and review status</span></div></div>
+      <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8 7.5L20 18M8 16.5L20 6"/></svg></span><div><b>SpliceAI</b><span>Predicted effect on splicing</span></div></div>
+      <div class="source"><span class="source-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h8M11 7v10M15 12h1.5M19.5 12h1.5"/></svg></span><div><b>LOFTEE</b><span>High- and low-confidence loss-of-function calls</span></div></div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <h2 class="section-title">Questions</h2>
+    <p class="section-sub">The ones we're asked first. Details on the statistics are in the app itself, beside each figure.</p>
+    <div class="faq-list">
+      <details class="faq">
+        <summary>Who can use VIA?</summary>
+        <p>Researchers with Controlled Tier access to the <i>All of Us</i> Researcher Workbench. <i>All of Us</i> makes its genomic data available only in the Controlled Tier, and VIA reads that data, so Registered Tier access isn't enough. VIA runs as an app inside your workspace, and nothing leaves the Workbench.</p>
+      </details>
+      <details class="faq">
+        <summary>How do I get Controlled Tier access?</summary>
+        <p>Four steps, all through <i>All of Us</i> rather than VIA:</p>
+        <ol>
+          <li><b>Institutional agreement.</b> Your institution needs a Data Use and Registration Agreement with <i>All of Us</i> that includes the Controlled Tier.</li>
+          <li><b>Register.</b> Create a Researcher Workbench account and verify your identity, which needs an eRA Commons account.</li>
+          <li><b>Train and sign.</b> Complete the Registered Tier training, sign the Data User Code of Conduct, then complete the additional Controlled Tier training.</li>
+          <li><b>Institutional sign-off.</b> Your institution approves your Controlled Tier access.</li>
+        </ol>
+        <p><a href="https://www.researchallofus.org/?p=4786" target="_blank" rel="noopener">The <i>All of Us</i> guide to accessing genomic data</a> has the current details and the list of institutions with agreements in place.</p>
+      </details>
+      <details class="faq">
+        <summary>Do I need to write code?</summary>
+        <p>No. You paste variant IDs, optionally pick a condition, and read the results. There are no notebooks, queries or files to manage.</p>
+      </details>
+      <details class="faq">
+        <summary>What does VIA compare?</summary>
+        <p>For each candidate variant, how often it appears across all <i>All of Us</i> participants with genomes, and, if you add a phenotype, how often it appears among the participants recorded with that condition. gnomAD frequencies, ClinVar classifications, SpliceAI scores and LOFTEE calls sit beside those figures for context.</p>
+      </details>
+      <details class="faq">
+        <summary>How does VIA decide a variant is enriched or depleted?</summary>
+        <p>Review compares the phenotype-matched participants with the rest of the cohort using Fisher's exact test and an exact confidence interval for the odds ratio. The verdict comes from that interval: enriched if it sits entirely above 1, depleted if entirely below, similar if it rules out a two-fold difference either way, and inconclusive otherwise. The p-value is also shown corrected for the number of variants you searched.</p>
+      </details>
+      <details class="faq">
+        <summary>Is VIA a clinical tool?</summary>
+        <p>VIA is a research tool. It summarises frequencies and statistics to support interpretation; it doesn't classify variants or make clinical determinations. Those remain with the interpreter, following your institution's processes.</p>
+      </details>
+      <details class="faq">
+        <summary>What does VIA store?</summary>
+        <p>Nothing on its own. It reads the curated data repository read-only using your workspace's credentials and keeps no copy. Your recent searches, just the variant IDs and the condition you picked, are remembered in your browser so you can re-run them, and you can clear them at any time.</p>
+      </details>
+      <details class="faq">
+        <summary>How many variants can I search at once?</summary>
+        <p>Up to 50 per search. You can export the results table as a TSV file to keep or share.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Get started -->
+  <section id="get-started">
+    <div class="cta-card">
+      <div>
+        <h2>Ready to look at your variants?</h2>
+        <p>VIA is in development for the <i>All of Us</i> Researcher Workbench. Open it from a workspace with Controlled Tier access.</p>
+      </div>
+      <!-- TODO: point at the Researcher Workbench launch URL once VIA is published there. -->
+      <a class="btn-primary" href="#get-started">
+        Open VIA
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <footer id="footer">
+    <!-- TODO: confirm the funding statement and award numbers with the program before publishing. -->
+    <p class="support-summary">
+      VIA is developed by the Broad Institute as part of the <i>All of Us</i> Data and Research Center.
+    </p>
+    <img src="img/broad-white-logo.png" alt="Broad Institute" class="logo-broad" />
+    <p class="support-detail">
+      <i>All of Us</i> and the <i>All of Us</i> logo are registered trademarks of the U.S. Department of Health and Human Services.
+      The inclusion of trade names, logos, trademarks, and references to outside entities does not constitute or imply an endorsement by any Federal entity.
+    </p>
+  </footer>
+
+  <script src="js/illustrations.js"></script>
+  <script src="js/tabs.js"></script>
+</body>
+</html>
