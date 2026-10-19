@@ -17,7 +17,10 @@ import java.util.Arrays;
 import java.util.List;
 import org.broadinstitute.variantinterpretation.model.ConditionOverlapCell;
 import org.broadinstitute.variantinterpretation.model.ConditionSearch;
+import org.broadinstitute.variantinterpretation.model.HpoTerm;
 import org.broadinstitute.variantinterpretation.model.MatchedConcept;
+import org.broadinstitute.variantinterpretation.ontology.HpoLookupService;
+import org.broadinstitute.variantinterpretation.ontology.HpoLookupServiceTest;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -30,6 +33,9 @@ class ConditionLookupServiceTest {
 
   private static final long TETRALOGY = 9000010L;
   private static final long HCM = 9000040L;
+
+  /** The trimmed ontology in test resources; see HpoLookupServiceTest for what it pairs. */
+  private static final HpoLookupService HPO = HpoLookupServiceTest.trimmed();
 
   private static final Field[] CONCEPT_ROW = {
     Field.of("concept_id", StandardSQLTypeName.INT64),
@@ -76,7 +82,7 @@ class ConditionLookupServiceTest {
                 return concepts;
               });
       return new ConditionLookupService(
-          bigQuery, new BigQueryProperties("billing", "project", "dataset", "vat", "cdr-project.cdr"));
+          bigQuery, new BigQueryProperties("billing", "project", "dataset", "vat", "cdr-project.cdr"), HPO);
     }
   }
 
@@ -145,7 +151,7 @@ class ConditionLookupServiceTest {
   @Test
   void search_returnsNullWhenNoConceptWasPicked() {
     // A null BigQuery client is the assertion: touching it would NPE.
-    ConditionLookupService service = new ConditionLookupService(null, null);
+    ConditionLookupService service = new ConditionLookupService(null, null, HPO);
     assertThat(service.search(null)).isNull();
     assertThat(service.search(List.of())).isNull();
     assertThat(service.search(Arrays.asList((Long) null))).isNull();
@@ -178,6 +184,10 @@ class ConditionLookupServiceTest {
         .containsExactly(
             tuple(HCM, "Hypertrophic cardiomyopathy", 212, 214), tuple(TETRALOGY, "Tetralogy of Fallot", 47, 49));
     assertThat(search.getParticipantCount().orElse(null)).isEqualTo(260);
+    // Each resolved concept carries the HPO term its name pairs with.
+    assertThat(search.getConcepts())
+        .extracting(m -> m.getHpo().map(HpoTerm::getId).orElse(null))
+        .containsExactly("HP:0001639", "HP:0001636");
     // Singles in request order, then the pair, whose ids are in request order too.
     assertThat(search.getConditionOverlap())
         .extracting(ConditionOverlapCell::getConceptIds, ConditionOverlapCell::getCount)
@@ -322,7 +332,7 @@ class ConditionLookupServiceTest {
    */
   @Test
   void candidates_returnsEmptyForBlankTerm() {
-    ConditionLookupService service = new ConditionLookupService(null, null);
+    ConditionLookupService service = new ConditionLookupService(null, null, HPO);
 
     for (String blank : new String[] {null, "", "   "}) {
       var result = service.candidates(blank);
@@ -335,13 +345,13 @@ class ConditionLookupServiceTest {
   /** Echoed back trimmed, so a type-ahead can match a response to the keystroke it came from. */
   @Test
   void candidates_echoesTheTrimmedTerm() {
-    ConditionLookupService service = new ConditionLookupService(null, null);
+    ConditionLookupService service = new ConditionLookupService(null, null, HPO);
     assertThat(service.candidates("  ( )  ").getTerm()).isEqualTo("( )");
   }
 
   @Test
   void candidates_returnsEmptyWhenNoUsableTerms() {
-    ConditionLookupService service = new ConditionLookupService(null, null);
+    ConditionLookupService service = new ConditionLookupService(null, null, HPO);
     assertThat(service.candidates("( )").getCandidates()).isEmpty();
   }
 

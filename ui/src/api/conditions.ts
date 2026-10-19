@@ -1,9 +1,23 @@
 import { apiFetch } from "./client";
 
+/**
+ * The Human Phenotype Ontology term the backend pairs with a condition concept, for display. A
+ * lexical pairing on the concept's name, not a curated mapping: "exact" when the name is the
+ * term's name or an exact synonym, "approximate" when the term is a broader phrase the name
+ * contains ("Hypercholesterolemia" for "Familial hypercholesterolemia").
+ */
+export interface HpoTerm {
+  id: string;
+  name: string;
+  match: "exact" | "approximate";
+}
+
 /** A condition concept matching a free-text term, as offered in the phenotype dropdown. */
 export interface ConditionConcept {
   conceptId: number;
   name: string;
+  /** The HPO term paired with this concept; null when none did. Absent from fixtures that predate it. */
+  hpo?: HpoTerm | null;
   /**
    * cb_criteria.est_count -- an estimate All of Us maintains, and what the ranking is based on.
    * Not the same number as the participant count /api/search returns for the same concept, and

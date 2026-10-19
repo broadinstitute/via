@@ -36,6 +36,38 @@ dependencies {
   testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
+// The Human Phenotype Ontology, pinned to a release and fetched at build time into the jar's
+// resources: VIA runs where it can't call out, so the ontology ships inside it. Bumping the release
+// means changing both the tag and the checksum here (the checksum is the whole point: a build
+// can't quietly pick up a different file). HpoOntology reads it from the classpath at startup.
+def hpoRelease = 'v2026-09-01'
+def hpoSha256 = '93dace952fcb3ec4728818857f6ba76bc2d5312f4d83266519b8694b8e798f22'
+def hpoDir = layout.buildDirectory.dir('generated-resources/hpo').get().asFile
+
+tasks.register('downloadHpo') {
+  description = "Fetches hp.obo ${hpoRelease} into the build's resources, verifying its checksum."
+  def target = new File(hpoDir, 'hpo/hp.obo')
+  outputs.file(target)
+  doLast {
+    target.parentFile.mkdirs()
+    if (!target.exists()) {
+      ant.get(
+        src: "https://github.com/obophenotype/human-phenotype-ontology/releases/download/${hpoRelease}/hp.obo",
+        dest: target,
+        verbose: false)
+    }
+    ant.checksum(file: target, algorithm: 'SHA-256', property: 'hpoActualSha256')
+    def actual = ant.properties['hpoActualSha256']
+    if (actual != hpoSha256) {
+      target.delete()
+      throw new GradleException("hp.obo ${hpoRelease} has SHA-256 ${actual}, expected ${hpoSha256}")
+    }
+  }
+}
+
+sourceSets.main.resources.srcDir(hpoDir)
+tasks.named('processResources') { dependsOn tasks.named('downloadHpo') }
+
 def openApiSpec = "$projectDir/src/main/resources/openapi/api.yaml"
 def generatedSourcesDir = layout.buildDirectory.dir('generated/sources/openapi').get().asFile
 

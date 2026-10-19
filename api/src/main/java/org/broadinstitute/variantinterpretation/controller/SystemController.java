@@ -13,6 +13,7 @@ import org.broadinstitute.variantinterpretation.model.BigQueryStatus;
 import org.broadinstitute.variantinterpretation.model.DataSourceVersion;
 import org.broadinstitute.variantinterpretation.model.QueryUsage;
 import org.broadinstitute.variantinterpretation.model.TableStatus;
+import org.broadinstitute.variantinterpretation.ontology.HpoLookupService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,11 +23,13 @@ public class SystemController implements SystemApi {
   private final BigQueryService bigQuery;
   private final BigQueryProperties properties;
   private final QueryUsageMeter usage;
+  private final HpoLookupService hpo;
 
-  public SystemController(BigQueryService bigQuery, BigQueryProperties properties, QueryUsageMeter usage) {
+  public SystemController(BigQueryService bigQuery, BigQueryProperties properties, QueryUsageMeter usage, HpoLookupService hpo) {
     this.bigQuery = bigQuery;
     this.properties = properties;
     this.usage = usage;
+    this.hpo = hpo;
   }
 
   /** What this instance has spent on BigQuery since it started; see QueryUsageMeter. */
@@ -60,7 +63,9 @@ public class SystemController implements SystemApi {
             source("gnomAD", "v3.1.2", "https://gnomad.broadinstitute.org/"),
             source("ClinVar", "2025-06-01", "https://www.ncbi.nlm.nih.gov/clinvar/"),
             source("SpliceAI", "v1.3", "https://github.com/Illumina/SpliceAI"),
-            source("LOFTEE", "v1.0.3", "https://github.com/konradjk/loftee")));
+            source("LOFTEE", "v1.0.3", "https://github.com/konradjk/loftee"),
+            // The one source that ships inside VIA, so its version is read from the file itself.
+            source("HPO", hpo.release(), "https://hpo.jax.org/")));
   }
 
   private static DataSourceVersion source(String name, String version, String url) {

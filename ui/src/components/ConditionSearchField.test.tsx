@@ -5,6 +5,13 @@ import ConditionSearchField from "./ConditionSearchField";
 const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47 };
 const REPAIRED = { conceptId: 9000018, name: "Fallot tetralogy, repaired", estimatedParticipantCount: 8 };
 const NO_ESTIMATE = { conceptId: 9000016, name: "Tetralogy of Fallot in adult", estimatedParticipantCount: null };
+const WITH_HPO = { ...TETRALOGY, hpo: { id: "HP:0001636", name: "Tetralogy of Fallot", match: "exact" } };
+const WITH_NEAREST_HPO = {
+  conceptId: 9000015,
+  name: "Tetralogy of Fallot, unspecified",
+  estimatedParticipantCount: 3,
+  hpo: { id: "HP:0001636", name: "Tetralogy of Fallot", match: "approximate" },
+};
 
 const PAST_DEBOUNCE_MS = 1200;
 configure({ asyncUtilTimeout: 2500 });
@@ -104,6 +111,25 @@ describe("ConditionSearchField", () => {
   });
 
   /** est_count is nullable in cb_criteria, so the option still has to render. */
+  /**
+   * The HPO term the backend paired with the concept rides along as a quiet id after the name,
+   * "≈" when it's only a broader term, so the pairing is seen when the concept is picked rather
+   * than discovered on the results page.
+   */
+  it("shows the paired HPO term beside a candidate, marking a nearest match, and none when there isn't one", async () => {
+    renderOpen([WITH_HPO, WITH_NEAREST_HPO, REPAIRED]);
+
+    const options = await screen.findAllByRole("option");
+    expect(options[0]).toHaveTextContent("Tetralogy of FallotHP:0001636");
+    expect(options[0]).toHaveAccessibleName("Tetralogy of Fallot, about 47 participants, HPO term HP:0001636, Tetralogy of Fallot");
+    expect(screen.getByTitle("HPO HP:0001636 Tetralogy of Fallot. Matched on the condition's name.")).toBeInTheDocument();
+    expect(options[1]).toHaveTextContent("Tetralogy of Fallot, unspecified≈ HP:0001636");
+    expect(options[1]).toHaveAccessibleName(/, nearest HPO term HP:0001636, Tetralogy of Fallot$/);
+    expect(screen.getByTitle(/^Nearest HPO term: HP:0001636 Tetralogy of Fallot\. Broader than the condition/)).toBeInTheDocument();
+    expect(options[2]).toHaveTextContent("Fallot tetralogy, repaired");
+    expect(options[2]).not.toHaveTextContent("HP:");
+  });
+
   it("labels a candidate with no estimate rather than showing a blank", async () => {
     renderOpen([NO_ESTIMATE]);
 

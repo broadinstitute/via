@@ -26,6 +26,44 @@ const TWO_CONDITIONS: ConditionSearch = {
   ],
 };
 
+/** The same condition with its HPO term, exact and with the same name, so the code alone is shown. */
+const CONDITION_WITH_HPO: ConditionSearch = {
+  ...CONDITION,
+  concepts: [{ ...CONDITION.concepts[0], hpo: { id: "HP:0001636", name: "Tetralogy of Fallot", match: "exact" } }],
+};
+
+/** A condition whose HPO term is a synonym match, so the term's own name is worth showing. */
+const LONG_QT: ConditionSearch = {
+  conceptIds: [9000050],
+  concepts: [
+    {
+      conceptId: 9000050,
+      name: "Long QT syndrome",
+      estimatedParticipantCount: 128,
+      participantCount: 130,
+      hpo: { id: "HP:0001657", name: "Prolonged QT interval", match: "exact" },
+    },
+  ],
+  participantCount: 130,
+  conditionOverlap: [{ conceptIds: [9000050], count: 130 }],
+};
+
+/** A condition with only a broader HPO term. */
+const FH: ConditionSearch = {
+  conceptIds: [9000060],
+  concepts: [
+    {
+      conceptId: 9000060,
+      name: "Familial hypercholesterolemia",
+      estimatedParticipantCount: 386,
+      participantCount: 390,
+      hpo: { id: "HP:0003124", name: "Hypercholesterolemia", match: "approximate" },
+    },
+  ],
+  participantCount: 390,
+  conditionOverlap: [{ conceptIds: [9000060], count: 390 }],
+};
+
 const ANCESTRY: BreakdownSegment[] = [
   { label: "EUR", count: 33, percent: 67.3, color: "#F9C854" },
   { label: "AFR", count: 16, percent: 32.7, color: "#2078B4" },
@@ -84,6 +122,50 @@ describe("PhenotypeSummaryStrip", () => {
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: /^Age breakdown: 40–49: .* \(100%\)$/ })).toBeInTheDocument();
     expect(screen.getByText("40–49")).toBeInTheDocument();
+  });
+
+  it("shows the HPO term under the condition as a link, with its name when that adds something", () => {
+    renderStrip({ conditionSearch: CONDITION_WITH_HPO, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+    const link = screen.getByRole("link", { name: "HPO term HP:0001636, Tetralogy of Fallot, opens the HPO browser" });
+    expect(link).toHaveTextContent("HPO — HP:0001636");
+    expect(link).toHaveAttribute("href", "https://hpo.jax.org/browse/term/HP:0001636");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("button", { name: "Copy HPO term ID" })).toBeInTheDocument();
+    // Same name as the condition: nothing more to say.
+    expect(screen.getAllByText("Tetralogy of Fallot")).toHaveLength(1);
+
+    cleanup();
+    renderStrip({ conditionSearch: LONG_QT, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+    expect(screen.getByRole("link", { name: /^HPO term HP:0001657/ })).toHaveTextContent("HPO — HP:0001657");
+    expect(screen.getByText("Prolonged QT interval")).toBeInTheDocument();
+
+    cleanup();
+    renderStrip({ conditionSearch: FH, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+    const nearest = screen.getByRole("link", { name: /^Nearest HPO term HP:0003124, Hypercholesterolemia/ });
+    expect(nearest).toHaveTextContent("HPO — ≈ HP:0003124");
+    expect(screen.getByText("nearest: Hypercholesterolemia")).toBeInTheDocument();
+    expect(nearest.parentElement).toHaveAttribute("title", expect.stringMatching(/^Nearest HPO term HP:0003124 Hypercholesterolemia: broader than the condition/));
+
+    // Without a term there's no HPO line at all.
+    cleanup();
+    renderStrip({ conditionSearch: CONDITION, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+    expect(screen.queryByText(/HPO/)).not.toBeInTheDocument();
+  });
+
+  it("trails each condition's HPO id after its code in the several-conditions table", () => {
+    const withHpo: ConditionSearch = {
+      ...TWO_CONDITIONS,
+      concepts: [
+        { ...TWO_CONDITIONS.concepts[0], hpo: { id: "HP:0001636", name: "Tetralogy of Fallot", match: "exact" } },
+        { ...TWO_CONDITIONS.concepts[1], hpo: null },
+      ],
+    };
+    renderStrip({ conditionSearch: withHpo, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+
+    const rows = within(screen.getByRole("list", { name: /Conditions, any of/ })).getAllByRole("listitem");
+    expect(rows.map((row) => row.textContent)).toEqual(["Tetralogy of Fallot9000010HP:000163649", "Hypertrophic cardiomyopathy9000040214"]);
+    expect(within(rows[0]).getByRole("link", { name: /^HPO term HP:0001636/ })).toHaveAttribute("href", "https://hpo.jax.org/browse/term/HP:0001636");
+    expect(within(rows[0]).getByTitle(/HPO HP:0001636 Tetralogy of Fallot, matched on the condition's name$/)).toBeInTheDocument();
   });
 
   it("switches views from its segmented control", () => {

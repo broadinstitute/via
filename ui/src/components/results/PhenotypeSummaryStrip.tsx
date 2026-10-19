@@ -11,6 +11,20 @@ import InfoTooltip from "../common/InfoTooltip";
 import { PlusIcon } from "../icons";
 import BreakdownBar from "./BreakdownBar";
 import CopyButton from "./CopyButton";
+import { hpoTermUrl } from "../../utils/externalLinks";
+import type { HpoTerm } from "../../api/conditions";
+
+/** The HPO id as the strip shows it, "≈" for a nearest (broader) term, with the full story for tooltips. */
+function describeHpoCode(hpo: HpoTerm): { label: string; tooltip: string; spoken: string } {
+  const exact = hpo.match === "exact";
+  return {
+    label: exact ? hpo.id : `≈ ${hpo.id}`,
+    tooltip: exact
+      ? `HPO ${hpo.id} ${hpo.name}, matched on the condition's name`
+      : `Nearest HPO term ${hpo.id} ${hpo.name}: broader than the condition, no exact term matched its name`,
+    spoken: `${exact ? "HPO term" : "Nearest HPO term"} ${hpo.id}, ${hpo.name}, opens the HPO browser`,
+  };
+}
 import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
 
 // A full-width band between the top bar and the results. Four blocks with one
@@ -143,6 +157,24 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     gap: 2,
+  },
+  // The two codes side by side under the name: OMOP first (what was counted), then HPO.
+  codeLines: {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: "2px 12px",
+  },
+  codeLink: {
+    textDecoration: "none",
+  },
+  // The HPO term's name when it isn't the condition's own, and the caveat for a nearest match.
+  codeNote: {
+    marginLeft: 4,
+    color: colors.textMuted,
+    fontFamily: "inherit",
+    fontSize: 10.5,
+    fontWeight: 500,
   },
   code: {
     ...Style.elements.trimmedText,
@@ -344,10 +376,24 @@ export default function PhenotypeSummaryStrip({
             <ul style={styles.conditionList} aria-label="Conditions, any of, with participants matched by each">
               {concepts.map((concept) => (
                 <li key={concept.conceptId} style={styles.conditionRow}>
-                  <span style={styles.conditionRowName} title={`${concept.name} · OMOP ${concept.conceptId}`}>
+                  <span
+                    style={styles.conditionRowName}
+                    title={`${concept.name} · OMOP ${concept.conceptId}${concept.hpo ? ` · ${describeHpoCode(concept.hpo).tooltip}` : ""}`}
+                  >
                     <span style={styles.conditionRowText}>{concept.name}</span>
                     <span style={styles.trailingCode}>{concept.conceptId}</span>
                     <CopyButton getText={() => String(concept.conceptId)} label={`Copy OMOP concept ID ${concept.conceptId}`} />
+                    {concept.hpo && (
+                      <a
+                        href={hpoTermUrl(concept.hpo.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ ...styles.trailingCode, ...styles.codeLink }}
+                        aria-label={describeHpoCode(concept.hpo).spoken}
+                      >
+                        {describeHpoCode(concept.hpo).label}
+                      </a>
+                    )}
                   </span>
                   <span style={styles.conditionCount} aria-label={`${formatInt(concept.participantCount)} participants`}>
                     {formatInt(concept.participantCount)}
@@ -360,9 +406,30 @@ export default function PhenotypeSummaryStrip({
               <span style={styles.conditionName} title={concepts[0].name}>
                 {concepts[0].name}
               </span>
-              <span style={styles.codeLine}>
-                <span style={styles.code}>OMOP — {concepts[0].conceptId}</span>
-                <CopyButton getText={() => String(concepts[0].conceptId)} label="Copy OMOP concept ID" />
+              <span style={styles.codeLines}>
+                <span style={styles.codeLine}>
+                  <span style={styles.code}>OMOP — {concepts[0].conceptId}</span>
+                  <CopyButton getText={() => String(concepts[0].conceptId)} label="Copy OMOP concept ID" />
+                </span>
+                {concepts[0].hpo && (
+                  <span style={styles.codeLine} title={describeHpoCode(concepts[0].hpo).tooltip}>
+                    <a
+                      href={hpoTermUrl(concepts[0].hpo.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ ...styles.code, ...styles.codeLink }}
+                      aria-label={describeHpoCode(concepts[0].hpo).spoken}
+                    >
+                      HPO — {describeHpoCode(concepts[0].hpo).label}
+                    </a>
+                    <CopyButton getText={() => concepts[0].hpo!.id} label="Copy HPO term ID" />
+                    {(concepts[0].hpo.match !== "exact" || concepts[0].hpo.name !== concepts[0].name) && (
+                      <span style={styles.codeNote}>
+                        {concepts[0].hpo.match === "exact" ? concepts[0].hpo.name : `nearest: ${concepts[0].hpo.name}`}
+                      </span>
+                    )}
+                  </span>
+                )}
               </span>
             </div>
           ) : (
