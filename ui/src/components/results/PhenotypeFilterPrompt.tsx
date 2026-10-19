@@ -6,7 +6,7 @@ import Clickable from "../common/Clickable";
 import { describeAlternatives } from "../../utils/phenotypes";
 import { PlusIcon } from "../icons";
 import PhenotypeFilterIllustration from "./PhenotypeFilterIllustration";
-import { TOP_BAR_HEIGHT } from "./TopBar";
+import { TOP_BAR_HEIGHT } from "../shell/TopBar";
 
 // What the phenotype-matched columns hold when there's nothing matched to show: the picture, one
 // line saying what the columns would show, and the button that fills them. It sits on a white card

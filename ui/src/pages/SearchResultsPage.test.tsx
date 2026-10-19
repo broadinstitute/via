@@ -1,6 +1,7 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createSavedSearch, findSavedSearch, loadSavedSearches } from "../utils/savedSearches";
 import SearchResultsPage from "./SearchResultsPage";
 
 /**
@@ -8,7 +9,7 @@ import SearchResultsPage from "./SearchResultsPage";
  * resolved concepts name the search everywhere, and an edit re-runs with the list that's left.
  */
 
-/** The top bar's usage meter reads this once results have loaded. */
+/** Answered for completeness; the rail's meter, not the page, reads it. */
 const USAGE = { queries: 0, cacheHits: 0, bytesProcessed: 0, bytesBilled: 0, slotMilliseconds: 0, estimatedCostUsd: 0, since: new Date().toISOString(), searches: [] };
 
 const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot", estimatedParticipantCount: 47, participantCount: 49 };
@@ -64,6 +65,7 @@ function renderPage(search: string) {
     <MemoryRouter initialEntries={[`/results?${search}`]}>
       <Routes>
         <Route path="/results" element={<SearchResultsPage />} />
+        <Route path="/saved/:id" element={<p>saved search page</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -118,5 +120,36 @@ describe("SearchResultsPage", () => {
     expect(searches[1]).toBe("/api/search?variants=2-2-C-T&conditionConceptIds=9000040");
     await waitFor(() => expect(screen.getByRole("button", { name: "Edit search" })).toHaveAccessibleDescription(/Phenotype\s*Hypertrophic cardiomyopathy$/));
     expect(screen.queryByRole("list", { name: /Conditions, any of/ })).not.toBeInTheDocument();
+  });
+
+  it("saves the loaded search from the bar, then names it there and logs the run", async () => {
+    stubApi();
+    renderPage("variants=3-3-G-A&conditionConceptIds=9000010");
+    const save = screen.getByRole("button", { name: "Save search" });
+    expect(save).toBeDisabled();
+    await waitFor(() => expect(save).toBeEnabled());
+
+    fireEvent.click(save);
+    const dialog = screen.getByRole("dialog", { name: "Save search" });
+    expect(dialog).toHaveTextContent("1 variant · Tetralogy of Fallot.");
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "ToF panel" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    const saved = loadSavedSearches();
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({ name: "ToF panel", variants: ["3-3-G-A"], conditions: [{ conceptId: 9000010, name: "Tetralogy of Fallot" }] });
+    expect(saved[0].runs).toEqual([{ at: expect.any(Number), matchedCount: 260 }]);
+    expect(screen.queryByRole("button", { name: "Save search" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ToF panel" })).toHaveAttribute("href", `/saved/${saved[0].id}`);
+  });
+
+  it("logs a run to the saved search it was run from, and names it in the bar", async () => {
+    stubApi();
+    const saved = createSavedSearch({ name: "HCM set", variants: ["4-4-A-T"], conditions: [{ conceptId: 9000040, name: "Hypertrophic cardiomyopathy" }] });
+    renderPage(`variants=4-4-A-T&conditionConceptIds=9000040&saved=${saved.id}`);
+
+    await waitFor(() => expect(findSavedSearch(saved.id)?.runs).toHaveLength(1));
+    expect(findSavedSearch(saved.id)?.runs[0].matchedCount).toBe(260);
+    expect(screen.getByRole("link", { name: "HCM set" })).toHaveAttribute("href", `/saved/${saved.id}`);
   });
 });

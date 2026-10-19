@@ -10,7 +10,7 @@ import { SearchIcon } from "../icons";
 import PhenotypeStep from "../PhenotypeStep";
 import SearchSteps from "../SearchSteps";
 import VariantsStep from "../VariantsStep";
-import { TOP_BAR_HEIGHT } from "./TopBar";
+import { TOP_BAR_HEIGHT } from "../shell/TopBar";
 
 const styles = {
   backdrop: {

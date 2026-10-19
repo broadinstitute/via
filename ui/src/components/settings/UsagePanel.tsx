@@ -348,7 +348,7 @@ export default function UsagePanel() {
           checked={showMeter}
           onChange={(event) => setShowMeter(event.target.checked)}
         />
-        <span>Show usage in the top bar</span>
+        <span>Show usage on the rail</span>
       </label>
 
       {error ? (

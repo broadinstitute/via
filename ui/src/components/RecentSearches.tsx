@@ -5,10 +5,8 @@ import colors from "../libs/colors";
 import { useHover } from "../libs/hooks";
 import * as Style from "../libs/style";
 import {
-  clearRecentSearches,
   describeSearchedAt,
   groupRecentSearches,
-  loadRecentSearches,
   type RecentSearch,
   type RecentSearchGroup,
 } from "../utils/recentSearches";
@@ -21,32 +19,6 @@ import { ChevronDownIcon, ChevronRightIcon, SearchIcon, UserIcon } from "./icons
 const PREVIEW_VARIANTS = 3;
 
 const styles = {
-  section: {
-    marginTop: 28,
-  },
-  header: {
-    display: "flex",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    padding: "0 4px",
-  },
-  heading: {
-    ...Style.elements.eyebrow,
-    color: colors.textSecondary,
-  },
-  clear: {
-    padding: 0,
-    border: "none",
-    background: "none",
-    color: colors.textMuted,
-    fontSize: 11.5,
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  clearHover: {
-    color: colors.textAccent,
-  },
   list: {
     ...Style.elements.panel,
     margin: 0,
@@ -185,16 +157,12 @@ const conditionNames = (search: RecentSearch) => describeAlternatives(search.con
 /**
  * The searches run in this browser (see utils/recentSearches), each re-run with a click, grouped
  * by when: today, this week, and earlier, which starts folded so a long history doesn't push the
- * page down. Renders nothing until there's history, so a first visit isn't met with an empty list.
+ * page down. The page around it supplies the heading, the Clear action and the empty state.
  */
-export default function RecentSearches() {
+export default function RecentSearches({ searches }: { searches: RecentSearch[] }) {
   const navigate = useNavigate();
-  const [searches, setSearches] = useState(loadRecentSearches);
   const [earlierOpen, setEarlierOpen] = useState(false);
-  const { hovered: clearHovered, hoverProps: clearHoverProps } = useHover();
   const { hovered: earlierHovered, hoverProps: earlierHoverProps } = useHover();
-
-  if (searches.length === 0) return null;
   const groups = groupRecentSearches(searches);
 
   const groupHeading = (group: RecentSearchGroup, first: boolean) => {
@@ -223,23 +191,6 @@ export default function RecentSearches() {
   };
 
   return (
-    <section style={styles.section} aria-labelledby="recentSearchesHeading">
-      <div style={styles.header}>
-        <h2 id="recentSearchesHeading" style={styles.heading}>
-          Recent searches
-        </h2>
-        <button
-          type="button"
-          style={{ ...styles.clear, ...(clearHovered ? styles.clearHover : undefined) }}
-          onClick={() => {
-            clearRecentSearches();
-            setSearches([]);
-          }}
-          {...clearHoverProps}
-        >
-          Clear
-        </button>
-      </div>
       <div style={styles.list}>
         {groups.map((group, groupIndex) => (
           <section key={group.label} aria-label={group.label}>
@@ -293,6 +244,5 @@ export default function RecentSearches() {
           </section>
         ))}
       </div>
-    </section>
   );
 }

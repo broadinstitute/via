@@ -8,10 +8,10 @@ describe("preferences", () => {
   });
 
   it("falls back to the defaults when nothing is stored, or what is stored is unreadable", () => {
-    expect(readPreferences()).toEqual({ showUsageMeter: false });
+    expect(readPreferences()).toEqual({ showUsageMeter: false, railCollapsed: false });
 
     window.localStorage.setItem("via.preferences.v1", "not json");
-    expect(readPreferences()).toEqual({ showUsageMeter: false });
+    expect(readPreferences()).toEqual({ showUsageMeter: false, railCollapsed: false });
 
     window.localStorage.setItem("via.preferences.v1", JSON.stringify({ showUsageMeter: "yes" }));
     expect(readPreferences().showUsageMeter).toBe(false);

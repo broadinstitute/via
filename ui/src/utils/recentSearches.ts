@@ -1,8 +1,12 @@
-// The entry page's "Recent searches": the criteria of the last few searches that loaded, kept in
-// this browser's localStorage. Only what was searched for (variant IDs and condition concepts)
-// is stored -- never results or participant counts. A per-browser convenience: storage can be
-// empty, full, blocked or cleared, and every read and write here tolerates that by treating it
-// as "no history" rather than failing.
+// The rail's "Recent": the criteria of the last few searches that loaded, kept in this browser's
+// localStorage. Only what was searched for (variant IDs and condition concepts) is stored -- never
+// results or participant counts. A per-browser convenience: storage can be empty, full, blocked or
+// cleared, and every read and write here tolerates that by treating it as "no history" rather
+// than failing. Components read the list through useRecentSearches, which re-renders them when a
+// search is recorded or the history is cleared.
+
+import { useSyncExternalStore } from "react";
+import { notifyStorageKey, subscribeToStorageKey } from "./storageSync";
 
 // Bumped when the shape changes: entries in an older shape fail validation and are dropped, which
 // is simpler than migrating a convenience. v1 held one `condition` where v2 holds `conditions`.
@@ -22,7 +26,10 @@ export interface RecentSearch {
   searchedAt: number;
 }
 
-function isCondition(value: unknown): value is RecentSearchCondition {
+/** The criteria of a search, without when it ran: what Recent and Saved both key on. */
+export type SearchCriteria = Omit<RecentSearch, "searchedAt">;
+
+export function isCondition(value: unknown): value is RecentSearchCondition {
   if (typeof value !== "object" || value === null) return false;
   const condition = value as Record<string, unknown>;
   return typeof condition.conceptId === "number" && typeof condition.name === "string";
@@ -56,15 +63,16 @@ function save(searches: RecentSearch[]) {
   } catch {
     // Storage full or blocked: history just isn't kept.
   }
+  notifyStorageKey(STORAGE_KEY);
 }
 
 /**
  * Same variants and same conditions, each in any order: re-running a search moves it to the top.
  * Conditions are OR'd, so their order doesn't change the search.
  */
-function sameCriteria(a: Omit<RecentSearch, "searchedAt">, b: Omit<RecentSearch, "searchedAt">) {
-  const variants = (search: typeof a) => [...search.variants].sort().join("\n");
-  const conditions = (search: typeof a) =>
+export function sameCriteria(a: SearchCriteria, b: SearchCriteria) {
+  const variants = (search: SearchCriteria) => [...search.variants].sort().join("\n");
+  const conditions = (search: SearchCriteria) =>
     search.conditions
       .map((condition) => condition.conceptId)
       .sort((x, y) => x - y)
@@ -73,7 +81,7 @@ function sameCriteria(a: Omit<RecentSearch, "searchedAt">, b: Omit<RecentSearch,
 }
 
 /** Adds a search that just loaded, at the top, replacing an earlier run of the same criteria. */
-export function recordRecentSearch(search: Omit<RecentSearch, "searchedAt">, now = Date.now()) {
+export function recordRecentSearch(search: SearchCriteria, now = Date.now()) {
   if (search.variants.length === 0) return;
   const others = loadRecentSearches().filter((existing) => !sameCriteria(existing, search));
   save([{ ...search, searchedAt: now }, ...others].slice(0, MAX_SEARCHES));
@@ -85,6 +93,31 @@ export function clearRecentSearches() {
   } catch {
     // Nothing to clear if storage is unavailable.
   }
+  notifyStorageKey(STORAGE_KEY);
+}
+
+const subscribe = (listener: () => void) => subscribeToStorageKey(STORAGE_KEY, listener);
+// useSyncExternalStore needs the same array back while nothing changed; the raw string is what
+// changes, so the parsed list is cached against it.
+let cachedRaw: string | null | undefined;
+let cachedList: RecentSearch[] = [];
+function snapshot(): RecentSearch[] {
+  let raw: string | null = null;
+  try {
+    raw = window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    raw = null;
+  }
+  if (raw !== cachedRaw) {
+    cachedRaw = raw;
+    cachedList = loadRecentSearches();
+  }
+  return cachedList;
+}
+
+/** The history as state, newest first: re-renders when a search is recorded or the list is cleared. */
+export function useRecentSearches(): RecentSearch[] {
+  return useSyncExternalStore(subscribe, snapshot);
 }
 
 export type RecentSearchGroupLabel = "Today" | "This week" | "Earlier";

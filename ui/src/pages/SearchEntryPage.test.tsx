@@ -1,7 +1,7 @@
 import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { recordRecentSearch } from "../utils/recentSearches";
+import { loadSavedSearches } from "../utils/savedSearches";
 import { USE_CASES } from "../utils/useCases";
 import SearchEntryPage from "./SearchEntryPage";
 
@@ -30,12 +30,13 @@ function renderPage() {
       <Routes>
         <Route path="/" element={<SearchEntryPage />} />
         <Route path="/results" element={<LocationProbe />} />
+        <Route path="/saved/:id" element={<LocationProbe />} />
       </Routes>
     </MemoryRouter>,
   );
 }
 
-/** The top bar's usage meter reads this on mount. */
+/** The rail's usage meter reads this when it's on; the page itself no longer does. */
 const USAGE = { queries: 0, cacheHits: 0, bytesProcessed: 0, bytesBilled: 0, slotMilliseconds: 0, estimatedCostUsd: 0, since: new Date().toISOString(), searches: [] };
 
 /** Routes /api/profile, /api/usage and /api/condition, which the page hits for different reasons. */
@@ -61,15 +62,54 @@ describe("SearchEntryPage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("names the app and what it gives you above the form, and each step says its part", () => {
+  it("names the view and what VIA gives you in the bar, and each step says its part", () => {
     stubApi([], "");
     renderPage();
-    const title = screen.getByRole("heading", { level: 1, name: "All of Us Variant Interpretation" });
-    // The Beta chip sits beside the name (the footer has one too).
-    expect(title.parentElement).toHaveTextContent(/^All of Us Variant InterpretationBeta$/);
-    // The hero positions; the instructions are the steps' own lines.
+    expect(screen.getByRole("heading", { level: 1, name: "New search" })).toBeInTheDocument();
+    expect(screen.getByText(/Variant frequencies across the/)).toHaveTextContent(/All of Us cohort and among participants with a condition/);
+    // The bar positions; the instructions are the steps' own lines.
     expect(screen.getByText(/Enter the variants you're interpreting/)).toBeInTheDocument();
     expect(screen.getByText(/among participants recorded with a condition/)).toBeInTheDocument();
+  });
+
+  it("saves the search under a name, then opens it", async () => {
+    stubApi([TETRALOGY], "tetralogy");
+    renderPage();
+    const saveAs = screen.getByRole("button", { name: "Save as…" });
+    expect(saveAs).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), { target: { value: "8-11708582-C-T\n\n1-2-A-G" } });
+    expect(saveAs).toBeEnabled();
+    fireEvent.click(saveAs);
+    const dialog = screen.getByRole("dialog", { name: "Save search" });
+    expect(dialog).toHaveTextContent("2 variants. Saved searches keep what was searched for, not results.");
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "  LQTS clinic panel  " } });
+    fireEvent.change(screen.getByLabelText(/Notes/), { target: { value: "Rerun each release" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const saved = loadSavedSearches();
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({ name: "LQTS clinic panel", notes: "Rerun each release", variants: ["8-11708582-C-T", "1-2-A-G"], conditions: [] });
+    expect(await screen.findByTestId("location")).toHaveTextContent(`/saved/${saved[0].id}`);
+  });
+
+  it("closes the save dialog without saving from Cancel, Escape and the backdrop", () => {
+    stubApi([], "");
+    renderPage();
+    fireEvent.change(screen.getByPlaceholderText(/8-11708582-C-T/), { target: { value: "8-11708582-C-T" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save as…" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save as…" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save as…" }));
+    fireEvent.click(screen.getByRole("dialog").parentElement!);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(loadSavedSearches()).toEqual([]);
   });
 
   it("shows the phenotype step open from the start, as the condition combobox", () => {
@@ -254,51 +294,6 @@ describe("SearchEntryPage", () => {
     );
   });
 
-  it("hides recent searches until there are some, then re-runs one with a click", async () => {
-    stubApi([], "");
-    renderPage();
-    expect(screen.queryByRole("heading", { name: "Recent searches" })).not.toBeInTheDocument();
-    cleanup();
-
-    recordRecentSearch({ variants: ["1-1-A-G", "2-2-C-T"], conditions: [{ conceptId: 9000010, name: "Tetralogy of Fallot" }] });
-    renderPage();
-
-    expect(screen.getByRole("heading", { name: "Recent searches" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^Run again: 2 variants, Tetralogy of Fallot/ }));
-    expect(await screen.findByTestId("location")).toHaveTextContent(
-      "/results?variants=1-1-A-G&variants=2-2-C-T&conditionConceptIds=9000010",
-    );
-  });
-
-  it("folds searches older than a week under Earlier until asked", () => {
-    stubApi([], "");
-    const day = 24 * 60 * 60 * 1000;
-    recordRecentSearch({ variants: ["9-9-A-G"], conditions: [] }, Date.now() - 9 * day);
-    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [{ conceptId: 9000010, name: "Tetralogy of Fallot" }] });
-    renderPage();
-
-    expect(screen.getByRole("region", { name: "Today" })).toHaveTextContent("Tetralogy of Fallot");
-    const earlier = screen.getByRole("button", { name: /^Earlier/ });
-    expect(earlier).toHaveAttribute("aria-expanded", "false");
-    expect(earlier).toHaveTextContent("1");
-    expect(screen.queryByRole("button", { name: /^Run again: 1 variant, no phenotype/ })).not.toBeInTheDocument();
-
-    fireEvent.click(earlier);
-    expect(earlier).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: /^Run again: 1 variant, no phenotype/ })).toBeInTheDocument();
-  });
-
-  it("clears recent searches", () => {
-    stubApi([], "");
-    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [] });
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
-
-    expect(screen.queryByRole("heading", { name: "Recent searches" })).not.toBeInTheDocument();
-    expect(window.localStorage.getItem("via.recentSearches.v2")).toBeNull();
-  });
-
   it("carries the picked concept's id into the results URL", async () => {
     stubApi([TETRALOGY], "tetralogy");
     renderPage();
@@ -397,25 +392,6 @@ describe("SearchEntryPage", () => {
       expect(screen.getByTestId("location")).toHaveTextContent(
         "/results?variants=8-11708582-C-T&conditionConceptIds=9000010&conditionConceptIds=9000018",
       ),
-    );
-  });
-
-  it("re-runs a recent search with several conditions, naming them as alternatives", async () => {
-    stubApi([], "");
-    recordRecentSearch({
-      variants: ["1-1-A-G"],
-      conditions: [
-        { conceptId: 9000010, name: "Tetralogy of Fallot" },
-        { conceptId: 9000040, name: "Hypertrophic cardiomyopathy" },
-      ],
-    });
-    renderPage();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: /^Run again: 1 variant, Tetralogy of Fallot or Hypertrophic cardiomyopathy/ }),
-    );
-    expect(await screen.findByTestId("location")).toHaveTextContent(
-      "/results?variants=1-1-A-G&conditionConceptIds=9000010&conditionConceptIds=9000040",
     );
   });
 

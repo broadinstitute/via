@@ -26,14 +26,28 @@ describe("App", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders the search entry page at /", () => {
+  it("renders the search entry page at /, inside the shell", () => {
     renderAt("/");
-    expect(screen.getByRole("heading", { name: /^All of Us Variant Interpretation$/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /search/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "New search" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Workspace" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^search$/i })).toBeInTheDocument();
   });
 
   it("renders the search results page at /results", () => {
     renderAt("/results");
     expect(screen.getAllByRole("heading", { name: "Candidate variants" }).length).toBeGreaterThan(0);
+  });
+
+  it("renders the rail's destinations", () => {
+    renderAt("/recent");
+    expect(screen.getByRole("heading", { level: 1, name: "Recent searches" })).toBeInTheDocument();
+    renderAt("/saved");
+    expect(screen.getByRole("heading", { level: 1, name: "Saved searches" })).toBeInTheDocument();
+    renderAt("/sources");
+    expect(screen.getByRole("heading", { level: 1, name: "Data sources" })).toBeInTheDocument();
+    renderAt("/status");
+    expect(screen.getByRole("heading", { level: 1, name: "System status" })).toBeInTheDocument();
+    renderAt("/usage");
+    expect(screen.getByRole("heading", { level: 1, name: "Usage" })).toBeInTheDocument();
   });
 });
