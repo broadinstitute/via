@@ -1,29 +1,109 @@
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { ConditionSearch } from "../../api/conditions";
-import colors from "../../libs/colors";
+import colors, { alpha } from "../../libs/colors";
+import { useHover } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
 import { conditionBreakdown } from "../../utils/conditionBreakdown";
 import { formatInt } from "../../utils/format";
 import Clickable from "../common/Clickable";
 import InfoTooltip from "../common/InfoTooltip";
-import { PlusIcon } from "../icons";
+import { useTooltip } from "../common/useTooltip";
+import { ExternalLinkIcon, PlusIcon } from "../icons";
 import BreakdownBar from "./BreakdownBar";
 import CopyButton from "./CopyButton";
 import { hpoTermUrl } from "../../utils/externalLinks";
 import type { HpoTerm } from "../../api/conditions";
 
-/** The HPO id as the strip shows it, "≈" for a nearest (broader) term, with the full story for tooltips. */
-function describeHpoCode(hpo: HpoTerm): { label: string; tooltip: string; spoken: string } {
+/** How the strip words an HPO term: the tooltip's full story and the link's accessible name. */
+function describeHpoCode(hpo: HpoTerm): { tooltip: string; spoken: string } {
   const exact = hpo.match === "exact";
   return {
-    label: exact ? hpo.id : `≈ ${hpo.id}`,
     tooltip: exact
-      ? `HPO ${hpo.id} ${hpo.name}, matched on the condition's name`
-      : `Nearest HPO term ${hpo.id} ${hpo.name}: broader than the condition, no exact term matched its name`,
+      ? `HPO ${hpo.id} ${hpo.name}, matched on the condition's name. Opens the HPO browser.`
+      : `Nearest HPO term ${hpo.id} ${hpo.name}: broader than the condition, no exact term matched its name. Opens the HPO browser.`,
     spoken: `${exact ? "HPO term" : "Nearest HPO term"} ${hpo.id}, ${hpo.name}, opens the HPO browser`,
   };
+}
+
+const NEAREST_NOTE = "No HPO term has this condition's name; this is the broader term its name contains.";
+const NO_TERM_NOTE = "No term in the Human Phenotype Ontology has this condition's name, or a name its words contain.";
+
+/**
+ * The chip that flags a nearest match or no match, explained by the app's tooltip on hover,
+ * focus or tap. Focusable, so the keyboard reaches the explanation, and described by it for
+ * screen readers without hovering.
+ */
+function HpoStateChip({ kind }: { kind: "nearest" | "none" }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const descriptionId = useId();
+  const note = kind === "nearest" ? NEAREST_NOTE : NO_TERM_NOTE;
+  const tooltip = useTooltip(ref, note);
+  return (
+    <span
+      ref={ref}
+      tabIndex={0}
+      aria-describedby={descriptionId}
+      style={{
+        ...(kind === "nearest" ? styles.hpoNearest : styles.hpoNone),
+        ...(tooltip.keyboardFocused ? Style.elements.tooltipIconFocusRing : undefined),
+      }}
+      {...tooltip.anchorProps}
+    >
+      {kind === "nearest" ? "≈ nearest" : "no matching term"}
+      <span id={descriptionId} style={Style.elements.visuallyHidden}>
+        {note}
+      </span>
+      {tooltip.bubble}
+    </span>
+  );
+}
+
+/**
+ * The line under a condition's name that names its HPO term: an "HPO" eyebrow, then the term's
+ * own name (always, even when it is the condition's name too, so what was matched is never left
+ * to inference), then its id as the link out, with a copy button. A nearest match is flagged
+ * ahead of the name in the warning tint; a condition with no term says so in a dashed chip.
+ */
+function HpoLine({ hpo }: { hpo: HpoTerm | null | undefined }) {
+  const { hovered, hoverProps } = useHover();
+  if (!hpo) {
+    return (
+      <span style={styles.hpoLine}>
+        <span style={styles.hpoEyebrow} aria-hidden="true">
+          HPO
+        </span>
+        <HpoStateChip kind="none" />
+      </span>
+    );
+  }
+  const words = describeHpoCode(hpo);
+  return (
+    <span style={styles.hpoLine}>
+      <span style={styles.hpoEyebrow} aria-hidden="true">
+        HPO
+      </span>
+      {hpo.match !== "exact" && <HpoStateChip kind="nearest" />}
+      <span style={styles.hpoName} title={hpo.name}>
+        {hpo.name}
+      </span>
+      <a
+        href={hpoTermUrl(hpo.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={words.tooltip}
+        aria-label={words.spoken}
+        style={{ ...styles.hpoId, ...(hovered ? styles.hpoIdHover : undefined) }}
+        {...hoverProps}
+      >
+        {/* The text's box trimmed to its cap height and the icon drawn as a block, so the two centre on each other. */}
+        <span style={Style.elements.trimmedText}>{hpo.id}</span>
+        <ExternalLinkIcon size={12} strokeWidth={2.4} aria-hidden="true" style={styles.hpoIdIcon} />
+      </a>
+      <CopyButton getText={() => hpo.id} label="Copy HPO term ID" />
+    </span>
+  );
 }
 import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
 
@@ -89,19 +169,20 @@ const styles = {
     textOverflow: "ellipsis",
     maxWidth: 320,
   },
-  // One condition: its name over its OMOP code.
+  // One condition: its name over its HPO term.
   conditionText: {
     display: "flex",
     flexDirection: "column",
     gap: 2,
     minWidth: 0,
   },
-  // Several: a two-column list, name (code trailing) and that condition's own matched count.
+  // Several: a two-column list, each condition (its name over its HPO line) and that condition's
+  // own matched count, centred against the two lines.
   conditionList: {
     display: "grid",
     gridTemplateColumns: "minmax(0, 1fr) auto",
-    alignItems: "baseline",
-    gap: "3px 16px",
+    alignItems: "center",
+    gap: "8px 16px",
     margin: 0,
     padding: 0,
     listStyle: "none",
@@ -110,31 +191,22 @@ const styles = {
   conditionRow: {
     display: "contents",
   },
-  // A flex row, so the copy button (itself a flex box) sits inline after the code.
-  conditionRowName: {
+  // A condition in the list: its name, then its HPO line, stacked like the one-condition layout.
+  conditionRowText: {
     display: "flex",
-    alignItems: "center",
+    flexDirection: "column",
     gap: 2,
     minWidth: 0,
-    maxWidth: 300,
+    maxWidth: 360,
+  },
+  conditionRowName: {
+    overflow: "hidden",
+    color: colors.textPrimary,
     fontSize: 12.5,
     fontWeight: 600,
     lineHeight: 1.3,
-    color: colors.textPrimary,
-  },
-  conditionRowText: {
-    overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-  },
-  // The code after the name, quieter than on its own line; still copyable.
-  trailingCode: {
-    flexShrink: 0,
-    marginLeft: 6,
-    color: colors.textMuted,
-    fontFamily: "monospace",
-    fontSize: 10.5,
-    fontWeight: 500,
   },
   conditionCount: {
     fontSize: 12.5,
@@ -153,35 +225,78 @@ const styles = {
   labelRowSplit: {
     justifyContent: "space-between",
   },
-  codeLine: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 2,
-  },
-  // The two codes side by side under the name: OMOP first (what was counted), then HPO.
-  codeLines: {
+  // Under a condition's name: "HPO", the term's name, its id as the link, a copy button.
+  hpoLine: {
     display: "flex",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: "2px 12px",
+    gap: 6,
+    minWidth: 0,
   },
-  codeLink: {
-    textDecoration: "none",
+  hpoEyebrow: {
+    ...Style.elements.eyebrow,
+    flexShrink: 0,
+    color: colors.textSecondary,
   },
-  // The HPO term's name when it isn't the condition's own, and the caveat for a nearest match.
-  codeNote: {
-    marginLeft: 4,
-    color: colors.textMuted,
-    fontFamily: "inherit",
-    fontSize: 10.5,
+  hpoName: {
+    overflow: "hidden",
+    color: colors.textSecondary,
+    fontSize: 13,
     fontWeight: 500,
+    lineHeight: 1.3,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
-  code: {
-    ...Style.elements.trimmedText,
-    color: colors.textAccent,
-    fontFamily: "monospace",
-    fontSize: 10.5,
+  hpoId: {
+    display: "inline-flex",
+    alignItems: "center",
+    flexShrink: 0,
+    gap: 3,
+    color: colors.textSecondary,
+    fontFamily: Style.monoFamily,
+    fontSize: 12,
     fontWeight: 600,
+    textDecoration: "none",
+    whiteSpace: "nowrap",
+  },
+  hpoIdIcon: {
+    display: "block",
+    flexShrink: 0,
+  },
+  hpoIdHover: {
+    color: colors.textAccent,
+  },
+  // A nearest match is a status, not an identity, so it reads as a small warning chip ahead of
+  // the name rather than as part of it.
+  hpoNearest: {
+    flexShrink: 0,
+    padding: "1px 7px",
+    border: `1px solid ${alpha(colors.textWarning, 0.45)}`,
+    borderRadius: 6,
+    background: colors.bgWarning,
+    color: colors.textWarning,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.3,
+    lineHeight: 1.4,
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+    cursor: "default",
+  },
+  // No term at all: an empty, dashed slot where one would be.
+  hpoNone: {
+    flexShrink: 0,
+    padding: "1px 7px",
+    border: `1px dashed ${colors.borderStrong}`,
+    borderRadius: 6,
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.3,
+    lineHeight: 1.4,
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+    cursor: "default",
   },
   count: {
     fontSize: 20,
@@ -376,24 +491,11 @@ export default function PhenotypeSummaryStrip({
             <ul style={styles.conditionList} aria-label="Conditions, any of, with participants matched by each">
               {concepts.map((concept) => (
                 <li key={concept.conceptId} style={styles.conditionRow}>
-                  <span
-                    style={styles.conditionRowName}
-                    title={`${concept.name} · OMOP ${concept.conceptId}${concept.hpo ? ` · ${describeHpoCode(concept.hpo).tooltip}` : ""}`}
-                  >
-                    <span style={styles.conditionRowText}>{concept.name}</span>
-                    <span style={styles.trailingCode}>{concept.conceptId}</span>
-                    <CopyButton getText={() => String(concept.conceptId)} label={`Copy OMOP concept ID ${concept.conceptId}`} />
-                    {concept.hpo && (
-                      <a
-                        href={hpoTermUrl(concept.hpo.id)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ ...styles.trailingCode, ...styles.codeLink }}
-                        aria-label={describeHpoCode(concept.hpo).spoken}
-                      >
-                        {describeHpoCode(concept.hpo).label}
-                      </a>
-                    )}
+                  <span style={styles.conditionRowText}>
+                    <span style={styles.conditionRowName} title={concept.name}>
+                      {concept.name}
+                    </span>
+                    <HpoLine hpo={concept.hpo} />
                   </span>
                   <span style={styles.conditionCount} aria-label={`${formatInt(concept.participantCount)} participants`}>
                     {formatInt(concept.participantCount)}
@@ -406,31 +508,7 @@ export default function PhenotypeSummaryStrip({
               <span style={styles.conditionName} title={concepts[0].name}>
                 {concepts[0].name}
               </span>
-              <span style={styles.codeLines}>
-                <span style={styles.codeLine}>
-                  <span style={styles.code}>OMOP — {concepts[0].conceptId}</span>
-                  <CopyButton getText={() => String(concepts[0].conceptId)} label="Copy OMOP concept ID" />
-                </span>
-                {concepts[0].hpo && (
-                  <span style={styles.codeLine} title={describeHpoCode(concepts[0].hpo).tooltip}>
-                    <a
-                      href={hpoTermUrl(concepts[0].hpo.id)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ ...styles.code, ...styles.codeLink }}
-                      aria-label={describeHpoCode(concepts[0].hpo).spoken}
-                    >
-                      HPO — {describeHpoCode(concepts[0].hpo).label}
-                    </a>
-                    <CopyButton getText={() => concepts[0].hpo!.id} label="Copy HPO term ID" />
-                    {(concepts[0].hpo.match !== "exact" || concepts[0].hpo.name !== concepts[0].name) && (
-                      <span style={styles.codeNote}>
-                        {concepts[0].hpo.match === "exact" ? concepts[0].hpo.name : `nearest: ${concepts[0].hpo.name}`}
-                      </span>
-                    )}
-                  </span>
-                )}
-              </span>
+              <HpoLine hpo={concepts[0].hpo} />
             </div>
           ) : (
             <span style={styles.noMatch}>
