@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { fetchConditionCandidates } from "../api/conditions";
-import type { ConditionConcept } from "../api/conditions";
+import type { ConditionConcept, HpoTerm } from "../api/conditions";
 import colors from "../libs/colors";
 import { useFocus, useHoveredKey } from "../libs/hooks";
 import * as Style from "../libs/style";
@@ -61,9 +61,27 @@ const styles = {
     background: colors.bgAccent,
   },
   optionName: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
     color: colors.textBody,
     fontSize: 12.5,
     lineHeight: 1.35,
+  },
+  optionNameText: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  /** The HPO id paired with the concept, in mono and quiet: a cross-reference, not the choice itself. */
+  hpo: {
+    flexShrink: 0,
+    color: colors.textSecondary,
+    fontFamily: Style.monoFamily,
+    fontSize: 10.5,
+    fontWeight: 600,
+    cursor: "help",
   },
   /**
    * The estimate, not the real cohort size -- /api/search returns the actual count for a
@@ -108,6 +126,25 @@ const styles = {
 } as const satisfies Record<string, CSSProperties>;
 
 const EXACT_COUNT_NOTE = "The exact count is calculated when you search.";
+
+/**
+ * How a concept's HPO term is shown: its id, prefixed "≈" when the term is only a broader
+ * phrase the concept's name contains, with the term's name and the caveat in the tooltip.
+ */
+export function describeHpo(hpo: HpoTerm): { label: string; tooltip: string; spoken: string } {
+  if (hpo.match === "exact") {
+    return {
+      label: hpo.id,
+      tooltip: `HPO ${hpo.id} ${hpo.name}. Matched on the condition's name.`,
+      spoken: `HPO term ${hpo.id}, ${hpo.name}`,
+    };
+  }
+  return {
+    label: `≈ ${hpo.id}`,
+    tooltip: `Nearest HPO term: ${hpo.id} ${hpo.name}. Broader than the condition; no exact term matched its name.`,
+    spoken: `nearest HPO term ${hpo.id}, ${hpo.name}`,
+  };
+}
 
 /**
  * How a concept's participant estimate is shown: the number beside a person icon, with the
@@ -391,7 +428,9 @@ export default function ConditionSearchField({
               id={`${listboxId}-option-${index}`}
               role="option"
               aria-selected={index === activeIndex}
-              aria-label={`${concept.name}, ${describeEstimate(concept.estimatedParticipantCount).spoken}`}
+              aria-label={`${concept.name}, ${describeEstimate(concept.estimatedParticipantCount).spoken}${
+                concept.hpo ? `, ${describeHpo(concept.hpo).spoken}` : ""
+              }`}
               style={{
                 ...styles.option,
                 ...(index === activeIndex || hoveredKey === index ? styles.optionActive : undefined),
@@ -404,7 +443,14 @@ export default function ConditionSearchField({
               }}
               {...hoverProps(index)}
             >
-              <span style={styles.optionName}>{concept.name}</span>
+              <span style={styles.optionName}>
+                <span style={styles.optionNameText}>{concept.name}</span>
+                {concept.hpo && (
+                  <span style={styles.hpo} title={describeHpo(concept.hpo).tooltip} aria-hidden="true">
+                    {describeHpo(concept.hpo).label}
+                  </span>
+                )}
+              </span>
               <Estimate
                 estimate={concept.estimatedParticipantCount}
                 onActiveRow={index === activeIndex || hoveredKey === index}

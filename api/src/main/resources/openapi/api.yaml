@@ -529,6 +529,42 @@ components:
             descendants recorded in condition_occurrence. With several
             concepts, these overlap: see ConditionSearch.participantCount.
           example: 49
+        hpo:
+          nullable: true
+          description: >-
+            The HPO term paired with this concept, or null when none matched;
+            see HpoTerm.
+          allOf:
+            - $ref: "#/components/schemas/HpoTerm"
+    HpoTerm:
+      type: object
+      description: >-
+        The Human Phenotype Ontology term VIA pairs with a condition concept,
+        for display beside it. Matched on the concept's name against HPO term
+        names and exact synonyms, inside the Phenotypic abnormality branch of
+        the ontology; VIA has no cross-reference table, so this is a lexical
+        pairing, not a curated mapping.
+      required:
+        - id
+        - name
+        - match
+      properties:
+        id:
+          type: string
+          example: "HP:0001636"
+        name:
+          type: string
+          example: "Tetralogy of Fallot"
+        match:
+          type: string
+          description: >-
+            How the term was found. "exact": the concept's name is the term's
+            name or one of its exact synonyms. "approximate": no term matched
+            exactly, and this is the most specific term whose words all appear
+            in the concept's name (e.g. "Hypercholesterolemia" for "Familial
+            hypercholesterolemia"), so it is broader than the condition.
+          enum: [exact, approximate]
+          example: "exact"
     ConditionConcept:
       type: object
       required:
@@ -551,6 +587,13 @@ components:
             when the column was null or non-numeric; the real table also
             carries 0 and -1.
           example: 47
+        hpo:
+          nullable: true
+          description: >-
+            The HPO term paired with this concept, or null when none matched;
+            see HpoTerm.
+          allOf:
+            - $ref: "#/components/schemas/HpoTerm"
     BreakdownSegment:
       type: object
       required:

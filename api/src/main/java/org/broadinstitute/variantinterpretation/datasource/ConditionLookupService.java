@@ -20,6 +20,7 @@ import org.broadinstitute.variantinterpretation.model.ConditionConcept;
 import org.broadinstitute.variantinterpretation.model.ConditionOverlapCell;
 import org.broadinstitute.variantinterpretation.model.ConditionSearch;
 import org.broadinstitute.variantinterpretation.model.MatchedConcept;
+import org.broadinstitute.variantinterpretation.ontology.HpoLookupService;
 import org.springframework.stereotype.Service;
 
 /**
@@ -135,10 +136,12 @@ public class ConditionLookupService {
 
   private final BigQueryService bigQuery;
   private final BigQueryProperties properties;
+  private final HpoLookupService hpo;
 
-  public ConditionLookupService(BigQueryService bigQuery, BigQueryProperties properties) {
+  public ConditionLookupService(BigQueryService bigQuery, BigQueryProperties properties, HpoLookupService hpo) {
     this.bigQuery = bigQuery;
     this.properties = properties;
+    this.hpo = hpo;
   }
 
   /**
@@ -183,6 +186,7 @@ public class ConditionLookupService {
                         .conceptId(concept.getConceptId())
                         .name(concept.getName())
                         .estimatedParticipantCount(concept.getEstimatedParticipantCount().orElse(null))
+                        .hpo(concept.getHpo().orElse(null))
                         .participantCount(
                             cells.stream()
                                 .filter(cell -> cell.getConceptIds().contains(concept.getConceptId()))
@@ -281,14 +285,17 @@ public class ConditionLookupService {
     return toConcepts(bigQuery.query(builder, "Condition candidates"));
   }
 
-  private static List<ConditionConcept> toConcepts(Iterable<FieldValueList> rows) {
+  /** Each row as a concept, paired with its HPO term by name (see HpoLookupService). */
+  private List<ConditionConcept> toConcepts(Iterable<FieldValueList> rows) {
     List<ConditionConcept> concepts = new ArrayList<>();
     for (FieldValueList row : rows) {
+      String name = row.get("name").getStringValue();
       concepts.add(
           new ConditionConcept()
               .conceptId(row.get("concept_id").getLongValue())
-              .name(row.get("name").getStringValue())
-              .estimatedParticipantCount(intValue(row, "est_count")));
+              .name(name)
+              .estimatedParticipantCount(intValue(row, "est_count"))
+              .hpo(hpo.match(name).orElse(null)));
     }
     return concepts;
   }
