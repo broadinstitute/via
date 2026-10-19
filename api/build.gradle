@@ -77,8 +77,13 @@ tasks.named('test') {
   finalizedBy tasks.named('jacocoTestReport')
 }
 
-// OpenAPI-generated interfaces/models are excluded from coverage below
-def coverageExcludes = ['**/api/**', '**/model/**', '**/invoker/**']
+// Excluded from coverage: the OpenAPI-generated interfaces and models, and the wiring that has no
+// logic of its own (the entry point, Spring configuration and the SPA forward), so the gate below
+// measures the code that does something.
+def coverageExcludes = [
+  '**/api/**', '**/model/**', '**/invoker/**',
+  '**/Application*', '**/config/**', '**/controller/SpaController*',
+]
 
 tasks.named('jacocoTestReport') {
   dependsOn tasks.named('test')
@@ -96,7 +101,7 @@ tasks.named('jacocoTestCoverageVerification') {
     rule {
       limit {
         counter = 'LINE'
-        minimum = 0.02
+        minimum = 0.80
       }
     }
   }
