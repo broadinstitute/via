@@ -18,3 +18,4 @@ export { default as SearchIcon } from "./SearchIcon";
 export { default as SortIcon } from "./SortIcon";
 export { default as TableIcon } from "./TableIcon";
 export { default as UserIcon } from "./UserIcon";
+export { default as ExternalLinkIcon } from "./ExternalLinkIcon";
