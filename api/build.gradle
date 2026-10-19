@@ -36,10 +36,10 @@ dependencies {
   testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
-// The Human Phenotype Ontology, pinned to a release and fetched at build time into the jar's
-// resources: VIA runs where it can't call out, so the ontology ships inside it. Bumping the release
-// means changing both the tag and the checksum here (the checksum is the whole point: a build
-// can't quietly pick up a different file). HpoOntology reads it from the classpath at startup.
+// The Human Phenotype Ontology (HPO), pinned to a release and fetched at build time into the
+// jar's resources. VIA shouldn't make external API calls from within AoU RWB, so the ontology
+// is packaged inside it. Bumping the release means changing both the tag and the checksum here.
+// HpoOntology reads it from the classpath at startup.
 def hpoRelease = 'v2026-09-01'
 def hpoSha256 = '93dace952fcb3ec4728818857f6ba76bc2d5312f4d83266519b8694b8e798f22'
 def hpoDir = layout.buildDirectory.dir('generated-resources/hpo').get().asFile
