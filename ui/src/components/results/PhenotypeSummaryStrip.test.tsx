@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ConditionSearch } from "../../api/conditions";
 import type { BreakdownSegment } from "../../types/results";
@@ -24,6 +24,44 @@ const TWO_CONDITIONS: ConditionSearch = {
     { conceptIds: [9000040], count: 211 },
     { conceptIds: [9000010, 9000040], count: 3 },
   ],
+};
+
+/** The same condition with its HPO term, exact and with the same name, so the code alone is shown. */
+const CONDITION_WITH_HPO: ConditionSearch = {
+  ...CONDITION,
+  concepts: [{ ...CONDITION.concepts[0], hpo: { id: "HP:0001636", name: "Tetralogy of Fallot", match: "exact" } }],
+};
+
+/** A condition whose HPO term is a synonym match, so the term's own name is worth showing. */
+const LONG_QT: ConditionSearch = {
+  conceptIds: [9000050],
+  concepts: [
+    {
+      conceptId: 9000050,
+      name: "Long QT syndrome",
+      estimatedParticipantCount: 128,
+      participantCount: 130,
+      hpo: { id: "HP:0001657", name: "Prolonged QT interval", match: "exact" },
+    },
+  ],
+  participantCount: 130,
+  conditionOverlap: [{ conceptIds: [9000050], count: 130 }],
+};
+
+/** A condition with only a broader HPO term. */
+const FH: ConditionSearch = {
+  conceptIds: [9000060],
+  concepts: [
+    {
+      conceptId: 9000060,
+      name: "Familial hypercholesterolemia",
+      estimatedParticipantCount: 386,
+      participantCount: 390,
+      hpo: { id: "HP:0003124", name: "Hypercholesterolemia", match: "approximate" },
+    },
+  ],
+  participantCount: 390,
+  conditionOverlap: [{ conceptIds: [9000060], count: 390 }],
 };
 
 const ANCESTRY: BreakdownSegment[] = [
@@ -67,7 +105,11 @@ describe("PhenotypeSummaryStrip", () => {
     renderStrip({ conditionSearch: CONDITION, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
 
     expect(screen.getByText("Tetralogy of Fallot")).toBeInTheDocument();
-    expect(screen.getByText("OMOP — 9000010")).toBeInTheDocument();
+    // No concept id anywhere: it's internal to All of Us. With no HPO term paired, the line says so.
+    expect(screen.queryByText(/9000010/)).not.toBeInTheDocument();
+    const noTerm = screen.getByText("no matching term");
+    expect(noTerm).not.toHaveAttribute("title");
+    expect(noTerm).toHaveAccessibleDescription(/^No term in the Human Phenotype Ontology/);
     expect(screen.getByText("49")).toBeInTheDocument();
     expect(screen.getByText("matched")).toBeInTheDocument();
     // Every block carries the same small label.
@@ -84,6 +126,67 @@ describe("PhenotypeSummaryStrip", () => {
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: /^Age breakdown: 40–49: .* \(100%\)$/ })).toBeInTheDocument();
     expect(screen.getByText("40–49")).toBeInTheDocument();
+  });
+
+  it("shows the HPO term under the condition as a pill linking to the browser, with its name when that adds something", () => {
+    renderStrip({ conditionSearch: CONDITION_WITH_HPO, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+    const link = screen.getByRole("link", { name: "HPO term HP:0001636, Tetralogy of Fallot, opens the HPO browser" });
+    expect(link).toHaveTextContent("HP:0001636");
+    expect(link).toHaveAttribute("href", "https://hpo.jax.org/browse/term/HP:0001636");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("title", "HPO HP:0001636 Tetralogy of Fallot, matched on the condition's name. Opens the HPO browser.");
+    expect(screen.getByRole("button", { name: "Copy HPO term ID" })).toBeInTheDocument();
+    // The term is named even when it is the condition's own name, so the match is never inferred.
+    expect(screen.getAllByText("Tetralogy of Fallot")).toHaveLength(2);
+    expect(screen.queryByText("≈ nearest")).not.toBeInTheDocument();
+    expect(screen.queryByText("no matching term")).not.toBeInTheDocument();
+
+    cleanup();
+    renderStrip({ conditionSearch: LONG_QT, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+    expect(screen.getByRole("link", { name: /^HPO term HP:0001657/ })).toHaveTextContent("HP:0001657");
+    expect(screen.getByText("Prolonged QT interval")).toBeInTheDocument();
+
+    cleanup();
+    renderStrip({ conditionSearch: FH, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+    const nearest = screen.getByRole("link", { name: /^Nearest HPO term HP:0003124, Hypercholesterolemia/ });
+    expect(nearest).toHaveTextContent("HP:0003124");
+    expect(nearest).toHaveAttribute("title", expect.stringMatching(/^Nearest HPO term HP:0003124 Hypercholesterolemia: broader than the condition/));
+    expect(screen.getByText("Hypercholesterolemia")).toBeInTheDocument();
+    // The chip explains itself in the app's tooltip, not the browser's, and the keyboard can reach it.
+    const chip = screen.getByText("≈ nearest");
+    expect(chip).not.toHaveAttribute("title");
+    expect(chip).toHaveAttribute("tabindex", "0");
+    expect(chip).toHaveAccessibleDescription(/^No HPO term has this condition's name/);
+    vi.useFakeTimers();
+    try {
+      fireEvent.mouseEnter(chip);
+      act(() => vi.advanceTimersByTime(200));
+      expect(screen.getByTestId("infoTooltip")).toHaveTextContent(/^No HPO term has this condition's name; this is the broader term its name contains\.$/);
+      fireEvent.mouseLeave(chip);
+      expect(screen.queryByTestId("infoTooltip")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stacks each condition's HPO line under its name in the several-conditions table", () => {
+    const withHpo: ConditionSearch = {
+      ...TWO_CONDITIONS,
+      concepts: [
+        { ...TWO_CONDITIONS.concepts[0], hpo: { id: "HP:0001636", name: "Tetralogy of Fallot", match: "exact" } },
+        { ...TWO_CONDITIONS.concepts[1], hpo: null },
+      ],
+    };
+    renderStrip({ conditionSearch: withHpo, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
+
+    const rows = within(screen.getByRole("list", { name: /Conditions, any of/ })).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent(/^Tetralogy of FallotHPOTetralogy of FallotHP:000163649$/);
+    // The chip carries its hidden explanation too, so the row's text is matched loosely around it.
+    expect(rows[1]).toHaveTextContent(/^Hypertrophic cardiomyopathyHPOno matching term.*214$/);
+    expect(within(rows[0]).getByRole("link", { name: /^HPO term HP:0001636/ })).toHaveAttribute("href", "https://hpo.jax.org/browse/term/HP:0001636");
+    // A row without a term says so the same way the one-condition layout does.
+    expect(within(rows[1]).queryByRole("link")).not.toBeInTheDocument();
+    expect(within(rows[1]).getByText("no matching term")).toBeInTheDocument();
   });
 
   it("switches views from its segmented control", () => {
@@ -109,23 +212,24 @@ describe("PhenotypeSummaryStrip", () => {
     expect(screen.getByRole("button", { name: "Review" })).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("lists several conditions as a table: name, code and each one's own count under a participants label", () => {
+  it("lists several conditions as a table: name, HPO id and each one's own count under a participants label", () => {
     renderStrip({ conditionSearch: TWO_CONDITIONS, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
 
     // The label row says the rule and names the count column.
     expect(screen.getByText("Phenotype")).toHaveTextContent(/any of/);
     expect(screen.getByText("participants")).toBeInTheDocument();
     const rows = within(screen.getByRole("list", { name: /Conditions, any of/ })).getAllByRole("listitem");
-    expect(rows.map((row) => row.textContent)).toEqual(["Tetralogy of Fallot900001049", "Hypertrophic cardiomyopathy9000040214"]);
+    expect(rows[0]).toHaveTextContent(/^Tetralogy of FallotHPOno matching term.*49$/);
+    expect(rows[1]).toHaveTextContent(/^Hypertrophic cardiomyopathyHPOno matching term.*214$/);
     expect(within(rows[0]).getByLabelText("49 participants")).toBeInTheDocument();
-    expect(within(rows[1]).getByRole("button", { name: "Copy OMOP concept ID 9000040" })).toBeInTheDocument();
+    expect(screen.queryByText(/9000040/)).not.toBeInTheDocument();
     // The union stays the headline; the per-condition line under it is gone.
     expect(screen.getByText("260")).toBeInTheDocument();
     expect(screen.queryByLabelText("Participants with each condition")).not.toBeInTheDocument();
-    // One condition keeps the stacked name-over-code look, without the column label.
+    // One condition keeps the stacked name-over-term look, without the column label.
     cleanup();
     renderStrip({ conditionSearch: CONDITION, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
-    expect(screen.getByText("OMOP — 9000010")).toBeInTheDocument();
+    expect(screen.getByText("no matching term")).toBeInTheDocument();
     expect(screen.queryByText("participants")).not.toBeInTheDocument();
   });
 
