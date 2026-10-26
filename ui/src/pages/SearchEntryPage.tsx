@@ -53,8 +53,8 @@ const styles = {
   // The second step, divided from the first by a hairline: both steps sit bare in the card, which
   // is the one container the form needs. A box around either would nest it inside the other.
   phenotype: {
-    marginTop: 18,
-    paddingTop: 18,
+    marginTop: 20,
+    paddingTop: 20,
     borderTop: `1px solid ${colors.border}`,
   },
   cardFooter: {
