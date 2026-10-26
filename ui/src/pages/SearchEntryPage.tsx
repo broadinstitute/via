@@ -34,10 +34,19 @@ const CONDITION_FIELD_ID = "condition";
 // so it isn't folded behind a click. Each step says in a line what it does for the search, so the
 // hero doesn't have to.
 const styles = {
+  // The page is a column that fills the window, so the footer sits at the bottom even when the
+  // form doesn't reach it.
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+  },
   main: {
-    maxWidth: 860,
+    flex: 1,
+    width: "100%",
+    maxWidth: 860 + 40,
     margin: "20px auto 0",
-    padding: "0 20px 48px",
+    padding: "0 20px 40px",
   },
   // Both steps in one card, so the page reads as a single search form with one action.
   card: {
@@ -123,7 +132,7 @@ export default function SearchEntryPage() {
   }
 
   return (
-    <>
+    <div style={styles.page}>
       <TopBar userEmail={userEmail} />
       <Hero
         title={
@@ -214,9 +223,8 @@ export default function SearchEntryPage() {
         </section>
 
         <RecentSearches />
-
-        <Footer style={{ marginTop: 28 }} />
       </main>
-    </>
+      <Footer />
+    </div>
   );
 }
