@@ -53,12 +53,6 @@ const colors = {
   bgDanger: "#fcebeb",
 
   white: "#ffffff",
-  /** The hero's navy at its top edge, deepening into textPrimary below. */
-  heroDeep: "#052f4c",
-  /** The teal glow in the hero's bottom-left corner. */
-  heroGlowTeal: "#1a9a86",
-  /** The blue glow in the hero's top-right corner: lighter than the navy it sits on, so it shows. */
-  heroGlowBlue: "#2f8fcf",
 
   subpopEur: "#F9C854",
   subpopAfr: "#2078B4",

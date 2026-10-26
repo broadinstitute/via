@@ -19,7 +19,7 @@ import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 /** What the step does for the search; the folded row says the same, so the step reads alike open or closed. */
 export const PHENOTYPE_STEP_DESCRIPTION =
   <>
-    See how often each variant shows up among <AllOfUs /> participants recorded with a condition.
+    See how often each variant shows up among <AllOfUs /> participants recorded with any of up to three conditions.
   </>;
 
 /** The step's tags, the same on the folded row and the open step: optional, then the limit. */
@@ -168,8 +168,8 @@ export default function PhenotypeStep({
       {atLimit ? (
         <p style={styles.atLimit}>
           {limit === 1
-            ? "Search has a maximum of one phenotype. Remove it to pick another."
-            : `Search has a maximum of ${limit} phenotypes. Remove one to pick another.`}
+            ? "You have reached the maximum of one phenotype. Remove it to pick another."
+            : `You have reached the maximum of ${limit} phenotypes. Remove one to pick another.`}
         </p>
       ) : (
         <>
@@ -188,11 +188,11 @@ export default function PhenotypeStep({
           <FieldHint>
             {picked.length === 0 ? (
               <>
-                Start typing a condition and pick one from the list. Matched against the <AllOfUs /> condition
-                vocabulary.
+                Start typing a condition and pick one from the list, then add more if you like, up to {limit}. Matched
+                against the <AllOfUs /> condition vocabulary.
               </>
             ) : (
-              "Add another condition. Participants recorded with any of them are matched."
+              `Add up to ${limit - picked.length} more. A participant recorded with any of these conditions is matched.`
             )}
           </FieldHint>
         </>

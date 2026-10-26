@@ -133,8 +133,8 @@ export default function SearchEntryPage() {
         }
         subtitle={
           <>
-            Variant frequencies across the <AllOfUs /> cohort and among participants with a condition, with gnomAD,
-            ClinVar and predicted impact beside them.
+            See how often your candidate variants appear in <AllOfUs />, overall and in participants with the
+            conditions you choose.
           </>
         }
         // TODO: decide whether the data source versions belong in the hero. HeroSources renders them

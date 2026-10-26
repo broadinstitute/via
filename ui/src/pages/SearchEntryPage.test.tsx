@@ -69,7 +69,7 @@ describe("SearchEntryPage", () => {
     expect(title.parentElement).toHaveTextContent(/^All of Us Variant InterpretationBeta$/);
     // The hero positions; the instructions are the steps' own lines.
     expect(screen.getByText(/Enter the variants you're interpreting/)).toBeInTheDocument();
-    expect(screen.getByText(/among participants recorded with a condition/)).toBeInTheDocument();
+    expect(screen.getByText(/among participants recorded with any of up to three conditions/)).toBeInTheDocument();
   });
 
   it("shows the phenotype step open from the start, as the condition combobox", () => {
@@ -366,7 +366,7 @@ describe("SearchEntryPage", () => {
     await pick(/Tetralogy of Fallot/, "fallot");
     const picked = screen.getByRole("list", { name: "Picked phenotypes" });
     expect(picked).not.toHaveTextContent(/\bor\b/);
-    expect(screen.getByText("Add another condition. Participants recorded with any of them are matched.")).toBeInTheDocument();
+    expect(screen.getByText("Add up to 2 more. A participant recorded with any of these conditions is matched.")).toBeInTheDocument();
     expect(screen.getByText("1 variant ready").parentElement).toHaveTextContent("filtered by Tetralogy of Fallot");
 
     // The one already picked isn't offered again.
@@ -384,7 +384,7 @@ describe("SearchEntryPage", () => {
     // The third pick fills the search; the field gives way to the limit line until one is removed.
     await pick(/Fallot tetralogy, repaired/, "fallot");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-    expect(screen.getByText("Search has a maximum of 3 phenotypes. Remove one to pick another.")).toBeInTheDocument();
+    expect(screen.getByText("You have reached the maximum of 3 phenotypes. Remove one to pick another.")).toBeInTheDocument();
     expect(screen.getByText("1 variant ready").parentElement).toHaveTextContent(
       "filtered by Tetralogy of Fallot, Pentalogy of Fallot or Fallot tetralogy, repaired",
     );
