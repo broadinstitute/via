@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ConditionSearch } from "../../api/conditions";
 import type { BreakdownSegment } from "../../types/results";
@@ -152,21 +152,10 @@ describe("PhenotypeSummaryStrip", () => {
     expect(nearest).toHaveTextContent("HP:0003124");
     expect(nearest).toHaveAttribute("title", expect.stringMatching(/^Nearest HPO term HP:0003124 Hypercholesterolemia: broader than the condition/));
     expect(screen.getByText("Hypercholesterolemia")).toBeInTheDocument();
-    // The chip explains itself in the app's tooltip, not the browser's, and the keyboard can reach it.
-    const chip = screen.getByText("≈ nearest");
-    expect(chip).not.toHaveAttribute("title");
-    expect(chip).toHaveAttribute("tabindex", "0");
-    expect(chip).toHaveAccessibleDescription(/^No HPO term has this condition's name/);
-    vi.useFakeTimers();
-    try {
-      fireEvent.mouseEnter(chip);
-      act(() => vi.advanceTimersByTime(200));
-      expect(screen.getByTestId("infoTooltip")).toHaveTextContent(/^No HPO term has this condition's name; this is the broader term its name contains\.$/);
-      fireEvent.mouseLeave(chip);
-      expect(screen.queryByTestId("infoTooltip")).not.toBeInTheDocument();
-    } finally {
-      vi.useRealTimers();
-    }
+    // A nearest match is marked on the id itself, as the search page's picked chip marks it, with
+    // the explanation in the link's tooltip; there is no separate chip for it.
+    expect(nearest).toHaveTextContent("≈ HP:0003124");
+    expect(screen.queryByText("≈ nearest")).not.toBeInTheDocument();
   });
 
   it("stacks each condition's HPO line under its name in the several-conditions table", () => {

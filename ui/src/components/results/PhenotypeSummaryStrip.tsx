@@ -27,33 +27,31 @@ function describeHpoCode(hpo: HpoTerm): { tooltip: string; spoken: string } {
   };
 }
 
-const NEAREST_NOTE = "No HPO term has this condition's name; this is the broader term its name contains.";
 const NO_TERM_NOTE = "No term in the Human Phenotype Ontology has this condition's name, or a name its words contain.";
 
 /**
- * The chip that flags a nearest match or no match, explained by the app's tooltip on hover,
- * focus or tap. Focusable, so the keyboard reaches the explanation, and described by it for
- * screen readers without hovering.
+ * The chip that says a condition has no HPO term, explained by the app's tooltip on hover, focus
+ * or tap. Focusable, so the keyboard reaches the explanation, and described by it for screen
+ * readers without hovering.
  */
-function HpoStateChip({ kind }: { kind: "nearest" | "none" }) {
+function NoHpoTermChip() {
   const ref = useRef<HTMLSpanElement>(null);
   const descriptionId = useId();
-  const note = kind === "nearest" ? NEAREST_NOTE : NO_TERM_NOTE;
-  const tooltip = useTooltip(ref, note);
+  const tooltip = useTooltip(ref, NO_TERM_NOTE);
   return (
     <span
       ref={ref}
       tabIndex={0}
       aria-describedby={descriptionId}
       style={{
-        ...(kind === "nearest" ? styles.hpoNearest : styles.hpoNone),
+        ...styles.hpoNone,
         ...(tooltip.keyboardFocused ? Style.elements.tooltipIconFocusRing : undefined),
       }}
       {...tooltip.anchorProps}
     >
-      {kind === "nearest" ? "≈ nearest" : "no matching term"}
+      no matching term
       <span id={descriptionId} style={Style.elements.visuallyHidden}>
-        {note}
+        {NO_TERM_NOTE}
       </span>
       {tooltip.bubble}
     </span>
@@ -63,8 +61,9 @@ function HpoStateChip({ kind }: { kind: "nearest" | "none" }) {
 /**
  * The line under a condition's name that names its HPO term: an "HPO" eyebrow, then the term's
  * own name (always, even when it is the condition's name too, so what was matched is never left
- * to inference), then its id as the link out, with a copy button. A nearest match is flagged
- * ahead of the name in the warning tint; a condition with no term says so in a dashed chip.
+ * to inference), then its id as the link out, styled as the picked chip's id is on the search
+ * page, with a copy button. A nearest match carries "≈" ahead of its id, as the chip does, and
+ * explains itself on hover; a condition with no term says so in a dashed chip.
  */
 function HpoLine({ hpo }: { hpo: HpoTerm | null | undefined }) {
   const { hovered, hoverProps } = useHover();
@@ -74,7 +73,7 @@ function HpoLine({ hpo }: { hpo: HpoTerm | null | undefined }) {
         <span style={styles.hpoEyebrow} aria-hidden="true">
           HPO
         </span>
-        <HpoStateChip kind="none" />
+        <NoHpoTermChip />
       </span>
     );
   }
@@ -84,7 +83,6 @@ function HpoLine({ hpo }: { hpo: HpoTerm | null | undefined }) {
       <span style={styles.hpoEyebrow} aria-hidden="true">
         HPO
       </span>
-      {hpo.match !== "exact" && <HpoStateChip kind="nearest" />}
       <span style={styles.hpoName} title={hpo.name}>
         {hpo.name}
       </span>
@@ -97,9 +95,8 @@ function HpoLine({ hpo }: { hpo: HpoTerm | null | undefined }) {
         style={{ ...styles.hpoId, ...(hovered ? styles.hpoIdHover : undefined) }}
         {...hoverProps}
       >
-        {/* The text's box trimmed to its cap height and the icon drawn as a block, so the two centre on each other. */}
-        <span style={Style.elements.trimmedText}>{hpo.id}</span>
-        <ExternalLinkIcon size={12} strokeWidth={2.4} aria-hidden="true" style={styles.hpoIdIcon} />
+        {hpo.match === "exact" ? hpo.id : `≈ ${hpo.id}`}
+        <ExternalLinkIcon size={10} aria-hidden="true" />
       </a>
       <CopyButton getText={() => hpo.id} label="Copy HPO term ID" />
     </span>
@@ -247,43 +244,24 @@ const styles = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
+  // The picked chip's id link: navy mono, faintly underlined, the external mark inline.
   hpoId: {
     display: "inline-flex",
     alignItems: "center",
     flexShrink: 0,
     gap: 3,
-    color: colors.textSecondary,
+    color: colors.textAccent,
     fontFamily: Style.monoFamily,
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: 600,
-    textDecoration: "none",
+    textDecoration: "underline",
+    textDecorationColor: alpha(colors.textAccent, 0.35),
+    textUnderlineOffset: 2,
     whiteSpace: "nowrap",
-  },
-  hpoIdIcon: {
-    display: "block",
-    flexShrink: 0,
   },
   hpoIdHover: {
-    color: colors.textAccent,
+    textDecorationColor: colors.textAccent,
   },
-  // A nearest match is a status, not an identity, so it reads as a small warning chip ahead of
-  // the name rather than as part of it.
-  hpoNearest: {
-    flexShrink: 0,
-    padding: "1px 7px",
-    border: `1px solid ${alpha(colors.textWarning, 0.45)}`,
-    borderRadius: 6,
-    background: colors.bgWarning,
-    color: colors.textWarning,
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: 0.3,
-    lineHeight: 1.4,
-    textTransform: "uppercase",
-    whiteSpace: "nowrap",
-    cursor: "default",
-  },
-  // No term at all: an empty, dashed slot where one would be.
   hpoNone: {
     flexShrink: 0,
     padding: "1px 7px",
