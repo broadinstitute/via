@@ -1,7 +1,10 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readPreferences } from "../../utils/preferences";
-import SettingsDialog from "./SettingsDialog";
+import { readPreferences } from "../utils/preferences";
+import DataSourcesPage from "./DataSourcesPage";
+import SystemStatusPage from "./SystemStatusPage";
+import UsagePage from "./UsagePage";
 
 /** Answers /api/status with the given body, /api/sources with SOURCES and /api/usage with USAGE. */
 function mockStatus(body: unknown, ok = true) {
@@ -13,6 +16,17 @@ function mockStatus(body: unknown, ok = true) {
         : url === "/api/usage"
           ? Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(USAGE) })
           : Promise.resolve({ ok, status: ok ? 200 : 500, json: () => Promise.resolve(body) }),
+    ),
+  );
+}
+
+function mockUsage(usage: unknown) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((url: string) =>
+      url === "/api/usage"
+        ? Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(usage) })
+        : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(SOURCES) }),
     ),
   );
 }
@@ -74,10 +88,6 @@ const USAGE = {
   ],
 };
 
-function openStatusPanel() {
-  fireEvent.click(screen.getByRole("button", { name: "System status" }));
-}
-
 const SOURCES = [{ name: "gnomAD", version: "v3.1.2", url: "https://gnomad.broadinstitute.org/" }];
 
 const ACCESSIBLE = {
@@ -88,48 +98,34 @@ const ACCESSIBLE = {
   ],
 };
 
-describe("SettingsDialog", () => {
-  beforeEach(() => {
-    mockStatus(ACCESSIBLE);
-  });
+const renderPage = (page: React.ReactElement) => render(<MemoryRouter>{page}</MemoryRouter>);
 
+describe("DataSourcesPage", () => {
+  beforeEach(() => mockStatus(ACCESSIBLE));
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
-    window.localStorage.clear();
   });
 
-  it("offers the top bar's usage meter as a checkbox, off by default, and keeps the choice", async () => {
-    render(<SettingsDialog onClose={vi.fn()} initialPanel="usage" />);
-
-    const box = await screen.findByRole("checkbox", { name: /Show usage in the top bar/ });
-    expect(box).not.toBeChecked();
-    expect(readPreferences().showUsageMeter).toBe(false);
-
-    fireEvent.click(box);
-    expect(box).toBeChecked();
-    expect(readPreferences().showUsageMeter).toBe(true);
-
-    cleanup();
-    render(<SettingsDialog onClose={vi.fn()} initialPanel="usage" />);
-    expect(await screen.findByRole("checkbox", { name: /Show usage in the top bar/ })).toBeChecked();
-  });
-
-  it("opens on the data sources panel", async () => {
-    render(<SettingsDialog onClose={vi.fn()} />);
-
-    expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Data sources" })).toHaveAttribute("aria-current", "page");
+  it("lists the sources, without checking status", async () => {
+    renderPage(<DataSourcesPage />);
+    expect(screen.getByRole("heading", { level: 1, name: "Data sources" })).toBeInTheDocument();
     expect(await screen.findByText("gnomAD")).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith("/api/sources");
     expect(fetch).not.toHaveBeenCalledWith("/api/status");
   });
+});
 
-  it("switches to the system status panel and lists every checked table", async () => {
-    render(<SettingsDialog onClose={vi.fn()} />);
-    openStatusPanel();
+describe("SystemStatusPage", () => {
+  beforeEach(() => mockStatus(ACCESSIBLE));
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
-    expect(screen.getByRole("button", { name: "System status" })).toHaveAttribute("aria-current", "page");
+  it("lists every checked table", async () => {
+    renderPage(<SystemStatusPage />);
+    expect(screen.getByRole("heading", { level: 1, name: "System status" })).toBeInTheDocument();
     expect(await screen.findByText("All tables accessible")).toBeInTheDocument();
     expect(screen.getByText("proj.vat.v1")).toBeInTheDocument();
     expect(screen.getByText("cdr.C2024.cb_criteria")).toBeInTheDocument();
@@ -144,9 +140,7 @@ describe("SettingsDialog", () => {
         { table: "cdr.C2024.concept_ancestor", accessible: false, detail: "Access Denied" },
       ],
     });
-    render(<SettingsDialog onClose={vi.fn()} />);
-    openStatusPanel();
-
+    renderPage(<SystemStatusPage />);
     expect(await screen.findByText("1 of 2 tables unavailable")).toBeInTheDocument();
     expect(screen.getByText("Access Denied")).toBeInTheDocument();
     expect(screen.getByText("Unavailable")).toBeInTheDocument();
@@ -154,15 +148,12 @@ describe("SettingsDialog", () => {
 
   it("reports a failed status request", async () => {
     mockStatus({}, false);
-    render(<SettingsDialog onClose={vi.fn()} />);
-    openStatusPanel();
-
+    renderPage(<SystemStatusPage />);
     expect(await screen.findByRole("alert")).toHaveTextContent("status 500");
   });
 
   it("refreshes on demand", async () => {
-    render(<SettingsDialog onClose={vi.fn()} />);
-    openStatusPanel();
+    renderPage(<SystemStatusPage />);
     await screen.findByText("All tables accessible");
 
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
@@ -170,10 +161,35 @@ describe("SettingsDialog", () => {
     expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/status")).toHaveLength(2);
     expect(await screen.findByText("All tables accessible")).toBeInTheDocument();
   });
+});
+
+describe("UsagePage", () => {
+  beforeEach(() => mockStatus(ACCESSIBLE));
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    window.localStorage.clear();
+  });
+
+  it("offers the top bar's usage meter as a checkbox, off by default, and keeps the choice", async () => {
+    renderPage(<UsagePage />);
+
+    const box = await screen.findByRole("checkbox", { name: /Show usage in the top bar/ });
+    expect(box).not.toBeChecked();
+    expect(readPreferences().showUsageMeter).toBe(false);
+
+    fireEvent.click(box);
+    expect(box).toBeChecked();
+    expect(readPreferences().showUsageMeter).toBe(true);
+
+    cleanup();
+    renderPage(<UsagePage />);
+    expect(await screen.findByRole("checkbox", { name: /Show usage in the top bar/ })).toBeChecked();
+  });
 
   it("shows this session's BigQuery usage as totals and a log of searches, each opening into its queries", async () => {
-    render(<SettingsDialog onClose={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+    renderPage(<UsagePage />);
+    expect(screen.getByRole("heading", { level: 1, name: "Usage" })).toBeInTheDocument();
 
     const totals = await screen.findByRole("group", { name: "This session's totals" });
     expect(within(totals).getAllByRole("term").map((term) => term.textContent)).toEqual(["Billed", "Est. cost", "Queries", "Slot time"]);
@@ -223,16 +239,8 @@ describe("SettingsDialog", () => {
       id: 13 - index,
       variants: [`${13 - index}-1-A-G`],
     }));
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((url: string) =>
-        url === "/api/usage"
-          ? Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...USAGE, searches }) })
-          : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(SOURCES) }),
-      ),
-    );
-    render(<SettingsDialog onClose={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+    mockUsage({ ...USAGE, searches });
+    renderPage(<UsagePage />);
     await screen.findByText("1–10 of 13");
 
     const list = () => within(screen.getByRole("list", { name: /Requests this session/ })).getAllByRole("button");
@@ -252,38 +260,14 @@ describe("SettingsDialog", () => {
   });
 
   it("has no pager for ten searches or fewer", async () => {
-    render(<SettingsDialog onClose={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+    renderPage(<UsagePage />);
     await screen.findByText("Recent requests");
-
     expect(screen.queryByRole("navigation", { name: "Requests, by page" })).not.toBeInTheDocument();
   });
 
   it("says when no search has run yet", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((url: string) =>
-        url === "/api/usage"
-          ? Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...USAGE, queries: 0, searches: [] }) })
-          : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(SOURCES) }),
-      ),
-    );
-    render(<SettingsDialog onClose={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
-
+    mockUsage({ ...USAGE, queries: 0, searches: [] });
+    renderPage(<UsagePage />);
     expect(await screen.findByText("Nothing has queried BigQuery yet this session.")).toBeInTheDocument();
-  });
-
-  it("closes from the close button, Escape, and the backdrop", async () => {
-    const onClose = vi.fn();
-    render(<SettingsDialog onClose={onClose} />);
-    await screen.findByText("gnomAD");
-
-    fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
-    fireEvent.keyDown(document, { key: "Escape" });
-    fireEvent.click(screen.getByRole("dialog").parentElement!);
-    fireEvent.click(screen.getByRole("dialog"));
-
-    expect(onClose).toHaveBeenCalledTimes(3);
   });
 });

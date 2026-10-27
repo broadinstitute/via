@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { updatePreferences } from "../../utils/preferences";
+import { recordRecentSearch } from "../../utils/recentSearches";
 import TopBar, { USAGE_REFRESH_MS } from "./TopBar";
 
 /** The meter is opt-in; these tests turn it on. */
@@ -221,18 +222,69 @@ describe("TopBar", () => {
     );
   }
 
-  it("opens the settings dialog from the gear button", async () => {
+  it("opens the sidebar from the hamburger, listing the search and each workspace page", () => {
     stubBackend();
     renderTopBar({ userEmail: "user@example.org" });
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const button = screen.getByRole("button", { name: "Menu" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
 
-    expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
-    expect(await screen.findByText("gnomAD")).toBeInTheDocument();
+    fireEvent.click(button);
+    const drawer = screen.getByRole("dialog", { name: "Menu" });
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(drawer).toHaveFocus();
+    const nav = within(drawer).getByRole("navigation", { name: "Menu" });
+    expect(within(nav).getAllByRole("link").map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+      ["New search", "/"],
+      ["Data sources", "/data-sources"],
+      ["System status", "/system-status"],
+      ["Usage", "/usage"],
+    ]);
+    expect(within(nav).getByText("Workspace")).toBeInTheDocument();
+    expect(within(nav).queryByText("Recent")).not.toBeInTheDocument();
+    // The page being shown is marked; the bar renders at "/" here.
+    expect(within(nav).getByRole("link", { name: "New search" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: "Usage" })).not.toHaveAttribute("aria-current");
+    // Who is signed in, and the version, at the bottom.
+    expect(within(drawer).getAllByText("user@example.org").length).toBeGreaterThan(0);
+    expect(within(drawer).getByTitle("VIA version")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // Escape closes it and hands focus back to the hamburger.
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
+    expect(button).toHaveFocus();
+
+    // So do the close button, the scrim, and following a link.
+    fireEvent.click(button);
+    fireEvent.click(screen.getByRole("button", { name: "Close menu" }));
+    expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
+    fireEvent.click(button);
+    fireEvent.click(screen.getByTestId("appDrawerScrim"));
+    expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
+    fireEvent.click(button);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Menu" })).getByRole("link", { name: "Usage" }));
+    expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("lists the last few searches in the sidebar, each linking to its results", () => {
+    stubBackend();
+    recordRecentSearch({ variants: ["8-11708582-C-T", "8-11708590-G-GAA", "8-11708598-T-C"], conditions: [{ conceptId: 4208906, name: "Tetralogy of Fallot" }] });
+    recordRecentSearch({ variants: ["14-23412740-C-T"], conditions: [] });
+    renderTopBar({ userEmail: "user@example.org" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    const recent = within(screen.getByRole("list", { name: "Recent searches" })).getAllByRole("link");
+    expect(recent).toHaveLength(2);
+    // Newest first, variants summarised, then the phenotype and when.
+    expect(recent[0]).toHaveTextContent("14-23412740-C-T");
+    expect(recent[0]).toHaveTextContent("No phenotype · just now");
+    expect(recent[0]).toHaveAttribute("href", "/results?variants=14-23412740-C-T");
+    expect(recent[1]).toHaveTextContent("8-11708582-C-T, 8-11708590-G-GAA +1");
+    expect(recent[1]).toHaveTextContent("Tetralogy of Fallot · just now");
+    expect(recent[1]).toHaveAttribute("href", "/results?variants=8-11708582-C-T&variants=8-11708590-G-GAA&variants=8-11708598-T-C&conditionConceptIds=4208906");
+    expect(recent[1]).toHaveAccessibleName("Run again: 3 variants, Tetralogy of Fallot · just now");
     vi.unstubAllGlobals();
   });
 
@@ -240,32 +292,26 @@ describe("TopBar", () => {
     stubBackend();
     renderTopBar({ userEmail: "user@example.org" });
 
-    expect(screen.queryByRole("button", { name: /BigQuery usage/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /BigQuery usage/ })).not.toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalledWith("/api/usage");
 
-    // Switched on from the Usage panel, it appears without a reload.
-    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
-    fireEvent.click(await screen.findByRole("checkbox", { name: /Show usage in the top bar/ }));
-    expect(await screen.findByRole("button", { name: /BigQuery usage this session: 2.3 GB scanned/ })).toBeInTheDocument();
+    // Switched on from the Usage page, it appears without a reload.
+    act(() => updatePreferences({ showUsageMeter: true }));
+    expect(await screen.findByRole("link", { name: /BigQuery usage this session: 2.3 GB scanned/ })).toBeInTheDocument();
     vi.unstubAllGlobals();
   });
 
-  it("shows the session's bytes scanned and opens the Usage panel from the meter", async () => {
+  it("shows the session's bytes scanned, and links the meter to the Usage page", async () => {
     showMeter();
     stubBackend();
     renderTopBar({ userEmail: "user@example.org" });
 
-    const meter = await screen.findByRole("button", {
+    const meter = await screen.findByRole("link", {
       name: "BigQuery usage this session: 2.3 GB scanned, 2.5 GB billed, $0.01 estimated. Open usage details",
     });
     expect(meter).toHaveTextContent("2.3 GB·2.5 GB·$0.01");
     expect(meter).toHaveAttribute("title", "BigQuery this session: 2.3 GB scanned · 2.5 GB billed · $0.01 estimated");
-
-    fireEvent.click(meter);
-    const dialog = screen.getByRole("dialog", { name: "Settings" });
-    expect(within(dialog).getByRole("button", { name: "Usage" })).toHaveAttribute("aria-current", "page");
-    expect(await within(dialog).findByRole("heading", { name: "BigQuery usage" })).toBeInTheDocument();
+    expect(meter).toHaveAttribute("href", "/usage");
     vi.unstubAllGlobals();
   });
 
@@ -278,7 +324,7 @@ describe("TopBar", () => {
     renderTopBar({ userEmail: "user@example.org" });
 
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/usage"));
-    expect(screen.queryByRole("button", { name: /BigQuery usage/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /BigQuery usage/ })).not.toBeInTheDocument();
     expect(screen.getByText("user@example.org")).toBeInTheDocument();
     vi.unstubAllGlobals();
   });
@@ -302,7 +348,7 @@ describe("TopBar", () => {
 
       down = true;
       act(() => vi.advanceTimersByTime(USAGE_REFRESH_MS));
-      await waitFor(() => expect(screen.queryByRole("button", { name: /BigQuery usage/ })).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByRole("link", { name: /BigQuery usage/ })).not.toBeInTheDocument());
 
       // Back up on the next tick.
       down = false;
@@ -339,7 +385,7 @@ describe("TopBar", () => {
 
       // Off again: the meter goes, and so do the reads.
       act(() => updatePreferences({ showUsageMeter: false }));
-      expect(screen.queryByRole("button", { name: /BigQuery usage/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /BigQuery usage/ })).not.toBeInTheDocument();
       act(() => vi.advanceTimersByTime(USAGE_REFRESH_MS * 3));
       expect(fetch).toHaveBeenCalledTimes(2);
     } finally {
@@ -380,7 +426,7 @@ describe("TopBar", () => {
       stubBackend();
       renderTopBar(props);
 
-      const meter = await screen.findByRole("button", { name: /BigQuery usage this session/ });
+      const meter = await screen.findByRole("link", { name: /BigQuery usage this session/ });
       expect(meter).toHaveTextContent("$0.01");
       expect(meter).not.toHaveTextContent("GB");
       expect(meter).toHaveAttribute("title", expect.stringContaining("2.3 GB scanned"));

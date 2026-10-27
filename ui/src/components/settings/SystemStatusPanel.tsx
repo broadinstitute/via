@@ -7,15 +7,13 @@ import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
 
 const styles = {
+  // The page's title is above the panel; this row holds the panel's own action.
   heading: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     gap: 12,
     marginBottom: 6,
-  },
-  title: {
-    ...Style.elements.panelTitle,
   },
   summary: {
     display: "inline-flex",
@@ -81,7 +79,6 @@ export default function SystemStatusPanel() {
   return (
     <>
       <div style={styles.heading}>
-        <h3 style={styles.title}>System status</h3>
         <Clickable
           style={Style.buttons.accent}
           hoverStyle={Style.buttons.accentHover}

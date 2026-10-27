@@ -1,6 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { APP_VERSION } from "../../libs/version";
 import DataSourcesPanel from "./DataSourcesPanel";
 
 const { fetchDataSourceVersions } = vi.hoisted(() => ({
@@ -20,13 +19,12 @@ describe("DataSourcesPanel", () => {
     cleanup();
   });
 
-  it("shows a loading placeholder and the app version before sources load", () => {
+  it("shows a loading placeholder before sources load", () => {
     fetchDataSourceVersions.mockReturnValue(new Promise(() => {}));
 
     const { container } = render(<DataSourcesPanel />);
 
     expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
-    expect(screen.getByText(`VIA v${APP_VERSION}`)).toBeInTheDocument();
   });
 
   it("lists each source with its version and a link to its site", async () => {

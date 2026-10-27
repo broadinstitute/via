@@ -5,13 +5,8 @@ import { describeError } from "../../api/client";
 import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
-import AppVersion from "../elements/AppVersion";
 
 const styles = {
-  title: {
-    ...Style.elements.panelTitle,
-    marginBottom: 6,
-  },
   list: {
     margin: 0,
     padding: 0,
@@ -72,7 +67,6 @@ export default function DataSourcesPanel() {
 
   return (
     <>
-      <h3 style={styles.title}>Data sources</h3>
       <p style={Style.elements.panelIntro}>The datasets and annotation releases behind VIA's results.</p>
 
       {error ? (
@@ -112,8 +106,6 @@ export default function DataSourcesPanel() {
           ))}
         </ul>
       )}
-
-      <AppVersion style={{ marginTop: 14 }} />
     </>
   );
 }
