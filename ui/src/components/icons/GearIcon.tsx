@@ -1,5 +1,6 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
+/** A cog: the app's settings. */
 export default function GearIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>

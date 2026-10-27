@@ -5,44 +5,63 @@ import { describeError } from "../../api/client";
 import colors from "../../libs/colors";
 import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
-import AppVersion from "../elements/AppVersion";
+import { ExternalLinkIcon } from "../icons";
 
+// One table: each source with what VIA takes from it, the release it's on, and its site. The
+// three columns line up down the page, so the versions can be read as a list of their own.
 const styles = {
-  title: {
-    ...Style.elements.panelTitle,
-    marginBottom: 6,
-  },
-  list: {
-    margin: 0,
-    padding: 0,
-    listStyle: "none",
+  frame: {
     border: `1px solid ${colors.border}`,
     borderRadius: Style.radius,
     overflow: "hidden",
   },
-  row: {
-    display: "flex",
-    alignItems: "baseline",
-    gap: 10,
-    padding: "9px 12px",
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+  headerCell: {
+    ...Style.elements.eyebrow,
+    padding: "7px 12px",
+    background: colors.surface0,
+    borderBottom: `1px solid ${colors.border}`,
+    textAlign: "left",
+  },
+  cell: {
+    padding: "10px 12px",
+    verticalAlign: "top",
+    lineHeight: "18px",
   },
   name: {
-    minWidth: 90,
-    color: colors.textBody,
-    fontSize: 12.5,
+    color: colors.textPrimary,
+    fontSize: 13,
     fontWeight: 600,
+  },
+  description: {
+    marginTop: 1,
+    color: colors.textSecondary,
+    fontSize: 11.5,
+    lineHeight: 1.4,
   },
   version: {
     ...Style.elements.mono,
-    color: colors.textPrimary,
-    fontWeight: 700,
+    whiteSpace: "nowrap",
+    color: colors.textBody,
+    fontSize: 12,
+    fontWeight: 600,
   },
   link: {
-    marginLeft: "auto",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    whiteSpace: "nowrap",
     color: colors.textSecondary,
     fontSize: 11.5,
     textDecoration: "none",
-    wordBreak: "break-all",
+  },
+  linkHovered: {
+    color: colors.textAccent,
+    textDecoration: "underline",
+    textUnderlineOffset: 2,
   },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -68,52 +87,80 @@ export default function DataSourcesPanel() {
       .catch((err: unknown) => setError(`Couldn't reach the backend: ${describeError(err)}`));
   }, []);
 
-  const rowBorder = (index: number) => (index > 0 ? `1px solid ${colors.border}` : undefined);
+  const cell = (index: number, extra?: CSSProperties): CSSProperties => ({
+    ...styles.cell,
+    borderTop: index > 0 ? `1px solid ${colors.border}` : undefined,
+    ...extra,
+  });
 
-  return (
-    <>
-      <h3 style={styles.title}>Data sources</h3>
-      <p style={Style.elements.panelIntro}>The datasets and annotation releases behind VIA's results.</p>
-
-      {error ? (
+  if (error) {
+    return (
+      <>
+        <p style={Style.elements.panelIntro}>The datasets and annotation releases behind VIA's results.</p>
         <div role="alert" style={Style.elements.errorNote}>
           {error}
         </div>
-      ) : !versions ? (
-        <div style={styles.list} aria-busy="true">
-          {Array.from({ length: SKELETON_ROWS }, (_, index) => (
-            <div key={index} style={{ ...styles.row, borderTop: rowBorder(index) }}>
-              <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: `${50 - index * 5}%` }} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <ul style={styles.list}>
-          {versions.map((source, index) => (
-            <li key={source.name} style={{ ...styles.row, borderTop: rowBorder(index) }}>
-              <span style={styles.name}>{source.name}</span>
-              <span style={styles.version}>{source.version}</span>
-              {source.url && (
-                <a
-                  style={{
-                    ...styles.link,
-                    ...(hoveredLink === source.name ? { color: colors.textAccent } : undefined),
-                  }}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={`Open ${source.name}`}
-                  {...linkHoverProps(source.name)}
-                >
-                  {hostname(source.url)} ↗
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      </>
+    );
+  }
 
-      <AppVersion style={{ marginTop: 14 }} />
+  return (
+    <>
+      <p style={Style.elements.panelIntro}>The datasets and annotation releases behind VIA's results.</p>
+      <div style={styles.frame} aria-busy={!versions}>
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th scope="col" style={styles.headerCell}>
+                Source
+              </th>
+              <th scope="col" style={styles.headerCell}>
+                Version
+              </th>
+              <th scope="col" style={{ ...styles.headerCell, textAlign: "right" }}>
+                Website
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {versions
+              ? versions.map((source, index) => (
+                  <tr key={source.name}>
+                    <td style={cell(index, { width: "100%" })}>
+                      <div style={styles.name}>{source.name}</div>
+                      {source.description && <div style={styles.description}>{source.description}</div>}
+                    </td>
+                    <td style={cell(index, styles.version)}>{source.version}</td>
+                    <td style={cell(index, { textAlign: "right" })}>
+                      {source.url && (
+                        <a
+                          style={{
+                            ...styles.link,
+                            ...(hoveredLink === source.name ? styles.linkHovered : undefined),
+                          }}
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Open ${source.name}`}
+                          {...linkHoverProps(source.name)}
+                        >
+                          {hostname(source.url)}
+                          <ExternalLinkIcon size={11} aria-hidden="true" />
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              : Array.from({ length: SKELETON_ROWS }, (_, index) => (
+                  <tr key={index}>
+                    <td style={cell(index)} colSpan={3}>
+                      <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: `${50 - index * 5}%` }} />
+                    </td>
+                  </tr>
+                ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

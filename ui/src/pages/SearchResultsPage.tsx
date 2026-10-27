@@ -67,7 +67,11 @@ export default function SearchResultsPage() {
         // concepts that resolved: an id the CDR doesn't have isn't worth re-running.
         recordRecentSearch({
           variants: parseVariantsText(data.searchSummary.variantsRaw),
-          conditions: (data.conditionSearch?.concepts ?? []).map(({ conceptId, name }) => ({ conceptId, name })),
+          conditions: (data.conditionSearch?.concepts ?? []).map(({ conceptId, name, estimatedParticipantCount }) => ({
+            conceptId,
+            name,
+            estimatedParticipantCount,
+          })),
         });
       })
       .catch((err: unknown) => setError(describeError(err)));
@@ -121,7 +125,8 @@ export default function SearchResultsPage() {
   }
 
   return (
-    <>
+    // A column that fills the window, so the footer sits at the bottom even on a short result.
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <TopBar
         loading={!results}
         variantsEnteredCount={results?.searchSummary.variantsEnteredCount ?? 0}
@@ -146,7 +151,7 @@ export default function SearchResultsPage() {
         }
       />
 
-      <main style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+      <main style={{ flex: 1, padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
         <PhenotypeSummaryStrip
           loading={!results}
           conditionSearch={results?.conditionSearch}
@@ -188,9 +193,8 @@ export default function SearchResultsPage() {
             )}
           </>
         )}
-
-        <Footer />
       </main>
-    </>
+      <Footer />
+    </div>
   );
 }

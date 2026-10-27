@@ -15,6 +15,8 @@ import org.broadinstitute.variantinterpretation.datasource.BigQueryService;
 import org.broadinstitute.variantinterpretation.datasource.QueryUsageMeter;
 import org.broadinstitute.variantinterpretation.model.BigQueryStatus;
 import org.broadinstitute.variantinterpretation.model.TableStatus;
+import java.util.List;
+import org.broadinstitute.variantinterpretation.model.DataSourceVersion;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
@@ -70,5 +72,14 @@ class SystemControllerTest {
             tuple("cdr-project.test_cdr.cb_criteria", true, null),
             tuple("cdr-project.test_cdr.concept_ancestor", false, "Access Denied"),
             tuple("cdr-project.test_cdr.condition_occurrence", true, null));
+  }
+
+  /** Every source says what VIA takes from it, so the data-sources page can explain each row. */
+  @Test
+  void dataSourceVersions_describeEverySource() {
+    List<DataSourceVersion> sources = new SystemController(null, null, null).dataSourceVersions().getBody();
+
+    assertThat(sources).extracting(DataSourceVersion::getName).contains("All of Us", "gnomAD", "ClinVar");
+    assertThat(sources).allSatisfy(source -> assertThat(source.getDescription().orElse("")).isNotBlank());
   }
 }
