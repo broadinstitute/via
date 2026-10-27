@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { describeError } from "../../api/client";
 import { fetchQueryUsage, type QueryUsage, type SearchUsage } from "../../api/usage";
@@ -81,79 +81,87 @@ const styles = {
     fontWeight: 600,
     color: colors.textBody,
   },
-  list: {
-    margin: 0,
-    padding: 0,
-    listStyle: "none",
+  // The log: one table, so a request's queries, shown when it's opened, sit in the same columns
+  // as the request itself. Rounded by a frame around it, since a table can't clip its own corners.
+  frame: {
     border: `1px solid ${colors.border}`,
     borderRadius: Style.radius,
     overflow: "hidden",
   },
-  search: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
+  table: {
     width: "100%",
-    padding: "8px 10px",
-    border: "none",
-    borderTop: `1px solid ${colors.border}`,
-    background: "none",
-    color: colors.textPrimary,
-    font: "inherit",
+    borderCollapse: "collapse",
+  },
+  head: {
+    padding: "7px 10px",
+    background: colors.surface0,
+    borderBottom: `1px solid ${colors.border}`,
     textAlign: "left",
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+    color: colors.textSecondary,
+    whiteSpace: "nowrap",
+  },
+  cell: {
+    padding: "8px 10px",
+    borderTop: `1px solid ${colors.border}`,
+    verticalAlign: "middle",
+    whiteSpace: "nowrap",
+    fontSize: 12.5,
+    color: colors.textBody,
+  },
+  cellRight: {
+    textAlign: "right",
+    fontVariantNumeric: "tabular-nums",
+  },
+  request: {
     cursor: "pointer",
   },
-  searchFirst: {
-    borderTop: "none",
-  },
-  searchHovered: {
+  requestHovered: {
     background: colors.surface1,
   },
-  chevron: {
-    flexShrink: 0,
+  // The chevron: the keyboard's way to open a request, where the pointer can click the whole row.
+  toggle: {
+    ...Style.buttons.icon,
+    padding: 2,
     color: colors.textMuted,
   },
-  when: {
-    flexShrink: 0,
-    width: 62,
+  toggleCell: {
+    width: 16,
+    paddingRight: 0,
+  },
+  time: {
+    width: 72,
     fontSize: 11.5,
     color: colors.textSecondary,
     fontVariantNumeric: "tabular-nums",
   },
-  what: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-    minWidth: 0,
-  },
   variants: {
     ...Style.elements.mono,
+    display: "block",
     overflow: "hidden",
-    fontSize: 11,
+    maxWidth: 340,
+    fontSize: 11.5,
     color: colors.textBody,
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
   lookup: {
-    overflow: "hidden",
-    fontSize: 12,
-    color: colors.textSecondary,
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    fontSize: 12.5,
+    color: colors.textBody,
   },
   lookupTerm: {
-    color: colors.textBody,
-    fontWeight: 600,
+    fontWeight: 700,
   },
   phenotype: {
     display: "inline-flex",
     alignItems: "center",
     gap: 4,
-    flexShrink: 0,
-    maxWidth: 180,
-    padding: "1px 7px",
-    borderRadius: 6,
+    maxWidth: 240,
+    padding: "1px 8px",
+    borderRadius: 999,
     background: colors.bgAccent,
     color: colors.textAccent,
     fontSize: 11,
@@ -161,25 +169,39 @@ const styles = {
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
+    verticalAlign: "middle",
+  },
+  phenotypeNext: {
+    marginLeft: 4,
+  },
+  none: {
+    color: colors.textMuted,
   },
   cost: {
-    flexShrink: 0,
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    fontSize: 11.5,
-    color: colors.textSecondary,
-    fontVariantNumeric: "tabular-nums",
-  },
-  costBilled: {
     fontWeight: 600,
     color: colors.textPrimary,
   },
+  // A request's queries, one row each, tinted and quieter than the request above them.
+  queryCell: {
+    padding: "6px 10px",
+    borderTop: `1px solid ${colors.border}`,
+    background: colors.surface1,
+    verticalAlign: "middle",
+    whiteSpace: "nowrap",
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  queryName: {
+    paddingLeft: 34,
+    color: colors.textBody,
+  },
   tag: {
+    display: "inline-block",
     padding: "1px 7px",
     borderRadius: 999,
     fontSize: 10.5,
     fontWeight: 600,
+    lineHeight: 1.5,
   },
   tagCached: {
     background: colors.bgSuccess,
@@ -189,32 +211,9 @@ const styles = {
     background: colors.bgAccent,
     color: colors.textAccent,
   },
-  jobs: {
-    width: "100%",
-    borderCollapse: "collapse",
-    background: colors.surface1,
+  skeletonRow: {
+    padding: "11px 10px",
     borderTop: `1px solid ${colors.border}`,
-    fontSize: 11.5,
-  },
-  jobsHead: {
-    padding: "5px 10px 5px 40px",
-    textAlign: "left",
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    color: colors.textSecondary,
-  },
-  jobCell: {
-    padding: "5px 10px 5px 40px",
-    borderTop: `1px solid ${colors.border}`,
-    color: colors.textBody,
-    verticalAlign: "middle",
-  },
-  jobCellRight: {
-    textAlign: "right",
-    fontVariantNumeric: "tabular-nums",
-    paddingLeft: 10,
   },
   empty: {
     padding: "14px 12px",
@@ -273,14 +272,21 @@ export function formatSlotTime(milliseconds: number): string {
 }
 
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+/**
+ * A query's time, to the second, without the AM or PM its request's row already says: "11:14:13"
+ * is no wider than "11:14 AM", so opening a request doesn't widen the column.
+ */
 const clockSeconds = (iso: string) =>
-  new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+  new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" }).replace(/\s?[AP]M$/, "");
 
 function previewVariants(variants: string[]): string {
   const shown = variants.slice(0, PREVIEW_VARIANTS).join(", ");
   const rest = variants.length - PREVIEW_VARIANTS;
   return rest > 0 ? `${shown} +${rest} more` : shown;
 }
+
+/** A request's slot time: the sum over its queries, which the API doesn't total itself. */
+const slotTime = (search: SearchUsage) => search.queries.reduce((total, job) => total + job.slotMilliseconds, 0);
 
 /** "cached" when every query came from the cache (a repeat), else "billed". */
 function CostTag({ search }: { search: SearchUsage }) {
@@ -359,9 +365,9 @@ export default function UsagePanel() {
           <div style={styles.caption}>
             <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 120, height: 10 }} />
           </div>
-          <div style={styles.list} aria-busy="true">
+          <div style={styles.frame} aria-busy="true">
             {Array.from({ length: SKELETON_ROWS }, (_, index) => (
-              <div key={index} style={{ ...styles.search, ...(index === 0 ? styles.searchFirst : undefined), cursor: "default" }}>
+              <div key={index} style={{ ...styles.skeletonRow, ...(index === 0 ? { borderTop: "none" } : undefined) }}>
                 <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: `${70 - index * 8}%` }} />
               </div>
             ))}
@@ -380,78 +386,110 @@ export default function UsagePanel() {
             <span>Searches and phenotype lookups {describeSince(usage.since)}, newest first</span>
           </div>
           {usage.searches.length === 0 ? (
-            <div style={{ ...styles.list, ...styles.empty }}>Nothing has queried BigQuery yet this session.</div>
+            <div style={{ ...styles.frame, ...styles.empty }}>Nothing has queried BigQuery yet this session.</div>
           ) : (
-            <ul style={styles.list} aria-label="Requests this session, newest first">
-              {shown.map((search, index) => {
-                const expanded = open.has(search.id);
-                const jobsId = `usage-search-${search.id}`;
-                return (
-                  <li key={search.id}>
-                    <button
-                      type="button"
-                      aria-expanded={expanded}
-                      aria-controls={jobsId}
-                      onClick={() => toggle(search.id)}
-                      {...hoverProps(search.id)}
-                      style={{
-                        ...styles.search,
-                        ...(index === 0 ? styles.searchFirst : undefined),
-                        ...(hoveredKey === search.id ? styles.searchHovered : undefined),
-                      }}
-                    >
-                      {expanded ? (
-                        <ChevronDownIcon size={12} strokeWidth={2.5} style={styles.chevron} aria-hidden="true" />
-                      ) : (
-                        <ChevronRightIcon size={12} strokeWidth={2.5} style={styles.chevron} aria-hidden="true" />
-                      )}
-                      <span style={styles.when}>{clock(search.at)}</span>
-                      <span style={styles.what}>
-                        {search.kind === "condition" ? (
-                          <span style={styles.lookup}>
-                            Condition lookup <span style={styles.lookupTerm}>“{search.term}”</span>
-                          </span>
-                        ) : (
-                          <>
-                            <span style={styles.variants} title={search.variants.join("\n")}>
-                              {previewVariants(search.variants)}
-                            </span>
-                            {search.phenotypes.length > 0 && (
-                              <span style={styles.phenotype} title={describeAlternatives(search.phenotypes)}>
-                                <UserIcon size={10} strokeWidth={2.5} aria-hidden="true" />
-                                {describeAlternatives(search.phenotypes)}
+            <div style={styles.frame}>
+              <table style={styles.table} aria-label="Requests this session, newest first">
+                <thead>
+                  <tr>
+                    <th style={{ ...styles.head, ...styles.toggleCell }} />
+                    <th style={styles.head}>Time</th>
+                    <th style={styles.head}>Request</th>
+                    <th style={styles.head}>Phenotype</th>
+                    <th style={{ ...styles.head, ...styles.cellRight }}>Queries</th>
+                    <th style={{ ...styles.head, ...styles.cellRight }}>Read</th>
+                    <th style={{ ...styles.head, ...styles.cellRight }}>Billed</th>
+                    <th style={{ ...styles.head, ...styles.cellRight }}>Slot time</th>
+                    <th style={{ ...styles.head, ...styles.cellRight }}>Cost</th>
+                    <th style={styles.head} />
+                  </tr>
+                </thead>
+                {shown.map((search, index) => {
+                  const expanded = open.has(search.id);
+                  const jobsId = `usage-search-${search.id}-queries`;
+                  const cell = (extra?: CSSProperties): CSSProperties => ({
+                    ...styles.cell,
+                    ...(index === 0 ? { borderTop: "none" } : undefined),
+                    ...extra,
+                  });
+                  const right = { ...styles.cellRight };
+                  return (
+                    <Fragment key={search.id}>
+                      <tbody>
+                        <tr
+                          onClick={() => toggle(search.id)}
+                          {...hoverProps(search.id)}
+                          style={{ ...styles.request, ...(hoveredKey === search.id ? styles.requestHovered : undefined) }}
+                        >
+                          <td style={cell(styles.toggleCell)}>
+                            <button
+                              type="button"
+                              style={styles.toggle}
+                              aria-expanded={expanded}
+                              aria-controls={expanded ? jobsId : undefined}
+                              aria-label={`${expanded ? "Hide" : "Show"} queries for request ${search.id}`}
+                            >
+                              {expanded ? (
+                                <ChevronDownIcon size={12} strokeWidth={2.5} aria-hidden="true" />
+                              ) : (
+                                <ChevronRightIcon size={12} strokeWidth={2.5} aria-hidden="true" />
+                              )}
+                            </button>
+                          </td>
+                          <td style={cell(styles.time)}>{clock(search.at)}</td>
+                          <td style={cell()}>
+                            {search.kind === "condition" ? (
+                              <span style={styles.lookup}>
+                                Condition lookup <span style={styles.lookupTerm}>“{search.term}”</span>
+                              </span>
+                            ) : (
+                              <span style={styles.variants} title={search.variants.join("\n")}>
+                                {previewVariants(search.variants)}
                               </span>
                             )}
-                          </>
-                        )}
-                      </span>
-                      <span style={styles.cost}>
-                        <span>
-                          {search.queries.length} {search.queries.length === 1 ? "query" : "queries"}
-                        </span>
-                        <span style={styles.costBilled}>{formatBytes(search.bytesBilled)}</span>
-                        <CostTag search={search} />
-                      </span>
-                    </button>
-                    {expanded && (
-                      <table id={jobsId} style={styles.jobs} aria-label={`Queries run by request ${search.id}`}>
-                        <thead>
-                          <tr>
-                            <th style={styles.jobsHead}>When</th>
-                            <th style={{ ...styles.jobsHead, paddingLeft: 10 }}>Query</th>
-                            <th style={{ ...styles.jobsHead, ...styles.jobCellRight }}>Read</th>
-                            <th style={{ ...styles.jobsHead, ...styles.jobCellRight }}>Billed</th>
-                            <th style={{ ...styles.jobsHead, paddingLeft: 10 }} />
-                          </tr>
-                        </thead>
-                        <tbody>
+                          </td>
+                          <td style={cell()}>
+                            {search.phenotypes.length > 0 ? (
+                              search.phenotypes.map((phenotype, phenotypeIndex) => (
+                                <span
+                                  key={phenotype}
+                                  style={{ ...styles.phenotype, ...(phenotypeIndex > 0 ? styles.phenotypeNext : undefined) }}
+                                  title={describeAlternatives(search.phenotypes)}
+                                >
+                                  <UserIcon size={10} strokeWidth={2.5} aria-hidden="true" />
+                                  {phenotype}
+                                </span>
+                              ))
+                            ) : (
+                              <span style={styles.none} aria-label={search.kind === "condition" ? "Not a search" : "No phenotype"}>
+                                —
+                              </span>
+                            )}
+                          </td>
+                          <td style={cell(right)}>{formatInt(search.queries.length)}</td>
+                          <td style={cell(right)}>{formatBytes(search.bytesProcessed)}</td>
+                          <td style={cell(right)}>{formatBytes(search.bytesBilled)}</td>
+                          <td style={cell(right)}>{formatSlotTime(slotTime(search))}</td>
+                          <td style={cell({ ...right, ...styles.cost })}>{formatUsd(search.estimatedCostUsd)}</td>
+                          <td style={cell()}>
+                            <CostTag search={search} />
+                          </td>
+                        </tr>
+                      </tbody>
+                      {expanded && (
+                        <tbody id={jobsId} aria-label={`Queries run by request ${search.id}`}>
                           {search.queries.map((job, jobIndex) => (
                             <tr key={jobIndex}>
-                              <td style={{ ...styles.jobCell, fontVariantNumeric: "tabular-nums" }}>{clockSeconds(job.at)}</td>
-                              <td style={{ ...styles.jobCell, paddingLeft: 10 }}>{job.name}</td>
-                              <td style={{ ...styles.jobCell, ...styles.jobCellRight }}>{formatBytes(job.bytesProcessed)}</td>
-                              <td style={{ ...styles.jobCell, ...styles.jobCellRight }}>{formatBytes(job.bytesBilled)}</td>
-                              <td style={{ ...styles.jobCell, paddingLeft: 10 }}>
+                              <td style={{ ...styles.queryCell, ...styles.toggleCell }} />
+                              <td style={{ ...styles.queryCell, ...styles.time }}>{clockSeconds(job.at)}</td>
+                              <td style={{ ...styles.queryCell, ...styles.queryName }}>{job.name}</td>
+                              <td style={styles.queryCell} />
+                              <td style={styles.queryCell} />
+                              <td style={{ ...styles.queryCell, ...right }}>{formatBytes(job.bytesProcessed)}</td>
+                              <td style={{ ...styles.queryCell, ...right }}>{formatBytes(job.bytesBilled)}</td>
+                              <td style={{ ...styles.queryCell, ...right }}>{formatSlotTime(job.slotMilliseconds)}</td>
+                              <td style={styles.queryCell} />
+                              <td style={styles.queryCell}>
                                 <span style={{ ...styles.tag, ...(job.cacheHit ? styles.tagCached : styles.tagBilled) }}>
                                   {job.cacheHit ? "cache" : "billed"}
                                 </span>
@@ -459,12 +497,12 @@ export default function UsagePanel() {
                             </tr>
                           ))}
                         </tbody>
-                      </table>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </table>
+            </div>
           )}
           {usage.searches.length > SEARCHES_PER_PAGE && (
             <nav style={styles.pager} aria-label="Requests, by page">

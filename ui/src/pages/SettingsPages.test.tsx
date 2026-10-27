@@ -102,6 +102,10 @@ const ACCESSIBLE = {
 
 const renderPage = (page: React.ReactElement) => render(<MemoryRouter>{page}</MemoryRouter>);
 
+/** The usage log's request rows, each with the chevron that opens it, in the order shown. */
+const requestRows = () =>
+  screen.getAllByRole("button", { name: /queries for request \d+$/ }).map((toggle) => ({ toggle, row: toggle.closest("tr")! }));
+
 describe("DataSourcesPage", () => {
   beforeEach(() => mockStatus(ACCESSIBLE));
   afterEach(() => {
@@ -236,34 +240,33 @@ describe("UsagePage", () => {
     expect(screen.getByText(/^Searches and phenotype lookups since \d{1,2}:\d{2} [AP]M, newest first$/)).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith("/api/usage");
 
-    const rows = within(screen.getByRole("list", { name: /Requests this session/ })).getAllByRole("button");
+    const rows = requestRows();
     expect(rows).toHaveLength(3);
     // Newest first: the phenotype box's lookup, billed like anything else, named by what was typed.
-    expect(rows[0]).toHaveTextContent("Condition lookup “long qt”");
-    expect(rows[0]).toHaveTextContent(/1 query10 MBbilled$/);
+    expect(rows[0].row).toHaveTextContent("Condition lookup “long qt”");
+    expect(rows[0].row).toHaveTextContent(/—14 KB10 MB20 ms< \$0\.01billed$/);
     // Then the search, closed; opening it lists its three cached queries, and the repeat is marked as such.
-    expect(rows[1]).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("table", { name: "Queries run by request 2" })).not.toBeInTheDocument();
-    fireEvent.click(rows[1]);
-    expect(rows[1]).toHaveAttribute("aria-expanded", "true");
-    expect(rows[1]).toHaveTextContent("14-23424218-G-A, 11-47332274-G-A +1 more");
-    expect(rows[1]).toHaveTextContent("Hypertrophic cardiomyopathy or Long QT syndrome");
-    expect(rows[1]).toHaveTextContent(/3 queries0 Bcached$/);
-    const jobs = screen.getByRole("table", { name: "Queries run by request 2" });
+    expect(rows[1].toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("rowgroup", { name: "Queries run by request 2" })).not.toBeInTheDocument();
+    fireEvent.click(rows[1].row);
+    expect(rows[1].toggle).toHaveAttribute("aria-expanded", "true");
+    expect(rows[1].row).toHaveTextContent("14-23424218-G-A, 11-47332274-G-A +1 more");
+    expect(rows[1].row).toHaveTextContent("Hypertrophic cardiomyopathyLong QT syndrome");
+    expect(rows[1].row).toHaveTextContent(/352 KB0 B0 ms\$0\.00cached$/);
+    const jobs = screen.getByRole("rowgroup", { name: "Queries run by request 2" });
     expect(within(jobs).getAllByRole("row").map((row) => row.textContent)).toEqual([
-      "WhenQueryReadBilled",
-      expect.stringMatching(/VAT lookup25 KB0 Bcache$/),
-      expect.stringMatching(/Resolve concept4 KB0 Bcache$/),
-      expect.stringMatching(/Cohort count22 KB0 Bcache$/),
+      expect.stringMatching(/VAT lookup25 KB0 B0 mscache$/),
+      expect.stringMatching(/Resolve concept4 KB0 B0 mscache$/),
+      expect.stringMatching(/Cohort count22 KB0 B0 mscache$/),
     ]);
-    // The oldest is closed and billed; opening it lists its one billed query.
-    expect(rows[2]).toHaveAttribute("aria-expanded", "false");
-    expect(rows[2]).toHaveTextContent(/1 query10 MBbilled$/);
-    expect(screen.queryByRole("table", { name: "Queries run by request 1" })).not.toBeInTheDocument();
-    fireEvent.click(rows[2]);
-    expect(within(screen.getByRole("table", { name: "Queries run by request 1" })).getAllByRole("row")[1]).toHaveTextContent(/VAT lookup25 KB10 MBbilled$/);
-    fireEvent.click(rows[1]);
-    expect(screen.queryByRole("table", { name: "Queries run by request 2" })).not.toBeInTheDocument();
+    // The oldest is closed and billed; opening it, by its chevron, lists its one billed query.
+    expect(rows[2].toggle).toHaveAttribute("aria-expanded", "false");
+    expect(rows[2].row).toHaveTextContent(/125 KB10 MB30 ms< \$0\.01billed$/);
+    expect(screen.queryByRole("rowgroup", { name: "Queries run by request 1" })).not.toBeInTheDocument();
+    fireEvent.click(rows[2].toggle);
+    expect(within(screen.getByRole("rowgroup", { name: "Queries run by request 1" })).getAllByRole("row")[0]).toHaveTextContent(/VAT lookup25 KB10 MB30 msbilled$/);
+    fireEvent.click(rows[1].row);
+    expect(screen.queryByRole("rowgroup", { name: "Queries run by request 2" })).not.toBeInTheDocument();
   });
 
   it("pages through the searches ten at a time, newest first", async () => {
@@ -276,7 +279,7 @@ describe("UsagePage", () => {
     renderPage(<UsagePage />);
     await screen.findByText("1–10 of 13");
 
-    const list = () => within(screen.getByRole("list", { name: /Requests this session/ })).getAllByRole("button");
+    const list = () => requestRows().map(({ row }) => row);
     expect(list()).toHaveLength(10);
     expect(list()[0]).toHaveTextContent("13-1-A-G");
     expect(list()[9]).toHaveTextContent("4-1-A-G");

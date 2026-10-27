@@ -21,18 +21,24 @@ const styles = {
     borderRadius: Style.radius,
     overflow: "hidden",
   },
+  // A grid: the box and the name share the first row and centre on each other, whatever size
+  // either is; the description goes under the name in the second.
   option: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 10,
+    display: "grid",
+    gridTemplateColumns: "auto minmax(0, 1fr)",
+    alignItems: "center",
+    columnGap: 10,
+    rowGap: 2,
     padding: "10px 12px",
     cursor: "pointer",
   },
   optionBox: {
-    flexShrink: 0,
-    margin: "2px 0 0",
+    margin: 0,
     accentColor: colors.textAccent,
     cursor: "pointer",
+  },
+  optionAbout: {
+    gridColumn: 2,
   },
   text: {
     display: "flex",
@@ -71,7 +77,7 @@ const OPTIONS: { key: keyof Preferences; name: string; about: string }[] = [
   {
     key: "demoMode",
     name: "Demo mode",
-    about: "Offers the curated example searches under the variants box, as \u201cTry an example\u201d.",
+    about: "Shows the curated example searches under the variants box.",
   },
   {
     key: "showUsageMeter",
@@ -86,10 +92,8 @@ function Option({ option, first }: { option: (typeof OPTIONS)[number]; first: bo
     <li style={{ borderTop: first ? undefined : `1px solid ${colors.border}` }}>
       <label style={styles.option}>
         <input type="checkbox" style={styles.optionBox} checked={on} onChange={(event) => setOn(event.target.checked)} />
-        <span style={styles.text}>
-          <span style={styles.name}>{option.name}</span>
-          <span style={styles.about}>{option.about}</span>
-        </span>
+        <span style={styles.name}>{option.name}</span>
+        <span style={{ ...styles.about, ...styles.optionAbout }}>{option.about}</span>
       </label>
     </li>
   );
