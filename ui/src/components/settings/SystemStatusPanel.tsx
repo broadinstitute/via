@@ -7,8 +7,6 @@ import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
 
 const styles = {
-  // The page's title is above the panel; this row holds the panel's own action.
-  // The intro on the left, the panel's own action on the right; the page's title is above the panel.
   heading: {
     display: "flex",
     alignItems: "center",

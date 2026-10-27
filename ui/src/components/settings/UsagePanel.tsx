@@ -11,7 +11,6 @@ import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, UserIcon } from "../icons";
 
 const styles = {
-  // The intro on the left, the panel's own action on the right; the page's title is above the panel.
   heading: {
     display: "flex",
     alignItems: "center",
@@ -19,9 +18,6 @@ const styles = {
     gap: 16,
     marginBottom: 14,
   },
-  // The session's totals, one labelled cell each, in a bar.
-  // The session's totals as a row of figures, bare on the panel: each number large with its
-  // label beneath, a hairline between neighbours, and no box around them.
   strip: {
     display: "flex",
     flexWrap: "wrap",
@@ -29,7 +25,6 @@ const styles = {
     margin: "2px 0 0",
     padding: 0,
   },
-  // Label then value in the markup (a dt and its dd), shown the other way up.
   stat: {
     display: "flex",
     flexDirection: "column-reverse",
@@ -55,7 +50,6 @@ const styles = {
     color: colors.textPrimary,
     fontVariantNumeric: "tabular-nums",
   },
-  // The value, and beside it what qualifies it: "12 from cache", "on-demand".
   statFigure: {
     display: "flex",
     alignItems: "baseline",
@@ -81,8 +75,6 @@ const styles = {
     fontWeight: 600,
     color: colors.textBody,
   },
-  // The log: one table, so a request's queries, shown when it's opened, sit in the same columns
-  // as the request itself. Rounded by a frame around it, since a table can't clip its own corners.
   frame: {
     border: `1px solid ${colors.border}`,
     borderRadius: Style.radius,
@@ -122,7 +114,6 @@ const styles = {
   requestHovered: {
     background: colors.surface1,
   },
-  // The chevron: the keyboard's way to open a request, where the pointer can click the whole row.
   toggle: {
     ...Style.buttons.icon,
     padding: 2,
@@ -181,7 +172,6 @@ const styles = {
     fontWeight: 600,
     color: colors.textPrimary,
   },
-  // A request's queries, one row each, tinted and quieter than the request above them.
   queryCell: {
     padding: "6px 10px",
     borderTop: `1px solid ${colors.border}`,
@@ -249,9 +239,9 @@ function Stat({ label, value, sub, first }: { label: string; value: string; sub?
     </div>
   );
 }
-/** Searches shown at once; the pager steps through the rest. */
+/** Searches shown at once; the pager steps through any remaining rows */
 export const SEARCHES_PER_PAGE = 10;
-/** Variant IDs shown in a search's row before the rest are summarised as "+N more". */
+/** Variant IDs shown in a search's row before the rest are summarized as "+N more". */
 const PREVIEW_VARIANTS = 2;
 
 /** "since 3:12 PM" today, or "since Oct 14, 3:12 PM" on another day. */
@@ -288,7 +278,7 @@ function previewVariants(variants: string[]): string {
 /** A request's slot time: the sum over its queries, which the API doesn't total itself. */
 const slotTime = (search: SearchUsage) => search.queries.reduce((total, job) => total + job.slotMilliseconds, 0);
 
-/** "cached" when every query came from the cache (a repeat), else "billed". */
+/** "cached" when every query came from the cache, else "billed". */
 function CostTag({ search }: { search: SearchUsage }) {
   const cached = search.queries.length > 0 && search.cacheHits === search.queries.length;
   return (
@@ -335,7 +325,7 @@ export default function UsagePanel() {
     <>
       <div style={styles.heading}>
         <p style={{ ...Style.elements.panelIntro, margin: 0 }}>
-          What this VIA instance has spent on BigQuery since it started, in total and request by request.
+          What this VIA instance has spent on BigQuery since it started.
         </p>
         <Clickable
           style={{ ...Style.buttons.accent, flexShrink: 0 }}

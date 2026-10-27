@@ -1,6 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-/** Three bars: the app menu. */
 export default function MenuIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>

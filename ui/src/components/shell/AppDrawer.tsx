@@ -52,9 +52,6 @@ const styles = {
     boxShadow: `12px 0 32px ${alpha(colors.brandNavy, 0.18)}`,
     outline: "none",
   },
-  // The top bar's first stretch, repeated: the close button where the hamburger was, then the
-  // brand. Its height is set at render, from TopBar: the two modules import each other, so the
-  // constant isn't readable while this one loads.
   header: {
     display: "flex",
     alignItems: "center",
@@ -124,7 +121,6 @@ const styles = {
     flexShrink: 0,
     color: colors.textAccent,
   },
-  // A recent search: its variants on top, in mono, then who it was filtered by and when.
   recentText: {
     display: "flex",
     flexDirection: "column",
@@ -148,8 +144,6 @@ const styles = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  // The app footer's first stretch, repeated the same way: the version where the page shows it,
-  // so the drawer's last line and the page's meet when the page is pinned to the window's bottom.
   footer: {
     display: "flex",
     alignItems: "center",
@@ -176,12 +170,6 @@ interface AppDrawerProps {
   onClose: () => void;
 }
 
-/**
- * The app's sidebar, opened from the bar's hamburger: the search and the workspace pages and the
- * last few searches, over a scrim. Its top and bottom repeat the page's bars, so it reads as a
- * panel of the page rather than a sheet over it; who is signed in stays in the top bar. Closes on Escape, on the scrim, on its
- * close button and on following a link; whoever opened it puts focus back where it came from.
- */
 export default function AppDrawer({ open, onClose }: AppDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const { hoveredKey, hoverProps } = useHoveredKey<string>();

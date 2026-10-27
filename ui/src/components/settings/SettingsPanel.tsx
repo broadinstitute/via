@@ -9,7 +9,7 @@ import { TrashIcon } from "../icons";
 
 // The app's switches, one row each: a checkbox, its name, and a line on what it does; then the
 // search history, with the button that clears it. All kept per browser (see utils/preferences
-// and utils/recentSearches); nothing here reaches the backend.
+// and utils/recentSearches); nothing here reaches the backend (yet).
 const styles = {
   list: {
     display: "flex",
@@ -21,8 +21,6 @@ const styles = {
     borderRadius: Style.radius,
     overflow: "hidden",
   },
-  // A grid: the box and the name share the first row and centre on each other, whatever size
-  // either is; the description goes under the name in the second.
   option: {
     display: "grid",
     gridTemplateColumns: "auto minmax(0, 1fr)",
@@ -55,7 +53,6 @@ const styles = {
     fontSize: 11.5,
     lineHeight: 1.4,
   },
-  // The history row: what's kept on the left, the button that clears it on the right.
   action: {
     display: "flex",
     alignItems: "center",
@@ -99,7 +96,7 @@ function Option({ option, first }: { option: (typeof OPTIONS)[number]; first: bo
   );
 }
 
-/** "0 searches", "1 search", "12 searches". */
+/** i.e. "0 searches", "1 search", "12 searches". */
 function describeHistory(count: number) {
   return `${count} search${count === 1 ? "" : "es"}`;
 }

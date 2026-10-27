@@ -1,6 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-/** Recent searches. */
 export default function ClockIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>

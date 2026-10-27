@@ -59,10 +59,8 @@ interface VariantsStepProps {
   appearance?: StepPanelAppearance;
   numbered?: boolean;
   description?: ReactNode;
-  /** Offers these in a "Try an example" menu while the field is empty. */
   examples?: UseCase[];
   onUseExample?: (example: UseCase) => void;
-  /** Offers these in a "Recent searches" menu beside it, likewise while the field is empty. */
   recentSearches?: RecentSearch[];
   onUseRecentSearch?: (search: RecentSearch) => void;
 }

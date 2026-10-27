@@ -5,12 +5,6 @@ import { describeSearchedAt, type RecentSearch } from "../utils/recentSearches";
 import { describeAlternatives } from "../utils/phenotypes";
 import LinkMenu from "./LinkMenu";
 
-// "Recent searches", beside "Try an example" under the variants box: the searches run in this
-// browser (see utils/recentSearches), each filling both steps when picked, so it can be changed
-// before it's run. The conditions are the title, since they're what tells searches apart at a
-// glance; the variants follow in mono, the first few, and the time at the right. Clearing the
-// history is on the Settings page, with the app's other per-browser state.
-
 /** Variant IDs shown before the rest are summarised as "+N more". */
 const PREVIEW_VARIANTS = 3;
 

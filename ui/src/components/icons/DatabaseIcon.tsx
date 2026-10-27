@@ -1,6 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-/** Sources. */
 export default function DatabaseIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>

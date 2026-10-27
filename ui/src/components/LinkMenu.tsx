@@ -5,8 +5,7 @@ import { useHover, useHoveredKey } from "../libs/hooks";
 import * as Style from "../libs/style";
 import { ChevronDownIcon } from "./icons";
 
-// A link that opens a small menu of things to fill the form with: the curated examples, or the
-// searches run before. One component for both, so they open, close and arrow through alike.
+// A link that opens a small context menu of things to fill the form with i.e. the curated examples
 
 const styles = {
   wrap: {
@@ -28,7 +27,6 @@ const styles = {
   triggerHover: {
     textDecoration: "underline",
   },
-  // Right-aligned under the link, which sits at the right of its row.
   menu: {
     position: "absolute",
     top: "calc(100% + 6px)",
@@ -56,7 +54,6 @@ const styles = {
   itemActive: {
     background: colors.surface1,
   },
-  // The title, with anything the item puts at its right (when a search was run), then its detail.
   itemTitleRow: {
     display: "flex",
     alignItems: "baseline",

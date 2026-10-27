@@ -1,6 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-/** A bin: throws something away. */
 export default function TrashIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>

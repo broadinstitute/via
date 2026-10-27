@@ -2,12 +2,7 @@ import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import AppVersion from "../elements/AppVersion";
 
-// The page's last line, edge to edge like the top bar: the app's version and the Broad logo. The
-// brand mark stays in the top bar alone, so it isn't on screen twice. The same bar on every page,
-// pinned to the bottom of the window when the page is shorter than it (the pages lay out as a
-// column with the main content growing). The app drawer's last stretch repeats this bar, so the
-// two meet when the drawer is open.
-export const FOOTER_HEIGHT = 58;
+export const FOOTER_HEIGHT = 60;
 
 const styles = {
   footer: {

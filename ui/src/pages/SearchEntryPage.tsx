@@ -110,15 +110,9 @@ const styles = {
 export default function SearchEntryPage() {
   const navigate = useNavigate();
   const [variants, setVariants] = useState("");
-  // The phenotypes picked from the dropdown, as concepts rather than names, so the backend counts
-  // exactly what the user chose instead of re-resolving a name -- which matters for concepts a
-  // text path would skip, e.g. ones with a zero participant estimate.
   const [phenotypes, setPhenotypes] = useState<ConditionConcept[]>([]);
   const [userEmail, setUserEmail] = useState("");
-  // This browser's history, read once: a search run from here lands on the results page, and
-  // clearing it is on the Settings page.
   const [recentSearches] = useState(loadRecentSearches);
-  // The example searches are for showing VIA off; a switch in Settings offers them.
   const [demoMode] = usePreference("demoMode");
 
   useEffect(() => {

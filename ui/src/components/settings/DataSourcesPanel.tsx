@@ -7,8 +7,6 @@ import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import { ExternalLinkIcon } from "../icons";
 
-// One table: each source with what VIA takes from it, the release it's on, and its site. The
-// three columns line up down the page, so the versions can be read as a list of their own.
 const styles = {
   frame: {
     border: `1px solid ${colors.border}`,

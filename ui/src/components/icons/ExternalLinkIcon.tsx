@@ -1,6 +1,5 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-/** Marks a link that leaves VIA for another site. */
 export default function ExternalLinkIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>
