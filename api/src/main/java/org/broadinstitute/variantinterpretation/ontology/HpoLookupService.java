@@ -21,7 +21,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 /**
- * Pairs a condition concept's name with an HPO term, for display beside it.
+ * Pairs a condition concept's name with an HPO term.
  *
  * <p>VIA has no cross-reference between the All of Us condition vocabulary and HPO (the HPO
  * release carries no SNOMED or UMLS references), so the pairing is lexical, on the concept's
@@ -29,14 +29,14 @@ import org.springframework.stereotype.Service;
  * term can be shown at the moment the concept is picked. Two tiers, in order:
  *
  * <ol>
- *   <li><b>Exact.</b> The name, normalised, equals a term's name or one of its exact synonyms.
+ *   <li><b>Exact.</b> The name, normalized, equals a term's name or one of its exact synonyms.
  *       "Long QT syndrome" is an exact synonym of <i>Prolonged QT interval</i>, so it lands there.
  *   <li><b>Approximate.</b> Every word of some term's name (or exact synonym) appears in the
  *       concept's name: the term is a broader phrase the condition contains, e.g.
  *       <i>Hypercholesterolemia</i> for "Familial hypercholesterolemia", or <i>Tetralogy of
  *       Fallot</i> for "Tetralogy of Fallot, unspecified". The term with the most words wins, so
  *       the most specific such phrase is chosen; a single-word term has to be at least five
- *       letters, so "Pain" or "Mass" inside another word's neighbourhood doesn't pair with
+ *       letters, so "Pain" or "Mass" inside another word's neighborhood doesn't pair with
  *       everything.
  * </ol>
  *
@@ -59,7 +59,7 @@ public class HpoLookupService {
   private static final int MIN_SINGLE_WORD_LENGTH = 5;
 
   private final HpoOntology ontology;
-  /** Normalised name or exact synonym -> the term. First term in file order wins a collision. */
+  /** Normalized name or exact synonym -> the term. First term in file order wins a collision. */
   private final Map<String, HpoOntology.Term> byPhrase = new HashMap<>();
   /** Every phrase as its word set, for the containment tier. */
   private final List<Phrase> phrases = new ArrayList<>();
@@ -88,10 +88,10 @@ public class HpoLookupService {
   }
 
   private void index(String phrase, HpoOntology.Term term) {
-    String normalised = normalise(phrase);
-    if (normalised.isEmpty()) return;
-    byPhrase.putIfAbsent(normalised, term);
-    Set<String> words = words(normalised);
+    String normalized = normalize(phrase);
+    if (normalized.isEmpty()) return;
+    byPhrase.putIfAbsent(normalized, term);
+    Set<String> words = words(normalized);
     if (!words.isEmpty()) phrases.add(new Phrase(words, term));
   }
 
@@ -103,13 +103,13 @@ public class HpoLookupService {
   /** The HPO term for a condition concept's name, if one pairs with it; see the class comment. */
   public Optional<HpoTerm> match(String conditionName) {
     if (conditionName == null) return Optional.empty();
-    String normalised = normalise(conditionName);
-    if (normalised.isEmpty()) return Optional.empty();
+    String normalized = normalize(conditionName);
+    if (normalized.isEmpty()) return Optional.empty();
 
-    HpoOntology.Term exact = byPhrase.get(normalised);
+    HpoOntology.Term exact = byPhrase.get(normalized);
     if (exact != null) return Optional.of(toHpoTerm(exact, HpoTerm.MatchEnum.EXACT));
 
-    Set<String> words = words(normalised);
+    Set<String> words = words(normalized);
     return phrases.stream()
         .filter(phrase -> words.containsAll(phrase.words()))
         .filter(phrase -> phrase.words().size() > 1 || phrase.words().iterator().next().length() >= MIN_SINGLE_WORD_LENGTH)
@@ -125,14 +125,14 @@ public class HpoLookupService {
    * Lower case, accents stripped, punctuation turned to spaces and runs of space collapsed:
    * "Tetralogy of Fallot, unspecified" and "tetralogy of fallot unspecified" are the same phrase.
    */
-  static String normalise(String text) {
+  static String normalize(String text) {
     String folded = Normalizer.normalize(text, Normalizer.Form.NFKD).replaceAll("\\p{M}+", "");
     return folded.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", " ").trim();
   }
 
   /** The phrase's words without connectives; the connectives alone if there's nothing else. */
-  static Set<String> words(String normalised) {
-    List<String> tokens = Stream.of(normalised.split(" ")).filter(token -> !token.isEmpty()).toList();
+  static Set<String> words(String normalized) {
+    List<String> tokens = Stream.of(normalized.split(" ")).filter(token -> !token.isEmpty()).toList();
     Set<String> kept = new HashSet<>();
     for (String token : tokens) if (!STOP_WORDS.contains(token)) kept.add(token);
     return kept.isEmpty() ? new HashSet<>(tokens) : kept;

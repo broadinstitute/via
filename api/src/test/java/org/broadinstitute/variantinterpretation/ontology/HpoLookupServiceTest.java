@@ -29,7 +29,7 @@ public class HpoLookupServiceTest {
     assertThat(term.get().getMatch()).isEqualTo(HpoTerm.MatchEnum.EXACT);
   }
 
-  /** Case, punctuation and accents don't count; the normalised phrases have to agree. */
+  /** Case, punctuation and accents don't count; the normalized phrases have to agree. */
   @Test
   void ignoresCasePunctuationAndAccents() {
     assertThat(id(HPO.match("HYPERTROPHIC CARDIOMYOPATHY"))).isEqualTo("HP:0001639");
@@ -44,7 +44,7 @@ public class HpoLookupServiceTest {
     assertThat(id(term)).isEqualTo("HP:0001657");
     assertThat(term.get().getName()).isEqualTo("Prolonged QT interval");
     assertThat(term.get().getMatch()).isEqualTo(HpoTerm.MatchEnum.EXACT);
-    // A related synonym isn't an identity: "Long Q-T syndrome" normalises to a different phrase.
+    // A related synonym isn't an identity: "Long Q-T syndrome" normalizes to a different phrase.
     assertThat(id(HPO.match("Long Q-T syndrome"))).isNull();
   }
 
@@ -101,8 +101,8 @@ public class HpoLookupServiceTest {
   }
 
   @Test
-  void normalisesAndSplitsWords() {
-    assertThat(HpoLookupService.normalise("  Tétralogy of Fallot, (unspecified)  ")).isEqualTo("tetralogy of fallot unspecified");
+  void normalizesAndSplitsWords() {
+    assertThat(HpoLookupService.normalize("  Tétralogy of Fallot, (unspecified)  ")).isEqualTo("tetralogy of fallot unspecified");
     assertThat(HpoLookupService.words("tetralogy of fallot")).containsExactlyInAnyOrder("tetralogy", "fallot");
     assertThat(HpoLookupService.words("of the")).containsExactlyInAnyOrder("of", "the");
   }
