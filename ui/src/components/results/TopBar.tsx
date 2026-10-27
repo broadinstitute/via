@@ -315,7 +315,7 @@ export default function TopBar({
   return (
     <div style={{ ...styles.topbar, ...compactStyle("topbar") }}>
       <div style={{ ...styles.leading, ...compactStyle("leading") }}>
-        <AppMenu userEmail={userEmail} />
+        <AppMenu />
         <Link
           to="/"
           style={{

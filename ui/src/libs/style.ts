@@ -215,6 +215,23 @@ export const buttons = {
   accentHover: {
     background: colors.bgAccent,
   },
+  /** The outline button in red, for throwing something away. */
+  danger: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "6px 12px",
+    border: `1px solid ${colors.textDanger}`,
+    borderRadius: radius,
+    background: "none",
+    color: colors.textDanger,
+    fontSize: 11.5,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  dangerHover: {
+    background: colors.bgDanger,
+  },
   /** Icon-only button with no chrome until hovered: copy, expand-row. */
   icon: {
     display: "flex",

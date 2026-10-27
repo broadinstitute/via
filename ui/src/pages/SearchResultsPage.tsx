@@ -67,7 +67,12 @@ export default function SearchResultsPage() {
         // concepts that resolved: an id the CDR doesn't have isn't worth re-running.
         recordRecentSearch({
           variants: parseVariantsText(data.searchSummary.variantsRaw),
-          conditions: (data.conditionSearch?.concepts ?? []).map(({ conceptId, name }) => ({ conceptId, name })),
+          conditions: (data.conditionSearch?.concepts ?? []).map(({ conceptId, name, estimatedParticipantCount, hpo }) => ({
+            conceptId,
+            name,
+            estimatedParticipantCount,
+            hpo,
+          })),
         });
       })
       .catch((err: unknown) => setError(describeError(err)));

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clearRecentSearches, describeSearchedAt, groupRecentSearches, loadRecentSearches, recordRecentSearch } from "./recentSearches";
+import { clearRecentSearches, describeSearchedAt, loadRecentSearches, recordRecentSearch } from "./recentSearches";
 
 const TETRALOGY = { conceptId: 9000010, name: "Tetralogy of Fallot" };
 const HCM = { conceptId: 9000040, name: "Hypertrophic cardiomyopathy" };
@@ -82,23 +82,22 @@ describe("recent searches", () => {
     expect(kept[19]).toBe("4-1-A-G");
   });
 
-  it("groups searches into today, this week and earlier, by the calendar for today", () => {
-    // Mid-afternoon, so "today" has hours either side of it.
-    const now = new Date(2026, 9, 8, 15, 0).getTime();
-    const hour = 60 * 60 * 1000, day = 24 * hour;
-    const at = (ms: number, id: string) => ({ variants: [id], conditions: [], searchedAt: ms });
-    const groups = groupRecentSearches(
-      [at(now - hour, "a"), at(now - 14 * hour, "b"), at(now - 20 * hour, "c"), at(now - 3 * day, "d"), at(now - 9 * day, "e")],
-      now,
-    );
+  /** What a chip shows comes back with the condition; history from before it was kept still loads. */
+  it("keeps a condition's estimate and HPO term when it has them", () => {
+    const hpo = { id: "HP:0001636", name: "Tetralogy of Fallot", match: "exact" as const };
+    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [{ ...TETRALOGY, estimatedParticipantCount: 47, hpo }] }, 1000);
+    recordRecentSearch({ variants: ["2-2-C-T"], conditions: [{ ...HCM, estimatedParticipantCount: null, hpo: null }] }, 2000);
 
-    // 14 hours ago is 1am today; 20 hours ago is yesterday evening, so it's "this week".
-    expect(groups.map((group) => [group.label, group.searches.map((search) => search.variants[0])])).toEqual([
-      ["Today", ["a", "b"]],
-      ["This week", ["c", "d"]],
-      ["Earlier", ["e"]],
+    expect(loadRecentSearches()).toEqual([
+      { variants: ["2-2-C-T"], conditions: [{ ...HCM, estimatedParticipantCount: null, hpo: null }], searchedAt: 2000 },
+      { variants: ["1-1-A-G"], conditions: [{ ...TETRALOGY, estimatedParticipantCount: 47, hpo }], searchedAt: 1000 },
     ]);
-    expect(groupRecentSearches([], now)).toEqual([]);
+
+    window.localStorage.setItem(
+      "via.recentSearches.v2",
+      JSON.stringify([{ variants: ["3-3-G-A"], conditions: [{ ...TETRALOGY, estimatedParticipantCount: "many" }], searchedAt: 7 }]),
+    );
+    expect(loadRecentSearches()).toEqual([]);
   });
 
   it("ignores a search with no variants", () => {

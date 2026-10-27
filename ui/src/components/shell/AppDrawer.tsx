@@ -9,16 +9,18 @@ import { describeAlternatives } from "../../utils/phenotypes";
 import { resultsPath } from "../../utils/variants";
 import Clickable from "../common/Clickable";
 import AppVersion from "../elements/AppVersion";
-import { ActivityIcon, ClockIcon, CloseIcon, DatabaseIcon, GaugeIcon, SearchIcon, UserIcon } from "../icons";
+import { ActivityIcon, ClockIcon, CloseIcon, DatabaseIcon, GaugeIcon, GearIcon, SearchIcon } from "../icons";
 import type { IconProps } from "../icons";
+import { FOOTER_HEIGHT } from "../results/Footer";
 import { TOP_BAR_HEIGHT } from "../results/TopBar";
 
 /** Where the drawer goes: the search, then each workspace page. Add new pages here. */
 export const APP_MENU_ITEMS: { path: string; label: string; icon: (props: IconProps) => ReactNode }[] = [
   { path: "/", label: "New search", icon: SearchIcon },
-  { path: "/data-sources", label: "Data sources", icon: DatabaseIcon },
-  { path: "/system-status", label: "System status", icon: ActivityIcon },
+  { path: "/data-sources", label: "Sources", icon: DatabaseIcon },
+  { path: "/system-status", label: "Status", icon: ActivityIcon },
   { path: "/usage", label: "Usage", icon: GaugeIcon },
+  { path: "/settings", label: "Settings", icon: GearIcon },
 ];
 
 /** How many recent searches the drawer lists; the search page shows them all. */
@@ -146,26 +148,15 @@ const styles = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
+  // The app footer's first stretch, repeated the same way: the version where the page shows it,
+  // so the drawer's last line and the page's meet when the page is pinned to the window's bottom.
   footer: {
     display: "flex",
-    flexDirection: "column",
-    gap: 8,
-    flexShrink: 0,
-    padding: "12px 20px",
-    borderTop: `1px solid ${colors.border}`,
-    color: colors.textSecondary,
-    fontSize: 11.5,
-  },
-  user: {
-    display: "flex",
     alignItems: "center",
-    gap: 6,
-    minWidth: 0,
-  },
-  userEmail: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    flexShrink: 0,
+    height: FOOTER_HEIGHT,
+    padding: "0 20px",
+    borderTop: `1px solid ${colors.border}`,
   },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -183,15 +174,15 @@ function recentSub(search: RecentSearch): string {
 interface AppDrawerProps {
   open: boolean;
   onClose: () => void;
-  userEmail: string;
 }
 
 /**
- * The app's sidebar, opened from the bar's hamburger: the search and the workspace pages, the
- * last few searches, and who is signed in, over a scrim. Closes on Escape, on the scrim, on its
+ * The app's sidebar, opened from the bar's hamburger: the search and the workspace pages and the
+ * last few searches, over a scrim. Its top and bottom repeat the page's bars, so it reads as a
+ * panel of the page rather than a sheet over it; who is signed in stays in the top bar. Closes on Escape, on the scrim, on its
  * close button and on following a link; whoever opened it puts focus back where it came from.
  */
-export default function AppDrawer({ open, onClose, userEmail }: AppDrawerProps) {
+export default function AppDrawer({ open, onClose }: AppDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const { hoveredKey, hoverProps } = useHoveredKey<string>();
   const { pathname } = useLocation();
@@ -295,10 +286,6 @@ export default function AppDrawer({ open, onClose, userEmail }: AppDrawerProps) 
           )}
         </nav>
         <div style={styles.footer}>
-          <span style={styles.user} title={userEmail}>
-            <UserIcon size={16} style={styles.itemIcon} aria-hidden="true" />
-            <span style={styles.userEmail}>{userEmail}</span>
-          </span>
           <AppVersion />
         </div>
       </div>

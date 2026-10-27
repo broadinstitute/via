@@ -59,16 +59,32 @@ public class SystemController implements SystemApi {
   public ResponseEntity<List<DataSourceVersion>> dataSourceVersions() {
     return ResponseEntity.ok(
         List.of(
-            source("All of Us", "CDRv9", "https://www.researchallofus.org/"),
-            source("gnomAD", "v3.1.2", "https://gnomad.broadinstitute.org/"),
-            source("ClinVar", "2025-06-01", "https://www.ncbi.nlm.nih.gov/clinvar/"),
-            source("SpliceAI", "v1.3", "https://github.com/Illumina/SpliceAI"),
-            source("LOFTEE", "v1.0.3", "https://github.com/konradjk/loftee"),
+            source(
+                "All of Us",
+                "CDRv9",
+                "Whole-genome sequences and health records of the research cohort",
+                "https://researchallofus.org/"),
+            source(
+                "gnomAD",
+                "v3.1.2",
+                "Allele frequencies across the wider population, for comparison",
+                "https://gnomad.broadinstitute.org/"),
+            source(
+                "ClinVar",
+                "2025-06-01",
+                "Reported clinical classifications and the conditions they cite",
+                "https://ncbi.nlm.nih.gov/clinvar/"),
+            source("SpliceAI", "v1.3", "Predicted gain or loss of splice sites", "https://github.com/Illumina/SpliceAI"),
+            source(
+                "LOFTEE",
+                "v1.0.3",
+                "Confidence in each predicted loss-of-function variant",
+                "https://github.com/konradjk/loftee"),
             // The one source that ships inside VIA, so its version is read from the file itself.
-            source("HPO", hpo.release(), "https://hpo.jax.org/")));
+            source("HPO", hpo.release(), "Phenotype terms that picked conditions are matched to", "https://hpo.jax.org/")));
   }
 
-  private static DataSourceVersion source(String name, String version, String url) {
-    return new DataSourceVersion().name(name).version(version).url(url);
+  private static DataSourceVersion source(String name, String version, String description, String url) {
+    return new DataSourceVersion().name(name).version(version).description(description).url(url);
   }
 }

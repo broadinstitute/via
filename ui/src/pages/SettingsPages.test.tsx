@@ -2,6 +2,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readPreferences } from "../utils/preferences";
+import { loadRecentSearches, recordRecentSearch } from "../utils/recentSearches";
+import AppSettingsPage from "./AppSettingsPage";
 import DataSourcesPage from "./DataSourcesPage";
 import SystemStatusPage from "./SystemStatusPage";
 import UsagePage from "./UsagePage";
@@ -109,7 +111,7 @@ describe("DataSourcesPage", () => {
 
   it("lists the sources, without checking status", async () => {
     renderPage(<DataSourcesPage />);
-    expect(screen.getByRole("heading", { level: 1, name: "Data sources" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Sources" })).toBeInTheDocument();
     expect(await screen.findByText("gnomAD")).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith("/api/sources");
     expect(fetch).not.toHaveBeenCalledWith("/api/status");
@@ -125,7 +127,7 @@ describe("SystemStatusPage", () => {
 
   it("lists every checked table", async () => {
     renderPage(<SystemStatusPage />);
-    expect(screen.getByRole("heading", { level: 1, name: "System status" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Status" })).toBeInTheDocument();
     expect(await screen.findByText("All tables accessible")).toBeInTheDocument();
     expect(screen.getByText("proj.vat.v1")).toBeInTheDocument();
     expect(screen.getByText("cdr.C2024.cb_criteria")).toBeInTheDocument();
@@ -163,7 +165,7 @@ describe("SystemStatusPage", () => {
   });
 });
 
-describe("UsagePage", () => {
+describe("AppSettingsPage", () => {
   beforeEach(() => mockStatus(ACCESSIBLE));
   afterEach(() => {
     cleanup();
@@ -171,20 +173,51 @@ describe("UsagePage", () => {
     window.localStorage.clear();
   });
 
-  it("offers the top bar's usage meter as a checkbox, off by default, and keeps the choice", async () => {
-    renderPage(<UsagePage />);
+  it("offers demo mode as a checkbox, off by default, and keeps the choice", () => {
+    renderPage(<AppSettingsPage />);
+    expect(screen.getByRole("heading", { level: 1, name: "Settings" })).toBeInTheDocument();
 
-    const box = await screen.findByRole("checkbox", { name: /Show usage in the top bar/ });
+    const box = screen.getByRole("checkbox", { name: /Demo mode/ });
     expect(box).not.toBeChecked();
-    expect(readPreferences().showUsageMeter).toBe(false);
+    expect(readPreferences().demoMode).toBe(false);
 
     fireEvent.click(box);
     expect(box).toBeChecked();
-    expect(readPreferences().showUsageMeter).toBe(true);
+    expect(readPreferences().demoMode).toBe(true);
+    // The usage meter's switch is here, off by default and untouched by the other.
+    expect(screen.getByRole("checkbox", { name: /Show usage in the top bar/ })).not.toBeChecked();
+    expect(readPreferences().showUsageMeter).toBe(false);
 
     cleanup();
-    renderPage(<UsagePage />);
-    expect(await screen.findByRole("checkbox", { name: /Show usage in the top bar/ })).toBeChecked();
+    renderPage(<AppSettingsPage />);
+    expect(screen.getByRole("checkbox", { name: /Demo mode/ })).toBeChecked();
+  });
+
+  it("says how many recent searches are kept, and clears them", () => {
+    renderPage(<AppSettingsPage />);
+    expect(screen.getByText("This will remove 0 searches from your history.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear recent searches" })).toBeDisabled();
+    cleanup();
+
+    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [] }, 1000);
+    recordRecentSearch({ variants: ["2-2-C-T"], conditions: [] }, 2000);
+    renderPage(<AppSettingsPage />);
+    expect(screen.getByText("This will remove 2 searches from your history.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear recent searches" }));
+
+    expect(screen.getByText("This will remove 0 searches from your history.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear recent searches" })).toBeDisabled();
+    expect(loadRecentSearches()).toEqual([]);
+  });
+});
+
+describe("UsagePage", () => {
+  beforeEach(() => mockStatus(ACCESSIBLE));
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    window.localStorage.clear();
   });
 
   it("shows this session's BigQuery usage as totals and a log of searches, each opening into its queries", async () => {

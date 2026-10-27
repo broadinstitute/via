@@ -8,10 +8,10 @@ describe("preferences", () => {
   });
 
   it("falls back to the defaults when nothing is stored, or what is stored is unreadable", () => {
-    expect(readPreferences()).toEqual({ showUsageMeter: false });
+    expect(readPreferences()).toEqual({ showUsageMeter: false, demoMode: false });
 
     window.localStorage.setItem("via.preferences.v1", "not json");
-    expect(readPreferences()).toEqual({ showUsageMeter: false });
+    expect(readPreferences()).toEqual({ showUsageMeter: false, demoMode: false });
 
     window.localStorage.setItem("via.preferences.v1", JSON.stringify({ showUsageMeter: "yes" }));
     expect(readPreferences().showUsageMeter).toBe(false);
@@ -22,6 +22,8 @@ describe("preferences", () => {
     expect(readPreferences().showUsageMeter).toBe(true);
     updatePreferences({});
     expect(readPreferences().showUsageMeter).toBe(true);
+    updatePreferences({ demoMode: true });
+    expect(readPreferences()).toEqual({ showUsageMeter: true, demoMode: true });
   });
 
   it("re-renders every reader when one of them sets a preference", () => {

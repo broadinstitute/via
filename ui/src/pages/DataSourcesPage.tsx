@@ -3,7 +3,7 @@ import SettingsPage from "./SettingsPage";
 
 export default function DataSourcesPage() {
   return (
-    <SettingsPage title="Data sources">
+    <SettingsPage title="Sources">
       <DataSourcesPanel />
     </SettingsPage>
   );

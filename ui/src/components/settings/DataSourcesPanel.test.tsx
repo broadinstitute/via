@@ -29,21 +29,22 @@ describe("DataSourcesPanel", () => {
 
   it("lists each source with its version and a link to its site", async () => {
     fetchDataSourceVersions.mockResolvedValue([
-      { name: "All of Us", version: "v8", url: "https://allofus.nih.gov" },
-      { name: "ClinVar", version: "2024-02", url: "https://www.ncbi.nlm.nih.gov/clinvar/" },
+      { name: "All of Us", version: "v8", description: "The research cohort", url: "https://allofus.nih.gov" },
+      { name: "ClinVar", version: "2024-02", description: null, url: "https://www.ncbi.nlm.nih.gov/clinvar/" },
     ]);
 
     render(<DataSourcesPanel />);
 
     expect(await screen.findByText("All of Us")).toBeInTheDocument();
     expect(screen.getByText("v8")).toBeInTheDocument();
+    expect(screen.getByText("The research cohort")).toBeInTheDocument();
     expect(screen.getByText("2024-02")).toBeInTheDocument();
     expect(screen.getByTitle("Open All of Us")).toHaveAttribute("href", "https://allofus.nih.gov");
     expect(screen.getByTitle("Open ClinVar")).toHaveTextContent("www.ncbi.nlm.nih.gov");
   });
 
   it("omits the outbound link for sources without a URL", async () => {
-    fetchDataSourceVersions.mockResolvedValue([{ name: "gnomAD", version: "3.1.2", url: null }]);
+    fetchDataSourceVersions.mockResolvedValue([{ name: "gnomAD", version: "3.1.2", description: null, url: null }]);
 
     render(<DataSourcesPanel />);
 

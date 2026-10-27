@@ -3,7 +3,7 @@ import SettingsPage from "./SettingsPage";
 
 export default function SystemStatusPage() {
   return (
-    <SettingsPage title="System status">
+    <SettingsPage title="Status">
       <SystemStatusPanel />
     </SettingsPage>
   );

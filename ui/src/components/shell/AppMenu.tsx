@@ -21,7 +21,7 @@ const styles = {
 } as const satisfies Record<string, CSSProperties>;
 
 /** The bar's hamburger, and the sidebar it opens. Focus comes back to the button when the sidebar closes. */
-export default function AppMenu({ userEmail }: { userEmail: string }) {
+export default function AppMenu() {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
@@ -45,7 +45,7 @@ export default function AppMenu({ userEmail }: { userEmail: string }) {
       >
         <MenuIcon size={18} strokeWidth={2.2} aria-hidden="true" />
       </Clickable>
-      <AppDrawer open={open} onClose={() => setOpen(false)} userEmail={userEmail} />
+      <AppDrawer open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

@@ -237,9 +237,10 @@ describe("TopBar", () => {
     const nav = within(drawer).getByRole("navigation", { name: "Menu" });
     expect(within(nav).getAllByRole("link").map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
       ["New search", "/"],
-      ["Data sources", "/data-sources"],
-      ["System status", "/system-status"],
+      ["Sources", "/data-sources"],
+      ["Status", "/system-status"],
       ["Usage", "/usage"],
+      ["Settings", "/settings"],
     ]);
     expect(within(nav).getByText("Workspace")).toBeInTheDocument();
     expect(within(nav).queryByText("Recent")).not.toBeInTheDocument();
@@ -247,7 +248,8 @@ describe("TopBar", () => {
     expect(within(nav).getByRole("link", { name: "New search" })).toHaveAttribute("aria-current", "page");
     expect(within(nav).getByRole("link", { name: "Usage" })).not.toHaveAttribute("aria-current");
     // Who is signed in, and the version, at the bottom.
-    expect(within(drawer).getAllByText("user@example.org").length).toBeGreaterThan(0);
+    // Who is signed in stays in the top bar; the drawer's last line is the footer's.
+    expect(within(drawer).queryByText("user@example.org")).not.toBeInTheDocument();
     expect(within(drawer).getByTitle("VIA version")).toBeInTheDocument();
 
     // Escape closes it and hands focus back to the hamburger.

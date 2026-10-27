@@ -7,67 +7,65 @@ import { useHoveredKey } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import { formatBytes, formatInt, formatUsd } from "../../utils/format";
 import { describeAlternatives } from "../../utils/phenotypes";
-import { usePreference } from "../../utils/preferences";
 import Clickable from "../common/Clickable";
 import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, UserIcon } from "../icons";
 
 const styles = {
-  // The page's title is above the panel; this row holds the panel's own action.
+  // The intro on the left, the panel's own action on the right; the page's title is above the panel.
   heading: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 12,
-    marginBottom: 6,
-  },
-  option: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
+    gap: 16,
     marginBottom: 14,
-    fontSize: 12,
-    color: colors.textBody,
-    cursor: "pointer",
-  },
-  optionBox: {
-    margin: 0,
-    accentColor: colors.textAccent,
-    cursor: "pointer",
   },
   // The session's totals, one labelled cell each, in a bar.
+  // The session's totals as a row of figures, bare on the panel: each number large with its
+  // label beneath, a hairline between neighbours, and no box around them.
   strip: {
     display: "flex",
-    border: `1px solid ${colors.border}`,
-    borderRadius: Style.radius,
-    background: colors.surface1,
-    overflow: "hidden",
+    flexWrap: "wrap",
+    rowGap: 12,
+    margin: "2px 0 0",
+    padding: 0,
   },
+  // Label then value in the markup (a dt and its dd), shown the other way up.
   stat: {
-    flex: 1,
+    display: "flex",
+    flexDirection: "column-reverse",
+    gap: 3,
     minWidth: 0,
-    padding: "8px 12px",
+    padding: "2px 28px",
     borderLeft: `1px solid ${colors.border}`,
   },
   statFirst: {
+    paddingLeft: 0,
     borderLeft: "none",
   },
   statLabel: {
-    fontSize: 10.5,
-    fontWeight: 600,
-    letterSpacing: "0.04em",
-    textTransform: "uppercase",
-    color: colors.textMuted,
+    fontSize: 11.5,
+    lineHeight: 1.2,
+    color: colors.textSecondary,
   },
   statValue: {
-    fontSize: 15,
-    fontWeight: 600,
-    lineHeight: 1.3,
+    fontSize: 22,
+    fontWeight: 700,
+    lineHeight: 1.1,
+    letterSpacing: -0.3,
     color: colors.textPrimary,
     fontVariantNumeric: "tabular-nums",
   },
+  // The value, and beside it what qualifies it: "12 from cache", "on-demand".
+  statFigure: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 7,
+    margin: 0,
+  },
   statSub: {
-    fontSize: 11,
-    color: colors.textSecondary,
+    fontSize: 11.5,
+    color: colors.textMuted,
+    whiteSpace: "nowrap",
   },
   caption: {
     display: "flex",
@@ -245,9 +243,9 @@ function Stat({ label, value, sub, first }: { label: string; value: string; sub?
   return (
     <div style={{ ...styles.stat, ...(first ? styles.statFirst : undefined) }}>
       <dt style={styles.statLabel}>{label}</dt>
-      <dd style={{ margin: 0 }}>
-        <div style={styles.statValue}>{value}</div>
-        {sub && <div style={styles.statSub}>{sub}</div>}
+      <dd style={styles.statFigure}>
+        <span style={styles.statValue}>{value}</span>
+        {sub && <span style={styles.statSub}>{sub}</span>}
       </dd>
     </div>
   );
@@ -301,7 +299,6 @@ export default function UsagePanel() {
   // Zero-based; clamped below so a refresh that shortens the log can't leave it past the end.
   const [page, setPage] = useState(0);
   const { hoveredKey, hoverProps } = useHoveredKey<number>();
-  const [showMeter, setShowMeter] = usePreference("showUsageMeter");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -331,8 +328,11 @@ export default function UsagePanel() {
   return (
     <>
       <div style={styles.heading}>
+        <p style={{ ...Style.elements.panelIntro, margin: 0 }}>
+          What this VIA instance has spent on BigQuery since it started, in total and request by request.
+        </p>
         <Clickable
-          style={Style.buttons.accent}
+          style={{ ...Style.buttons.accent, flexShrink: 0 }}
           hoverStyle={Style.buttons.accentHover}
           disabledStyle={Style.buttons.disabled}
           onClick={load}
@@ -341,15 +341,6 @@ export default function UsagePanel() {
           {loading ? "Refreshing..." : "Refresh"}
         </Clickable>
       </div>
-      <label style={styles.option}>
-        <input
-          type="checkbox"
-          style={styles.optionBox}
-          checked={showMeter}
-          onChange={(event) => setShowMeter(event.target.checked)}
-        />
-        <span>Show usage in the top bar</span>
-      </label>
 
       {error ? (
         <div role="alert" style={Style.elements.errorNote}>
@@ -360,7 +351,8 @@ export default function UsagePanel() {
           <div style={styles.strip} aria-busy="true">
             {Array.from({ length: STATS }, (_, index) => (
               <div key={index} style={{ ...styles.stat, ...(index === 0 ? styles.statFirst : undefined) }}>
-                <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: "60%", height: 10 }} />
+                <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 72, height: 22 }} />
+                <span className="animate-skeleton-pulse" style={{ ...Style.elements.skeleton, width: 48, height: 10 }} />
               </div>
             ))}
           </div>

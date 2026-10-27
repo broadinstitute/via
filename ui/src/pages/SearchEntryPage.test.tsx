@@ -1,6 +1,7 @@
-import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { updatePreferences } from "../utils/preferences";
 import { recordRecentSearch } from "../utils/recentSearches";
 import { USE_CASES } from "../utils/useCases";
 import SearchEntryPage from "./SearchEntryPage";
@@ -147,8 +148,18 @@ describe("SearchEntryPage", () => {
    * The backend counts exactly the concept that was picked, which is what makes a low- or
    * zero-estimate concept countable. Its name isn't sent: there's no free-text path to use it.
    */
+  it("offers 'Try an example' only in demo mode", () => {
+    stubApi([], "");
+    renderPage();
+    expect(screen.queryByRole("button", { name: "Try an example" })).not.toBeInTheDocument();
+
+    act(() => updatePreferences({ demoMode: true }));
+    expect(screen.getByRole("button", { name: "Try an example" })).toBeInTheDocument();
+  });
+
   it("fills in a use case's variants and condition from 'Try an example', ready to search", async () => {
     stubApi([], "");
+    updatePreferences({ demoMode: true });
     renderPage();
     const hcm = USE_CASES.find((useCase) => useCase.key === "hypertrophic_cardiomyopathy")!;
 
@@ -172,6 +183,7 @@ describe("SearchEntryPage", () => {
 
   it("opens the example menu into its first item, and closes it on Escape", () => {
     stubApi([], "");
+    updatePreferences({ demoMode: true });
     renderPage();
     const trigger = screen.getByRole("button", { name: "Try an example" });
 
@@ -254,49 +266,67 @@ describe("SearchEntryPage", () => {
     );
   });
 
-  it("hides recent searches until there are some, then re-runs one with a click", async () => {
+  it("offers recent searches once there are some, and picking one fills both steps without running it", async () => {
     stubApi([], "");
     renderPage();
-    expect(screen.queryByRole("heading", { name: "Recent searches" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Recent searches" })).not.toBeInTheDocument();
     cleanup();
 
-    recordRecentSearch({ variants: ["1-1-A-G", "2-2-C-T"], conditions: [{ conceptId: 9000010, name: "Tetralogy of Fallot" }] });
+    recordRecentSearch({
+      variants: ["1-1-A-G", "2-2-C-T"],
+      conditions: [{ ...TETRALOGY, hpo: { id: "HP:0001636", name: "Tetralogy of Fallot", match: "exact" } }],
+    });
     renderPage();
 
-    expect(screen.getByRole("heading", { name: "Recent searches" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^Run again: 2 variants, Tetralogy of Fallot/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Recent searches" }));
+    const item = screen.getByRole("menuitem", { name: /Tetralogy of Fallot/ });
+    expect(item).toHaveTextContent("1-1-A-G, 2-2-C-T");
+    expect(item).toHaveTextContent("just now");
+    fireEvent.click(item);
+
+    expect(screen.getByRole("textbox", { name: "Candidate variants" })).toHaveValue("1-1-A-G\n2-2-C-T");
+    const picked = screen.getByRole("list", { name: "Picked phenotypes" });
+    expect(picked).toHaveTextContent("Tetralogy of Fallot");
+    expect(picked).toHaveTextContent("~47");
+    expect(picked).toHaveTextContent("HP:0001636");
+    expect(screen.queryByTestId("location")).not.toBeInTheDocument();
+    // The links go while the box has text, like the example link does.
+    expect(screen.queryByRole("button", { name: "Recent searches" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^search$/i }));
     expect(await screen.findByTestId("location")).toHaveTextContent(
       "/results?variants=1-1-A-G&variants=2-2-C-T&conditionConceptIds=9000010",
     );
   });
 
-  it("folds searches older than a week under Earlier until asked", () => {
+  it("fills a recent search with several conditions as chips, and one without as none", () => {
     stubApi([], "");
-    const day = 24 * 60 * 60 * 1000;
-    recordRecentSearch({ variants: ["9-9-A-G"], conditions: [] }, Date.now() - 9 * day);
-    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [{ conceptId: 9000010, name: "Tetralogy of Fallot" }] });
+    recordRecentSearch({ variants: ["9-9-A-G"], conditions: [] }, Date.now() - 60 * 60 * 1000);
+    recordRecentSearch({
+      variants: ["1-1-A-G"],
+      conditions: [
+        { conceptId: 9000010, name: "Tetralogy of Fallot" },
+        { conceptId: 9000040, name: "Hypertrophic cardiomyopathy" },
+      ],
+    });
     renderPage();
 
-    expect(screen.getByRole("region", { name: "Today" })).toHaveTextContent("Tetralogy of Fallot");
-    const earlier = screen.getByRole("button", { name: /^Earlier/ });
-    expect(earlier).toHaveAttribute("aria-expanded", "false");
-    expect(earlier).toHaveTextContent("1");
-    expect(screen.queryByRole("button", { name: /^Run again: 1 variant, no phenotype/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Recent searches" }));
+    const items = screen.getAllByRole("menuitem");
+    expect(items.map((item) => item.textContent)).toEqual([
+      expect.stringMatching(/^Tetralogy of Fallot or Hypertrophic cardiomyopathyjust now1-1-A-G$/),
+      expect.stringMatching(/^No phenotype1 hour ago9-9-A-G$/),
+    ]);
+    fireEvent.click(items[0]);
+    const picked = screen.getByRole("list", { name: "Picked phenotypes" });
+    expect(picked).toHaveTextContent("Tetralogy of Fallot");
+    expect(picked).toHaveTextContent("Hypertrophic cardiomyopathy");
 
-    fireEvent.click(earlier);
-    expect(earlier).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: /^Run again: 1 variant, no phenotype/ })).toBeInTheDocument();
-  });
-
-  it("clears recent searches", () => {
-    stubApi([], "");
-    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [] });
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
-
-    expect(screen.queryByRole("heading", { name: "Recent searches" })).not.toBeInTheDocument();
-    expect(window.localStorage.getItem("via.recentSearches.v2")).toBeNull();
+    fireEvent.change(screen.getByRole("textbox", { name: "Candidate variants" }), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Recent searches" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /No phenotype/ }));
+    expect(screen.getByRole("textbox", { name: "Candidate variants" })).toHaveValue("9-9-A-G");
+    expect(screen.queryByRole("list", { name: "Picked phenotypes" })).not.toBeInTheDocument();
   });
 
   it("carries the picked concept's id into the results URL", async () => {
@@ -309,9 +339,8 @@ describe("SearchEntryPage", () => {
     const combobox = screen.getByRole("combobox");
     fireEvent.focus(combobox);
     fireEvent.change(combobox, { target: { value: "tetralogy" } });
-    // Scoped to the option role on purpose: RecentSearches also renders the text "Tetralogy of
-    // Fallot" (it's the description for HP:0001636), so a plain findByText picks up that
-    // instead and the click silently does nothing.
+    // Scoped to the option role on purpose, so nothing else on the page saying "Tetralogy of
+    // Fallot" is picked up instead.
     fireEvent.mouseDown(await screen.findByRole("option", { name: /Tetralogy of Fallot/ }));
     // The pick becomes a chip, and the field clears for the next one.
     expect(screen.getByRole("list", { name: "Picked phenotypes" })).toHaveTextContent("Tetralogy of Fallot");
@@ -397,25 +426,6 @@ describe("SearchEntryPage", () => {
       expect(screen.getByTestId("location")).toHaveTextContent(
         "/results?variants=8-11708582-C-T&conditionConceptIds=9000010&conditionConceptIds=9000018",
       ),
-    );
-  });
-
-  it("re-runs a recent search with several conditions, naming them as alternatives", async () => {
-    stubApi([], "");
-    recordRecentSearch({
-      variants: ["1-1-A-G"],
-      conditions: [
-        { conceptId: 9000010, name: "Tetralogy of Fallot" },
-        { conceptId: 9000040, name: "Hypertrophic cardiomyopathy" },
-      ],
-    });
-    renderPage();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: /^Run again: 1 variant, Tetralogy of Fallot or Hypertrophic cardiomyopathy/ }),
-    );
-    expect(await screen.findByTestId("location")).toHaveTextContent(
-      "/results?variants=1-1-A-G&conditionConceptIds=9000010&conditionConceptIds=9000040",
     );
   });
 

@@ -5,6 +5,7 @@ import SearchResultsPage from "./pages/SearchResultsPage";
 import DataSourcesPage from "./pages/DataSourcesPage";
 import SystemStatusPage from "./pages/SystemStatusPage";
 import UsagePage from "./pages/UsagePage";
+import AppSettingsPage from "./pages/AppSettingsPage";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/data-sources" element={<DataSourcesPage />} />
         <Route path="/system-status" element={<SystemStatusPage />} />
         <Route path="/usage" element={<UsagePage />} />
+        <Route path="/settings" element={<AppSettingsPage />} />
       </Routes>
     </>
   );

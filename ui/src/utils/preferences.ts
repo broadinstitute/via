@@ -1,7 +1,7 @@
 // Per-browser display preferences, kept in localStorage the way recent searches are: a
 // convenience that may be empty, blocked or cleared, so every read falls back to the defaults and
 // every write may silently do nothing. Components read a preference through usePreference, which
-// re-renders them when it changes anywhere in the page (the settings dialog flips a switch, the
+// re-renders them when it changes anywhere in the page (the settings page flips a switch, the
 // top bar follows) or in another tab.
 
 import { useCallback, useSyncExternalStore } from "react";
@@ -12,11 +12,16 @@ const STORAGE_KEY = "via.preferences.v1";
 export interface Preferences {
   /** Show the BigQuery usage meter in the top bar. Off by default: it's a developer's readout. */
   showUsageMeter: boolean;
+  /** Offer the curated example searches under the variants box. Off by default: they're for demos. */
+  demoMode: boolean;
 }
 
 const DEFAULTS: Preferences = {
   showUsageMeter: false,
+  demoMode: false,
 };
+
+const bool = (value: unknown, fallback: boolean) => (typeof value === "boolean" ? value : fallback);
 
 function isPreferences(value: unknown): value is Partial<Preferences> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -28,7 +33,8 @@ export function readPreferences(): Preferences {
     const parsed: unknown = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}");
     if (!isPreferences(parsed)) return DEFAULTS;
     return {
-      showUsageMeter: typeof parsed.showUsageMeter === "boolean" ? parsed.showUsageMeter : DEFAULTS.showUsageMeter,
+      showUsageMeter: bool(parsed.showUsageMeter, DEFAULTS.showUsageMeter),
+      demoMode: bool(parsed.demoMode, DEFAULTS.demoMode),
     };
   } catch {
     return DEFAULTS;

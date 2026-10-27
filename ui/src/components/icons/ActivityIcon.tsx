@@ -1,6 +1,6 @@
 import { baseIconProps, type IconProps } from "./Icon";
 
-/** System status. */
+/** Status. */
 export default function ActivityIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>

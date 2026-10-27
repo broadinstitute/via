@@ -1,10 +1,12 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useFocus } from "../libs/hooks";
 import * as Style from "../libs/style";
+import type { RecentSearch } from "../utils/recentSearches";
 import type { UseCase } from "../utils/useCases";
 import { variantEntryStatus } from "../utils/variants";
 import ExampleMenu from "./ExampleMenu";
 import FieldHint from "./FieldHint";
+import RecentSearchesMenu from "./RecentSearchesMenu";
 import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
 const styles = {
@@ -24,6 +26,13 @@ const styles = {
     alignItems: "baseline",
     justifyContent: "space-between",
     gap: 12,
+  },
+  // The links that fill the form, at the row's right: recent searches, then the examples.
+  menus: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 16,
+    flexShrink: 0,
   },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -53,6 +62,9 @@ interface VariantsStepProps {
   /** Offers these in a "Try an example" menu while the field is empty. */
   examples?: UseCase[];
   onUseExample?: (example: UseCase) => void;
+  /** Offers these in a "Recent searches" menu beside it, likewise while the field is empty. */
+  recentSearches?: RecentSearch[];
+  onUseRecentSearch?: (search: RecentSearch) => void;
 }
 
 /** Step 1 of a search: the candidate-variants textarea, with its count and limit. */
@@ -66,6 +78,8 @@ export default function VariantsStep({
   description,
   examples = [],
   onUseExample,
+  recentSearches = [],
+  onUseRecentSearch,
 }: VariantsStepProps) {
   const { focused, focusProps } = useFocus();
   const { count } = variantEntryStatus(value, limit);
@@ -90,8 +104,13 @@ export default function VariantsStep({
       <div style={styles.hintRow}>
         {/* Short enough to share a line with "Try an example"; the placeholder shows the format. */}
         <FieldHint>One variant per line, as chr-pos-ref-alt.</FieldHint>
-        {onUseExample && examples.length > 0 && !value.trim() && (
-          <ExampleMenu examples={examples} onPick={onUseExample} />
+        {!value.trim() && (
+          <div style={styles.menus}>
+            {onUseRecentSearch && recentSearches.length > 0 && (
+              <RecentSearchesMenu searches={recentSearches} onPick={onUseRecentSearch} />
+            )}
+            {onUseExample && examples.length > 0 && <ExampleMenu examples={examples} onPick={onUseExample} />}
+          </div>
         )}
       </div>
     </StepPanel>

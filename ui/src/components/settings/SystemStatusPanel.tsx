@@ -8,12 +8,13 @@ import Clickable from "../common/Clickable";
 
 const styles = {
   // The page's title is above the panel; this row holds the panel's own action.
+  // The intro on the left, the panel's own action on the right; the page's title is above the panel.
   heading: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 12,
-    marginBottom: 6,
+    justifyContent: "space-between",
+    gap: 16,
+    marginBottom: 14,
   },
   summary: {
     display: "inline-flex",
@@ -79,8 +80,11 @@ export default function SystemStatusPanel() {
   return (
     <>
       <div style={styles.heading}>
+        <p style={{ ...Style.elements.panelIntro, margin: 0 }}>
+          The BigQuery tables VIA queries, and whether this workspace's credentials can read them.
+        </p>
         <Clickable
-          style={Style.buttons.accent}
+          style={{ ...Style.buttons.accent, flexShrink: 0 }}
           hoverStyle={Style.buttons.accentHover}
           disabledStyle={Style.buttons.disabled}
           onClick={check}
@@ -89,9 +93,6 @@ export default function SystemStatusPanel() {
           {loading ? "Refreshing..." : "Refresh"}
         </Clickable>
       </div>
-      <p style={Style.elements.panelIntro}>
-        The BigQuery tables VIA queries, and whether this workspace's credentials can read them.
-      </p>
 
       {error ? (
         <div role="alert" style={Style.elements.errorNote}>

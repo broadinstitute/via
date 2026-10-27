@@ -1,17 +1,24 @@
-// The entry page's "Recent searches": the criteria of the last few searches that loaded, kept in
-// this browser's localStorage. Only what was searched for (variant IDs and condition concepts)
-// is stored -- never results or participant counts. A per-browser convenience: storage can be
-// empty, full, blocked or cleared, and every read and write here tolerates that by treating it
-// as "no history" rather than failing.
+import type { HpoTerm } from "../api/conditions";
+
+// The entry page's "Recent searches" menu, and the drawer's: the criteria of the last few searches
+// that loaded, kept in this browser's localStorage. Only what was searched for (variant IDs and
+// condition concepts, with what their chips show) is stored -- never results or participant
+// counts. A per-browser convenience: storage can be empty, full, blocked or cleared, and every
+// read and write here tolerates that by treating it as "no history" rather than failing.
 
 // Bumped when the shape changes: entries in an older shape fail validation and are dropped, which
 // is simpler than migrating a convenience. v1 held one `condition` where v2 holds `conditions`.
+// A condition's estimate and HPO term were added within v2: both optional, so earlier entries
+// still load, their chips just without them.
 const STORAGE_KEY = "via.recentSearches.v2";
 const MAX_SEARCHES = 20;
 
+/** A picked condition as the form needs it back: ConditionConcept, with the extras optional. */
 export interface RecentSearchCondition {
   conceptId: number;
   name: string;
+  estimatedParticipantCount?: number | null;
+  hpo?: HpoTerm | null;
 }
 
 export interface RecentSearch {
@@ -22,10 +29,23 @@ export interface RecentSearch {
   searchedAt: number;
 }
 
+function isHpoTerm(value: unknown): value is HpoTerm {
+  if (typeof value !== "object" || value === null) return false;
+  const term = value as Record<string, unknown>;
+  return typeof term.id === "string" && typeof term.name === "string" && (term.match === "exact" || term.match === "approximate");
+}
+
 function isCondition(value: unknown): value is RecentSearchCondition {
   if (typeof value !== "object" || value === null) return false;
   const condition = value as Record<string, unknown>;
-  return typeof condition.conceptId === "number" && typeof condition.name === "string";
+  return (
+    typeof condition.conceptId === "number" &&
+    typeof condition.name === "string" &&
+    (condition.estimatedParticipantCount === undefined ||
+      condition.estimatedParticipantCount === null ||
+      typeof condition.estimatedParticipantCount === "number") &&
+    (condition.hpo === undefined || condition.hpo === null || isHpoTerm(condition.hpo))
+  );
 }
 
 function isRecentSearch(value: unknown): value is RecentSearch {
@@ -85,41 +105,6 @@ export function clearRecentSearches() {
   } catch {
     // Nothing to clear if storage is unavailable.
   }
-}
-
-export type RecentSearchGroupLabel = "Today" | "This week" | "Earlier";
-
-export interface RecentSearchGroup {
-  label: RecentSearchGroupLabel;
-  searches: RecentSearch[];
-}
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/**
- * The searches in their display groups, newest first within each: today by the calendar, then
- * the rest of the last seven days, then everything older. Empty groups are left out.
- */
-export function groupRecentSearches(searches: RecentSearch[], now = Date.now()): RecentSearchGroup[] {
-  const today = new Date(now);
-  const isToday = (at: number) => {
-    const date = new Date(at);
-    return (
-      date.getFullYear() === today.getFullYear() &&
-      date.getMonth() === today.getMonth() &&
-      date.getDate() === today.getDate()
-    );
-  };
-  const labelOf = (search: RecentSearch): RecentSearchGroupLabel =>
-    isToday(search.searchedAt) ? "Today" : now - search.searchedAt < 7 * DAY_MS ? "This week" : "Earlier";
-  const groups: RecentSearchGroup[] = [];
-  for (const search of searches) {
-    const label = labelOf(search);
-    const group = groups.find((candidate) => candidate.label === label);
-    if (group) group.searches.push(search);
-    else groups.push({ label, searches: [search] });
-  }
-  return groups;
 }
 
 const RELATIVE_TIME = new Intl.RelativeTimeFormat("en", { numeric: "auto" });

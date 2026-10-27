@@ -89,5 +89,15 @@ class SystemControllerTest {
     DataSourceVersion hpo = sources.stream().filter(source -> source.getName().equals("HPO")).findFirst().orElseThrow();
     assertThat(hpo.getVersion()).isEqualTo("2026-09-01");
     assertThat(hpo.getUrl().orElse(null)).isEqualTo("https://hpo.jax.org/");
+    assertThat(hpo.getDescription().orElse(null)).contains("Phenotype terms");
+  }
+
+  /** Every source says what VIA takes from it, so the data-sources page can explain each row. */
+  @Test
+  void dataSourceVersions_describeEverySource() {
+    List<DataSourceVersion> sources =
+        new SystemController(null, null, null, HPO).dataSourceVersions().getBody();
+
+    assertThat(sources).allSatisfy(source -> assertThat(source.getDescription().orElse("")).isNotBlank());
   }
 }
