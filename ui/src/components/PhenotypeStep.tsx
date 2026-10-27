@@ -1,20 +1,23 @@
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { ConditionConcept } from "../api/conditions";
-import colors, { alpha } from "../libs/colors";
+import colors from "../libs/colors";
 import * as Style from "../libs/style";
 import { PHENOTYPES_LIMIT } from "../utils/phenotypes";
 import AllOfUs from "./common/AllOfUs";
 import Clickable from "./common/Clickable";
 import ConditionSearchField, { describeEstimate } from "./ConditionSearchField";
 import FieldHint from "./FieldHint";
-import { CloseIcon, UserIcon } from "./icons";
+import { CloseIcon } from "./icons";
 import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
 // Step 2 of a search: the phenotypes to filter by, as a list. Each picked condition is a chip
 // with its participant estimate and a remove control, with "or" between chips, since a
 // participant is matched by any of them; the type-ahead beneath adds the next one until the
 // search's limit is reached, when it gives way to a line saying so.
+//
+// The chip is one quiet object: white, a plain border, the name in one weight, then the estimate
+// as muted text behind a hairline. No tint and no icon, so it reads as a choice, not a badge.
 
 /** What the step does for the search; the folded row says the same, so the step reads alike open or closed. */
 export const PHENOTYPE_STEP_DESCRIPTION =
@@ -55,30 +58,35 @@ const styles = {
   chip: {
     display: "inline-flex",
     alignItems: "center",
-    gap: 8,
-    padding: "4px 4px 4px 11px",
-    border: `1px solid ${alpha(colors.textAccent, 0.35)}`,
+    height: 30,
+    padding: "0 4px 0 12px",
+    border: `1px solid ${colors.borderStrong}`,
     borderRadius: 999,
-    background: colors.bgAccent,
-    color: colors.textPrimary,
-    fontSize: 12.5,
+    background: colors.surface2,
+    color: colors.textBody,
+    fontSize: 13,
     fontWeight: 600,
     lineHeight: 1.3,
   },
+  chipDivider: {
+    flexShrink: 0,
+    width: 1,
+    height: 14,
+    margin: "0 10px",
+    background: colors.border,
+  },
   // The same estimate the dropdown showed for the pick, so the chip confirms what was chosen.
   chipEstimate: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 3,
     ...Style.elements.mono,
-    fontSize: 11,
-    fontWeight: 600,
-    color: colors.textAccent,
+    fontSize: 11.5,
+    fontWeight: 500,
+    color: colors.textSecondary,
   },
   remove: {
     ...Style.buttons.icon,
     width: 20,
     height: 20,
+    marginLeft: 4,
     borderRadius: "50%",
     color: colors.textSecondary,
   },
@@ -112,8 +120,7 @@ function ChipEstimate({ estimate }: { estimate: number | null }) {
   const { label, tooltip, spoken } = describeEstimate(estimate);
   return (
     <span style={styles.chipEstimate} title={tooltip} aria-label={spoken}>
-      <UserIcon size={11} strokeWidth={2.5} aria-hidden="true" />
-      <span style={Style.elements.trimmedText}>{label}</span>
+      {label}
     </span>
   );
 }
@@ -151,6 +158,7 @@ export default function PhenotypeStep({
               {index > 0 && <span style={styles.or}>or</span>}
               <span style={styles.chip}>
                 {concept.name}
+                <span style={styles.chipDivider} aria-hidden="true" />
                 <ChipEstimate estimate={concept.estimatedParticipantCount} />
                 <Clickable
                   style={styles.remove}
@@ -158,7 +166,7 @@ export default function PhenotypeStep({
                   aria-label={`Remove ${concept.name}`}
                   onClick={() => onRemove(concept.conceptId)}
                 >
-                  <CloseIcon size={12} strokeWidth={2.5} aria-hidden="true" />
+                  <CloseIcon size={11} strokeWidth={2.2} aria-hidden="true" />
                 </Clickable>
               </span>
             </li>

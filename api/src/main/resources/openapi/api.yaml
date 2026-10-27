@@ -348,6 +348,11 @@ components:
         version:
           type: string
           example: "v3.1.2"
+        description:
+          type: string
+          nullable: true
+          description: What VIA uses from the source.
+          example: "Allele frequencies across the wider population, for comparison"
         url:
           type: string
           nullable: true

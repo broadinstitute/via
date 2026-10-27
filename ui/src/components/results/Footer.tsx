@@ -1,17 +1,20 @@
 import type { CSSProperties } from "react";
-import * as Style from "../../libs/style";
+import colors from "../../libs/colors";
 import AppVersion from "../elements/AppVersion";
+
+export const FOOTER_HEIGHT = 60;
 
 const styles = {
   footer: {
-    ...Style.elements.panel,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "wrap",
     gap: 16,
-    padding: "12px 18px",
-    boxShadow: Style.shadows.panel,
+    minHeight: FOOTER_HEIGHT,
+    padding: "10px 20px",
+    background: colors.surface2,
+    borderTop: `1px solid ${colors.border}`,
   },
   logo: {
     height: 32,

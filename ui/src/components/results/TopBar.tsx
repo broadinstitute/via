@@ -6,8 +6,8 @@ import colors from "../../libs/colors";
 import { useHover, useMediaQuery } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
-import { GaugeIcon, GearIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
-import SettingsDialog from "../settings/SettingsDialog";
+import { GaugeIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
+import AppMenu from "../shell/AppMenu";
 import { formatBytes, formatUsd } from "../../utils/format";
 import { describeAlternatives } from "../../utils/phenotypes";
 import { usePreference } from "../../utils/preferences";
@@ -36,7 +36,7 @@ const styles = {
     color: colors.textSecondary,
     fontSize: 12,
   },
-  // The mark and name, then (on the results page) the search box.
+  // The hamburger, the mark and name, then (on the results page) the search box.
   leading: {
     display: "flex",
     alignItems: "center",
@@ -59,7 +59,7 @@ const styles = {
     letterSpacing: 0.3,
     textDecoration: "none",
   },
-  /** Matches the gear's (Style.buttons.iconHover). */
+  /** Matches the menu button's (Style.buttons.iconHover). */
   brandHover: {
     ...Style.buttons.iconHover,
   },
@@ -186,15 +186,13 @@ const styles = {
     alignItems: "center",
     gap: 5,
     padding: "3px 8px",
-    border: "none",
     borderRadius: 999,
-    background: "none",
     color: colors.textSecondary,
     fontSize: 11,
     fontWeight: 600,
     fontVariantNumeric: "tabular-nums",
+    textDecoration: "none",
     whiteSpace: "nowrap",
-    cursor: "pointer",
   },
   meterHover: {
     background: colors.bgAccent,
@@ -208,7 +206,7 @@ const styles = {
     color: colors.textMuted,
     fontWeight: 400,
   },
-  /** Same rule as the back button's right border, between the email and the gear. */
+  /** Same rule as the brand divider, between the meter and the email. */
   userDivider: {
     width: 1,
     height: 16,
@@ -261,10 +259,9 @@ export default function TopBar({
   modifyOpen = false,
   editSearchPanel,
 }: TopBarProps) {
-  // The settings dialog: closed, open on its default panel, or open on a named one (the meter opens Usage).
-  const [settings, setSettings] = useState<{ panel?: string } | null>(null);
   const [usage, setUsage] = useState<QueryUsage | null>(null);
   const { hovered: brandHovered, hoverProps: brandHoverProps } = useHover();
+  const { hovered: meterHovered, hoverProps: meterHoverProps } = useHover();
   const { hovered: searchHovered, hoverProps: searchHoverProps } = useHover();
   const termsId = useId();
   const compact = useMediaQuery(COMPACT_QUERY);
@@ -282,11 +279,10 @@ export default function TopBar({
     wasModifyOpen.current = modifyOpen;
   }, [modifyOpen]);
 
-  // The meter is opt-in, from the Usage panel. While it's on it reads the backend's running total
+  // The meter is opt-in, from the Usage page. While it's on it reads the backend's running total
   // when switched on or mounted, each time a search finishes loading (a search is what moves it),
-  // when the settings dialog closes (its Usage panel may have shown newer numbers), and otherwise
-  // every minute. Reads can overlap, so only the newest one's reply is kept. If it can't be read
-  // the meter stays off the bar; the Usage panel is where that failure is explained.
+  // and otherwise every minute. Reads can overlap, so only the newest one's reply is kept. If it
+  // can't be read the meter stays off the bar; the Usage page is where that failure is explained.
   const [showMeter] = usePreference("showUsageMeter");
   const usageRead = useRef(0);
   const readUsage = useCallback(() => {
@@ -319,6 +315,7 @@ export default function TopBar({
   return (
     <div style={{ ...styles.topbar, ...compactStyle("topbar") }}>
       <div style={{ ...styles.leading, ...compactStyle("leading") }}>
+        <AppMenu />
         <Link
           to="/"
           style={{
@@ -393,13 +390,12 @@ export default function TopBar({
       <div style={styles.user}>
         {meter && (
           <>
-            <Clickable
-              style={styles.meter}
-              hoverStyle={styles.meterHover}
-              onClick={() => setSettings({ panel: "usage" })}
+            <Link
+              to="/usage"
+              style={{ ...styles.meter, ...(meterHovered ? styles.meterHover : undefined) }}
               aria-label={`BigQuery usage this session: ${meter.scanned} scanned, ${meter.billed} billed, ${meter.cost} estimated. Open usage details`}
-              aria-haspopup="dialog"
               title={`BigQuery this session: ${meter.scanned} scanned · ${meter.billed} billed · ${meter.cost} estimated`}
+              {...meterHoverProps}
             >
               <GaugeIcon size={14} strokeWidth={2.2} style={styles.meterIcon} aria-hidden="true" />
               {compact ? (
@@ -413,7 +409,7 @@ export default function TopBar({
                   <span>{meter.cost}</span>
                 </>
               )}
-            </Clickable>
+            </Link>
             <span style={{ ...styles.userDivider, ...compactStyle("userDivider") }} aria-hidden="true" />
           </>
         )}
@@ -421,27 +417,7 @@ export default function TopBar({
           <UserIcon size={16} style={styles.userIcon} />
           <span style={compact ? Style.elements.visuallyHidden : undefined}>{userEmail}</span>
         </span>
-        <span style={{ ...styles.userDivider, ...compactStyle("userDivider") }} aria-hidden="true" />
-        <Clickable
-          style={Style.buttons.icon}
-          hoverStyle={Style.buttons.iconHover}
-          onClick={() => setSettings({})}
-          aria-label="Settings"
-          aria-haspopup="dialog"
-          title="Settings"
-        >
-          <GearIcon size={15} />
-        </Clickable>
       </div>
-      {settings && (
-        <SettingsDialog
-          initialPanel={settings.panel}
-          onClose={() => {
-            setSettings(null);
-            if (showMeter) readUsage();
-          }}
-        />
-      )}
     </div>
   );
 }

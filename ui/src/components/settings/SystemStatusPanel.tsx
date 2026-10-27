@@ -11,11 +11,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 6,
-  },
-  title: {
-    ...Style.elements.panelTitle,
+    gap: 16,
+    marginBottom: 14,
   },
   summary: {
     display: "inline-flex",
@@ -81,9 +78,11 @@ export default function SystemStatusPanel() {
   return (
     <>
       <div style={styles.heading}>
-        <h3 style={styles.title}>System status</h3>
+        <p style={{ ...Style.elements.panelIntro, margin: 0 }}>
+          The BigQuery tables VIA queries, and whether this workspace's credentials can read them.
+        </p>
         <Clickable
-          style={Style.buttons.accent}
+          style={{ ...Style.buttons.accent, flexShrink: 0 }}
           hoverStyle={Style.buttons.accentHover}
           disabledStyle={Style.buttons.disabled}
           onClick={check}
@@ -92,9 +91,6 @@ export default function SystemStatusPanel() {
           {loading ? "Refreshing..." : "Refresh"}
         </Clickable>
       </div>
-      <p style={Style.elements.panelIntro}>
-        The BigQuery tables VIA queries, and whether this workspace's credentials can read them.
-      </p>
 
       {error ? (
         <div role="alert" style={Style.elements.errorNote}>

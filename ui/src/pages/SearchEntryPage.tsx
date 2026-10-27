@@ -10,7 +10,6 @@ import AllOfUs from "../components/common/AllOfUs";
 import Hero from "../components/Hero";
 // import HeroSources from "../components/HeroSources";
 import PhenotypeStep, { PHENOTYPE_STEP_DESCRIPTION } from "../components/PhenotypeStep";
-import RecentSearches from "../components/RecentSearches";
 import VariantsStep from "../components/VariantsStep";
 import { SearchIcon } from "../components/icons";
 import Footer from "../components/results/Footer";
@@ -24,20 +23,32 @@ import {
   variantEntryStatus,
 } from "../utils/variants";
 import { describeAlternatives, searchConceptIds } from "../utils/phenotypes";
+import { usePreference } from "../utils/preferences";
+import { loadRecentSearches, type RecentSearch } from "../utils/recentSearches";
 import { USE_CASES, type UseCase } from "../utils/useCases";
 
 const CONDITION_FIELD_ID = "condition";
 
 // The hero says what VIA is and what it reads from; the card is the form in the order it's
-// filled: the variants box across the whole card, with the example searches a link beneath it
-// while it's empty, then the phenotype step, open from the start -- nearly every search adds one,
-// so it isn't folded behind a click. Each step says in a line what it does for the search, so the
-// hero doesn't have to.
+// filled: the variants box across the whole card, with the recent searches and the example
+// searches as links beneath it while it's empty, then the phenotype step, open from the start --
+// nearly every search adds one, so it isn't folded behind a click. Each step says in a line what
+// it does for the search, so the hero doesn't have to. The card is the whole page: a recent
+// search fills the form rather than running, so it can be changed first.
 const styles = {
+  // The page is a column that fills the window, so the footer sits at the bottom even when the
+  // form doesn't reach it.
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+  },
   main: {
-    maxWidth: 860,
+    flex: 1,
+    width: "100%",
+    maxWidth: 860 + 40,
     margin: "20px auto 0",
-    padding: "0 20px 48px",
+    padding: "0 20px 40px",
   },
   // Both steps in one card, so the page reads as a single search form with one action.
   card: {
@@ -53,8 +64,8 @@ const styles = {
   // The second step, divided from the first by a hairline: both steps sit bare in the card, which
   // is the one container the form needs. A box around either would nest it inside the other.
   phenotype: {
-    marginTop: 18,
-    paddingTop: 18,
+    marginTop: 20,
+    paddingTop: 20,
     borderTop: `1px solid ${colors.border}`,
   },
   cardFooter: {
@@ -99,11 +110,10 @@ const styles = {
 export default function SearchEntryPage() {
   const navigate = useNavigate();
   const [variants, setVariants] = useState("");
-  // The phenotypes picked from the dropdown, as concepts rather than names, so the backend counts
-  // exactly what the user chose instead of re-resolving a name -- which matters for concepts a
-  // text path would skip, e.g. ones with a zero participant estimate.
   const [phenotypes, setPhenotypes] = useState<ConditionConcept[]>([]);
   const [userEmail, setUserEmail] = useState("");
+  const [recentSearches] = useState(loadRecentSearches);
+  const [demoMode] = usePreference("demoMode");
 
   useEffect(() => {
     fetchProfile()
@@ -118,12 +128,23 @@ export default function SearchEntryPage() {
     setPhenotypes([example.condition]);
   }
 
+  function fillRecent(search: RecentSearch) {
+    setVariants(search.variants.join("\n"));
+    // History from before the estimate was kept has none; the chip shows that as unknown.
+    setPhenotypes(
+      search.conditions.map((condition) => ({
+        ...condition,
+        estimatedParticipantCount: condition.estimatedParticipantCount ?? null,
+      })),
+    );
+  }
+
   function handleSearch() {
     navigate(resultsPath(parseVariantsText(variants), searchConceptIds(phenotypes)));
   }
 
   return (
-    <>
+    <div style={styles.page}>
       <TopBar userEmail={userEmail} />
       <Hero
         title={
@@ -164,8 +185,10 @@ export default function SearchEntryPage() {
                   Enter the variants you're interpreting. Each is looked up across the entire <AllOfUs /> cohort.
                 </>
               }
-              examples={USE_CASES}
+              examples={demoMode ? USE_CASES : []}
               onUseExample={fillExample}
+              recentSearches={recentSearches}
+              onUseRecentSearch={fillRecent}
             />
             <div style={styles.phenotype}>
               <PhenotypeStep
@@ -212,11 +235,8 @@ export default function SearchEntryPage() {
             </Clickable>
           </div>
         </section>
-
-        <RecentSearches />
-
-        <Footer style={{ marginTop: 28 }} />
       </main>
-    </>
+      <Footer />
+    </div>
   );
 }
