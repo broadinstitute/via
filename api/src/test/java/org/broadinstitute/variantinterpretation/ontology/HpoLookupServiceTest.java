@@ -107,20 +107,25 @@ public class HpoLookupServiceTest {
     assertThat(HpoLookupService.words("of the")).containsExactlyInAnyOrder("of", "the");
   }
 
+  /** The release is the ontology's; the fixture's header is read by HpoOntologyTest. */
   @Test
-  void reportsTheRelease() {
-    assertThat(HPO.release()).isEqualTo("2026-09-01");
+  void reportsTheOntologysRelease() {
+    assertThat(HPO.release()).isEqualTo(HpoOntologyTest.trimmed().release()).isNotEqualTo("unknown");
   }
 
   /**
-   * The real release, as the build puts it on the classpath: it loads, it is the branch's size,
+   * The real release, as the build puts it on the classpath: it loads, it is the release
+   * build.gradle pins (handed to the test JVM as a system property, so the date lives only there),
    * and the four example conditions VIA ships pair the way the trimmed fixture says they do.
    */
   @Test
   void loadsThePinnedReleaseFromTheClasspath() {
+    String pinned = System.getProperty("via.hpo.release");
+    assertThat(pinned).as("via.hpo.release, set by the test task in build.gradle").isNotNull();
+
     HpoLookupService real = new HpoLookupService();
 
-    assertThat(real.release()).isEqualTo("2026-09-01");
+    assertThat(real.release()).isEqualTo(pinned.replaceFirst("^v", ""));
     assertThat(id(real.match("Tetralogy of Fallot"))).isEqualTo("HP:0001636");
     assertThat(id(real.match("Hypertrophic cardiomyopathy"))).isEqualTo("HP:0001639");
     assertThat(id(real.match("Long QT syndrome"))).isEqualTo("HP:0001657");

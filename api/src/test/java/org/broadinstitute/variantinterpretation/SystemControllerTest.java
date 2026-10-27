@@ -87,7 +87,7 @@ class SystemControllerTest {
 
     assertThat(sources).extracting(DataSourceVersion::getName).contains("All of Us", "gnomAD", "ClinVar", "HPO");
     DataSourceVersion hpo = sources.stream().filter(source -> source.getName().equals("HPO")).findFirst().orElseThrow();
-    assertThat(hpo.getVersion()).isEqualTo("2026-09-01");
+    assertThat(hpo.getVersion()).isEqualTo(HPO.release());
     assertThat(hpo.getUrl().orElse(null)).isEqualTo("https://hpo.jax.org/");
     assertThat(hpo.getDescription().orElse(null)).contains("Phenotype terms");
   }
