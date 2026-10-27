@@ -83,13 +83,14 @@ describe("recent searches", () => {
   });
 
   /** What a chip shows comes back with the condition; history from before it was kept still loads. */
-  it("keeps a condition's estimate when it has one", () => {
-    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [{ ...TETRALOGY, estimatedParticipantCount: 47 }] }, 1000);
-    recordRecentSearch({ variants: ["2-2-C-T"], conditions: [{ ...HCM, estimatedParticipantCount: null }] }, 2000);
+  it("keeps a condition's estimate and HPO term when it has them", () => {
+    const hpo = { id: "HP:0001636", name: "Tetralogy of Fallot", match: "exact" as const };
+    recordRecentSearch({ variants: ["1-1-A-G"], conditions: [{ ...TETRALOGY, estimatedParticipantCount: 47, hpo }] }, 1000);
+    recordRecentSearch({ variants: ["2-2-C-T"], conditions: [{ ...HCM, estimatedParticipantCount: null, hpo: null }] }, 2000);
 
     expect(loadRecentSearches()).toEqual([
-      { variants: ["2-2-C-T"], conditions: [{ ...HCM, estimatedParticipantCount: null }], searchedAt: 2000 },
-      { variants: ["1-1-A-G"], conditions: [{ ...TETRALOGY, estimatedParticipantCount: 47 }], searchedAt: 1000 },
+      { variants: ["2-2-C-T"], conditions: [{ ...HCM, estimatedParticipantCount: null, hpo: null }], searchedAt: 2000 },
+      { variants: ["1-1-A-G"], conditions: [{ ...TETRALOGY, estimatedParticipantCount: 47, hpo }], searchedAt: 1000 },
     ]);
 
     window.localStorage.setItem(

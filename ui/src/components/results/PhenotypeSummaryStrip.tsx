@@ -1,16 +1,107 @@
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { ConditionSearch } from "../../api/conditions";
-import colors from "../../libs/colors";
+import colors, { alpha } from "../../libs/colors";
+import { useHover } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
 import { conditionBreakdown } from "../../utils/conditionBreakdown";
 import { formatInt } from "../../utils/format";
 import Clickable from "../common/Clickable";
 import InfoTooltip from "../common/InfoTooltip";
-import { PlusIcon } from "../icons";
+import { useTooltip } from "../common/useTooltip";
+import { ExternalLinkIcon, PlusIcon } from "../icons";
 import BreakdownBar from "./BreakdownBar";
 import CopyButton from "./CopyButton";
+import { hpoTermUrl } from "../../utils/externalLinks";
+import type { HpoTerm } from "../../api/conditions";
+
+/** How the strip words an HPO term: the tooltip's full story and the link's accessible name. */
+function describeHpoCode(hpo: HpoTerm): { tooltip: string; spoken: string } {
+  const exact = hpo.match === "exact";
+  return {
+    tooltip: exact
+      ? `HPO ${hpo.id} ${hpo.name}, matched on the condition's name. Opens the HPO browser.`
+      : `Nearest HPO term ${hpo.id} ${hpo.name}: broader than the condition, no exact term matched its name. Opens the HPO browser.`,
+    spoken: `${exact ? "HPO term" : "Nearest HPO term"} ${hpo.id}, ${hpo.name}, opens the HPO browser`,
+  };
+}
+
+const NO_TERM_NOTE = "No term in the Human Phenotype Ontology has this condition's name, or a name its words contain.";
+
+/**
+ * The chip that says a condition has no HPO term, explained by the app's tooltip on hover, focus
+ * or tap. Focusable, so the keyboard reaches the explanation, and described by it for screen
+ * readers without hovering.
+ */
+function NoHpoTermChip() {
+  const ref = useRef<HTMLSpanElement>(null);
+  const descriptionId = useId();
+  const tooltip = useTooltip(ref, NO_TERM_NOTE);
+  return (
+    <span
+      ref={ref}
+      tabIndex={0}
+      aria-describedby={descriptionId}
+      style={{
+        ...styles.hpoNone,
+        ...(tooltip.keyboardFocused ? Style.elements.tooltipIconFocusRing : undefined),
+      }}
+      {...tooltip.anchorProps}
+    >
+      no matching term
+      <span id={descriptionId} style={Style.elements.visuallyHidden}>
+        {NO_TERM_NOTE}
+      </span>
+      {tooltip.bubble}
+    </span>
+  );
+}
+
+/**
+ * The line under a condition's name that names its HPO term: an "HPO" eyebrow, then the term's
+ * own name (always, even when it is the condition's name too, so what was matched is never left
+ * to inference), then its id as the link out, styled as the picked chip's id is on the search
+ * page, with a copy button. A nearest match carries "≈" ahead of its id, as the chip does, and
+ * explains itself on hover; a condition with no term says so in a dashed chip.
+ */
+function HpoLine({ hpo }: { hpo: HpoTerm | null | undefined }) {
+  const { hovered, hoverProps } = useHover();
+  if (!hpo) {
+    return (
+      <span style={styles.hpoLine}>
+        <span style={styles.hpoEyebrow} aria-hidden="true">
+          HPO
+        </span>
+        <NoHpoTermChip />
+      </span>
+    );
+  }
+  const words = describeHpoCode(hpo);
+  return (
+    <span style={styles.hpoLine}>
+      <span style={styles.hpoEyebrow} aria-hidden="true">
+        HPO
+      </span>
+      <span style={styles.hpoName} title={hpo.name}>
+        {hpo.name}
+      </span>
+      <a
+        href={hpoTermUrl(hpo.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={words.tooltip}
+        aria-label={words.spoken}
+        style={{ ...styles.hpoId, ...(hovered ? styles.hpoIdHover : undefined) }}
+        {...hoverProps}
+      >
+        {hpo.match === "exact" ? hpo.id : `≈ ${hpo.id}`}
+        <ExternalLinkIcon size={10} aria-hidden="true" />
+      </a>
+      <CopyButton getText={() => hpo.id} label="Copy HPO term ID" />
+    </span>
+  );
+}
 import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
 
 // A full-width band between the top bar and the results. Four blocks with one
@@ -75,19 +166,20 @@ const styles = {
     textOverflow: "ellipsis",
     maxWidth: 320,
   },
-  // One condition: its name over its OMOP code.
+  // One condition: its name over its HPO term.
   conditionText: {
     display: "flex",
     flexDirection: "column",
     gap: 2,
     minWidth: 0,
   },
-  // Several: a two-column list, name (code trailing) and that condition's own matched count.
+  // Several: a two-column list, each condition (its name over its HPO line) and that condition's
+  // own matched count, centred against the two lines.
   conditionList: {
     display: "grid",
     gridTemplateColumns: "minmax(0, 1fr) auto",
-    alignItems: "baseline",
-    gap: "3px 16px",
+    alignItems: "center",
+    gap: "8px 16px",
     margin: 0,
     padding: 0,
     listStyle: "none",
@@ -96,31 +188,22 @@ const styles = {
   conditionRow: {
     display: "contents",
   },
-  // A flex row, so the copy button (itself a flex box) sits inline after the code.
-  conditionRowName: {
+  // A condition in the list: its name, then its HPO line, stacked like the one-condition layout.
+  conditionRowText: {
     display: "flex",
-    alignItems: "center",
+    flexDirection: "column",
     gap: 2,
     minWidth: 0,
-    maxWidth: 300,
+    maxWidth: 360,
+  },
+  conditionRowName: {
+    overflow: "hidden",
+    color: colors.textPrimary,
     fontSize: 12.5,
     fontWeight: 600,
     lineHeight: 1.3,
-    color: colors.textPrimary,
-  },
-  conditionRowText: {
-    overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-  },
-  // The code after the name, quieter than on its own line; still copyable.
-  trailingCode: {
-    flexShrink: 0,
-    marginLeft: 6,
-    color: colors.textMuted,
-    fontFamily: "monospace",
-    fontSize: 10.5,
-    fontWeight: 500,
   },
   conditionCount: {
     fontSize: 12.5,
@@ -139,17 +222,59 @@ const styles = {
   labelRowSplit: {
     justifyContent: "space-between",
   },
-  codeLine: {
+  // Under a condition's name: "HPO", the term's name, its id as the link, a copy button.
+  hpoLine: {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    minWidth: 0,
+  },
+  hpoEyebrow: {
+    ...Style.elements.eyebrow,
+    flexShrink: 0,
+    color: colors.textSecondary,
+  },
+  hpoName: {
+    overflow: "hidden",
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: 500,
+    lineHeight: 1.3,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  // The picked chip's id link: navy mono, faintly underlined, the external mark inline.
+  hpoId: {
     display: "inline-flex",
     alignItems: "center",
-    gap: 2,
-  },
-  code: {
-    ...Style.elements.trimmedText,
+    flexShrink: 0,
+    gap: 3,
     color: colors.textAccent,
-    fontFamily: "monospace",
-    fontSize: 10.5,
+    fontFamily: Style.monoFamily,
+    fontSize: 11.5,
     fontWeight: 600,
+    textDecoration: "underline",
+    textDecorationColor: alpha(colors.textAccent, 0.35),
+    textUnderlineOffset: 2,
+    whiteSpace: "nowrap",
+  },
+  hpoIdHover: {
+    textDecorationColor: colors.textAccent,
+  },
+  hpoNone: {
+    flexShrink: 0,
+    padding: "1px 7px",
+    border: `1px dashed ${colors.borderStrong}`,
+    borderRadius: 6,
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.3,
+    lineHeight: 1.4,
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+    cursor: "default",
   },
   count: {
     fontSize: 20,
@@ -344,10 +469,11 @@ export default function PhenotypeSummaryStrip({
             <ul style={styles.conditionList} aria-label="Conditions, any of, with participants matched by each">
               {concepts.map((concept) => (
                 <li key={concept.conceptId} style={styles.conditionRow}>
-                  <span style={styles.conditionRowName} title={`${concept.name} · OMOP ${concept.conceptId}`}>
-                    <span style={styles.conditionRowText}>{concept.name}</span>
-                    <span style={styles.trailingCode}>{concept.conceptId}</span>
-                    <CopyButton getText={() => String(concept.conceptId)} label={`Copy OMOP concept ID ${concept.conceptId}`} />
+                  <span style={styles.conditionRowText}>
+                    <span style={styles.conditionRowName} title={concept.name}>
+                      {concept.name}
+                    </span>
+                    <HpoLine hpo={concept.hpo} />
                   </span>
                   <span style={styles.conditionCount} aria-label={`${formatInt(concept.participantCount)} participants`}>
                     {formatInt(concept.participantCount)}
@@ -360,10 +486,7 @@ export default function PhenotypeSummaryStrip({
               <span style={styles.conditionName} title={concepts[0].name}>
                 {concepts[0].name}
               </span>
-              <span style={styles.codeLine}>
-                <span style={styles.code}>OMOP — {concepts[0].conceptId}</span>
-                <CopyButton getText={() => String(concepts[0].conceptId)} label="Copy OMOP concept ID" />
-              </span>
+              <HpoLine hpo={concepts[0].hpo} />
             </div>
           ) : (
             <span style={styles.noMatch}>

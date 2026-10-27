@@ -1,3 +1,5 @@
+import type { HpoTerm } from "../api/conditions";
+
 // The entry page's "Recent searches" menu, and the drawer's: the criteria of the last few searches
 // that loaded, kept in this browser's localStorage. Only what was searched for (variant IDs and
 // condition concepts, with what their chips show) is stored -- never results or participant
@@ -6,8 +8,8 @@
 
 // Bumped when the shape changes: entries in an older shape fail validation and are dropped, which
 // is simpler than migrating a convenience. v1 held one `condition` where v2 holds `conditions`.
-// A condition's estimate was added within v2, optional, so earlier entries still load, their
-// chips just without it.
+// A condition's estimate and HPO term were added within v2: both optional, so earlier entries
+// still load, their chips just without them.
 const STORAGE_KEY = "via.recentSearches.v2";
 const MAX_SEARCHES = 20;
 
@@ -16,6 +18,7 @@ export interface RecentSearchCondition {
   conceptId: number;
   name: string;
   estimatedParticipantCount?: number | null;
+  hpo?: HpoTerm | null;
 }
 
 export interface RecentSearch {
@@ -26,6 +29,12 @@ export interface RecentSearch {
   searchedAt: number;
 }
 
+function isHpoTerm(value: unknown): value is HpoTerm {
+  if (typeof value !== "object" || value === null) return false;
+  const term = value as Record<string, unknown>;
+  return typeof term.id === "string" && typeof term.name === "string" && (term.match === "exact" || term.match === "approximate");
+}
+
 function isCondition(value: unknown): value is RecentSearchCondition {
   if (typeof value !== "object" || value === null) return false;
   const condition = value as Record<string, unknown>;
@@ -34,7 +43,8 @@ function isCondition(value: unknown): value is RecentSearchCondition {
     typeof condition.name === "string" &&
     (condition.estimatedParticipantCount === undefined ||
       condition.estimatedParticipantCount === null ||
-      typeof condition.estimatedParticipantCount === "number")
+      typeof condition.estimatedParticipantCount === "number") &&
+    (condition.hpo === undefined || condition.hpo === null || isHpoTerm(condition.hpo))
   );
 }
 

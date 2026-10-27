@@ -17,10 +17,15 @@ import org.broadinstitute.variantinterpretation.model.BigQueryStatus;
 import org.broadinstitute.variantinterpretation.model.TableStatus;
 import java.util.List;
 import org.broadinstitute.variantinterpretation.model.DataSourceVersion;
+import org.broadinstitute.variantinterpretation.ontology.HpoLookupService;
+import org.broadinstitute.variantinterpretation.ontology.HpoLookupServiceTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
 class SystemControllerTest {
+
+  /** The trimmed ontology; its release is what the data-sources list should report. */
+  private static final HpoLookupService HPO = HpoLookupServiceTest.trimmed();
 
   private final BigQueryProperties properties =
       new BigQueryProperties(
@@ -33,7 +38,7 @@ class SystemControllerTest {
 
     QueryUsageMeter usage = new QueryUsageMeter();
     ResponseEntity<BigQueryStatus> response =
-        new SystemController(new BigQueryService(bigQuery, usage), properties, usage).bigQueryStatus();
+        new SystemController(new BigQueryService(bigQuery, usage), properties, usage, HPO).bigQueryStatus();
 
     assertThat(response.getStatusCode().value()).isEqualTo(200);
     assertThat(response.getBody()).isNotNull();
@@ -58,7 +63,7 @@ class SystemControllerTest {
 
     QueryUsageMeter usage = new QueryUsageMeter();
     BigQueryStatus status =
-        new SystemController(new BigQueryService(bigQuery, usage), properties, usage).bigQueryStatus().getBody();
+        new SystemController(new BigQueryService(bigQuery, usage), properties, usage, HPO).bigQueryStatus().getBody();
 
     assertThat(status).isNotNull();
     assertThat(status.getAccessible()).isFalse();
@@ -74,12 +79,25 @@ class SystemControllerTest {
             tuple("cdr-project.test_cdr.condition_occurrence", true, null));
   }
 
+  /** HPO is the one source that ships inside VIA, so its version comes from the ontology file. */
+  @Test
+  void dataSourceVersions_nameTheBundledHpoRelease() {
+    List<DataSourceVersion> sources =
+        new SystemController(null, null, null, HPO).dataSourceVersions().getBody();
+
+    assertThat(sources).extracting(DataSourceVersion::getName).contains("All of Us", "gnomAD", "ClinVar", "HPO");
+    DataSourceVersion hpo = sources.stream().filter(source -> source.getName().equals("HPO")).findFirst().orElseThrow();
+    assertThat(hpo.getVersion()).isEqualTo("2026-09-01");
+    assertThat(hpo.getUrl().orElse(null)).isEqualTo("https://hpo.jax.org/");
+    assertThat(hpo.getDescription().orElse(null)).contains("Phenotype terms");
+  }
+
   /** Every source says what VIA takes from it, so the data-sources page can explain each row. */
   @Test
   void dataSourceVersions_describeEverySource() {
-    List<DataSourceVersion> sources = new SystemController(null, null, null).dataSourceVersions().getBody();
+    List<DataSourceVersion> sources =
+        new SystemController(null, null, null, HPO).dataSourceVersions().getBody();
 
-    assertThat(sources).extracting(DataSourceVersion::getName).contains("All of Us", "gnomAD", "ClinVar");
     assertThat(sources).allSatisfy(source -> assertThat(source.getDescription().orElse("")).isNotBlank());
   }
 }
