@@ -15,6 +15,7 @@ import BreakdownBar from "./BreakdownBar";
 import CopyButton from "./CopyButton";
 import { hpoTermUrl } from "../../utils/externalLinks";
 import type { HpoTerm } from "../../api/conditions";
+import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
 
 /** How the strip words an HPO term: the tooltip's full story and the link's accessible name. */
 function describeHpoCode(hpo: HpoTerm): { tooltip: string; spoken: string } {
@@ -102,18 +103,7 @@ function HpoLine({ hpo }: { hpo: HpoTerm | null | undefined }) {
     </span>
   );
 }
-import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
 
-// A full-width band between the top bar and the results. Four blocks with one
-// anatomy -- a small uppercase label over its content -- divided by hairlines the way the top bar
-// divides its parts: what the phenotype filter is, how many it matched, how they break down, and
-// which view is showing. Being a band rather than a side panel, it leaves the table the full width.
-// With several conditions the breakdown gains a Condition tab: who has only each one, and who has
-// more than one. Unlike the ancestry and age breakdowns, that one is a real count.
-// A filter of several conditions becomes a small table in the first block: each condition with its
-// code trailing and its own matched count in a column, under a "participants" label at the end of
-// the block's label row. The column is what makes the overlap visible: the counts plainly add up
-// to more than the total beside them.
 const BLOCK_GAP = 20;
 
 const styles = {
