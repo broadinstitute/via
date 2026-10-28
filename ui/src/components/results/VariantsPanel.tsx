@@ -125,6 +125,16 @@ const styles = {
   scopeHeaderMatched: {
     color: colors.textPrimary,
   },
+  // The source row: each source's name on a solid fill of its own colour, white text. The strongest
+  // cue in the table, and the one that survives a small window or a screenshot; everything below it
+  // takes only a wash.
+  sourceHeaderCell: {
+    color: colors.white,
+    letterSpacing: 0.3,
+    // Rounded at the top, so each source's cell reads as a tab over its columns rather than a bar.
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+  },
   // Pinned cells sit above the scrolling ones; pinned header cells above everything.
   pinnedCell: {
     position: "sticky",
@@ -399,7 +409,10 @@ function gutterStyle(columnId: string): CSSProperties | undefined {
   return rule;
 }
 
-/** The tint each group header takes, so a source's band starts in the source row and runs down through its scopes. */
+/** The ids of the source row's cells, which are filled solid in their source's colour. */
+const SOURCE_HEADER_IDS = new Set(["aou", "gnomad"]);
+
+/** The tint each group header takes: the source row solid, the scope and column rows beneath it washed. */
 const GROUP_TINTS: Record<string, Tint> = {
   aou: "aou",
   allParticipants: "aou",
@@ -1024,6 +1037,7 @@ export default function VariantsPanel({
                       // tint names, and the matched scope takes the matched tint, so each band
                       // starts in its top-most header row.
                       const tint = tintOf(header.column.id) ?? headerTint(header.column.id);
+                      const isSourceHeader = depth === 0 && tint !== null && SOURCE_HEADER_IDS.has(header.column.id);
                       const sortable = header.column.getCanSort();
                       const sortDirection = header.column.getIsSorted();
                       return (
@@ -1040,6 +1054,7 @@ export default function VariantsPanel({
                             top: depth * GROUP_HEADER_HEIGHT,
                             ...gutterStyle(header.column.id),
                             background: cellBackground(tint, false) ?? styles.headerCell.background,
+                            ...(isSourceHeader ? { ...styles.sourceHeaderCell, background: sourceTints[tint].header } : undefined),
                             ...(sortable ? Style.table.sortable : undefined),
                             ...(sortable && hoveredHeader === header.id ? Style.table.sortableHover : undefined),
                             ...pinnedStyle(header.column.id),

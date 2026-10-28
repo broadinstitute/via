@@ -85,21 +85,23 @@ export const CONDITION_SERIES = [colors.conditionA, colors.conditionB, colors.co
 /**
  * Background tints that mark which source a table's column group reports -- All of Us or gnomAD.
  *
- * `strong` is for the variants table, where the tint separates its side-by-side column groups;
- * `soft` is for the population table nested inside an expanded row, where the same distinction
- * only needs a hint. Both share one `hover` value so a hovered row reads as a single band.
+ * `header` fills the source's name cell at the top of its column group, solid, with white text:
+ * the one cue that still reads when the table is small. `strong` is the soft wash under it in
+ * the variants table; `soft` is for the population table nested inside an expanded row, where
+ * the same distinction only needs a hint. `strong` and `soft` share one `hover` value so a
+ * hovered row reads as a single band.
  */
 /** The accent's own tint: All of Us figures, wherever they sit. */
-const AOU_TINT = { strong: "#dfeaf2", soft: "#f6f9fc", hover: "#d4e3ee" } as const;
+const AOU_TINT = { header: NAVY, strong: "#eef4f8", soft: "#f6f9fc", hover: "#e2ecf4" } as const;
 
 export const sourceTints = {
   aou: AOU_TINT,
-  gnomad: { strong: "#f1f0ec", soft: "#fafbfb", hover: "#e9e8e3" },
+  gnomad: { header: "#6c7086", strong: "#f7f6f3", soft: "#fafbfb", hover: "#eeede8" },
   /**
    * The phenotype-matched column group in the merged table. Its figures are All of Us figures
    * too, so it shares the tint; the scope row above says which participants they cover.
    */
-  matched: { strong: AOU_TINT.strong, hover: AOU_TINT.hover },
+  matched: { header: NAVY, strong: AOU_TINT.strong, hover: AOU_TINT.hover },
 } as const;
 
 /** Marks the subpopulation with the highest allele frequency in the population table. */
