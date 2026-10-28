@@ -17,7 +17,7 @@ describe("SubpopBadge", () => {
     expect(screen.getByText("AMR")).toHaveStyle({
       display: "inline-flex",
       width: "52px",
-      background: colors.surface1,
+      backgroundColor: colors.surface1,
       border: `1px solid ${colors.border}`,
       borderRadius: "10px",
       color: colors.textSecondary,
@@ -32,7 +32,7 @@ describe("SubpopBadge", () => {
     const dot = badge.firstChild as HTMLElement;
 
     expect(dot).toHaveStyle({
-      background: SUBPOP_COLOR.MID,
+      backgroundColor: SUBPOP_COLOR.MID,
     });
   });
 
@@ -43,7 +43,7 @@ describe("SubpopBadge", () => {
 
     expect(screen.getByText("ASJ")).toBeInTheDocument();
     expect(dot).toHaveStyle({
-      background: SUBPOP_COLOR.ASJ,
+      backgroundColor: SUBPOP_COLOR.ASJ,
     });
   });
 
@@ -53,7 +53,7 @@ describe("SubpopBadge", () => {
     const dot = badge.firstChild as HTMLElement;
 
     expect(dot).toHaveStyle({
-      background: colors.subpopSas,
+      backgroundColor: colors.subpopSas,
     });
   });
 });
