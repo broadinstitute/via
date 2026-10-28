@@ -31,7 +31,7 @@ describe("ClinvarBadge", () => {
   it("is a tinted pill in the classification's colour, one width for every split badge", () => {
     const { container } = render(<ClinvarBadge significance="VUS" stars={2} />);
     expect(container.firstChild).toHaveStyle({
-      background: colors.bgWarning,
+      backgroundColor: colors.bgWarning,
       color: colors.textWarning,
       border: `1px solid ${alpha(colors.textWarning, 0.35)}`,
       borderRadius: "999px",

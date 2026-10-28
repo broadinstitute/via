@@ -21,7 +21,7 @@ describe("BreakdownBar", () => {
     });
     const runs = Array.from(bar.children) as HTMLElement[];
     expect(runs).toHaveLength(4);
-    expect(runs[0]).toHaveStyle({ flex: "52 0 3px", background: "#F9C854" });
+    expect(runs[0]).toHaveStyle({ flex: "52 0 3px", backgroundColor: "#F9C854" });
     expect(runs[3]).toHaveStyle({ flex: "2 0 3px" });
 
     const legend = container.lastElementChild!.lastElementChild!;
