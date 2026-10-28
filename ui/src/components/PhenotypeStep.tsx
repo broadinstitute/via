@@ -1,14 +1,16 @@
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import type { ConditionConcept } from "../api/conditions";
-import colors from "../libs/colors";
+import type { ConditionConcept, HpoTerm } from "../api/conditions";
+import colors, { alpha } from "../libs/colors";
 import * as Style from "../libs/style";
+import { hpoTermUrl } from "../utils/externalLinks";
+import { describeHpo } from "../utils/hpo";
 import { PHENOTYPES_LIMIT } from "../utils/phenotypes";
 import AllOfUs from "./common/AllOfUs";
 import Clickable from "./common/Clickable";
 import ConditionSearchField, { describeEstimate } from "./ConditionSearchField";
 import FieldHint from "./FieldHint";
-import { CloseIcon } from "./icons";
+import { CloseIcon, ExternalLinkIcon } from "./icons";
 import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
 // Step 2 of a search: the phenotypes to filter by, as a list. Each picked condition is a chip
@@ -17,7 +19,8 @@ import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 // search's limit is reached, when it gives way to a line saying so.
 //
 // The chip is one quiet object: white, a plain border, the name in one weight, then the estimate
-// as muted text behind a hairline. No tint and no icon, so it reads as a choice, not a badge.
+// as muted text behind a hairline, then the HPO id as the link out to the term, for concepts
+// that pair with one. No tint and no icon, so it reads as a choice, not a badge.
 
 /** What the step does for the search; the folded row says the same, so the step reads alike open or closed. */
 export const PHENOTYPE_STEP_DESCRIPTION =
@@ -82,6 +85,20 @@ const styles = {
     fontWeight: 500,
     color: colors.textSecondary,
   },
+  // The HPO id the dropdown showed, now a link to the term: underlined faintly so it reads as a
+  // cross-reference rather than a second label, with the term's name and the caveat on hover.
+  chipHpo: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 3,
+    ...Style.elements.mono,
+    fontSize: 11,
+    fontWeight: 600,
+    color: colors.textAccent,
+    textDecoration: "underline",
+    textDecorationColor: alpha(colors.textAccent, 0.35),
+    textUnderlineOffset: 2,
+  },
   remove: {
     ...Style.buttons.icon,
     width: 20,
@@ -125,6 +142,17 @@ function ChipEstimate({ estimate }: { estimate: number | null }) {
   );
 }
 
+/** The pick's HPO id as the link out to the term; "≈" ahead of it marks a nearest match. */
+function ChipHpo({ hpo }: { hpo: HpoTerm }) {
+  const { label, tooltip, spoken } = describeHpo(hpo, { link: true });
+  return (
+    <a href={hpoTermUrl(hpo.id)} target="_blank" rel="noopener noreferrer" style={styles.chipHpo} title={tooltip} aria-label={spoken}>
+      {label}
+      <ExternalLinkIcon size={10} aria-hidden="true" />
+    </a>
+  );
+}
+
 export default function PhenotypeStep({
   id,
   picked,
@@ -160,6 +188,12 @@ export default function PhenotypeStep({
                 {concept.name}
                 <span style={styles.chipDivider} aria-hidden="true" />
                 <ChipEstimate estimate={concept.estimatedParticipantCount} />
+                {concept.hpo && (
+                  <>
+                    <span style={styles.chipDivider} aria-hidden="true" />
+                    <ChipHpo hpo={concept.hpo} />
+                  </>
+                )}
                 <Clickable
                   style={styles.remove}
                   hoverStyle={styles.removeHover}

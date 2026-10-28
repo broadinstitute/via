@@ -88,8 +88,9 @@ describe("SearchResultsPage", () => {
     expect(searches).toEqual(["/api/search?variants=1-1-A-G&conditionConceptIds=9000010&conditionConceptIds=9000040"]);
     // The strip lists both, each with its own count beside it.
     expect(screen.getAllByText("260").length).toBeGreaterThan(0);
+    // (Each "no matching term" chip also carries its hidden explanation, so the match is loose.)
     expect(screen.getByRole("list", { name: /Conditions, any of/ })).toHaveTextContent(
-      "Tetralogy of Fallot900001049Hypertrophic cardiomyopathy9000040214",
+      /^Tetralogy of FallotHPOno matching term.*49Hypertrophic cardiomyopathyHPOno matching term.*214$/,
     );
     // And the search goes into history with both.
     expect(JSON.parse(window.localStorage.getItem("via.recentSearches.v2")!)[0]).toMatchObject({

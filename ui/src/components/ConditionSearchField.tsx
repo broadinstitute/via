@@ -6,6 +6,7 @@ import colors from "../libs/colors";
 import { useFocus, useHoveredKey } from "../libs/hooks";
 import * as Style from "../libs/style";
 import { formatInt } from "../utils/format";
+import { describeHpo } from "../utils/hpo";
 import { UserIcon } from "./icons";
 
 /**
@@ -61,9 +62,27 @@ const styles = {
     background: colors.bgAccent,
   },
   optionName: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
     color: colors.textBody,
     fontSize: 12.5,
     lineHeight: 1.35,
+  },
+  optionNameText: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  /** The HPO id paired with the concept, in mono and quiet: a cross-reference, not the choice itself. */
+  hpo: {
+    flexShrink: 0,
+    color: colors.textSecondary,
+    fontFamily: Style.monoFamily,
+    fontSize: 10.5,
+    fontWeight: 600,
+    cursor: "help",
   },
   /**
    * The estimate, not the real cohort size -- /api/search returns the actual count for a
@@ -391,7 +410,9 @@ export default function ConditionSearchField({
               id={`${listboxId}-option-${index}`}
               role="option"
               aria-selected={index === activeIndex}
-              aria-label={`${concept.name}, ${describeEstimate(concept.estimatedParticipantCount).spoken}`}
+              aria-label={`${concept.name}, ${describeEstimate(concept.estimatedParticipantCount).spoken}${
+                concept.hpo ? `, ${describeHpo(concept.hpo).spoken}` : ""
+              }`}
               style={{
                 ...styles.option,
                 ...(index === activeIndex || hoveredKey === index ? styles.optionActive : undefined),
@@ -404,7 +425,14 @@ export default function ConditionSearchField({
               }}
               {...hoverProps(index)}
             >
-              <span style={styles.optionName}>{concept.name}</span>
+              <span style={styles.optionName}>
+                <span style={styles.optionNameText}>{concept.name}</span>
+                {concept.hpo && (
+                  <span style={styles.hpo} title={describeHpo(concept.hpo).tooltip} aria-hidden="true">
+                    {describeHpo(concept.hpo).label}
+                  </span>
+                )}
+              </span>
               <Estimate
                 estimate={concept.estimatedParticipantCount}
                 onActiveRow={index === activeIndex || hoveredKey === index}

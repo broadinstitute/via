@@ -272,7 +272,10 @@ describe("SearchEntryPage", () => {
     expect(screen.queryByRole("button", { name: "Recent searches" })).not.toBeInTheDocument();
     cleanup();
 
-    recordRecentSearch({ variants: ["1-1-A-G", "2-2-C-T"], conditions: [TETRALOGY] });
+    recordRecentSearch({
+      variants: ["1-1-A-G", "2-2-C-T"],
+      conditions: [{ ...TETRALOGY, hpo: { id: "HP:0001636", name: "Tetralogy of Fallot", match: "exact" } }],
+    });
     renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "Recent searches" }));
@@ -285,6 +288,7 @@ describe("SearchEntryPage", () => {
     const picked = screen.getByRole("list", { name: "Picked phenotypes" });
     expect(picked).toHaveTextContent("Tetralogy of Fallot");
     expect(picked).toHaveTextContent("~47");
+    expect(picked).toHaveTextContent("HP:0001636");
     expect(screen.queryByTestId("location")).not.toBeInTheDocument();
     // The links go while the box has text, like the example link does.
     expect(screen.queryByRole("button", { name: "Recent searches" })).not.toBeInTheDocument();
