@@ -5,16 +5,20 @@
 # container boots. But Workbench-specific values (OWNER_EMAIL, GOOGLE_PROJECT,
 # WORKBENCH_USER_EMAIL, ...) aren't known yet at that point -- they're fetched
 # by post-startup.sh (via postCreateCommand, see .devcontainer.json) only
-# after the container is already running, and written to /root/.bashrc.
+# after the container is already running, and written to the app user's
+# ~/.bashrc (/home/via/.bashrc).
 #
-# postCreateCommand extracts those exports into /root/.workbench-env once
+# postCreateCommand extracts those exports into /home/via/.workbench-env once
 # post-startup.sh finishes (same approach used by other Workbench app
 # templates upstream, e.g. aou-sas/setup-sas-env.sh).
 # Wait for that file here, then source it before starting the app, so
 # System.getenv() in the Java process actually sees these values.
+#
+# This runs as the unprivileged `via` user (see deploy/Dockerfile), so HOME
+# is /home/via -- the same path .devcontainer.json's postCreateCommand writes to.
 set -euo pipefail
 
-readonly WORKBENCH_ENV_FILE="/root/.workbench-env"
+readonly WORKBENCH_ENV_FILE="${HOME}/.workbench-env"
 # post-startup.sh (wb CLI download/login, git-setup, gcsfuse install/mount) has
 # been observed taking ~3 minutes on a fresh VM; give it comfortable headroom.
 readonly MAX_WAIT_SECONDS=600

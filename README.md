@@ -85,7 +85,9 @@ no CORS or reverse proxy to configure). To build and run that image locally:
 
 ```bash
 docker network create app-network  # first time only
-WORKBENCH_USER_EMAIL=you@example.org WORKSPACE_CDR=<project.dataset> SKIP_WORKBENCH_WAIT=true docker compose -f deploy/docker-compose.yaml up --build
+WORKBENCH_USER_EMAIL=you@example.org WORKSPACE_CDR=<project.dataset> SKIP_WORKBENCH_WAIT=true docker compose -f deploy/docker-compose.yaml up --build --no-deps app
 ```
 
-Then open `http://localhost:8080`.
+Then open `http://localhost:8080`. `--no-deps app` leaves out the `wondershaper`
+egress-limiting sidecar, which only makes sense on a Workbench VM (see
+[deploy/README.md](deploy/README.md#aou-exfiltration-controls)).
