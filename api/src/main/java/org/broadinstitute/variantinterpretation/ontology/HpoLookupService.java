@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 import org.broadinstitute.variantinterpretation.model.HpoTerm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -66,6 +67,8 @@ public class HpoLookupService {
 
   private record Phrase(Set<String> words, HpoOntology.Term term) {}
 
+  /** The production service, over the release the build bundled; tests pass an ontology instead. */
+  @Autowired
   public HpoLookupService() {
     this(load());
   }
@@ -110,6 +113,9 @@ public class HpoLookupService {
     if (exact != null) return Optional.of(toHpoTerm(exact, HpoTerm.MatchEnum.EXACT));
 
     Set<String> words = words(normalized);
+    // Most words wins. Among phrases with the same number of words (two orderings of the same
+    // words are one set here, so they tie), the lowest id wins: reverseOrder inside max picks the
+    // smallest, so the choice is deterministic rather than file order.
     return phrases.stream()
         .filter(phrase -> words.containsAll(phrase.words()))
         .filter(phrase -> phrase.words().size() > 1 || phrase.words().iterator().next().length() >= MIN_SINGLE_WORD_LENGTH)
