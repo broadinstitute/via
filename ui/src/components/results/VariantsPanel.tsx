@@ -19,7 +19,7 @@ import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulation
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
 import InfoLabel from "../common/InfoLabel";
-import { ChevronRightIcon, CompareIcon, EyeOffIcon, GlobeIcon, SortIcon, UserIcon } from "../icons";
+import { ChevronRightIcon, CompareIcon, EyeOffIcon, SortIcon, UserIcon } from "../icons";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import NotAvailable from "../elements/NotAvailable";
 import SubpopBadge from "../elements/SubpopBadge";
@@ -96,8 +96,9 @@ const styles = {
     // render as a gap at the boundary between them.
     boxShadow: `inset 0 -1px 0 0 ${colors.border}`,
   },
-  // Two group rows sit above the column headers: the scope row (all participants vs matched),
-  // then the source row. Each row is sticky at its depth times this height.
+  // Two group rows sit above the column headers: the source row (All of Us, gnomAD), then the
+  // scope row within All of Us (all participants vs matched). Each is sticky at its depth times
+  // this height.
   groupHeaderCell: {
     height: GROUP_HEADER_HEIGHT,
     // Above the column-header row, which scrolls up underneath it.
@@ -109,7 +110,7 @@ const styles = {
     textAlign: "center",
   },
   // The scope row's labels, "All participants" and "Phenotype-matched participants": small caps,
-  // a step quieter than the source names beneath. The matched side is in primary ink with its count.
+  // a step quieter than the source name above. The matched side is in primary ink with its count.
   scopeHeader: {
     display: "inline-flex",
     alignItems: "center",
@@ -156,10 +157,6 @@ const styles = {
     width: SEAM_WIDTH,
     background: `linear-gradient(to right, ${colors.border} 1px, ${alpha(colors.textPrimary, 0.12)} 1px, transparent)`,
   },
-  groupQualifier: {
-    color: colors.textSecondary,
-    fontWeight: 500,
-  },
   // Within a source group the badge and the figures beside it read as one unit, so the gutter
   // between them is closed up: the badge cell gives up its right padding, the figures their left.
   // Badges and the globe above them centred together, so the header icon sits over the badges.
@@ -170,16 +167,16 @@ const styles = {
   figuresCell: {
     paddingLeft: 6,
   },
-  // The subpopulation columns' header: a globe in place of a word the column is too narrow for.
-  // Centred over the badges beneath it (see badgeCell); a lone icon at the cell's left edge read
-  // as a missing word. vertical-align middle, not the default baseline: an icon-only inline box
-  // sits on the text baseline with its descender space empty beneath, which lifts it a few pixels
-  // above the words in the neighbouring headers.
+  // The seam between the two scopes of the All of Us band: a rule a shade deeper than the tint,
+  // down the left edge of the matched scope from its header through every row, so the cohort-wide
+  // and matched figures read as two halves of one band rather than one run of columns.
+  scopeRule: {
+    borderLeft: `1px solid ${alpha(colors.textPrimary, 0.22)}`,
+  },
+  // The subpopulation columns' header, centred over the badges beneath it (see badgeCell).
   subpopHeader: {
-    display: "inline-flex",
-    alignItems: "center",
-    verticalAlign: "middle",
-    color: colors.textSecondary,
+    whiteSpace: "nowrap",
+    cursor: "help",
   },
   // A two-line cell: the value that's compared across rows, then its supporting figure.
   stack: {
@@ -270,12 +267,27 @@ const styles = {
     whiteSpace: "normal",
   },
   detailPanel: {
-    display: "grid",
-    gridTemplateColumns: "318px 1fr",
+    display: "flex",
+    flexDirection: "column",
     background: colors.surface2,
     border: `1px solid ${colors.border}`,
     borderRadius: Style.radius,
     overflow: "hidden",
+  },
+  // The panel's body: ClinVar beside the population table.
+  detailBody: {
+    display: "grid",
+    gridTemplateColumns: "318px 1fr",
+  },
+  // The panel's footer, holding the one thing to do from here: open the variant in Review. It
+  // lives in the detail rather than at the end of the row, so the row stays figures only and the
+  // action sits with the evidence it acts on.
+  detailActions: {
+    display: "flex",
+    justifyContent: "flex-start",
+    padding: "8px 12px",
+    background: colors.surface1,
+    borderTop: `1px solid ${colors.border}`,
   },
   detailClinvar: {
     padding: "12px 14px",
@@ -373,19 +385,31 @@ function sortButtonLabel(columnId: string, direction: false | "asc" | "desc"): s
 }
 const FIGURES_COLUMN_IDS = new Set(["aouFreq", "gnomadFreq"]);
 
-/** Tighter inner padding for a badge cell and the figures cell beside it. */
+/**
+ * The matched scope's header and its first column, which draw the rule that divides the two
+ * scopes inside the All of Us band (styles.scopeRule). The source row above is left whole.
+ */
+const SCOPE_RULE_IDS = new Set(["matchedScope", "matchedFreq"]);
+
+/** Tighter inner padding for a badge cell and the figures cell beside it, and the scope rule where it falls. */
 function gutterStyle(columnId: string): CSSProperties | undefined {
-  if (BADGE_COLUMN_IDS.has(columnId)) return styles.badgeCell;
-  if (FIGURES_COLUMN_IDS.has(columnId)) return styles.figuresCell;
-  return undefined;
+  const rule = SCOPE_RULE_IDS.has(columnId) ? styles.scopeRule : undefined;
+  if (BADGE_COLUMN_IDS.has(columnId)) return { ...styles.badgeCell, ...rule };
+  if (FIGURES_COLUMN_IDS.has(columnId)) return { ...styles.figuresCell, ...rule };
+  return rule;
 }
 
-/**
- * The tint a group header cell takes from its id: the source groups' ids are tint names. The scope
- * row above them is untinted on both sides, so the two scopes read as peers.
- */
+/** The tint each group header takes, so a source's band starts in the source row and runs down through its scopes. */
+const GROUP_TINTS: Record<string, Tint> = {
+  aou: "aou",
+  allParticipants: "aou",
+  matchedScope: "matched",
+  gnomad: "gnomad",
+  gnomadScope: "gnomad",
+};
+
 function headerTint(columnId: string): Tint | null {
-  return columnId in sourceTints ? (columnId as Tint) : null;
+  return GROUP_TINTS[columnId] ?? null;
 }
 
 /**
@@ -479,11 +503,21 @@ function ExpandButton({ expanded, variant, onToggle }: { expanded: boolean; vari
   );
 }
 
-/** The subpopulation column's header: the badge beneath says which group, so the header says only what kind of thing it is. */
-function SubpopHeader() {
+/**
+ * The subpopulation column's header. It carries the caveat for the whole source group: the badge
+ * beneath names the subpopulation with the highest allele frequency, and the figures beside it
+ * are that subpopulation's, not the whole cohort's. Sitting over the badge it describes, it costs
+ * the group no width, where the same words in the group header above forced the columns wider.
+ */
+function SubpopHeader({ source }: { source: "aou" | "gnomad" }) {
+  const name = source === "aou" ? "All of Us" : "gnomAD";
+  const codes = source === "aou" ? AOU_SUBPOP_CODES : GNOMAD_SUBPOP_CODES;
   return (
-    <span style={styles.subpopHeader} role="img" aria-label="Subpopulation" title="Subpopulation with the highest allele frequency">
-      <GlobeIcon size={14} strokeWidth={2} aria-hidden="true" />
+    <span
+      style={styles.subpopHeader}
+      title={`The ${name} subpopulation (${codes.join(", ")}) with the highest allele frequency for this variant. The figures beside it are that subpopulation's, not the entire ${name} cohort's; expand the row for the whole cohort.`}
+    >
+      Max subpop
     </span>
   );
 }
@@ -699,31 +733,22 @@ export default function VariantsPanel({
           ),
         ]),
       }),
+      // One All of Us band over both scopes: the cohort-wide figures, then the matched figures
+      // right beside them, so the comparison the table exists for sits in one tinted block.
+      // gnomAD follows as a band of its own.
+      columnHelper.group({
+        id: "aou",
+        header: () => <AllOfUs />,
+        enableSorting: false,
+        columns: [
       columnHelper.group({
         id: "allParticipants",
         header: () => <span style={styles.scopeHeader}>All participants</span>,
         enableSorting: false,
-        columns: [
-      columnHelper.group({
-        id: "aou",
-        header: () => (
-          <InfoLabel
-            tooltip={
-              <>
-                Values below reflect the <AllOfUs /> subpopulation ({AOU_SUBPOP_CODES.join(", ")}) with the
-                highest allele frequency for this variant, not the entire <AllOfUs /> cohort.
-                {"\n\n"}To see the allele frequency for the entire cohort, expand the row.
-              </>
-            }
-          >
-            <AllOfUs /> <span style={styles.groupQualifier}>— max subpopulation</span>
-          </InfoLabel>
-        ),
-        enableSorting: false,
         columns: columnHelper.columns([
           columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.aouSubpopulation ?? undefined : undefined), {
             id: "aouSubpop",
-            header: () => <SubpopHeader />,
+            header: () => <SubpopHeader source="aou" />,
             cell: ({ row }) =>
               row.original.cohort.annotated && row.original.cohort.aouSubpopulation ? (
                 <SubpopBadge subpopulation={row.original.cohort.aouSubpopulation} />
@@ -748,48 +773,6 @@ export default function VariantsPanel({
         ]),
       }),
       columnHelper.group({
-        id: "gnomad",
-        header: () => (
-          <InfoLabel
-            tooltip={
-              `Values below reflect the gnomAD subpopulation (${GNOMAD_SUBPOP_CODES.join(", ")}) with the highest allele frequency for this variant, not the entire gnomAD cohort.\n\n` +
-              "To see the allele frequency for the entire cohort, expand the row."
-            }
-          >
-            gnomAD <span style={styles.groupQualifier}>— max subpopulation</span>
-          </InfoLabel>
-        ),
-        enableSorting: false,
-        columns: columnHelper.columns([
-          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gnomadSubpopulation ?? undefined : undefined), {
-            id: "gnomadSubpop",
-            header: () => <SubpopHeader />,
-            cell: ({ row }) =>
-              row.original.cohort.annotated && row.original.cohort.gnomadSubpopulation ? (
-                <SubpopBadge subpopulation={row.original.cohort.gnomadSubpopulation} />
-              ) : (
-                <NotAvailable />
-              ),
-            sortUndefined: "last",
-          }),
-          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gnomadAf ?? undefined : undefined), {
-            id: "gnomadFreq",
-            header: () => <FrequencyHeader />,
-            cell: ({ row }) => {
-              const { cohort } = row.original;
-              return cohort.annotated && cohort.gnomadAf !== null && cohort.gnomadAc !== null && cohort.gnomadAn !== null ? (
-                <FrequencyCell af={cohort.gnomadAf} ac={cohort.gnomadAc} an={cohort.gnomadAn} />
-              ) : (
-                <NotAvailable />
-              );
-            },
-            sortUndefined: "last",
-          }),
-        ]),
-      }),
-        ],
-      }),
-      columnHelper.group({
         id: "matchedScope",
         header: () => (
           <InfoLabel
@@ -812,11 +795,6 @@ export default function VariantsPanel({
             </span>
           </InfoLabel>
         ),
-        enableSorting: false,
-        columns: [
-      columnHelper.group({
-        id: "matched",
-        header: () => <AllOfUs />,
         enableSorting: false,
         columns: columnHelper.columns([
           columnHelper.accessor((row) => row.matched?.cohortAf, {
@@ -859,6 +837,46 @@ export default function VariantsPanel({
         ],
       }),
       columnHelper.group({
+        id: "gnomad",
+        header: "gnomAD",
+        enableSorting: false,
+        columns: [
+      columnHelper.group({
+        // A second level, so gnomAD's name sits in the source row level with All of Us, with
+        // nothing to say in the scope row beneath.
+        id: "gnomadScope",
+        header: "",
+        enableSorting: false,
+        columns: columnHelper.columns([
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gnomadSubpopulation ?? undefined : undefined), {
+            id: "gnomadSubpop",
+            header: () => <SubpopHeader source="gnomad" />,
+            cell: ({ row }) =>
+              row.original.cohort.annotated && row.original.cohort.gnomadSubpopulation ? (
+                <SubpopBadge subpopulation={row.original.cohort.gnomadSubpopulation} />
+              ) : (
+                <NotAvailable />
+              ),
+            sortUndefined: "last",
+          }),
+          columnHelper.accessor((row) => (row.cohort.annotated ? row.cohort.gnomadAf ?? undefined : undefined), {
+            id: "gnomadFreq",
+            header: () => <FrequencyHeader />,
+            cell: ({ row }) => {
+              const { cohort } = row.original;
+              return cohort.annotated && cohort.gnomadAf !== null && cohort.gnomadAc !== null && cohort.gnomadAn !== null ? (
+                <FrequencyCell af={cohort.gnomadAf} ac={cohort.gnomadAc} an={cohort.gnomadAn} />
+              ) : (
+                <NotAvailable />
+              );
+            },
+            sortUndefined: "last",
+          }),
+        ]),
+      }),
+        ],
+      }),
+      columnHelper.group({
         id: "annotations",
         header: "",
         enableSorting: false,
@@ -892,37 +910,9 @@ export default function VariantsPanel({
           }),
         ]),
       }),
-      columnHelper.group({
-        id: "actions",
-        header: "",
-        enableSorting: false,
-        columns: columnHelper.columns([
-          columnHelper.display({
-            id: "review",
-            header: "",
-            enableSorting: false,
-            cell: ({ row }) =>
-              onReview ? (
-                <Clickable
-                  style={Style.buttons.icon}
-                  hoverStyle={Style.buttons.iconHover}
-                  onClick={(event) => {
-                    // The row itself toggles expansion on click; this shouldn't.
-                    event.stopPropagation();
-                    onReview(row.original.variant);
-                  }}
-                  aria-label={`Review ${row.original.variant}`}
-                  title="Open Review on this variant"
-                >
-                  <CompareIcon size={14} strokeWidth={2.2} aria-hidden="true" />
-                </Clickable>
-              ) : null,
-          }),
-        ]),
-      }),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columnHelper, expandedVariants, onReview, participantCount, phenotypes, hasPhenotypeFilter],
+    [columnHelper, expandedVariants, participantCount, phenotypes, hasPhenotypeFilter],
   );
 
   // Each pinned column sticks at the left edge plus the widths of the pinned columns before it.
@@ -968,8 +958,8 @@ export default function VariantsPanel({
   const seam = <span aria-hidden="true" style={{ ...styles.seam, ...(scrollable ? styles.seamScrollable : undefined) }} />;
 
   // Without a phenotype filter the matched block holds only the prompt to add one, so it moves to
-  // the end, out of the way of the figures there are; and with no Review to open, the Review
-  // column goes. Moving the whole block keeps its group headers whole.
+  // the end, out of the way of the figures there are. Moving the whole block keeps its group
+  // headers whole.
   const columnOrder = useMemo(() => {
     if (hasPhenotypeFilter) return [];
     // A column keyed by a field name takes that as its id; one missing from the order would land last.
@@ -979,12 +969,11 @@ export default function VariantsPanel({
     const ids = leafIds(columns as readonly Def[]);
     return [...ids.filter((id) => !TINT_COLUMN_IDS.matched.has(id)), ...ids.filter((id) => TINT_COLUMN_IDS.matched.has(id))];
   }, [columns, hasPhenotypeFilter]);
-  const columnVisibility = useMemo(() => ({ review: onReview !== undefined }), [onReview]);
 
   const table = useReactTable({
     data: rows,
     columns,
-    state: { sorting, columnOrder, columnVisibility },
+    state: { sorting, columnOrder },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -1213,8 +1202,9 @@ export default function VariantsPanel({
                           colSpan={promptSpan ? promptStart : visibleCells.length}
                           style={{ ...Style.table.bodyCell, ...styles.detailRow, ...styles.expandedBar }}
                         >
+                          <div style={styles.detailPanel}>
                           {cohort.annotated ? (
-                            <div style={styles.detailPanel}>
+                            <div style={styles.detailBody}>
                               <div style={styles.detailClinvar}>
                                 <ClinvarExpanderDetail variant={cohort} />
                               </div>
@@ -1223,7 +1213,7 @@ export default function VariantsPanel({
                               </div>
                             </div>
                           ) : (
-                            <div style={{ ...styles.detailPanel, gridTemplateColumns: "1fr" }}>
+                            <div style={{ ...styles.detailBody, gridTemplateColumns: "1fr" }}>
                               <div style={styles.detailEmpty}>
                                 <span style={styles.detailEmptyIcon} aria-hidden="true">
                                   <EyeOffIcon size={16} />
@@ -1257,6 +1247,23 @@ export default function VariantsPanel({
                               </div>
                             </div>
                           )}
+                          {onReview && (
+                            <div style={styles.detailActions}>
+                              <Clickable
+                                style={Style.buttons.accent}
+                                hoverStyle={Style.buttons.accentHover}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onReview(row.original.variant);
+                                }}
+                                title="Open Review on this variant"
+                              >
+                                <CompareIcon size={14} strokeWidth={2.2} aria-hidden="true" />
+                                Review this variant
+                              </Clickable>
+                            </div>
+                          )}
+                          </div>
                         </td>
                         {/* The prompt cell runs through this row; the columns after it close it out. */}
                         {promptSpan > 0 && promptStart + promptSpan < visibleCells.length && (

@@ -100,15 +100,17 @@ describe("VariantsPanel", () => {
       "href",
       "https://www.ncbi.nlm.nih.gov/clinvar/?term=2-122517541-C-G",
     );
-    expect(screen.getAllByRole("columnheader", { name: "Subpopulation" })).toHaveLength(2);
+    expect(screen.getAllByRole("columnheader", { name: "Max subpop" })).toHaveLength(2);
     expect(screen.getByRole("columnheader", { name: /^Hom/ })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /^Het/ })).toBeInTheDocument();
     expect(row).not.toHaveTextContent("0 / 2");
     expect(screen.queryByRole("columnheader", { name: /AF ratio/ })).not.toBeInTheDocument();
     // The visible label is the group's name and the count; the condition is left to the strip
     // (and to the header's tooltip).
-    // A scope row says which participants each side describes; the source row beneath names the sources.
+    // The source row names the sources; within All of Us, a scope row says which participants each
+    // side describes. The max-subpopulation caveat sits in the column header over the badge.
     expect(screen.getByRole("columnheader", { name: "All participants" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "gnomAD" })).toBeInTheDocument();
     const matchedHeader = screen.getByRole("columnheader", { name: /^Phenotype-matched participants/ });
     expect(matchedHeader).toHaveTextContent(/^Phenotype-matched participants\s*49/);
     expect(screen.getAllByRole("columnheader", { name: "All of Us" }).length).toBeGreaterThan(0);
@@ -138,7 +140,7 @@ describe("VariantsPanel", () => {
     // The click stays in the prompt rather than expanding the row it belongs to.
     expect(screen.queryByRole("button", { name: "Collapse row for more detail" })).not.toBeInTheDocument();
 
-    // The matched block moves to the end, past the annotations, and the empty Review column goes.
+    // The matched block moves to the end, past the annotations.
     const headers = screen.getAllByRole("columnheader").map((th) => th.textContent?.trim());
     expect(headers.findIndex((h) => h?.startsWith("P/LP in trans"))).toBeGreaterThan(headers.indexOf("pLOF"));
     expect(headers.indexOf("pLOF")).toBeGreaterThan(headers.indexOf("ClinVar"));
@@ -220,15 +222,28 @@ describe("VariantsPanel", () => {
     );
   });
 
-  it("opens Review on a row's variant from its control, and offers no control without a handler", () => {
+  it("opens Review on a variant from its expanded detail, and offers no control without a handler", () => {
     const onReview = vi.fn();
-    renderPanel([IN_AOU_ONLY], [MATCHED], { onReview });
-    fireEvent.click(screen.getByRole("button", { name: "Review 2-122517541-C-G" }));
+    renderPanel([IN_AOU_ONLY, NOT_IN_AOU], [MATCHED, NOT_MATCHED], { onReview });
+    // Nothing in the row itself: the action lives with the detail.
+    expect(screen.queryByRole("button", { name: /Review this variant/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Expand row for more detail" })[0]);
+    const detail = document.getElementById("variant-detail-2-122517541-C-G")!;
+    fireEvent.click(within(detail).getByRole("button", { name: "Review this variant" }));
     expect(onReview).toHaveBeenCalledWith("2-122517541-C-G");
+    // Opening Review leaves the row as it was.
+    expect(document.getElementById("variant-detail-2-122517541-C-G")).toBeInTheDocument();
+
+    // A variant not in All of Us can still be reviewed from its (empty) detail.
+    fireEvent.click(screen.getByRole("button", { name: "Expand row for more detail" }));
+    fireEvent.click(within(document.getElementById("variant-detail-7-55181378-G-A")!).getByRole("button", { name: "Review this variant" }));
+    expect(onReview).toHaveBeenLastCalledWith("7-55181378-G-A");
     cleanup();
 
     renderPanel([IN_AOU_ONLY], [MATCHED]);
-    expect(screen.queryByRole("button", { name: /^Review/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Expand row for more detail" }));
+    expect(screen.queryByRole("button", { name: /Review/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
