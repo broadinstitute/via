@@ -1,11 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { fetchConditionCandidates } from "../api/conditions";
-import type { ConditionConcept, HpoTerm } from "../api/conditions";
+import type { ConditionConcept } from "../api/conditions";
 import colors from "../libs/colors";
 import { useFocus, useHoveredKey } from "../libs/hooks";
 import * as Style from "../libs/style";
 import { formatInt } from "../utils/format";
+import { describeHpo } from "../utils/hpo";
 import { UserIcon } from "./icons";
 
 /**
@@ -126,25 +127,6 @@ const styles = {
 } as const satisfies Record<string, CSSProperties>;
 
 const EXACT_COUNT_NOTE = "The exact count is calculated when you search.";
-
-/**
- * How a concept's HPO term is shown: its id, prefixed "≈" when the term is only a broader
- * phrase the concept's name contains, with the term's name and the caveat in the tooltip.
- */
-export function describeHpo(hpo: HpoTerm): { label: string; tooltip: string; spoken: string } {
-  if (hpo.match === "exact") {
-    return {
-      label: hpo.id,
-      tooltip: `HPO ${hpo.id} ${hpo.name}. Matched on the condition's name.`,
-      spoken: `HPO term ${hpo.id}, ${hpo.name}`,
-    };
-  }
-  return {
-    label: `≈ ${hpo.id}`,
-    tooltip: `Nearest HPO term: ${hpo.id} ${hpo.name}. Broader than the condition; no exact term matched its name.`,
-    spoken: `nearest HPO term ${hpo.id}, ${hpo.name}`,
-  };
-}
 
 /**
  * How a concept's participant estimate is shown: the number beside a person icon, with the

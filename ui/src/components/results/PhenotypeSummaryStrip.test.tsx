@@ -134,7 +134,7 @@ describe("PhenotypeSummaryStrip", () => {
     expect(link).toHaveTextContent("HP:0001636");
     expect(link).toHaveAttribute("href", "https://hpo.jax.org/browse/term/HP:0001636");
     expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("title", "HPO HP:0001636 Tetralogy of Fallot, matched on the condition's name. Opens the HPO browser.");
+    expect(link).toHaveAttribute("title", "HPO HP:0001636 Tetralogy of Fallot. Matched on the condition's name. Opens the HPO browser.");
     expect(screen.getByRole("button", { name: "Copy HPO term ID" })).toBeInTheDocument();
     // The term is named even when it is the condition's own name, so the match is never inferred.
     expect(screen.getAllByText("Tetralogy of Fallot")).toHaveLength(2);
@@ -148,9 +148,9 @@ describe("PhenotypeSummaryStrip", () => {
 
     cleanup();
     renderStrip({ conditionSearch: FH, ancestryBreakdown: ANCESTRY, ageBreakdown: AGE });
-    const nearest = screen.getByRole("link", { name: /^Nearest HPO term HP:0003124, Hypercholesterolemia/ });
+    const nearest = screen.getByRole("link", { name: "nearest HPO term HP:0003124, Hypercholesterolemia, opens the HPO browser" });
     expect(nearest).toHaveTextContent("HP:0003124");
-    expect(nearest).toHaveAttribute("title", expect.stringMatching(/^Nearest HPO term HP:0003124 Hypercholesterolemia: broader than the condition/));
+    expect(nearest).toHaveAttribute("title", expect.stringMatching(/^Nearest HPO term: HP:0003124 Hypercholesterolemia\. Broader than the condition/));
     expect(screen.getByText("Hypercholesterolemia")).toBeInTheDocument();
     // A nearest match is marked on the id itself, as the search page's picked chip marks it, with
     // the explanation in the link's tooltip; there is no separate chip for it.

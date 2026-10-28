@@ -1,32 +1,21 @@
 import { useId, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import type { ConditionSearch } from "../../api/conditions";
+import type { ConditionSearch, HpoTerm } from "../../api/conditions";
 import colors, { alpha } from "../../libs/colors";
 import { useHover } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import type { BreakdownSegment } from "../../types/results";
 import { conditionBreakdown } from "../../utils/conditionBreakdown";
+import { hpoTermUrl } from "../../utils/externalLinks";
 import { formatInt } from "../../utils/format";
+import { describeHpo } from "../../utils/hpo";
 import Clickable from "../common/Clickable";
 import InfoTooltip from "../common/InfoTooltip";
 import { useTooltip } from "../common/useTooltip";
 import { ExternalLinkIcon, PlusIcon } from "../icons";
 import BreakdownBar from "./BreakdownBar";
 import CopyButton from "./CopyButton";
-import { hpoTermUrl } from "../../utils/externalLinks";
-import type { HpoTerm } from "../../api/conditions";
 import ViewSwitcher, { type ResultsView } from "./ViewSwitcher";
-
-/** How the strip words an HPO term: the tooltip's full story and the link's accessible name. */
-function describeHpoCode(hpo: HpoTerm): { tooltip: string; spoken: string } {
-  const exact = hpo.match === "exact";
-  return {
-    tooltip: exact
-      ? `HPO ${hpo.id} ${hpo.name}, matched on the condition's name. Opens the HPO browser.`
-      : `Nearest HPO term ${hpo.id} ${hpo.name}: broader than the condition, no exact term matched its name. Opens the HPO browser.`,
-    spoken: `${exact ? "HPO term" : "Nearest HPO term"} ${hpo.id}, ${hpo.name}, opens the HPO browser`,
-  };
-}
 
 const NO_TERM_NOTE = "No term in the Human Phenotype Ontology has this condition's name, or a name its words contain.";
 
@@ -78,7 +67,7 @@ function HpoLine({ hpo }: { hpo: HpoTerm | null | undefined }) {
       </span>
     );
   }
-  const words = describeHpoCode(hpo);
+  const words = describeHpo(hpo, { link: true });
   return (
     <span style={styles.hpoLine}>
       <span style={styles.hpoEyebrow} aria-hidden="true">
@@ -96,7 +85,7 @@ function HpoLine({ hpo }: { hpo: HpoTerm | null | undefined }) {
         style={{ ...styles.hpoId, ...(hovered ? styles.hpoIdHover : undefined) }}
         {...hoverProps}
       >
-        {hpo.match === "exact" ? hpo.id : `≈ ${hpo.id}`}
+        {words.label}
         <ExternalLinkIcon size={10} aria-hidden="true" />
       </a>
       <CopyButton getText={() => hpo.id} label="Copy HPO term ID" />

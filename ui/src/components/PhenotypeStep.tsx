@@ -3,13 +3,14 @@ import type { CSSProperties, ReactNode } from "react";
 import type { ConditionConcept, HpoTerm } from "../api/conditions";
 import colors, { alpha } from "../libs/colors";
 import * as Style from "../libs/style";
+import { hpoTermUrl } from "../utils/externalLinks";
+import { describeHpo } from "../utils/hpo";
 import { PHENOTYPES_LIMIT } from "../utils/phenotypes";
 import AllOfUs from "./common/AllOfUs";
 import Clickable from "./common/Clickable";
-import ConditionSearchField, { describeEstimate, describeHpo } from "./ConditionSearchField";
+import ConditionSearchField, { describeEstimate } from "./ConditionSearchField";
 import FieldHint from "./FieldHint";
 import { CloseIcon, ExternalLinkIcon } from "./icons";
-import { hpoTermUrl } from "../utils/externalLinks";
 import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
 // Step 2 of a search: the phenotypes to filter by, as a list. Each picked condition is a chip
@@ -143,16 +144,9 @@ function ChipEstimate({ estimate }: { estimate: number | null }) {
 
 /** The pick's HPO id as the link out to the term; "≈" ahead of it marks a nearest match. */
 function ChipHpo({ hpo }: { hpo: HpoTerm }) {
-  const { label, tooltip, spoken } = describeHpo(hpo);
+  const { label, tooltip, spoken } = describeHpo(hpo, { link: true });
   return (
-    <a
-      href={hpoTermUrl(hpo.id)}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={styles.chipHpo}
-      title={`${tooltip} Opens the HPO browser.`}
-      aria-label={`${spoken}, opens the HPO browser`}
-    >
+    <a href={hpoTermUrl(hpo.id)} target="_blank" rel="noopener noreferrer" style={styles.chipHpo} title={tooltip} aria-label={spoken}>
       {label}
       <ExternalLinkIcon size={10} aria-hidden="true" />
     </a>
