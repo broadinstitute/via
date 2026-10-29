@@ -82,6 +82,15 @@ container nobody opens a shell in:
   itself needing any extra capability. `.devcontainer.json`'s `runServices` makes
   `devcontainer up` start it, and `app` has `depends_on: wondershaper` so the limiter
   starts first and the app does not start at all if the limiter can't (fail closed).
+
+  One caveat, inherited from the sidecar: its entrypoint exempts
+  `restricted.googleapis.com` (199.36.153.4/30) from the cap, and Workbench DNS maps
+  every `*.googleapis.com` name to that range. So **Google API traffic -- BigQuery,
+  GCS -- is not rate-limited**; the sidecar's comment says the VPC Service Controls
+  perimeter is the control for that traffic, since it blocks cross-perimeter transfer
+  outright. Everything else leaving the container is capped. Measured on a Workbench
+  VM: an upload to GCS via the restricted endpoint ran at ~570 Mbit/s, the same upload
+  pinned to a public Google address ran at 14.7 Mbit/s.
 - **No root for the app user**: the image creates an unprivileged `via` user
   (`/home/via`, no sudoers entry) and runs the jar as that user via `USER via`. This is the
   equivalent of the upstream template's `rm /etc/sudoers.d/rstudio`. `sudo` stays
