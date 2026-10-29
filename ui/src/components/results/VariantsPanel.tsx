@@ -125,6 +125,12 @@ const styles = {
   scopeHeaderMatched: {
     color: colors.textPrimary,
   },
+  sourceHeaderCell: {
+    color: colors.white,
+    letterSpacing: 0.3,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+  },
   // Pinned cells sit above the scrolling ones; pinned header cells above everything.
   pinnedCell: {
     position: "sticky",
@@ -399,7 +405,8 @@ function gutterStyle(columnId: string): CSSProperties | undefined {
   return rule;
 }
 
-/** The tint each group header takes, so a source's band starts in the source row and runs down through its scopes. */
+const SOURCE_HEADER_IDS = new Set(["aou", "gnomad"]);
+
 const GROUP_TINTS: Record<string, Tint> = {
   aou: "aou",
   allParticipants: "aou",
@@ -1024,6 +1031,7 @@ export default function VariantsPanel({
                       // tint names, and the matched scope takes the matched tint, so each band
                       // starts in its top-most header row.
                       const tint = tintOf(header.column.id) ?? headerTint(header.column.id);
+                      const isSourceHeader = depth === 0 && tint !== null && SOURCE_HEADER_IDS.has(header.column.id);
                       const sortable = header.column.getCanSort();
                       const sortDirection = header.column.getIsSorted();
                       return (
@@ -1040,6 +1048,7 @@ export default function VariantsPanel({
                             top: depth * GROUP_HEADER_HEIGHT,
                             ...gutterStyle(header.column.id),
                             background: cellBackground(tint, false) ?? styles.headerCell.background,
+                            ...(isSourceHeader ? { ...styles.sourceHeaderCell, background: sourceTints[tint].header } : undefined),
                             ...(sortable ? Style.table.sortable : undefined),
                             ...(sortable && hoveredHeader === header.id ? Style.table.sortableHover : undefined),
                             ...pinnedStyle(header.column.id),
