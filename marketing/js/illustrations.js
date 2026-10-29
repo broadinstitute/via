@@ -1,16 +1,22 @@
 /**
  * Draws the product illustrations: the variants table, shown both in the hero and in the Table
- * view. The markup follows VariantsPanel in the app: two group rows over the column headers, the
- * expand chevron at the left and the Review action at the right. The app's sort and info icons on
- * the headers are left out, so the table fits the page's text column.
+ * view. The markup follows VariantsPanel in the app: a source row (All of Us on its navy header,
+ * gnomAD on its grey one) over a scope row (all participants, then phenotype-matched, inside the
+ * All of Us band) over the column headers, with the expand chevron at the left. The app's sort
+ * and info icons on the headers are left out, so the table fits the page's text column.
  *
  * The figures are illustrative, modelled on VIA's Familial hypercholesterolemia demo. They are
  * not real All of Us data.
  */
 
+// colors.ts's subpop* palette; the same values are CSS variables in style.css.
 const SUBPOP_COLORS = {
-  EUR: '#F9C854', AFR: '#2078B4', AMR: '#6DACE4', OTH: '#B3AEAD', FIN: '#6B4226', SAS: '#8CCA90',
+  EUR: '#F9C854', AFR: '#2078B4', AMR: '#6DACE4', EAS: '#A27BD7', SAS: '#8CCA90', MID: '#CB2D4C',
+  OTH: '#B3AEAD', FIN: '#6B4226', NFE: '#E67E22', ASJ: '#7B2D8E',
 };
+
+/** Participants matched by the illustration's phenotype, as the strip above the table says. */
+const MATCHED_PARTICIPANTS = 391;
 
 const ROWS = [
   {
@@ -63,14 +69,12 @@ const icon = (body, size, strokeWidth = 2) =>
 
 const CHEVRON = icon('<polyline points="9 6 15 12 9 18"/>', 16, 2.2);
 const USER = icon('<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>', 11, 2.5);
-const GLOBE = icon('<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 0 1 0 18a13.5 13.5 0 0 1 0-18z"/>', 14);
-const COMPARE = icon('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/><path d="M6 9h3M6 12h3M6 15h3M15 9h3M15 12h3M15 15h3"/>', 14, 2.2);
 
 const pill = (code) => `<span class="pill"><span class="dot" style="background:${SUBPOP_COLORS[code]}"></span>${code}</span>`;
 const freq = (af, acan) => `<span class="stack"><span>${af}</span><span class="sub">${acan}</span></span>`;
 const clinvar = (c) => (c ? `<span class="cv ${c[0]}"><span class="code">${c[1]}</span><span class="stars">${c[2]}★</span></span>` : '<span class="muted">—</span>');
 const plof = (p) => (p ? `<span class="hc">${p}</span>` : '<span class="muted">—</span>');
-const count = (n) => `<td class="matched num ${n === 0 ? 'zero' : ''}">${n}</td>`;
+const count = (n) => `<td class="aou">${n}</td>`;
 
 /** A row's identity, ClinVar included: the columns the app pins while the rest scroll. */
 function identityCells(row) {
@@ -87,37 +91,43 @@ function sourceCells(tint, source, missing) {
 
 const FREQ_HEADER = 'AF <span class="unit">· AC / AN</span>';
 
-/** The variants table as the app draws it. Shown in the hero and in the Table view. */
+/**
+ * The variants table as the app draws it. Shown in the hero and in the Table view.
+ *
+ * One All of Us band over both scopes -- the cohort-wide figures, then the matched figures, with
+ * a rule between them -- and the gnomAD band beside it, so the comparison that matters sits in
+ * one place and the external reference is set apart.
+ */
 function renderTable(table) {
   table.innerHTML = `
     <thead>
       <tr>
         <th colspan="5"></th>
-        <th class="group scope" colspan="4">All participants</th>
-        <th class="group scope matched-scope" colspan="4">Phenotype-matched <span class="count">${USER}391</span></th>
-        <th colspan="3"></th>
+        <th class="band aou" colspan="6"><i>All of Us</i></th>
+        <th class="band gnomad" colspan="2">gnomAD</th>
+        <th colspan="2"></th>
       </tr>
       <tr>
         <th colspan="5"></th>
-        <th class="group aou" colspan="2"><i>All of Us</i> <span class="unit">— max subpopulation</span></th>
-        <th class="group gnomad" colspan="2">gnomAD <span class="unit">— max subpopulation</span></th>
-        <th class="group matched" colspan="4"><i>All of Us</i></th>
-        <th colspan="3"></th>
+        <th class="scope aou" colspan="2">All participants</th>
+        <th class="scope aou matched rule" colspan="4">Phenotype-matched participants <span class="count">${USER}${MATCHED_PARTICIPANTS}</span></th>
+        <th class="scope gnomad" colspan="2"></th>
+        <th colspan="2"></th>
       </tr>
       <tr>
         <th></th><th>Variant</th><th>Gene</th><th>Consequence</th><th>ClinVar</th>
-        <th class="aou badge">${GLOBE}</th><th class="aou">${FREQ_HEADER}</th>
-        <th class="gnomad badge">${GLOBE}</th><th class="gnomad">${FREQ_HEADER}</th>
-        <th class="matched">${FREQ_HEADER}</th><th class="matched num">Hom</th><th class="matched num">Het</th><th class="matched num">P/LP in trans</th>
-        <th>SpliceAI</th><th>pLOF</th><th></th>
+        <th class="aou badge">Max subpop</th><th class="aou">${FREQ_HEADER}</th>
+        <th class="aou rule">${FREQ_HEADER}</th><th class="aou">Hom</th><th class="aou">Het</th><th class="aou">P/LP in trans</th>
+        <th class="gnomad badge">Max subpop</th><th class="gnomad">${FREQ_HEADER}</th>
+        <th>SpliceAI</th><th>pLOF</th>
       </tr>
     </thead>
     <tbody>${ROWS.map((row) => `
       <tr>${identityCells(row)}
-        ${sourceCells('aou', row.aou, 'Not observed in <i>All of Us</i>')}${sourceCells('gnomad', row.gnomad, 'Not observed in gnomAD')}
-        <td class="matched">${freq(row.matched.af, row.matched.acan)}</td>${count(row.matched.hom)}${count(row.matched.het)}${count(row.matched.plp)}
-        <td class="num">${row.spliceAi}</td><td>${plof(row.plof)}</td>
-        <td class="action">${COMPARE}</td>
+        ${sourceCells('aou', row.aou, 'Not observed in <i>All of Us</i>')}
+        <td class="aou rule">${freq(row.matched.af, row.matched.acan)}</td>${count(row.matched.hom)}${count(row.matched.het)}${count(row.matched.plp)}
+        ${sourceCells('gnomad', row.gnomad, 'Not observed in gnomAD')}
+        <td>${row.spliceAi}</td><td>${plof(row.plof)}</td>
       </tr>`).join('')}
     </tbody>`;
 }

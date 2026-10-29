@@ -2,10 +2,12 @@
  * VIA marketing page.
  *
  * Layout follows the All of Us + AnVIL Imputation Service page (full-width bands: hero, why,
- * feature tabs, how it works, footer), in VIA's own brand: the logo's navy and green, the
- * app's hero glow, and its navy call to action. Marketing copy is set in Montserrat like the
- * sibling site; the product illustrations use Public Sans, the app's own face, so they read as
- * the product rather than as a drawing of it.
+ * feature tabs, how it works, footer), in VIA's own brand: the logo's navy, flat, as the app's
+ * own hero band is, with the mark's green for highlights and the app's navy call to action.
+ * Marketing copy is set in Montserrat like the sibling site; the product illustrations use
+ * Public Sans, the app's own face, so they read as the product rather than as a drawing of it.
+ *
+ * Colour tokens mirror ui/src/libs/colors.ts; keep them in step when the app's change.
  */
 
 :root {
@@ -13,16 +15,13 @@
      follows the app, so they're one value here too. */
   --navy: #074770;
   --navy-hover: #063a5c;
-  --navy-deep: #052f4c;
   --ink: #074770;
   --body: #2b2b33;
   --secondary: #5b5f73;
   --muted: #9598a6;
   --blue: #074770;
-  --glow: #2f8fcf;
   --green: #5cc88d;
   --green-soft: #a8e6c4;
-  --teal-glow: #1a9a86;
 
   --surface0: #f6f5f2;
   --surface1: #fbfaf8;
@@ -30,15 +29,19 @@
   --border: #e2e1dc;
   --border-strong: #c7c6c0;
 
-  /* All of Us figures share one tint wherever they sit; the scope row says which participants. */
-  --tint-aou: #dfeaf2;
-  --tint-gnomad: #f1f0ec;
-  --tint-matched: #dfeaf2;
+  /* The table's source bands (colors.ts sourceTints): each source's name on a solid header in
+     its own colour, and a soft wash under it. All of Us figures share one tint wherever they
+     sit, cohort-wide or phenotype-matched; the scope row says which participants. */
+  --header-aou: #074770;
+  --header-gnomad: #6c7086;
+  --tint-aou: #eef4f8;
+  --tint-gnomad: #f7f6f3;
   --tint-accent: #e1edf4;
   --tint-popmax: #d9e6f0;
 
   --sub-eur: #F9C854; --sub-afr: #2078B4; --sub-amr: #6DACE4; --sub-eas: #A27BD7;
   --sub-sas: #8CCA90; --sub-mid: #CB2D4C; --sub-oth: #B3AEAD;
+  --sub-fin: #6B4226; --sub-nfe: #E67E22; --sub-asj: #7B2D8E;
 
   --font-display: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-app: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -120,11 +123,8 @@ a { color: inherit; }
   padding: 0 var(--gutter);
   color: white;
   text-align: center;
-  background-color: var(--ink);
-  background-image:
-    radial-gradient(ellipse 50% 70% at 92% 0%, rgba(47, 143, 207, 0.9), rgba(47, 143, 207, 0) 72%),
-    radial-gradient(ellipse 45% 60% at 5% 62%, rgba(26, 154, 134, 0.75), rgba(26, 154, 134, 0) 72%),
-    linear-gradient(180deg, var(--navy-deep) 0%, var(--ink) 100%);
+  /* Flat, like the app's own hero band: the brand navy needs no decorating. */
+  background: var(--navy);
 }
 
 /* The mark as a watermark, as on the app's own search page: the lens without its tile, large and
@@ -156,6 +156,8 @@ a { color: inherit; }
 .via-lockup { display: inline-flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; }
 /* The white tile, sized to sit level with the All of Us logo. */
 .logo-via { width: 38px; height: 38px; }
+/* The app's Beta chip, as it sits beside the app's name on its hero band and in its footer. */
+.beta { padding: 2px 7px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); font-family: var(--font-app); font-size: 10px; font-weight: 700; letter-spacing: 0.5px; line-height: 1.5; text-transform: uppercase; }
 
 .hero-body {
   position: relative;
@@ -245,8 +247,9 @@ a { color: inherit; }
 }
 .app-window.compact { box-shadow: 0 12px 32px rgba(7, 71, 112, 0.18); border-color: var(--border); }
 
-/* The app's top bar: the mark and name, the search box holding the current terms, the user and settings. */
+/* The app's top bar: the menu, the mark and name, the search box holding the current terms, and the user. */
 .app-topbar { display: flex; align-items: center; gap: 16px; height: 41px; padding: 0 20px; background: var(--surface2); border-bottom: 1px solid var(--border); color: var(--secondary); font-size: 12px; }
+.tb-menu { display: flex; flex-shrink: 0; color: var(--secondary); }
 .tb-brand { display: inline-flex; align-items: center; flex-shrink: 0; gap: 7px; color: var(--ink); font-size: 14px; font-weight: 800; letter-spacing: 0.3px; }
 .tb-brand img { display: block; width: 22px; height: 22px; }
 .tb-divider { flex-shrink: 0; width: 1px; height: 22px; background: var(--border); }
@@ -256,9 +259,8 @@ a { color: inherit; }
 .tb-badge { overflow: hidden; text-overflow: ellipsis; padding: 2px 8px; border-radius: 6px; background: var(--tint-accent); color: var(--ink); font-weight: 600; }
 .tb-term-divider { flex-shrink: 0; width: 1px; height: 14px; background: var(--border); }
 .tb-edit { display: inline-flex; align-items: center; flex-shrink: 0; gap: 4px; margin-left: auto; padding: 3px 8px; border-radius: 999px; color: var(--ink); font-size: 11px; font-weight: 600; }
-.tb-user { display: flex; align-items: center; gap: 8px; margin-left: auto; color: var(--ink); }
-.tb-user .tb-divider { height: 16px; }
-.tb-gear { display: flex; color: var(--muted); }
+.tb-user { display: flex; align-items: center; flex-shrink: 0; gap: 6px; margin-left: auto; color: var(--secondary); font-size: 11px; font-weight: 500; }
+.tb-user svg { color: var(--ink); }
 
 .app-strip {
   display: flex;
@@ -285,11 +287,14 @@ a { color: inherit; }
 .strip-value { display: inline-flex; align-items: center; gap: 8px; min-height: 30px; color: var(--ink); font-size: 13.5px; font-weight: 600; }
 .strip-value b { font-size: 20px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .strip-unit { color: var(--secondary); font-size: 12px; font-weight: 400; }
-/* The condition's OMOP code under its name, with the copy button. */
+/* Under the condition's name, the HPO term the app paired it with: an "HPO" eyebrow, the term's
+   name, its id as a link out (≈ marks a nearest match), and a copy button. */
 .strip-condition { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 30px; }
 .strip-condition .strip-value { min-height: 0; line-height: 1.2; }
-.strip-code { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; }
-.strip-code svg { color: var(--muted); }
+.strip-hpo { display: inline-flex; align-items: center; gap: 6px; color: var(--secondary); font-size: 13px; font-weight: 500; line-height: 1.3; white-space: nowrap; }
+.strip-hpo .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; }
+.strip-hpo .hpo-id { display: inline-flex; align-items: center; gap: 3px; color: var(--ink); font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; text-decoration: underline; text-decoration-color: rgba(7, 71, 112, 0.35); text-underline-offset: 2px; }
+.strip-hpo .copy { display: flex; color: var(--muted); }
 /* The Ancestry/Age toggle in the label row: the view switcher's pill, one size down. */
 .strip-tabs { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface1); letter-spacing: 0; text-transform: none; }
 .strip-tabs span { padding: 1px 8px; border-radius: 999px; color: var(--secondary); font-size: 10.5px; font-weight: 600; }
@@ -316,23 +321,29 @@ a { color: inherit; }
 
 .app-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .app-table th { padding: 8px 8px; background: var(--surface1); color: var(--secondary); font-weight: 600; text-align: left; box-shadow: inset 0 -1px 0 var(--border); }
-.app-table th.group { height: 26px; padding: 0 6px; font-size: 11px; font-weight: 700; text-align: center; }
-.app-table th.scope { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; }
-.app-table th.scope.matched-scope { color: var(--ink); }
+/* The source row: each source's name on a solid band in its own colour, white type, rounded at
+   the top, the one cue that still reads when the table is small. ("band", not "source": that
+   class is the Data sources section's card.) */
+.app-table th.band { height: 28px; padding: 0 10px; border-radius: 6px 6px 0 0; box-shadow: none; color: white; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; text-align: center; }
+.app-table th.band.aou { background: var(--header-aou); }
+.app-table th.band.gnomad { background: var(--header-gnomad); }
+/* The scope row within All of Us: small caps, a step quieter than the source name above; the
+   matched side in primary ink with its participant count. */
+.app-table th.scope { height: 28px; padding: 0 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.3px; text-align: center; text-transform: uppercase; }
+.app-table th.scope.matched { color: var(--ink); }
 .app-table th svg { vertical-align: middle; }
 .app-table .unit { color: var(--muted); font-weight: 500; }
 .app-table .count { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; color: var(--secondary); font-weight: 600; }
-.app-table td.action { width: 20px; padding-left: 4px; color: var(--muted); }
 .app-table td { height: 46px; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .app-table tbody tr:last-child td { border-bottom: none; }
+/* The soft wash under each source's header, from the scope row down through every body row. */
 .app-table .aou { background: var(--tint-aou); }
 .app-table .gnomad { background: var(--tint-gnomad); }
-.app-table .matched { background: var(--tint-matched); }
-.app-table .num { text-align: right; }
-.app-table td.zero { color: var(--muted); }
+/* The seam between the two scopes of the All of Us band, a rule a shade deeper than the tint. */
+.app-table .rule { border-left: 1px solid rgba(7, 71, 112, 0.22); }
 .app-table .chev { width: 18px; padding-right: 0; color: var(--secondary); }
 .app-table .mono { font-size: 11.5px; }
-.app-table .badge { padding-right: 2px; }
+.app-table .badge { padding-right: 2px; text-align: center; }
 .app-table td.na { color: var(--muted); font-style: italic; text-align: center; }
 .app-table .stack { display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
 .app-table .sub { color: var(--secondary); font-size: 11px; }
@@ -401,7 +412,7 @@ a { color: inherit; }
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #e3f5ea;
+  background: var(--tint-accent);
 }
 .why-icon svg { width: 28px; height: 28px; fill: none; stroke: var(--navy); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .why-box h3 { margin: 4px 0 8px; font-size: 19px; font-weight: 700; }
@@ -409,16 +420,12 @@ a { color: inherit; }
 
 /* ---------- The engine ---------- */
 
-/* A dark band in the hero's palette, between the beige steps and the white sources, so the page
-   keeps alternating light and dark. The white step cards stand out against it. */
+/* A navy band, like the hero, between the beige steps and the white sources, so the page keeps
+   alternating light and dark. The white step cards stand out against it. */
 #engine {
   padding: 96px var(--gutter);
   color: white;
-  background-color: var(--ink);
-  background-image:
-    radial-gradient(ellipse 55% 80% at 100% 0%, rgba(47, 143, 207, 0.7), rgba(47, 143, 207, 0) 70%),
-    radial-gradient(ellipse 50% 80% at 0% 100%, rgba(26, 154, 134, 0.6), rgba(26, 154, 134, 0) 70%),
-    linear-gradient(180deg, var(--navy-deep) 0%, var(--ink) 100%);
+  background: var(--navy);
 }
 #engine .section-sub { color: rgba(255, 255, 255, 0.82); }
 .engine-eyebrow { margin: 0 0 12px; color: var(--green-soft); font-size: 14px; font-weight: 700; letter-spacing: 0.14em; text-align: center; text-transform: uppercase; }
@@ -442,7 +449,7 @@ a { color: inherit; }
   background: var(--surface2);
   box-shadow: 0 16px 40px rgba(5, 10, 40, 0.35);
 }
-.engine-icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 4px; border-radius: 10px; background: #e3f5ea; }
+.engine-icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 4px; border-radius: 10px; background: var(--tint-accent); }
 .engine-icon svg { width: 22px; height: 22px; fill: none; stroke: var(--navy); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .engine-step h3 { margin: 0; color: var(--navy); font-size: 19px; font-weight: 700; }
 .engine-step p { margin: 0; color: var(--secondary); font-size: 15px; line-height: 1.55; }
@@ -553,7 +560,7 @@ a { color: inherit; }
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #e3f5ea url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23074770' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center / 12px no-repeat;
+  background: var(--tint-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23074770' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center / 12px no-repeat;
 }
 .view-figure { min-width: 0; }
 
@@ -633,6 +640,7 @@ a { color: inherit; }
 .compare th { padding: 7px 10px; border-bottom: 1px solid var(--border); background: var(--surface1); color: var(--secondary); font-size: 11px; font-weight: 600; text-align: left; vertical-align: bottom; white-space: nowrap; }
 .compare td { padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--secondary); white-space: nowrap; }
 .compare td.mono { color: var(--body); }
+.compare td.muted { color: var(--muted); }
 .compare td.strong { color: var(--ink); font-size: 15px; font-weight: 700; }
 /* An ancestry group: its dot and code, with a figure after it in the mono face. */
 .compare .pop { display: inline-flex; align-items: center; gap: 6px; color: var(--body); font-size: 12px; }
@@ -665,8 +673,8 @@ a { color: inherit; }
   list-style: none;
   counter-reset: step;
 }
-/* The connector: a navy rule with an open circle at each step, as on the imputation site. */
-.steps::before { content: ""; position: absolute; left: 11px; top: 40px; bottom: 40px; width: 2px; background: var(--navy); }
+/* The connector: a rule with a step number at each card, in the app's filled navy disc. */
+.steps::before { content: ""; position: absolute; left: 12px; top: 40px; bottom: 40px; width: 1px; background: var(--border-strong); }
 .step {
   position: relative;
   display: grid;
@@ -691,16 +699,17 @@ a { color: inherit; }
   width: 26px;
   height: 26px;
   margin-top: -13px;
-  border: 2px solid var(--navy);
   border-radius: 50%;
-  background: white;
-  color: var(--navy);
+  background: var(--navy);
+  color: white;
+  font-family: var(--font-app);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
 }
 .step h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-size: 20px; font-weight: 700; }
 .step p { margin: 0; color: var(--secondary); font-size: 15.5px; line-height: 1.6; }
-.optional { padding: 2px 9px; border-radius: 999px; background: #e3f5ea; color: var(--navy); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+/* The app's "Optional" step tag: the accent tint with navy type. */
+.optional { padding: 2px 9px; border-radius: 999px; background: var(--tint-accent); color: var(--navy); font-family: var(--font-app); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .step-visual { display: flex; justify-content: center; font-family: var(--font-app); }
 
 .mini-launch { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface1); }
@@ -709,7 +718,7 @@ a { color: inherit; }
 .mini-launch small { color: var(--secondary); font-size: 11.5px; }
 .mini-btn { margin-left: 10px; padding: 6px 14px; border-radius: 6px; background: var(--navy); color: white; font-size: 12px; font-weight: 600; }
 
-.mini-textarea { width: 100%; max-width: 240px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface2); color: var(--body); font-size: 12px; line-height: 1.7; }
+.mini-textarea { width: 100%; max-width: 240px; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface1); color: var(--body); font-size: 12px; line-height: 1.7; }
 .mini-textarea .caret { border-right: 2px solid var(--blue); padding-right: 1px; animation: caret 1.1s steps(1) infinite; }
 @keyframes caret { 50% { border-color: transparent; } }
 @media (prefers-reduced-motion: reduce) { .mini-textarea .caret { animation: none; } }
@@ -728,7 +737,7 @@ a { color: inherit; }
 .mc-cell { display: flex; flex-direction: column; gap: 4px; padding: 10px 14px; border-radius: var(--radius); color: var(--ink); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mc-cell small { color: var(--secondary); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .mc-cell.aou { background: var(--tint-aou); }
-.mc-cell.matched { background: var(--tint-matched); box-shadow: inset 0 0 0 2px var(--blue); }
+.mc-cell.matched { background: var(--tint-aou); box-shadow: inset 0 0 0 2px var(--blue); }
 .mc-arrow { color: var(--muted); font-size: 18px; }
 
 /* The four verdicts as a diamond: enriched on top, depleted at the bottom, the two without a
@@ -751,7 +760,7 @@ a { color: inherit; }
 .source b { color: var(--navy); font-size: 17px; }
 .source span { color: var(--secondary); font-size: 14.5px; line-height: 1.5; }
 /* A smaller version of the Why section's icon disc, as a rounded square. */
-.source-icon { display: grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; border-radius: 10px; background: #e3f5ea; }
+.source-icon { display: grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; border-radius: 10px; background: var(--tint-accent); }
 .source-icon svg { width: 22px; height: 22px; fill: none; stroke: var(--navy); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------- FAQ ---------- */
@@ -796,10 +805,7 @@ a { color: inherit; }
   padding: 40px 44px;
   border-radius: var(--radius-lg);
   color: white;
-  background-color: var(--ink);
-  background-image:
-    radial-gradient(ellipse 60% 120% at 100% 0%, rgba(47, 143, 207, 0.85), rgba(47, 143, 207, 0) 70%),
-    radial-gradient(ellipse 50% 120% at 0% 100%, rgba(26, 154, 134, 0.6), rgba(26, 154, 134, 0) 70%);
+  background: var(--navy);
   box-shadow: 0 12px 32px rgba(7, 71, 112, 0.25);
 }
 .cta-card h2 { margin: 0 0 8px; font-size: 28px; font-weight: 700; }
@@ -839,7 +845,7 @@ a { color: inherit; }
   #why { padding-top: 180px; }
   .strip-block { border-right: none; border-bottom: 1px solid var(--border); flex: 1 1 100%; }
   .strip-block:last-child { border-bottom: none; }
-  .tb-search, .app-topbar > .tb-divider { display: none; }
+  .tb-search, .app-topbar > .tb-divider, .tb-user span { display: none; }
   .switch-btn { padding: 10px 16px 10px 12px; gap: 8px; }
   .switch-desc { display: none; }
   .view-switcher { margin-bottom: -28px; }
