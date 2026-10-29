@@ -16,11 +16,11 @@ services:
       # default applies, and logs a warning saying so.
       - WORKSPACE_CDR=${WORKSPACE_CDR:-}
       # Set to "true" for local dev to skip entrypoint.sh's wait for
-      # /root/.workbench-env, which is only ever created by Workbench's
+      # /home/via/.workbench-env, which is only ever created by Workbench's
       # postCreateCommand and never appears on a plain local `docker compose up`.
       - SKIP_WORKBENCH_WAIT=${SKIP_WORKBENCH_WAIT:-false}
       # Local dev stand-in for the value Workbench normally injects via
-      # /root/.workbench-env; set this when using SKIP_WORKBENCH_WAIT so the
+      # /home/via/.workbench-env; set this when using SKIP_WORKBENCH_WAIT so the
       # profile endpoint has something to return.
       - WORKBENCH_USER_EMAIL=${WORKBENCH_USER_EMAIL:-}
     volumes:
@@ -33,6 +33,24 @@ services:
     # The service must be connected to the "app-network" Docker network
     networks:
       - app-network
+    # Start the egress limiter before the app, and don't start the app at all
+    # if the limiter can't be started (e.g. its image can't be pulled): for
+    # exfiltration controls, failing closed is the right default.
+    depends_on:
+      - wondershaper
+  # AoU Researcher Workbench egress limiter, identical to the sidecar in the
+  # upstream AoU templates (r-analysis-aou, jupyter-aou, aou-sas). It runs
+  # wondershaper (tc-based traffic shaping) on the VM's own network stack --
+  # hence host networking and NET_ADMIN -- capping upload bandwidth for the
+  # whole VM, including this app's container. The app container itself keeps
+  # no extra capabilities.
+  wondershaper:
+    container_name: "wondershaper"
+    image: "us-west2-docker.pkg.dev/shared-pub-buckets-94mvrf/workbench-artifacts/app-wondershaper@sha256:896eb0c4e1233a14284d326c4742aa0544a49b74c545c503a8e6a44ee3b9745e"
+    restart: always
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
 
 networks:
   # The Docker network must be named "app-network". This is an external network
