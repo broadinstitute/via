@@ -6,12 +6,12 @@ This repo contains the app's frontend (ui/, TypeScript + React) and backend (api
 
 <table>
   <tr>
-    <td><img width="600" src="https://github.com/user-attachments/assets/0ce77ec7-ef66-4389-8d31-920ec47ac4c0" /></td>
+    <td><img width="600" src="https://github.com/user-attachments/assets/c937be7f-0834-4658-bd29-fccb41b73221" /></td>
     <td></td>
   </tr>
   <tr>
-    <td><img width="600" src="https://github.com/user-attachments/assets/d1609254-1ffb-4e77-a719-014623e4c5e0" /></td>
-    <td><img width="600" src="https://github.com/user-attachments/assets/d368dbba-e64c-47ee-9d3a-65477b48ca13" />
+    <td><img width="600" src="https://github.com/user-attachments/assets/c9209b75-a3cf-49bd-b7d0-8330f55c33c8" /></td>
+    <td><img width="600" src="https://github.com/user-attachments/assets/a2bd8de4-0fec-4fba-b5e3-92e2eb10d9b8" />
 </td>
   </tr>
 </table>
