@@ -11,7 +11,8 @@ This repo contains the app's frontend (ui/, TypeScript + React) and backend (api
   </tr>
   <tr>
     <td><img width="600" src="https://github.com/user-attachments/assets/c9209b75-a3cf-49bd-b7d0-8330f55c33c8" /></td>
-    <td><img width="600" src="https://github.com/user-attachments/assets/f3331e09-aee3-4905-a917-59a04e1634a0" /></td>
+    <td><img width="600" src="https://github.com/user-attachments/assets/a2bd8de4-0fec-4fba-b5e3-92e2eb10d9b8" />
+</td>
   </tr>
 </table>
 
