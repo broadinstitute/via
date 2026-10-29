@@ -125,13 +125,9 @@ const styles = {
   scopeHeaderMatched: {
     color: colors.textPrimary,
   },
-  // The source row: each source's name on a solid fill of its own colour, white text. The strongest
-  // cue in the table, and the one that survives a small window or a screenshot; everything below it
-  // takes only a wash.
   sourceHeaderCell: {
     color: colors.white,
     letterSpacing: 0.3,
-    // Rounded at the top, so each source's cell reads as a tab over its columns rather than a bar.
     borderTopLeftRadius: 6,
     borderTopRightRadius: 6,
   },
@@ -409,10 +405,8 @@ function gutterStyle(columnId: string): CSSProperties | undefined {
   return rule;
 }
 
-/** The ids of the source row's cells, which are filled solid in their source's colour. */
 const SOURCE_HEADER_IDS = new Set(["aou", "gnomad"]);
 
-/** The tint each group header takes: the source row solid, the scope and column rows beneath it washed. */
 const GROUP_TINTS: Record<string, Tint> = {
   aou: "aou",
   allParticipants: "aou",
