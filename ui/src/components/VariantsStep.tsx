@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import colors from "../libs/colors";
 import { useFocus } from "../libs/hooks";
 import * as Style from "../libs/style";
 import type { RecentSearch } from "../utils/recentSearches";
@@ -10,6 +11,16 @@ import RecentSearchesMenu from "./RecentSearchesMenu";
 import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
 const styles = {
+  /**
+   * The ID format in the hint, in the same face the field shows the IDs in. A step larger and
+   * darker than the hint around it: the mono face has a small x-height and thin strokes, so at
+   * the hint's size and grey it looked faint.
+   */
+  format: {
+    ...Style.elements.mono,
+    fontSize: 12.5,
+    color: colors.textSecondary,
+  },
   input: {
     ...Style.inputs.mono,
     // Grows to fill the card, but from its own height (flexBasis auto), not from 0 as `flex: 1`
@@ -101,7 +112,9 @@ export default function VariantsStep({
       />
       <div style={styles.hintRow}>
         {/* Short enough to share a line with "Try an example"; the placeholder shows the format. */}
-        <FieldHint>One variant per line, as chr-pos-ref-alt.</FieldHint>
+        <FieldHint>
+          One variant per line, as <code style={styles.format}>chr-pos-ref-alt</code>.
+        </FieldHint>
         {!value.trim() && (
           <div style={styles.menus}>
             {onUseRecentSearch && recentSearches.length > 0 && (
