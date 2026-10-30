@@ -77,6 +77,25 @@ Open the URL Vite prints (default `http://localhost:5173`).
 With the backend running, Swagger UI is at `http://localhost:8080/swagger-ui`, and
 the raw spec it reads is at `http://localhost:8080/openapi/api.yaml`.
 
+### Testing and CI
+
+```bash
+cd ui && npm test          # Vitest; `npm run coverage` adds the coverage report
+cd api && ./gradlew check  # JUnit, then the JaCoCo coverage check
+```
+
+Both have a coverage floor that fails the build when crossed: 80% line coverage for the
+API (`api/build.gradle`), and 85% statements/lines/functions, 75% branches for the UI
+(`ui/vite.config.ts`). `npm run coverage` is what CI runs, so run it before opening a PR.
+
+GitHub Actions runs three workflows, in `.github/workflows/`:
+
+- `ui-tests.yml` and `api-tests.yml` run the commands above on every PR and push to
+  `main` that touches `ui/` or `api/` respectively, and post a coverage summary on the run.
+- `docker-build-push.yml` builds the Workbench image. On merge to `main` it pushes
+  `via:<sha>` and `via:latest`; on a PR from this repo it pushes `via:<branch>` so the
+  branch can be tried on a Workbench VM. Forks only build.
+
 ### Running as it will run in Workbench
 
 In Workbench, the frontend and backend are packaged into a single container on
