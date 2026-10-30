@@ -224,7 +224,7 @@ export default function PhenotypeStep({
           <FieldHint>
             {picked.length === 0 ? (
               <>
-                Start typing a condition and pick one from the list, then add more if you like, up to {limit}. Matched
+                Start typing a condition and pick one from the list. Matched
                 against the <AllOfUs /> condition vocabulary.
               </>
             ) : (
