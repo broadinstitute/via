@@ -92,15 +92,18 @@ const styles = {
   },
   headerCell: {
     ...Style.table.headerCell,
-    // boxShadow instead of borderBottom: with two stacked sticky header rows, a plain border can
+    // boxShadow instead of borderBottom: with stacked sticky header rows, a plain border can
     // render as a gap at the boundary between them.
     boxShadow: `inset 0 -1px 0 0 ${colors.border}`,
   },
   // Two group rows sit above the column headers: the source row (All of Us, gnomAD), then the
   // scope row within All of Us (all participants vs matched). Each is sticky at its depth times
-  // this height.
+  // this height. Neither draws the hairline: with it, every placeholder cell in the two rows
+  // ruled its own bottom edge, stacking three lines over the identity columns and two over the
+  // annotations, and underlining each band. The column-header row's hairline closes the header.
   groupHeaderCell: {
     height: GROUP_HEADER_HEIGHT,
+    boxShadow: "none",
     // Above the column-header row, which scrolls up underneath it.
     zIndex: 2,
     padding: "0 10px",
