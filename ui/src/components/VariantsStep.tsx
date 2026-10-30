@@ -11,11 +11,6 @@ import RecentSearchesMenu from "./RecentSearchesMenu";
 import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
 const styles = {
-  /**
-   * The ID format in the hint, in the same face the field shows the IDs in. A step larger and
-   * darker than the hint around it: the mono face has a small x-height and thin strokes, so at
-   * the hint's size and grey it looked faint.
-   */
   format: {
     ...Style.elements.mono,
     fontSize: 12.5,

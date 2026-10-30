@@ -93,8 +93,7 @@ GitHub Actions runs three workflows, in `.github/workflows/`:
 - `ui-tests.yml` and `api-tests.yml` run the commands above on every PR and push to
   `main` that touches `ui/` or `api/` respectively, and post a coverage summary on the run.
 - `docker-build-push.yml` builds the Workbench image. On merge to `main` it pushes
-  `via:<sha>` and `via:latest`; on a PR from this repo it pushes `via:<branch>` so the
-  branch can be tried on a Workbench VM. Forks only build.
+  `via:<sha>` and `via:latest`.
 
 ### Running as it will run in Workbench
 
