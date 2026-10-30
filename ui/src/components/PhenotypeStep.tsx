@@ -10,7 +10,7 @@ import AllOfUs from "./common/AllOfUs";
 import Clickable from "./common/Clickable";
 import ConditionSearchField, { describeEstimate } from "./ConditionSearchField";
 import FieldHint from "./FieldHint";
-import { CloseIcon, ExternalLinkIcon } from "./icons";
+import { CloseIcon, ExternalLinkIcon, UserIcon } from "./icons";
 import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
 // Step 2 of a search: the phenotypes to filter by, as a list. Each picked condition is a chip
@@ -20,7 +20,8 @@ import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 //
 // The chip is one quiet object: white, a plain border, the name in one weight, then the estimate
 // as muted text behind a hairline, then the HPO id as the link out to the term, for concepts
-// that pair with one. No tint and no icon, so it reads as a choice, not a badge.
+// that pair with one. No tint, so it reads as a choice, not a badge; the only icon is the person
+// beside the estimate, which says what the number counts.
 
 /** What the step does for the search; the folded row says the same, so the step reads alike open or closed. */
 export const PHENOTYPE_STEP_DESCRIPTION =
@@ -78,12 +79,20 @@ const styles = {
     margin: "0 10px",
     background: colors.border,
   },
-  // The same estimate the dropdown showed for the pick, so the chip confirms what was chosen.
+  // The same estimate the dropdown showed for the pick, so the chip confirms what was chosen,
+  // with the dropdown's person icon ahead of it: "~47" on its own doesn't say what it counts.
   chipEstimate: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
     ...Style.elements.mono,
     fontSize: 11.5,
     fontWeight: 500,
     color: colors.textSecondary,
+  },
+  chipEstimateIcon: {
+    display: "block",
+    flexShrink: 0,
   },
   // The HPO id the dropdown showed, now a link to the term: underlined faintly so it reads as a
   // cross-reference rather than a second label, with the term's name and the caveat on hover.
@@ -137,6 +146,7 @@ function ChipEstimate({ estimate }: { estimate: number | null }) {
   const { label, tooltip, spoken } = describeEstimate(estimate);
   return (
     <span style={styles.chipEstimate} title={tooltip} aria-label={spoken}>
+      <UserIcon size={11} strokeWidth={2.5} style={styles.chipEstimateIcon} aria-hidden="true" />
       {label}
     </span>
   );
