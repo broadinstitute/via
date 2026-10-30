@@ -13,16 +13,6 @@ import FieldHint from "./FieldHint";
 import { CloseIcon, ExternalLinkIcon, UserIcon } from "./icons";
 import StepPanel, { type StepPanelAppearance, type StepTag } from "./StepPanel";
 
-// Step 2 of a search: the phenotypes to filter by, as a list. Each picked condition is a chip
-// with its participant estimate and a remove control, with "or" between chips, since a
-// participant is matched by any of them; the type-ahead beneath adds the next one until the
-// search's limit is reached, when it gives way to a line saying so.
-//
-// The chip is one quiet object: white, a plain border, the name in one weight, then the estimate
-// as muted text behind a hairline, then the HPO id as the link out to the term, for concepts
-// that pair with one. No tint, so it reads as a choice, not a badge; the only icon is the person
-// beside the estimate, which says what the number counts.
-
 /** What the step does for the search; the folded row says the same, so the step reads alike open or closed. */
 export const PHENOTYPE_STEP_DESCRIPTION =
   <>
@@ -47,13 +37,11 @@ const styles = {
     padding: 0,
     listStyle: "none",
   },
-  // A pick and, from the second on, the "or" before it: one item, so the word wraps with its chip.
   pick: {
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
   },
-  // The semantics, said where the choice is made. Quiet: it's a conjunction, not a control.
   or: {
     color: colors.textMuted,
     fontSize: 12,
@@ -79,8 +67,6 @@ const styles = {
     margin: "0 10px",
     background: colors.border,
   },
-  // The same estimate the dropdown showed for the pick, so the chip confirms what was chosen,
-  // with the dropdown's person icon ahead of it: "~47" on its own doesn't say what it counts.
   chipEstimate: {
     display: "inline-flex",
     alignItems: "center",
@@ -94,8 +80,6 @@ const styles = {
     display: "block",
     flexShrink: 0,
   },
-  // The HPO id the dropdown showed, now a link to the term: underlined faintly so it reads as a
-  // cross-reference rather than a second label, with the term's name and the caveat on hover.
   chipHpo: {
     display: "inline-flex",
     alignItems: "center",
