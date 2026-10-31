@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { ConditionConcept, HpoTerm } from "../api/conditions";
 import colors, { alpha } from "../libs/colors";
+import { useElementWidth } from "../libs/hooks";
 import * as Style from "../libs/style";
 import { hpoTermUrl } from "../utils/externalLinks";
 import { describeHpo } from "../utils/hpo";
@@ -27,44 +28,79 @@ export function phenotypeTags(limit: number = PHENOTYPES_LIMIT): StepTag[] {
   ];
 }
 
+/**
+ * Narrower than this, the list stacks each row's figures under its name instead of beside it.
+ * The entry card's list is about 820px wide and the edit popover's about 350px; the figures
+ * take about 200px, so below this a name of ordinary length would be left a thin column.
+ */
+const STACKED_LIST_WIDTH = 480;
+
 const styles = {
+  /**
+   * The picks as a bordered list, one condition per row. Condition names run long ("Malignant
+   * neoplasm of upper-outer quadrant of female breast"), so a row gives the name the width it needs
+   * and lets it wrap, while the figures sit in a column at the right edge, aligned down the list.
+   * In a narrow list every row stacks the figures under the name instead; one layout for the whole
+   * list, rather than each row wrapping or not by its own name's length.
+   */
   picked: {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 8,
     margin: "0 0 8px",
     padding: 0,
     listStyle: "none",
+    border: `1px solid ${colors.border}`,
+    borderRadius: Style.radius,
+    background: colors.surface2,
+    overflow: "hidden",
   },
   pick: {
-    display: "inline-flex",
+    position: "relative",
+    display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
+    padding: "8px 6px 8px 12px",
   },
+  /** The remove button stays level with the name's first line, not the middle of the stack. */
+  pickStacked: {
+    alignItems: "flex-start",
+  },
+  pickRuled: {
+    borderTop: `1px solid ${colors.border}`,
+  },
+  /** "or" as a small label sitting on the rule above every row but the first. */
   or: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: 500,
-  },
-  chip: {
-    display: "inline-flex",
-    alignItems: "center",
-    height: 30,
-    padding: "0 4px 0 12px",
-    border: `1px solid ${colors.borderStrong}`,
-    borderRadius: 999,
+    position: "absolute",
+    top: -7,
+    left: 9,
+    padding: "0 4px",
     background: colors.surface2,
+    ...Style.elements.eyebrow,
+    lineHeight: 1.3,
+  },
+  /** The name, and in the stacked layout the figures beneath it. Takes the row's spare width. */
+  nameBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    flex: 1,
+    minWidth: 0,
+  },
+  name: {
     color: colors.textBody,
     fontSize: 13,
     fontWeight: 600,
-    lineHeight: 1.3,
+    lineHeight: 1.35,
+  },
+  /** The estimate and HPO id; never wraps, so the name gives way instead. */
+  figures: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
+    flexShrink: 0,
   },
   chipDivider: {
     flexShrink: 0,
     width: 1,
     height: 14,
-    margin: "0 10px",
     background: colors.border,
   },
   chipEstimate: {
@@ -75,6 +111,7 @@ const styles = {
     fontSize: 11.5,
     fontWeight: 500,
     color: colors.textSecondary,
+    whiteSpace: "nowrap",
   },
   chipEstimateIcon: {
     display: "block",
@@ -91,17 +128,22 @@ const styles = {
     textDecoration: "underline",
     textDecorationColor: alpha(colors.textAccent, 0.35),
     textUnderlineOffset: 2,
+    whiteSpace: "nowrap",
   },
   remove: {
     ...Style.buttons.icon,
+    flexShrink: 0,
     width: 20,
     height: 20,
-    marginLeft: 4,
     borderRadius: "50%",
     color: colors.textSecondary,
   },
+  /** Centred on the name's 17.5px first line. */
+  removeStacked: {
+    marginTop: -1,
+  },
   removeHover: {
-    background: colors.surface2,
+    background: colors.surface0,
     color: colors.textDanger,
   },
   atLimit: {
@@ -161,6 +203,9 @@ export default function PhenotypeStep({
   // What's typed in the field: transient, cleared by a pick. Only picked concepts filter a search,
   // so text left here without picking is ignored, the same as leaving the field empty.
   const [text, setText] = useState("");
+  const listRef = useRef<HTMLUListElement>(null);
+  const listWidth = useElementWidth(listRef);
+  const stacked = listWidth !== undefined && listWidth < STACKED_LIST_WIDTH;
   const atLimit = picked.length >= limit;
   const tags = phenotypeTags(limit);
 
@@ -174,13 +219,10 @@ export default function PhenotypeStep({
       description={description}
     >
       {picked.length > 0 && (
-        <ul style={styles.picked} aria-label="Picked phenotypes">
-          {picked.map((concept, index) => (
-            <li key={concept.conceptId} style={styles.pick}>
-              {index > 0 && <span style={styles.or}>or</span>}
-              <span style={styles.chip}>
-                {concept.name}
-                <span style={styles.chipDivider} aria-hidden="true" />
+        <ul ref={listRef} style={styles.picked} aria-label="Picked phenotypes">
+          {picked.map((concept, index) => {
+            const figures = (
+              <span style={styles.figures}>
                 <ChipEstimate estimate={concept.estimatedParticipantCount} />
                 {concept.hpo && (
                   <>
@@ -188,17 +230,34 @@ export default function PhenotypeStep({
                     <ChipHpo hpo={concept.hpo} />
                   </>
                 )}
+              </span>
+            );
+            return (
+              <li
+                key={concept.conceptId}
+                style={{
+                  ...styles.pick,
+                  ...(index > 0 ? styles.pickRuled : undefined),
+                  ...(stacked ? styles.pickStacked : undefined),
+                }}
+              >
+                {index > 0 && <span style={styles.or}>or</span>}
+                <span style={styles.nameBlock}>
+                  <span style={styles.name}>{concept.name}</span>
+                  {stacked && figures}
+                </span>
+                {!stacked && figures}
                 <Clickable
-                  style={styles.remove}
+                  style={{ ...styles.remove, ...(stacked ? styles.removeStacked : undefined) }}
                   hoverStyle={styles.removeHover}
                   aria-label={`Remove ${concept.name}`}
                   onClick={() => onRemove(concept.conceptId)}
                 >
                   <CloseIcon size={11} strokeWidth={2.2} aria-hidden="true" />
                 </Clickable>
-              </span>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
       {atLimit ? (
