@@ -101,6 +101,25 @@ export function useCenterAboveFold(ref: RefObject<HTMLElement | null>, topInset 
 }
 
 /**
+ * The element's current width, re-read as it resizes, for layout choices an inline style can't
+ * make from a container query. Undefined before the first measurement, and in browsers (and
+ * jsdom) without ResizeObserver, so callers should treat that as "wide enough".
+ */
+export function useElementWidth(ref: RefObject<HTMLElement | null>): number | undefined {
+  const [width, setWidth] = useState<number>();
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const measure = () => setWidth(element.getBoundingClientRect().width);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
+  return width;
+}
+
+/**
  * Whether the browser would draw a focus ring here: keyboard focus, not a click. Inline styles
  * can't use :focus-visible, so it's asked of the element instead. Browsers too old to know the
  * selector throw, and get the ring on every focus.

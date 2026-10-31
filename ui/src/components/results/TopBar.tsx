@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { fetchQueryUsage, type QueryUsage } from "../../api/usage";
-import colors from "../../libs/colors";
+import colors, { alpha } from "../../libs/colors";
 import { useHover, useMediaQuery } from "../../libs/hooks";
 import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
@@ -76,8 +76,8 @@ const styles = {
   brandMark: {
     display: "block",
   },
-  // Styled as a search field holding the current terms; clicking anywhere in it opens the drawer.
-  // Positioning context for the edit-search popover, which hangs from the search box.
+  // The current terms as a row of labelled cells; clicking anywhere in it opens the drawer.
+  // Positioning context for the edit-search popover, which hangs from the box's left edge.
   searchAnchor: {
     position: "relative",
     display: "flex",
@@ -85,18 +85,20 @@ const styles = {
     minWidth: 0,
     maxWidth: 575,
   },
+  /**
+   * A box squared to the inputs' radius, only as wide as its cells, which hairlines divide. The
+   * cells stretch to its height so the edit cell's fill runs edge to edge. Page-coloured against
+   * the white bar, so it reads as a field; goes white while the drawer is open, via inputs.focused.
+   */
   searchBox: {
     ...Style.inputs.text,
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
+    display: "inline-flex",
+    alignItems: "stretch",
+    width: "auto",
     minWidth: 0,
     height: 29,
-    // A pill, the usual shape for a search box; the extra left padding clears the curve.
-    borderRadius: 999,
-    padding: "0 4px 0 12px",
-    // Page-coloured against the white bar, so it reads as a field. Goes white while the drawer
-    // is open, via inputs.focused.
+    padding: 0,
+    overflow: "hidden",
     background: colors.surface0,
     color: colors.textSecondary,
     textAlign: "left",
@@ -105,41 +107,41 @@ const styles = {
   searchBoxHover: {
     borderColor: colors.borderHover,
   },
+  searchTerms: {
+    display: "flex",
+    alignItems: "stretch",
+    minWidth: 0,
+    overflow: "hidden",
+  },
+  /** A label and its value: "VARIANTS 3", "PHENOTYPE Seizure". */
+  cell: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 7,
+    minWidth: 0,
+    padding: "0 11px",
+    whiteSpace: "nowrap",
+  },
+  /** The variant count is short and always worth showing whole; the phenotype name gives way. */
+  cellFixed: {
+    flexShrink: 0,
+  },
+  /** Every cell after the first is set off by a hairline. */
+  cellRuled: {
+    borderLeft: `1px solid ${colors.border}`,
+  },
   searchIcon: {
     flexShrink: 0,
     color: colors.textMuted,
   },
-  searchTerms: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    minWidth: 0,
-    overflow: "hidden",
+  cellLabel: {
+    ...Style.elements.eyebrow,
+    letterSpacing: 0.6,
   },
-  searchField: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    minWidth: 0,
-    whiteSpace: "nowrap",
-  },
-  /** The variant count is short and always worth showing whole; the phenotype name gives way. */
-  searchFieldFixed: {
-    flexShrink: 0,
-  },
-  termDivider: {
-    flexShrink: 0,
-    width: 1,
-    height: 14,
-    background: colors.border,
-  },
-  valueBadge: {
+  cellValue: {
     maxWidth: 240,
     overflow: "hidden",
     textOverflow: "ellipsis",
-    padding: "2px 8px",
-    borderRadius: 6,
-    background: colors.bgAccent,
     color: colors.textAccent,
     fontSize: 12,
     fontWeight: 600,
@@ -147,25 +149,20 @@ const styles = {
   skeletonBadge: {
     display: "inline-block",
     width: 72,
-    height: 18,
-    borderRadius: 6,
+    height: 14,
+    borderRadius: 4,
     background: colors.border,
   },
-  modifyHint: {
+  /** The pencil in its own cell at the end, tinted a step past the box so it reads as the control it is. */
+  editCell: {
     display: "inline-flex",
     alignItems: "center",
-    gap: 4,
     flexShrink: 0,
-    marginLeft: "auto",
-    padding: "3px 8px",
-    // Matches the box's curve, so its hover fill sits snugly in the rounded end.
-    borderRadius: 999,
+    padding: "0 9px",
+    background: alpha(colors.textAccent, 0.07),
     color: colors.textAccent,
-    fontSize: 11,
-    fontWeight: 600,
-    whiteSpace: "nowrap",
   },
-  modifyHintHover: {
+  editCellHover: {
     background: colors.bgAccent,
   },
   user: {
@@ -232,8 +229,7 @@ export function describePhenotypeBadge(phenotypes: string[]): { label: string; t
 const compactStyles = {
   topbar: { padding: "0 12px" },
   leading: { gap: 10, marginRight: 10 },
-  searchBox: { gap: 8 },
-  searchTerms: { gap: 8 },
+  cell: { padding: "0 9px" },
   userDivider: { margin: "0 4px" },
 } as const satisfies Record<string, CSSProperties>;
 
@@ -266,7 +262,7 @@ export default function TopBar({
   const termsId = useId();
   const compact = useMediaQuery(COMPACT_QUERY);
   const compactStyle = (key: keyof typeof compactStyles) => (compact ? compactStyles[key] : undefined);
-  const fieldLabel = compact ? Style.elements.visuallyHidden : undefined;
+  const fieldLabel = compact ? Style.elements.visuallyHidden : styles.cellLabel;
   const hidePhenotype = compact && !loading && phenotypes.length === 0;
   const badge = describePhenotypeBadge(phenotypes);
   const searchBoxRef = useRef<HTMLButtonElement>(null);
@@ -335,7 +331,6 @@ export default function TopBar({
               ref={searchBoxRef}
               style={{
                 ...styles.searchBox,
-                ...compactStyle("searchBox"),
                 ...(searchHovered && !loading ? styles.searchBoxHover : undefined),
                 ...(modifyOpen ? Style.inputs.focused : undefined),
               }}
@@ -347,27 +342,33 @@ export default function TopBar({
               aria-expanded={modifyOpen}
               {...searchHoverProps}
             >
-              <SearchIcon size={14} strokeWidth={2.5} style={styles.searchIcon} aria-hidden="true" />
-              <span id={termsId} style={{ ...styles.searchTerms, ...compactStyle("searchTerms") }}>
-                <span style={{ ...styles.searchField, ...styles.searchFieldFixed }}>
+              <span id={termsId} style={styles.searchTerms}>
+                <span style={{ ...styles.cell, ...compactStyle("cell"), ...styles.cellFixed }}>
+                  <SearchIcon size={13} strokeWidth={2.5} style={styles.searchIcon} aria-hidden="true" />
                   <span style={fieldLabel}>Variants</span>
                   {loading ? (
                     <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
                   ) : (
-                    <span style={styles.valueBadge}>
+                    <span style={styles.cellValue}>
+                      {/* The label says what the number counts; without it (compact) the value has to. */}
                       {compact
                         ? `${variantsEnteredCount} variant${variantsEnteredCount === 1 ? "" : "s"}`
-                        : `${variantsEnteredCount} entered`}
+                        : variantsEnteredCount}
                     </span>
                   )}
                 </span>
-                {!hidePhenotype && <span style={styles.termDivider} aria-hidden="true" />}
-                <span style={hidePhenotype ? Style.elements.visuallyHidden : styles.searchField}>
+                <span
+                  style={
+                    hidePhenotype
+                      ? Style.elements.visuallyHidden
+                      : { ...styles.cell, ...compactStyle("cell"), ...styles.cellRuled }
+                  }
+                >
                   <span style={fieldLabel}>Phenotype</span>
                   {loading ? (
                     <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
                   ) : (
-                    <span style={styles.valueBadge} title={badge.title}>
+                    <span style={styles.cellValue} title={badge.title}>
                       {badge.label}
                     </span>
                   )}
@@ -375,11 +376,14 @@ export default function TopBar({
               </span>
               {!loading && (
                 <span
-                  style={{ ...styles.modifyHint, ...(searchHovered ? styles.modifyHintHover : undefined) }}
+                  style={{
+                    ...styles.editCell,
+                    ...styles.cellRuled,
+                    ...(searchHovered ? styles.editCellHover : undefined),
+                  }}
                   aria-hidden="true"
                 >
-                  <PencilIcon size={11} strokeWidth={2.5} />
-                  {!compact && "Edit"}
+                  <PencilIcon size={12} strokeWidth={2.5} />
                 </span>
               )}
             </Clickable>

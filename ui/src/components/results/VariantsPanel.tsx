@@ -92,15 +92,11 @@ const styles = {
   },
   headerCell: {
     ...Style.table.headerCell,
-    // boxShadow instead of borderBottom: with two stacked sticky header rows, a plain border can
-    // render as a gap at the boundary between them.
     boxShadow: `inset 0 -1px 0 0 ${colors.border}`,
   },
-  // Two group rows sit above the column headers: the source row (All of Us, gnomAD), then the
-  // scope row within All of Us (all participants vs matched). Each is sticky at its depth times
-  // this height.
   groupHeaderCell: {
     height: GROUP_HEADER_HEIGHT,
+    boxShadow: "none",
     // Above the column-header row, which scrolls up underneath it.
     zIndex: 2,
     padding: "0 10px",

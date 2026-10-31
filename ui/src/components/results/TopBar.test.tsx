@@ -51,7 +51,8 @@ describe("TopBar", () => {
     });
 
     expect(screen.getByRole("link", { name: "VIA home, new search" })).toBeInTheDocument();
-    expect(screen.getByText("17 entered")).toBeInTheDocument();
+    expect(screen.getByText("Variants")).toBeInTheDocument();
+    expect(screen.getByText("17")).toBeInTheDocument();
     expect(screen.getByText("Seizure")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit search" })).toBeEnabled();
   });
@@ -66,7 +67,7 @@ describe("TopBar", () => {
     });
     const searchBox = screen.getByRole("button", { name: "Edit search" });
 
-    expect(searchBox).toHaveAccessibleDescription(/Variants\s*17 entered.*Phenotype\s*Seizure/);
+    expect(searchBox).toHaveAccessibleDescription(/Variants\s*17.*Phenotype\s*Seizure/);
     expect(searchBox).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(screen.getByText("Seizure"));
@@ -173,7 +174,6 @@ describe("TopBar", () => {
       onModifySearch: vi.fn(),
     });
 
-    expect(screen.queryByText(/entered$/)).not.toBeInTheDocument();
     expect(screen.queryByText("None entered")).not.toBeInTheDocument();
     expect(document.querySelectorAll(".animate-skeleton-pulse")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Edit search" })).toBeDisabled();
