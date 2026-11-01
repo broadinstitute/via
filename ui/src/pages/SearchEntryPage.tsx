@@ -230,7 +230,7 @@ export default function SearchEntryPage() {
               disabled={!canSearch}
               onClick={handleSearch}
             >
-              <SearchIcon size={15} aria-hidden="true" style={{ flexShrink: 0 }} />
+              <SearchIcon size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
               Search
             </Clickable>
           </div>

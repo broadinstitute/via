@@ -100,7 +100,7 @@ function Option({ label, icon: Icon, selected, disabledReason, onSelect }: Optio
         onClick={unavailable ? undefined : onSelect}
         {...(unavailable ? tooltip.anchorProps : undefined)}
       >
-        <Icon size={15} strokeWidth={2.2} aria-hidden="true" />
+        <Icon size={16} aria-hidden="true" />
         {label}
       </Clickable>
       {/* Beside the button, not inside it, so the reason is its description and not part of its name. */}

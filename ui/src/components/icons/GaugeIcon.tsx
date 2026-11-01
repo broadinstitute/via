@@ -3,9 +3,8 @@ import { baseIconProps, type IconProps } from "./Icon";
 export default function GaugeIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>
-      <path d="M3.5 16 A9 9 0 1 1 20.5 16" />
-      <path d="M12 16 L16.2 9.8" />
-      <circle cx="12" cy="16" r="1" fill="currentColor" />
+      <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+      <path d="m12 14 4-4" />
     </svg>
   );
 }

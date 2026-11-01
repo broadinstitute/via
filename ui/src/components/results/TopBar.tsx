@@ -347,7 +347,7 @@ export default function TopBar({
               aria-expanded={modifyOpen}
               {...searchHoverProps}
             >
-              <SearchIcon size={14} strokeWidth={2.5} style={styles.searchIcon} aria-hidden="true" />
+              <SearchIcon size={14} style={styles.searchIcon} aria-hidden="true" />
               <span id={termsId} style={{ ...styles.searchTerms, ...compactStyle("searchTerms") }}>
                 <span style={{ ...styles.searchField, ...styles.searchFieldFixed }}>
                   <span style={fieldLabel}>Variants</span>
@@ -378,7 +378,7 @@ export default function TopBar({
                   style={{ ...styles.modifyHint, ...(searchHovered ? styles.modifyHintHover : undefined) }}
                   aria-hidden="true"
                 >
-                  <PencilIcon size={11} strokeWidth={2.5} />
+                  <PencilIcon size={11} />
                   {!compact && "Edit"}
                 </span>
               )}
@@ -397,7 +397,7 @@ export default function TopBar({
               title={`BigQuery this session: ${meter.scanned} scanned · ${meter.billed} billed · ${meter.cost} estimated`}
               {...meterHoverProps}
             >
-              <GaugeIcon size={14} strokeWidth={2.2} style={styles.meterIcon} aria-hidden="true" />
+              <GaugeIcon size={14} style={styles.meterIcon} aria-hidden="true" />
               {compact ? (
                 <span>{meter.cost}</span>
               ) : (
