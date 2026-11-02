@@ -501,7 +501,6 @@ function ExpandButton({ expanded, variant, onToggle }: { expanded: boolean; vari
     >
       <ChevronRightIcon
         size={16}
-        strokeWidth={2.2}
         className="transition-transform"
         style={expanded ? { transform: "rotate(90deg)" } : undefined}
       />
@@ -795,7 +794,7 @@ export default function VariantsPanel({
               Phenotype-matched participants
               {hasPhenotypeFilter && (
                 <span style={styles.matchedCount}>
-                  <UserIcon size={11} strokeWidth={2.5} aria-hidden="true" />
+                  <UserIcon size={11} aria-hidden="true" />
                   {formatInt(participantCount)}
                 </span>
               )}
@@ -1081,7 +1080,7 @@ export default function VariantsPanel({
                                     header.column.toggleSorting();
                                   }}
                                 >
-                                  <SortIcon direction={sortDirection || "none"} size={11} strokeWidth={2.5} aria-hidden="true" />
+                                  <SortIcon direction={sortDirection || "none"} size={11} aria-hidden="true" />
                                 </button>
                               )}
                             </>
@@ -1267,7 +1266,7 @@ export default function VariantsPanel({
                                 }}
                                 title="Open Review on this variant"
                               >
-                                <CompareIcon size={14} strokeWidth={2.2} aria-hidden="true" />
+                                <CompareIcon size={14} aria-hidden="true" />
                                 Review this variant
                               </Clickable>
                             </div>

@@ -128,7 +128,7 @@ export default function SettingsPanel() {
             setHistory(0);
           }}
         >
-          <TrashIcon size={13} aria-hidden="true" />
+          <TrashIcon size={14} aria-hidden="true" />
           Clear recent searches
         </Clickable>
       </div>

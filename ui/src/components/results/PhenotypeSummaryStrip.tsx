@@ -86,7 +86,7 @@ function HpoLine({ hpo }: { hpo: HpoTerm | null | undefined }) {
         {...hoverProps}
       >
         {words.label}
-        <ExternalLinkIcon size={10} aria-hidden="true" />
+        <ExternalLinkIcon size={11} aria-hidden="true" />
       </a>
       <CopyButton getText={() => hpo.id} label="Copy HPO term ID" />
     </span>
@@ -391,7 +391,7 @@ export default function PhenotypeSummaryStrip({
             <span style={styles.emptyTitle}>No phenotype filter</span>
             <span style={styles.emptyMessage}>Add a phenotype filter to see participant breakdowns and Review.</span>
             <Clickable style={Style.buttons.accent} hoverStyle={Style.buttons.accentHover} onClick={onAddPhenotypeFilter}>
-              <PlusIcon size={12} strokeWidth={2.5} />
+              <PlusIcon size={12} />
               Add phenotype filter
             </Clickable>
           </div>

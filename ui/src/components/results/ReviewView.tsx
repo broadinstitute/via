@@ -231,7 +231,7 @@ export default function ReviewView({
         aria-label="Previous variant"
         title="Previous variant (←)"
       >
-        <ArrowLeftIcon size={14} strokeWidth={2.5} aria-hidden="true" />
+        <ArrowLeftIcon size={14} aria-hidden="true" />
       </Clickable>
       <span style={styles.position} aria-live="polite">
         {rows.length === 0 ? "0 of 0" : `${index + 1} of ${rows.length}`}
@@ -245,7 +245,7 @@ export default function ReviewView({
         aria-label="Next variant"
         title="Next variant (→)"
       >
-        <ArrowRightIcon size={14} strokeWidth={2.5} aria-hidden="true" />
+        <ArrowRightIcon size={14} aria-hidden="true" />
       </Clickable>
     </div>
   );

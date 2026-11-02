@@ -34,7 +34,7 @@ export default function CopyButton({ getText, label }: CopyButtonProps) {
       title={label}
       aria-label={label}
     >
-      {copied ? <CheckIcon size={12} strokeWidth={2.5} /> : <CopyIcon size={12} />}
+      {copied ? <CheckIcon size={12} /> : <CopyIcon size={12} />}
     </Clickable>
   );
 }

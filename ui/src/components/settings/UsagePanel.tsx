@@ -420,9 +420,9 @@ export default function UsagePanel() {
                               aria-label={`${expanded ? "Hide" : "Show"} queries for request ${search.id}`}
                             >
                               {expanded ? (
-                                <ChevronDownIcon size={12} strokeWidth={2.5} aria-hidden="true" />
+                                <ChevronDownIcon size={12} aria-hidden="true" />
                               ) : (
-                                <ChevronRightIcon size={12} strokeWidth={2.5} aria-hidden="true" />
+                                <ChevronRightIcon size={12} aria-hidden="true" />
                               )}
                             </button>
                           </td>
@@ -446,7 +446,7 @@ export default function UsagePanel() {
                                   style={{ ...styles.phenotype, ...(phenotypeIndex > 0 ? styles.phenotypeNext : undefined) }}
                                   title={describeAlternatives(search.phenotypes)}
                                 >
-                                  <UserIcon size={10} strokeWidth={2.5} aria-hidden="true" />
+                                  <UserIcon size={11} aria-hidden="true" />
                                   {phenotype}
                                 </span>
                               ))
@@ -508,7 +508,7 @@ export default function UsagePanel() {
                 aria-label="Newer requests"
                 title="Newer requests"
               >
-                <ArrowLeftIcon size={14} strokeWidth={2.5} aria-hidden="true" />
+                <ArrowLeftIcon size={14} aria-hidden="true" />
               </Clickable>
               <Clickable
                 style={Style.buttons.icon}
@@ -519,7 +519,7 @@ export default function UsagePanel() {
                 aria-label="Older requests"
                 title="Older requests"
               >
-                <ArrowRightIcon size={14} strokeWidth={2.5} aria-hidden="true" />
+                <ArrowRightIcon size={14} aria-hidden="true" />
               </Clickable>
             </nav>
           )}

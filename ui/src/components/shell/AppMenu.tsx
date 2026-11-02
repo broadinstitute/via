@@ -43,7 +43,7 @@ export default function AppMenu() {
         aria-expanded={open}
         title="Menu"
       >
-        <MenuIcon size={18} strokeWidth={2.2} aria-hidden="true" />
+        <MenuIcon size={18} aria-hidden="true" />
       </Clickable>
       <AppDrawer open={open} onClose={() => setOpen(false)} />
     </>

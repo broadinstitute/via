@@ -218,7 +218,7 @@ export default function AppDrawer({ open, onClose }: AppDrawerProps) {
             aria-label="Close menu"
             title="Close"
           >
-            <CloseIcon size={18} strokeWidth={2.2} aria-hidden="true" />
+            <CloseIcon size={18} aria-hidden="true" />
           </Clickable>
           <Link to="/" style={styles.brand} onClick={onClose} aria-label="VIA home, new search">
             <img src="/favicon.svg" alt="" width={22} height={22} style={{ display: "block" }} />
@@ -237,7 +237,7 @@ export default function AppDrawer({ open, onClose }: AppDrawerProps) {
                     entry.path,
                     pathname === entry.path,
                     <>
-                      <Icon size={16} strokeWidth={2.2} style={styles.itemIcon} aria-hidden="true" />
+                      <Icon size={16} style={styles.itemIcon} aria-hidden="true" />
                       {entry.label}
                     </>,
                   )}
@@ -259,7 +259,7 @@ export default function AppDrawer({ open, onClose }: AppDrawerProps) {
                       ),
                       false,
                       <>
-                        <ClockIcon size={16} strokeWidth={2.2} style={styles.itemIcon} aria-hidden="true" />
+                        <ClockIcon size={16} style={styles.itemIcon} aria-hidden="true" />
                         <span style={styles.recentText}>
                           <span style={styles.recentVariants}>{describeVariants(search.variants)}</span>
                           <span style={styles.recentSub}>{recentSub(search)}</span>
