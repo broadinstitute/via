@@ -153,7 +153,7 @@ function Estimate({ estimate, onActiveRow = false }: { estimate: number | null; 
   const { label, tooltip } = describeEstimate(estimate);
   return (
     <span style={{ ...styles.estimate, ...(onActiveRow ? styles.estimateOnActive : undefined) }} title={tooltip}>
-      <UserIcon size={11} strokeWidth={2.5} style={styles.estimateIcon} aria-hidden="true" />
+      <UserIcon size={11} style={styles.estimateIcon} aria-hidden="true" />
       <span style={Style.elements.trimmedText}>{label}</span>
     </span>
   );

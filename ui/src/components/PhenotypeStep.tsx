@@ -184,7 +184,7 @@ function ChipHpo({ hpo }: { hpo: HpoTerm }) {
   return (
     <a href={hpoTermUrl(hpo.id)} target="_blank" rel="noopener noreferrer" style={styles.chipHpo} title={tooltip} aria-label={spoken}>
       {label}
-      <ExternalLinkIcon size={10} aria-hidden="true" />
+      <ExternalLinkIcon size={11} aria-hidden="true" />
     </a>
   );
 }
@@ -253,7 +253,7 @@ export default function PhenotypeStep({
                   aria-label={`Remove ${concept.name}`}
                   onClick={() => onRemove(concept.conceptId)}
                 >
-                  <CloseIcon size={11} strokeWidth={2.2} aria-hidden="true" />
+                  <CloseIcon size={11} aria-hidden="true" />
                 </Clickable>
               </li>
             );

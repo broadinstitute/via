@@ -167,7 +167,7 @@ export default function LinkMenu({ label, menuLabel, items, width = 300 }: LinkM
         {...hoverProps}
       >
         {label}
-        <ChevronDownIcon size={11} strokeWidth={2.5} aria-hidden="true" />
+        <ChevronDownIcon size={11} aria-hidden="true" />
       </button>
       {open && (
         <ul id={menuId} role="menu" aria-label={menuLabel} style={{ ...styles.menu, width }} onKeyDown={handleMenuKeyDown}>

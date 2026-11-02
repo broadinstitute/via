@@ -54,7 +54,7 @@ export default function InfoTooltip({ text, style }: InfoTooltipProps) {
           tooltip.anchorProps.onClick();
         }}
       >
-        <InfoIcon size={15} aria-hidden="true" />
+        <InfoIcon size={16} aria-hidden="true" />
         {/* Always present, so screen readers get the explanation without hovering. */}
         <span id={descriptionId} style={Style.elements.visuallyHidden}>
           {text}

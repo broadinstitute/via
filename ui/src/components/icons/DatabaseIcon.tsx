@@ -3,8 +3,9 @@ import { baseIconProps, type IconProps } from "./Icon";
 export default function DatabaseIcon(props: IconProps) {
   return (
     <svg {...baseIconProps(props)}>
-      <ellipse cx="12" cy="5" rx="8" ry="3" />
-      <path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+      <path d="M3 12a9 3 0 0 0 18 0" />
     </svg>
   );
 }

@@ -94,7 +94,7 @@ export default function PhenotypeFilterPrompt({ phenotypes, onAddPhenotypeFilter
         onAddPhenotypeFilter();
       }}
     >
-      <PlusIcon size={12} strokeWidth={2.5} aria-hidden="true" />
+      <PlusIcon size={12} aria-hidden="true" />
       {condition ? "Change phenotype" : "Add phenotype filter"}
     </Clickable>
   );

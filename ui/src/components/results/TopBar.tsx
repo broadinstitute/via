@@ -344,7 +344,7 @@ export default function TopBar({
             >
               <span id={termsId} style={styles.searchTerms}>
                 <span style={{ ...styles.cell, ...compactStyle("cell"), ...styles.cellFixed }}>
-                  <SearchIcon size={13} strokeWidth={2.5} style={styles.searchIcon} aria-hidden="true" />
+                  <SearchIcon size={14} style={styles.searchIcon} aria-hidden="true" />
                   <span style={fieldLabel}>Variants</span>
                   {loading ? (
                     <span className="animate-skeleton-pulse" style={styles.skeletonBadge} />
@@ -383,7 +383,7 @@ export default function TopBar({
                   }}
                   aria-hidden="true"
                 >
-                  <PencilIcon size={12} strokeWidth={2.5} />
+                  <PencilIcon size={12} />
                 </span>
               )}
             </Clickable>
@@ -401,7 +401,7 @@ export default function TopBar({
               title={`BigQuery this session: ${meter.scanned} scanned · ${meter.billed} billed · ${meter.cost} estimated`}
               {...meterHoverProps}
             >
-              <GaugeIcon size={14} strokeWidth={2.2} style={styles.meterIcon} aria-hidden="true" />
+              <GaugeIcon size={14} style={styles.meterIcon} aria-hidden="true" />
               {compact ? (
                 <span>{meter.cost}</span>
               ) : (
