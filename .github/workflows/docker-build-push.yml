@@ -15,8 +15,7 @@ on:
       - "deploy/**"
       - ".github/workflows/docker-build-push.yml"
   # Run by hand (Actions > Build and push Docker image > Run workflow) to publish a branch so it
-  # can be trialled in Workbench before merging. The image is tagged `:<branch>` and `:<sha>`,
-  # never `:latest`.
+  # can be tested in Workbench before merging. The image is tagged `:<branch>` and `:<sha>`
   workflow_dispatch:
     inputs:
       branch:
@@ -38,8 +37,7 @@ jobs:
       id-token: write
     env:
       # Pushes to main publish `:latest` and `:<sha>`; a manual run publishes `:<branch>` and
-      # `:<sha>`. Pull requests only validate that the image builds -- they never authenticate
-      # to GCP or push, so a PR can't publish an image before it's merged.
+      # `:<sha>`. Pull requests only validate that the image builds.
       PUBLISH: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
       # The branch a manual run builds: the input if given, else the ref the run was started
       # from. Empty for the other events, which build the commit that triggered them.
@@ -74,8 +72,6 @@ jobs:
         env:
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}
         run: |
-          # The checked-out commit, not github.sha: a manual run given a branch input builds
-          # that branch's head, which github.sha (the ref the run was started from) isn't.
           sha="$(git rev-parse HEAD)"
           {
             echo "tags<<EOF"
