@@ -297,14 +297,21 @@ class VatLookupServiceTest {
     assertThat(vus.getClinvarHasConflicts()).isFalse();
   }
 
-  /** Only the VEP terms the UI labels count; a row with none of them has no consequence. */
+  /**
+   * Only the VEP terms the UI labels count, and the most severe labelled term wins whatever order
+   * the VAT lists them in; a row with none of them has no consequence.
+   */
   @Test
   void consequence_readsOnlyTheLabelledTerms() {
-    assertThat(lookupOne(row("1-1-A-G", "consequence", List.of("intron_variant", "3_prime_UTR_variant"))).getConsequence().orElse(null))
+    assertThat(lookupOne(row("1-1-A-G", "consequence", List.of("upstream_gene_variant", "non_coding_transcript_exon_variant"))).getConsequence().orElse(null))
         .isNull();
+    assertThat(lookupOne(row("1-1-A-G", "consequence", List.of("intron_variant", "3_prime_UTR_variant"))).getConsequence().orElse(null))
+        .isEqualTo("3' UTR");
+    assertThat(lookupOne(row("1-1-A-G", "consequence", List.of("inframe_deletion", "splice_region_variant"))).getConsequence().orElse(null))
+        .isEqualTo("In-frame indel");
     assertThat(lookupOne(row("1-1-A-G", "consequence", List.of("splice_acceptor_variant"))).getConsequence().orElse(null))
         .isEqualTo("Splice site");
-    assertThat(lookupOne(row("1-1-A-G", "consequence", List.of("stop_gained", "missense_variant"))).getConsequence().orElse(null))
+    assertThat(lookupOne(row("1-1-A-G", "consequence", List.of("missense_variant", "stop_gained"))).getConsequence().orElse(null))
         .isEqualTo("Nonsense");
   }
 

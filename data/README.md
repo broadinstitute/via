@@ -82,12 +82,12 @@ Cohort counts, exact by construction and verified against BigQuery:
 
 | Seed | Participants | Why |
 |---|---|---|
-| `[9000010]` | 49 | 40 + 6 + 3 via descendant expansion; seed-only matching gives 40 |
-| `[9000001]` | 60 | also pulls in Pentalogy — the "don't seed on a parent" failure, made visible |
+| `[9000010]` | 214 | 180 + 26 + 8 via descendant expansion; seed-only matching gives 180 |
+| `[9000001]` | 225 | also pulls in Pentalogy — the "don't seed on a parent" failure, made visible |
 | `[9000030]` | 1,200 | high-prevalence anchor |
 | `[9000031]` | 180 | subset of the above |
 
-9000010's `est_count` is **47** against a true cohort of **49**. That mismatch is
+9000010's `est_count` is **205** against a true cohort of **214**. That mismatch is
 intentional: `est_count` is an estimate in the real table, so a sanity check should tolerate
 small divergence while still catching gross error.
 
@@ -97,13 +97,13 @@ hierarchy keeps the cohort counts above exact.
 
 ## Demo use cases
 
-Four curated searches, each a condition plus 16 hand-picked variants, written so every
+Four curated searches, each a condition plus 15 or 16 hand-picked variants, written so every
 panel of the results page looks right for them. They're what the entry page's **Try an
 example** menu fills in.
 
 | Use case | Condition (concept, participants) | Variants |
 |---|---|---|
-| Tetralogy of Fallot | 9000010, 49 (the fixture above) | NKX2-5, GATA4, GATA6, TBX5, JAG1, FLT4, NOTCH1, ZFPM2 |
+| Tetralogy of Fallot | 9000010, 214 (the fixture above) | NKX2-5, GATA4, GATA6, TBX5, TBX1, JAG1, FLT4, GDF1, ZFPM2 |
 | Hypertrophic cardiomyopathy | 9000040, 214 | MYH7, MYBPC3, TNNT2, TNNI3, TPM1, ACTC1 |
 | Familial hypercholesterolemia | 9000050, 391 | LDLR, APOB, PCSK9 |
 | Long QT syndrome | 9000060, 131 | KCNQ1, KCNH2, SCN5A, KCNE1 |
