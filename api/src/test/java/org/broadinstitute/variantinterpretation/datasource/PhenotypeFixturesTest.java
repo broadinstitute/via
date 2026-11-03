@@ -96,6 +96,6 @@ class PhenotypeFixturesTest {
   }
 
   private static int participantsFor(long conceptId) {
-    return Map.of(9000010L, 49, 9000040L, 214, 9000050L, 391, 9000060L, 131).get(conceptId);
+    return Map.of(9000010L, 214, 9000040L, 214, 9000050L, 391, 9000060L, 131).get(conceptId);
   }
 }

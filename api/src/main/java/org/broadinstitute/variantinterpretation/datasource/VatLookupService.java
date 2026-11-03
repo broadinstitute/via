@@ -65,15 +65,25 @@ public class VatLookupService {
       List.of("afr", "amr", "asj", "eas", "fin", "nfe", "oth", "sas");
 
   // VAT consequence terms (VEP) that map onto the simplified labels used elsewhere in this
-  // table; anything else is left as an unclassified (null) row.
-  private static final Map<String, String> CONSEQUENCE_LABELS =
-      Map.of(
-          "missense_variant", "Missense",
-          "synonymous_variant", "Synonymous",
-          "stop_gained", "Nonsense",
-          "frameshift_variant", "Frameshift",
-          "splice_donor_variant", "Splice site",
-          "splice_acceptor_variant", "Splice site");
+  // table, most severe first; anything else is left as an unclassified (null) row. A variant
+  // carries several terms and the VAT doesn't order them, so the most severe labelled one wins:
+  // a coding label always beats a regulatory or intronic one on the same variant.
+  private static final List<Map.Entry<String, String>> CONSEQUENCE_LABELS =
+      List.of(
+          Map.entry("frameshift_variant", "Frameshift"),
+          Map.entry("stop_gained", "Nonsense"),
+          Map.entry("splice_donor_variant", "Splice site"),
+          Map.entry("splice_acceptor_variant", "Splice site"),
+          Map.entry("start_lost", "Start loss"),
+          Map.entry("stop_lost", "Stop loss"),
+          Map.entry("inframe_insertion", "In-frame indel"),
+          Map.entry("inframe_deletion", "In-frame indel"),
+          Map.entry("missense_variant", "Missense"),
+          Map.entry("splice_region_variant", "Splice region"),
+          Map.entry("synonymous_variant", "Synonymous"),
+          Map.entry("5_prime_UTR_variant", "5' UTR"),
+          Map.entry("3_prime_UTR_variant", "3' UTR"),
+          Map.entry("intron_variant", "Intronic"));
 
   private static final Map<String, CohortVariant.ClinvarSignificanceEnum> CLINVAR_SIGNIFICANCE =
       Map.of(
@@ -123,9 +133,9 @@ public class VatLookupService {
   private static CohortVariant vatRowToCohortVariant(FieldValueList row) {
     List<String> consequences = stringList(row, "consequence");
     String consequence =
-        consequences.stream()
-            .map(CONSEQUENCE_LABELS::get)
-            .filter(Objects::nonNull)
+        CONSEQUENCE_LABELS.stream()
+            .filter(entry -> consequences.contains(entry.getKey()))
+            .map(Map.Entry::getValue)
             .findFirst()
             .orElse(null);
 

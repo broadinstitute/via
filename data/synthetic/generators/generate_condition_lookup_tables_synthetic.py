@@ -46,13 +46,13 @@ CONCEPTS = [
      "Congenital heart disease", 310,
      "over-broad parent"),
     (TETRALOGY_OF_FALLOT,
-     "Tetralogy of Fallot", 47,
+     "Tetralogy of Fallot", 205,
      "primary target"),
     (TOF_PULMONARY_ATRESIA,
-     "Tetralogy of Fallot with pulmonary atresia", 6,
+     "Tetralogy of Fallot with pulmonary atresia", 25,
      "child of 9000010"),
     (TOF_ABSENT_PULMONARY_VALVE,
-     "Tetralogy of Fallot with absent pulmonary valve", 3,
+     "Tetralogy of Fallot with absent pulmonary valve", 8,
      "child of 9000010"),
     (PENTALOGY_OF_FALLOT,
      "Pentalogy of Fallot", 11,
@@ -133,18 +133,18 @@ ANCESTOR_EDGES = {
 #
 # What the ranges below are built to produce, after expansion through concept_ancestor:
 #
-#   cohort([9000010]) -> 49    40 + 6 + 3; seed-only matching gives 40, which is the
+#   cohort([9000010]) -> 214   180 + 26 + 8; seed-only matching gives 180, which is the
 #                              silent-undercount bug descendant expansion exists to prevent
-#   cohort([9000001]) -> 60    also pulls in Pentalogy: the "don't seed on a parent" failure
+#   cohort([9000001]) -> 225   also pulls in Pentalogy: the "don't seed on a parent" failure
 #   cohort([9000030]) -> 1200  high-prevalence anchor
 #   cohort([9000031]) -> 180   subset of the above
 #
 # Verified against BigQuery, not asserted here.
 PERSON_RANGES = {
-    TETRALOGY_OF_FALLOT: range(1, 41),        # 40
-    TOF_PULMONARY_ATRESIA: range(41, 47),     # 6
-    TOF_ABSENT_PULMONARY_VALVE: range(47, 50),  # 3
-    PENTALOGY_OF_FALLOT: range(200, 211),     # 11
+    TETRALOGY_OF_FALLOT: range(1, 181),        # 180
+    TOF_PULMONARY_ATRESIA: range(181, 207),    # 26
+    TOF_ABSENT_PULMONARY_VALVE: range(207, 215),  # 8
+    PENTALOGY_OF_FALLOT: range(300, 311),      # 11
 }
 
 T2DM_POOL = range(1000, 5001)   # disjoint from the ranges above
