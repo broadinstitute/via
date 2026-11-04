@@ -15,7 +15,9 @@ on:
       - "deploy/**"
       - ".github/workflows/docker-build-push.yml"
   # Run by hand (Actions > Build and push Docker image > Run workflow) to publish a branch so it
-  # can be tested in Workbench before merging. The image is tagged `:<branch>` and `:<sha>`
+  # can be tested in Workbench before merging. The image is tagged `:branch-<name>` and `:<sha>`.
+  # Branch tags carry the `branch-` prefix so a manual run can never overwrite `:latest`, which
+  # deploy/docker-compose.yaml pulls on every start.
   workflow_dispatch:
     inputs:
       branch:
@@ -36,8 +38,8 @@ jobs:
       contents: read
       id-token: write
     env:
-      # Pushes to main publish `:latest` and `:<sha>`; a manual run publishes `:<branch>` and
-      # `:<sha>`. Pull requests only validate that the image builds.
+      # Pushes to main publish `:latest` and `:<sha>`; a manual run publishes `:branch-<name>`
+      # and `:<sha>`. Pull requests only validate that the image builds.
       PUBLISH: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
       # The branch a manual run builds: the input if given, else the ref the run was started
       # from. Empty for the other events, which build the commit that triggered them.
@@ -45,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.BRANCH || github.ref }}
+          ref: ${{ env.BRANCH || github.sha }}
 
       - uses: docker/setup-buildx-action@v4
 
@@ -80,7 +82,9 @@ jobs:
               echo "${IMAGE_REF}:latest"
             else
               # Docker tags allow only [A-Za-z0-9_.-], so anything else (e.g. "/") becomes "-".
-              echo "${IMAGE_REF}:${BRANCH//[^A-Za-z0-9_.-]/-}"
+              # The prefix keeps a branch named "latest" (or any future reserved tag) in its own
+              # namespace: only a push to main ever writes `:latest`.
+              echo "${IMAGE_REF}:branch-${BRANCH//[^A-Za-z0-9_.-]/-}"
             fi
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
