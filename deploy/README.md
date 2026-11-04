@@ -23,7 +23,10 @@ Note: `startupscript/` lives at the repository root, not here — see
 
 - **Image**: pulled from `us-central1-docker.pkg.dev/dsp-artifact-registry/via/via:latest`,
   built by the [docker-build-push](../.github/workflows/docker-build-push.yml) workflow on
-  merge to `main`
+  merge to `main`. To test a branch before merging, run that workflow by hand (Actions >
+  Build and push Docker image > Run workflow), which publishes the branch as `via:branch-<name>`
+  (with `/` and other characters Docker tags disallow replaced by `-`) and `via:<sha>`; point
+  `docker-compose.yaml` at the branch tag on that branch, and back at `:latest` before merging
 - **Port**: 8080
 - **User**: via (unprivileged; see [AoU exfiltration controls](#aou-exfiltration-controls))
 - **Home Directory**: /home/via
