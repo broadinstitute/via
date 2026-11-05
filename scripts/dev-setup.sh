@@ -43,6 +43,13 @@ else
   bad "gcloud not found -- https://cloud.google.com/sdk/docs/install"
 fi
 
+if command -v jq >/dev/null; then
+  ok "jq installed"
+else
+  bad "jq not found -- needed to read your application default credentials"
+  note "e.g. brew install jq"
+fi
+
 # ---------------------------------------------------------------------------
 step "Environment (.env.local)"
 
@@ -57,7 +64,16 @@ if [[ -f "${ENV_FILE}" ]]; then
   . "${ENV_FILE}"
   ok "using your existing .env.local (delete it to regenerate)"
 else
-  WORKBENCH_USER_EMAIL="$(gcloud config get-value account 2>/dev/null || true)"
+  # Read the account from the application default credentials file (not the
+  # active gcloud account, which may differ).
+  adc_file="${GOOGLE_APPLICATION_CREDENTIALS:-${HOME}/.config/gcloud/application_default_credentials.json}"
+  WORKBENCH_USER_EMAIL=""
+  if [[ -f "${adc_file}" ]] && command -v jq >/dev/null; then
+    WORKBENCH_USER_EMAIL="$(jq -r '.account // .client_email // empty' "${adc_file}" 2>/dev/null || true)"
+  fi
+  if [[ -z "${WORKBENCH_USER_EMAIL}" ]]; then
+    echo "warning: could not find an account in ${adc_file}; run 'gcloud auth application-default login' and delete .env.local to regenerate" >&2
+  fi
   {
     printf 'export JAVA_HOME=%q\n' "${java_home}"
     printf 'export WORKBENCH_USER_EMAIL=%q\n' "${WORKBENCH_USER_EMAIL}"
