@@ -28,7 +28,7 @@ if [[ -n "${java_home}" ]] && "${java_home}/bin/java" -version 2>&1 | grep -q '"
   ok "Java 21 (${java_home})"
 else
   bad "no Java 21 JDK found -- api/build.gradle's toolchain needs one"
-  note "e.g. brew install --cask corretto@21"
+  note "e.g. brew install --cask corretto@21  # may require sudo"
 fi
 
 if command -v node >/dev/null && [[ "$(node -v | sed 's/v\([0-9]*\).*/\1/')" -ge 20 ]]; then
