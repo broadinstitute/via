@@ -762,8 +762,17 @@ components:
           description: >-
             False when phenotype-filtered cohort stats aren't available --
             currently, when the variant has no cohort-wide All of Us
-            frequency to derive them from. The numeric fields below are only
-            meaningful when true.
+            frequency to derive them from, or when unsupportedReason is set. The
+            numeric fields below are only meaningful when true.
+        unsupportedReason:
+          type: string
+          nullable: true
+          enum: [CHR_Y]
+          description: >-
+            Set when phenotype-matched cohorts can't be computed for this variant
+            at all, as opposed to its stats merely being unavailable. CHR_Y:
+            chromosome Y variants aren't supported. hasStats is false whenever
+            this is set.
         cohortAc:
           type: integer
           nullable: true

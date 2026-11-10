@@ -24,6 +24,7 @@ import { ChevronRightIcon, CompareIcon, EyeOffIcon, SortIcon, UserIcon } from ".
 import ClinvarBadge from "../elements/ClinvarBadge";
 import NotAvailable from "../elements/NotAvailable";
 import SubpopBadge from "../elements/SubpopBadge";
+import ChrYUnsupported from "./ChrYUnsupported";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PhenotypeFilterPrompt from "./PhenotypeFilterPrompt";
 import { useTooltip } from "../common/useTooltip";
@@ -450,6 +451,12 @@ const AOU_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.aou, messag
 const GNOMAD_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.gnomad, message: "Not observed in gnomAD" };
 /** No matched-participant statistics for a variant All of Us does have. */
 const MATCHED_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.matched, message: "No matched statistics" };
+
+/** chrY has no phenotype-matched statistics, so the matched columns say why instead of showing any. */
+const CHRY_MATCHED_MISSING_GROUP: MissingGroup = {
+  columnIds: TINT_COLUMN_IDS.matched,
+  message: <ChrYUnsupported />,
+};
 
 // Everything after the Variant column. A variant that isn't in All of Us has no VAT row, so it
 // has no annotations, no gnomAD data and no matched statistics either -- not because gnomAD lacks
@@ -1108,7 +1115,11 @@ export default function VariantsPanel({
                   : [
                       cohort.aouSubpopulation === null ? AOU_MISSING_GROUP : null,
                       cohort.gnomadSubpopulation === null ? GNOMAD_MISSING_GROUP : null,
-                      hasPhenotypeFilter && !row.original.matched ? MATCHED_MISSING_GROUP : null,
+                      row.original.matchedUnsupported
+                        ? CHRY_MATCHED_MISSING_GROUP
+                        : hasPhenotypeFilter && !row.original.matched
+                          ? MATCHED_MISSING_GROUP
+                          : null,
                     ].filter((group) => group !== null);
                 const hovered = hoveredRow === row.id;
                 const expanded = expandedVariants.has(row.original.variant);

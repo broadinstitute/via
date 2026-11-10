@@ -55,6 +55,14 @@ const MATCHED: FilteredVariantRow = {
   afRatio: 1.5,
 };
 
+const UNSUPPORTED_CHR_Y: FilteredVariantRow = {
+  variant: "Y-2787412-C-T",
+  gene: null,
+  consequence: null,
+  hasStats: false,
+  unsupportedReason: "CHR_Y",
+};
+
 const NOT_MATCHED: FilteredVariantRow = { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false };
 
 function renderPanel(
@@ -177,6 +185,20 @@ describe("VariantsPanel", () => {
     expect(detail.nextElementSibling).toBeNull();
     // No button without somewhere to send it.
     expect(within(screen.getByTestId("phenotype-prompt-cell")).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("shows a chrY variant's matched columns as unsupported, not as figures", () => {
+    const chrY: AnnotatedCohortVariant = { ...IN_AOU_ONLY, variant: "Y-2787412-C-T" };
+    renderPanel([IN_AOU_ONLY, chrY], [MATCHED, { ...UNSUPPORTED_CHR_Y, variant: "Y-2787412-C-T" }]);
+
+    const yRow = screen.getByText("Y-2787412-C-T").closest("tr")!;
+    expect(yRow).toHaveTextContent("chrY is not supported for phenotype-matched cohorts");
+    expect(within(yRow).getByRole("button", { name: "More information" })).toBeInTheDocument();
+
+    // Other chromosomes keep their figures and don't get the message.
+    const autosomeRow = screen.getByText("2-122517541-C-G").closest("tr")!;
+    expect(autosomeRow).toHaveTextContent("0.0204");
+    expect(autosomeRow).not.toHaveTextContent("chrY is not supported");
   });
 
   it("says it couldn't parse an entry that isn't a variant ID, rather than that it wasn't observed", () => {
