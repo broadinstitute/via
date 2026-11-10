@@ -21,6 +21,13 @@ cd "${REPO_ROOT}"
 # ---------------------------------------------------------------------------
 step "Prerequisites"
 
+if command -v jq >/dev/null; then
+  ok "jq installed"
+else
+  bad "jq not found -- needed to read your application default credentials"
+  note "e.g. brew install jq"
+fi
+
 # Gradle's toolchain (api/build.gradle) needs a JDK 21. Shims like jenv often
 # leave JAVA_HOME pointing at a different version, so prefer asking macOS.
 java_home="$(/usr/libexec/java_home -v 21 2>/dev/null || echo "${JAVA_HOME:-}")"
@@ -31,23 +38,27 @@ else
   note "e.g. brew install --cask corretto@21  # may require sudo"
 fi
 
-if command -v node >/dev/null && [[ "$(node -v | sed 's/v\([0-9]*\).*/\1/')" -ge 20 ]]; then
-  ok "Node $(node -v)"
+# ui/package.json's volta pin is the single source for the Node version (Vitest
+# 5 needs ^22.12 || ^24 || >=26, which the pin satisfies); anything at or above
+# it is accepted.
+node_required=""
+if command -v jq >/dev/null; then
+  node_required="$(jq -r '.volta.node // empty' ui/package.json)"
+fi
+if [[ -z "${node_required}" ]]; then
+  bad "could not read the required Node version (volta.node in ui/package.json)"
+elif command -v node >/dev/null \
+  && [[ "$(printf '%s\n%s\n' "${node_required}" "$(node -v | sed 's/^v//')" | sort -V | head -n1)" == "${node_required}" ]]; then
+  ok "Node $(node -v) (>= ${node_required})"
 else
-  bad "Node 20+ required (ui/package.json pins a version for volta users)"
+  bad "Node ${node_required}+ required for the UI (found: $(node -v 2>/dev/null || echo none))"
+  note "e.g. nvm install ${node_required} && nvm use ${node_required}"
 fi
 
 if command -v gcloud >/dev/null; then
   ok "gcloud installed"
 else
   bad "gcloud not found -- https://cloud.google.com/sdk/docs/install"
-fi
-
-if command -v jq >/dev/null; then
-  ok "jq installed"
-else
-  bad "jq not found -- needed to read your application default credentials"
-  note "e.g. brew install jq"
 fi
 
 # ---------------------------------------------------------------------------
