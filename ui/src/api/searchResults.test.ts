@@ -10,8 +10,8 @@ const EMPTY_RESPONSE = {
   filteredVariants: [],
 };
 
-function stubFetch() {
-  const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(EMPTY_RESPONSE) }));
+function stubFetch(response: object = EMPTY_RESPONSE) {
+  const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(response) }));
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
@@ -51,5 +51,34 @@ describe("fetchSearchResults", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock).toHaveBeenLastCalledWith("/api/search?variants=4-4-A-C");
+  });
+
+  it("keeps the reason a variant's matched stats are unsupported", async () => {
+    stubFetch({
+      ...EMPTY_RESPONSE,
+      filteredVariants: [
+        {
+          variant: "Y-49049039-C-A",
+          gene: "PALB2",
+          consequence: "Splice site",
+          hasStats: false,
+          unsupportedReason: "CHR_Y",
+          cohortAc: null,
+          cohortAn: null,
+          cohortAf: null,
+          homozygotes: null,
+          heterozygotes: null,
+          clinvarPlpInTrans: null,
+          afRatio: null,
+        },
+        { variant: "1-5-A-G", gene: null, consequence: null, hasStats: false },
+      ],
+    });
+
+    const results = await fetchSearchResults({ variants: ["Y-49049039-C-A", "1-5-A-G"], conditionConceptIds: [9000010] });
+
+    expect(results.filteredVariants[0]).toMatchObject({ variant: "Y-49049039-C-A", unsupportedReason: "CHR_Y" });
+    // Absent from the response, it reads as null rather than undefined.
+    expect(results.filteredVariants[1]).toMatchObject({ unsupportedReason: null });
   });
 });
