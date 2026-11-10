@@ -179,6 +179,13 @@ describe("VariantsPanel", () => {
     expect(within(screen.getByTestId("phenotype-prompt-cell")).queryByRole("button")).not.toBeInTheDocument();
   });
 
+  it("says it couldn't parse an entry that isn't a variant ID, rather than that it wasn't observed", () => {
+    renderPanel([{ annotated: false, variant: '"5-173232894-C-T",' }], []);
+
+    expect(screen.getByText(cellWithText("Couldn't parse variant"))).toBeInTheDocument();
+    expect(screen.queryByText(cellWithText("Not observed in All of Us"))).not.toBeInTheDocument();
+  });
+
   it("spans a variant that isn't in All of Us with one message across every scrolling data column", () => {
     renderPanel([NOT_IN_AOU], [NOT_MATCHED]);
 

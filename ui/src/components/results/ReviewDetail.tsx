@@ -6,6 +6,7 @@ import type { BreakdownSegment } from "../../types/results";
 import { ancestryContext, largestMatchedAncestry, type ComparisonRow } from "../../utils/comparison";
 import { clinvarSearchUrl } from "../../utils/externalLinks";
 import { describeAlternatives } from "../../utils/phenotypes";
+import { isParseableVariant } from "../../utils/variants";
 import {
   exactAf,
   formatAcAn,
@@ -328,7 +329,9 @@ export default function ReviewDetail({
             </div>
           ) : (
             <div style={styles.nameLine}>
-              <span style={styles.gene}>Not observed in <AllOfUs /></span>
+              <span style={styles.gene}>
+                {isParseableVariant(row.variant) ? <>Not observed in <AllOfUs /></> : "Couldn't parse variant"}
+              </span>
             </div>
           )}
           <div style={styles.descriptionLine}>
