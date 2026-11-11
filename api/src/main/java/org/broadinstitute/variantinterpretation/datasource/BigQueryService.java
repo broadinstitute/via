@@ -12,6 +12,8 @@ import java.util.Map;
 import org.broadinstitute.variantinterpretation.model.TableStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
@@ -35,10 +37,24 @@ public class BigQueryService {
 
   private final BigQuery bigQuery;
   private final QueryUsageMeter usage;
+  private final boolean logQueries;
 
   public BigQueryService(BigQuery bigQuery, QueryUsageMeter usage) {
+    this(bigQuery, usage, false);
+  }
+
+  /**
+   * @param logQueries whether to write each query's SQL and job statistics to the application
+   *     log ({@code bigquery.log-queries}). Off by default; useful for debugging.
+   */
+  @Autowired
+  public BigQueryService(
+      BigQuery bigQuery,
+      QueryUsageMeter usage,
+      @Value("${bigquery.log-queries:false}") boolean logQueries) {
     this.bigQuery = bigQuery;
     this.usage = usage;
+    this.logQueries = logQueries;
   }
 
   /**
@@ -49,7 +65,9 @@ public class BigQueryService {
   public Iterable<FieldValueList> query(QueryJobConfiguration.Builder builder, String name) {
     QueryJobConfiguration configuration =
         builder.setMaximumBytesBilled(MAXIMUM_BYTES_BILLED).setLabels(JOB_LABELS).build();
-    log.info("Running BigQuery query: {}", configuration.getQuery());
+    if (logQueries) {
+      log.info("Running BigQuery query: {}", configuration.getQuery());
+    }
     try {
       TableResult result = bigQuery.query(configuration);
       meter(name, result.getJobId());
@@ -74,11 +92,13 @@ public class BigQueryService {
         return;
       }
       usage.record(name, statistics);
-      log.info(
-          "BigQuery job {}: {} bytes billed, cache hit {}",
-          jobId.getJob(),
-          statistics.getTotalBytesBilled(),
-          statistics.getCacheHit());
+      if (logQueries) {
+        log.info(
+            "BigQuery job {}: {} bytes billed, cache hit {}",
+            jobId.getJob(),
+            statistics.getTotalBytesBilled(),
+            statistics.getCacheHit());
+      }
     } catch (RuntimeException e) {
       log.warn("Couldn't read statistics for BigQuery job {}", jobId, e);
       usage.recordUnknown(name);
