@@ -92,13 +92,11 @@ public class BigQueryService {
         return;
       }
       usage.record(name, statistics);
-      if (logQueries) {
-        log.info(
-            "BigQuery job {}: {} bytes billed, cache hit {}",
-            jobId.getJob(),
-            statistics.getTotalBytesBilled(),
-            statistics.getCacheHit());
-      }
+      log.info(
+          "BigQuery job {}: {} bytes billed, cache hit {}",
+          jobId.getJob(),
+          statistics.getTotalBytesBilled(),
+          statistics.getCacheHit());
     } catch (RuntimeException e) {
       log.warn("Couldn't read statistics for BigQuery job {}", jobId, e);
       usage.recordUnknown(name);
