@@ -6,6 +6,7 @@ import type { BreakdownSegment } from "../../types/results";
 import { ancestryContext, largestMatchedAncestry, type ComparisonRow } from "../../utils/comparison";
 import { clinvarSearchUrl } from "../../utils/externalLinks";
 import { describeAlternatives } from "../../utils/phenotypes";
+import { isParseableVariant } from "../../utils/variants";
 import {
   exactAf,
   formatAcAn,
@@ -24,6 +25,7 @@ import InfoLabel from "../common/InfoLabel";
 import InfoTooltip from "../common/InfoTooltip";
 import ClinvarBadge from "../elements/ClinvarBadge";
 import NotAvailable from "../elements/NotAvailable";
+import ChrYUnsupported from "./ChrYUnsupported";
 import VerdictGlyph from "./VerdictGlyph";
 import { verdictTone } from "./verdictTone";
 
@@ -175,6 +177,11 @@ const styles = {
     opacity: 0.85,
   },
   // Indented to start under the word, past the glyph.
+  chrYNote: {
+    margin: "0 0 8px",
+    color: colors.textMuted,
+    fontStyle: "italic",
+  },
   verdictSentence: {
     margin: "0 0 0 34px",
     fontSize: 12.5,
@@ -303,7 +310,9 @@ export default function ReviewDetail({
 }: ReviewDetailProps) {
   const { cohort, matched, enrichment } = row;
   const tone = verdictTone(enrichment);
-  const allAncestry = ancestryContext(cohort, ancestryBreakdown);
+  const unsupported = row.matchedUnsupported;
+  // With no phenotype-matched cohort for this variant, the matched ancestry makeup is left out too.
+  const allAncestry = ancestryContext(cohort, unsupported ? [] : ancestryBreakdown);
   // A group with no matched participants and no frequency in either source would be a row of
   // dashes, so it's left out; the ones that remain are the ones that bear on the verdict.
   const ancestry = allAncestry.filter(
@@ -328,7 +337,9 @@ export default function ReviewDetail({
             </div>
           ) : (
             <div style={styles.nameLine}>
-              <span style={styles.gene}>Not observed in <AllOfUs /></span>
+              <span style={styles.gene}>
+                {isParseableVariant(row.variant) ? <>Not observed in <AllOfUs /></> : "Couldn't parse variant"}
+              </span>
             </div>
           )}
           <div style={styles.descriptionLine}>
@@ -481,6 +492,11 @@ export default function ReviewDetail({
           >
             Head to head
           </SectionTitle>
+          {unsupported && (
+            <p style={styles.chrYNote}>
+              <ChrYUnsupported />
+            </p>
+          )}
           {cohort ? (
             <table style={styles.table}>
               <colgroup>
@@ -504,7 +520,7 @@ export default function ReviewDetail({
                 <CompareRow
                   metric="Participants"
                   left={cohort.aouAllAn !== null ? formatInt(Math.round(cohort.aouAllAn / 2)) : null}
-                  right={formatInt(participantCount)}
+                  right={unsupported ? null : formatInt(participantCount)}
                 />
                 <CompareRow
                   metric="Allele frequency"
@@ -627,6 +643,7 @@ export default function ReviewDetail({
 function verdictSentence(row: ComparisonRow, condition: string): ReactNode {
   const { cohort, matched, enrichment } = row;
   if (!cohort) return "This variant has no cohort-wide frequency, so there is nothing to compare against.";
+  if (row.matchedUnsupported) return <ChrYUnsupported />;
   if (!matched) return "No phenotype-matched statistics exist for this variant yet.";
   if (!enrichment) {
     const exceeds =

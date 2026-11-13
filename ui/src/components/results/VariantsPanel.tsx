@@ -15,6 +15,7 @@ import { mergeVariantRows, type MergedVariantRow } from "../../utils/comparison"
 import { clinvarSearchUrl, gnomadVariantUrl } from "../../utils/externalLinks";
 import { exactAf, formatAcAn, formatAf, formatInt } from "../../utils/format";
 import { describeAlternatives } from "../../utils/phenotypes";
+import { isParseableVariant } from "../../utils/variants";
 import { AOU_SUBPOP_CODES, GNOMAD_SUBPOP_CODES } from "../../utils/subpopulations";
 import Clickable from "../common/Clickable";
 import AllOfUs from "../common/AllOfUs";
@@ -23,6 +24,7 @@ import { ChevronRightIcon, CompareIcon, EyeOffIcon, SortIcon, UserIcon } from ".
 import ClinvarBadge from "../elements/ClinvarBadge";
 import NotAvailable from "../elements/NotAvailable";
 import SubpopBadge from "../elements/SubpopBadge";
+import ChrYUnsupported from "./ChrYUnsupported";
 import ClinvarExpanderDetail from "./ClinvarExpanderDetail";
 import PhenotypeFilterPrompt from "./PhenotypeFilterPrompt";
 import { useTooltip } from "../common/useTooltip";
@@ -450,12 +452,21 @@ const GNOMAD_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.gnomad, 
 /** No matched-participant statistics for a variant All of Us does have. */
 const MATCHED_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.matched, message: "No matched statistics" };
 
+/** chrY has no phenotype-matched statistics, so the matched columns say why instead of showing any. */
+const CHRY_MATCHED_MISSING_GROUP: MissingGroup = {
+  columnIds: TINT_COLUMN_IDS.matched,
+  message: <ChrYUnsupported />,
+};
+
 // Everything after the Variant column. A variant that isn't in All of Us has no VAT row, so it
 // has no annotations, no gnomAD data and no matched statistics either -- not because gnomAD lacks
 // it, but because the VAT only covers variants All of Us has seen. One message across the row
 // says so, rather than a "not observed in gnomAD" that may not be true.
 /** Below this many rows the no-phenotype prompt takes its one-line layout, so it doesn't stretch them. */
 const COMPACT_PROMPT_BELOW_ROWS = 4;
+
+const UNPARSEABLE_MESSAGE = "Couldn't parse variant";
+const UNPARSEABLE_TITLE = "Expected a variant like 8-11708582-C-T: chromosome, position, ref and alt, separated by dashes.";
 
 const UNANNOTATED_GROUP: MissingGroup = {
   columnIds: new Set([
@@ -470,6 +481,12 @@ const UNANNOTATED_GROUP: MissingGroup = {
   message: NOT_IN_AOU,
   title:
     "Annotations and gnomAD frequencies come from the All of Us variant annotation table, which only includes variants observed in All of Us.",
+};
+/** The same span for an entry that isn't a variant ID at all. */
+const UNPARSEABLE_GROUP: MissingGroup = {
+  ...UNANNOTATED_GROUP,
+  message: UNPARSEABLE_MESSAGE,
+  title: UNPARSEABLE_TITLE,
 };
 
 // The chevron takes its colour from its cell, which the row loop sets to the accent while the
@@ -1094,11 +1111,15 @@ export default function VariantsPanel({
                 // A source with no data for this variant collapses its whole column group into one
                 // "not observed" cell, rather than a row of bare dashes.
                 const missingGroups: MissingGroup[] = !cohort.annotated
-                  ? [UNANNOTATED_GROUP]
+                  ? [isParseableVariant(row.original.variant) ? UNANNOTATED_GROUP : UNPARSEABLE_GROUP]
                   : [
                       cohort.aouSubpopulation === null ? AOU_MISSING_GROUP : null,
                       cohort.gnomadSubpopulation === null ? GNOMAD_MISSING_GROUP : null,
-                      hasPhenotypeFilter && !row.original.matched ? MATCHED_MISSING_GROUP : null,
+                      row.original.matchedUnsupported
+                        ? CHRY_MATCHED_MISSING_GROUP
+                        : hasPhenotypeFilter && !row.original.matched
+                          ? MATCHED_MISSING_GROUP
+                          : null,
                     ].filter((group) => group !== null);
                 const hovered = hoveredRow === row.id;
                 const expanded = expandedVariants.has(row.original.variant);
@@ -1224,12 +1245,25 @@ export default function VariantsPanel({
                                 </span>
                                 <div>
                                   <p style={styles.detailEmptyTitle}>
-                                    Not observed in <AllOfUs />
+                                    {isParseableVariant(row.original.variant) ? (
+                                      <>
+                                        Not observed in <AllOfUs />
+                                      </>
+                                    ) : (
+                                      UNPARSEABLE_MESSAGE
+                                    )}
                                   </p>
                                   <p style={styles.detailEmptyText}>
-                                    VIA only shows annotations and frequencies for variants found in <AllOfUs />,
-                                    so there's nothing to show here. This variant may still be in gnomAD or ClinVar.
+                                    {isParseableVariant(row.original.variant) ? (
+                                      <>
+                                        VIA only shows annotations and frequencies for variants found in <AllOfUs />,
+                                        so there's nothing to show here. This variant may still be in gnomAD or ClinVar.
+                                      </>
+                                    ) : (
+                                      UNPARSEABLE_TITLE
+                                    )}
                                   </p>
+                                  {isParseableVariant(row.original.variant) && (
                                   <div style={styles.detailEmptyLinks}>
                                     {[
                                       { label: "Look up in gnomAD ↗", href: gnomadVariantUrl(row.original.variant) },
@@ -1247,6 +1281,7 @@ export default function VariantsPanel({
                                       </a>
                                     ))}
                                   </div>
+                                  )}
                                 </div>
                               </div>
                             </div>

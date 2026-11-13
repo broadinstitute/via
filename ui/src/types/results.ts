@@ -63,6 +63,11 @@ interface FilteredVariantBase {
   gene: string | null;
   /** Some variants have consequence annotation even when cohort-filtered stats don't exist yet. */
   consequence: string | null;
+  /**
+   * Set when phenotype-matched cohorts can't be computed for this variant at all, rather than its
+   * stats merely being unavailable. Only ever on a row without stats.
+   */
+  unsupportedReason?: "CHR_Y" | null;
 }
 
 export interface FilteredVariantWithStats extends FilteredVariantBase {

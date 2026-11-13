@@ -91,6 +91,31 @@ class MockPhenotypeDataTest {
     assertThat(filtered).anyMatch(variant -> variant.getCohortAc().orElseThrow() > 0);
   }
 
+  /**
+   * chrY has no phenotype-matched cohort: the entry stays, in place so the list still lines up with
+   * the cohort variants, but with no stats and a reason the UI can show.
+   */
+  @Test
+  void filteredVariants_markChrYUnsupportedInPlaceWithoutStats() {
+    List<CohortVariant> variants =
+        List.of(
+            annotated("1-1000-A-G", "0.4").aouAllAc(3).aouAllAn(480_000),
+            annotated("Y-2787412-C-T", "0.4").gene("SRY").aouAllAc(3).aouAllAn(480_000),
+            annotated("2-2000-C-T", "0.4").aouAllAc(3).aouAllAn(480_000));
+
+    List<FilteredVariant> filtered = MockPhenotypeData.filteredVariants(variants, 978);
+
+    assertThat(filtered).extracting(FilteredVariant::getVariant).containsExactly("1-1000-A-G", "Y-2787412-C-T", "2-2000-C-T");
+    FilteredVariant y = filtered.get(1);
+    assertThat(y.getHasStats()).isFalse();
+    assertThat(y.getUnsupportedReason().orElse(null)).isEqualTo(FilteredVariant.UnsupportedReasonEnum.CHR_Y);
+    assertThat(y.getGene().orElseThrow()).isEqualTo("SRY");
+    assertThat(y.getCohortAc().orElse(null)).isNull();
+    // Everything else is untouched.
+    assertThat(filtered.get(0).getUnsupportedReason().orElse(null)).isNull();
+    assertThat(filtered.get(2).getUnsupportedReason().orElse(null)).isNull();
+  }
+
   /** A cohort larger than the whole table's allele number can't exist, so it gets no statistics. */
   @Test
   void filteredVariants_giveNoStatsWhenTheCohortOutgrowsTheTable() {
