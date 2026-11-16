@@ -3,7 +3,7 @@ plugins {
   id 'jacoco'
   id 'org.springframework.boot' version '4.1.2'
   id 'io.spring.dependency-management' version '1.1.7'
-  id 'org.openapi.generator' version '7.26.0'
+  id 'org.openapi.generator' version '7.27.0'
 }
 
 group = 'org.broadinstitute'
@@ -21,7 +21,7 @@ repositories {
 }
 
 dependencies {
-  implementation platform('com.google.cloud:libraries-bom:26.91.0')
+  implementation platform('com.google.cloud:libraries-bom:26.93.0')
 
   implementation 'org.springframework.boot:spring-boot-starter-web'
   implementation 'org.springframework.boot:spring-boot-starter-validation'
