@@ -44,8 +44,8 @@ public class BigQueryService {
   }
 
   /**
-   * @param logQueries whether to write each query's SQL and job statistics to the application
-   *     log ({@code bigquery.log-queries}). Off by default; useful for debugging.
+   * @param logQueries whether to write each query's SQL to the application log
+   *     ({@code bigquery.log-queries}). Off by default; useful for debugging.
    */
   @Autowired
   public BigQueryService(
