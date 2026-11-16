@@ -38,9 +38,10 @@ else
   note "e.g. brew install --cask corretto@21  # may require sudo"
 fi
 
-# ui/package.json's volta pin is the single source for the Node version (Vitest
-# 5 needs ^22.12 || ^24 || >=26, which the pin satisfies); anything at or above
-# it is accepted.
+# ui/package.json's volta pin is the single source for the Node version; keep it
+# within the UI dependencies' engines ranges (e.g. jsdom needs
+# ^22.22.2 || ^24.15.0 || >=26.0.0, see ui/package-lock.json). Anything at or
+# above the pin is accepted.
 node_required=""
 if command -v jq >/dev/null; then
   node_required="$(jq -r '.volta.node // empty' ui/package.json)"
@@ -83,18 +84,22 @@ else
     WORKBENCH_USER_EMAIL="$(jq -r '.account // .client_email // empty' "${adc_file}" 2>/dev/null || true)"
   fi
   if [[ -z "${WORKBENCH_USER_EMAIL}" ]]; then
-    echo "warning: could not find an account in ${adc_file}; run 'gcloud auth application-default login' and delete .env.local to regenerate" >&2
+    # Don't write .env.local without an email: later runs would source it and
+    # never notice, so the problem would stick around.
+    bad "could not find an account in ${adc_file}; not writing .env.local"
+    note "run: gcloud auth application-default login (and make sure jq is installed), then re-run"
+  else
+    {
+      printf 'export JAVA_HOME=%q\n' "${java_home}"
+      printf 'export WORKBENCH_USER_EMAIL=%q\n' "${WORKBENCH_USER_EMAIL}"
+      printf 'export VAT_PROJECT_ID=%q\n' "${VAT_PROJECT_ID}"
+      printf 'export VAT_DATASET_ID=%q\n' "${VAT_DATASET_ID}"
+      printf 'export VAT_TABLE_ID=%q\n' "${VAT_TABLE_ID}"
+      printf 'export GOOGLE_PROJECT=%q\n' "${GOOGLE_PROJECT}"
+      printf 'export WORKSPACE_CDR=%q\n' "${WORKSPACE_CDR}"
+    } > "${ENV_FILE}"
+    ok "wrote ${ENV_FILE}"
   fi
-  {
-    printf 'export JAVA_HOME=%q\n' "${java_home}"
-    printf 'export WORKBENCH_USER_EMAIL=%q\n' "${WORKBENCH_USER_EMAIL}"
-    printf 'export VAT_PROJECT_ID=%q\n' "${VAT_PROJECT_ID}"
-    printf 'export VAT_DATASET_ID=%q\n' "${VAT_DATASET_ID}"
-    printf 'export VAT_TABLE_ID=%q\n' "${VAT_TABLE_ID}"
-    printf 'export GOOGLE_PROJECT=%q\n' "${GOOGLE_PROJECT}"
-    printf 'export WORKSPACE_CDR=%q\n' "${WORKSPACE_CDR}"
-  } > "${ENV_FILE}"
-  ok "wrote ${ENV_FILE}"
 fi
 note "table: ${VAT_PROJECT_ID}.${VAT_DATASET_ID}.${VAT_TABLE_ID}"
 note "billing project (GOOGLE_PROJECT): ${GOOGLE_PROJECT}"
