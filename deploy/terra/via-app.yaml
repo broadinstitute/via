@@ -1,0 +1,34 @@
+# App descriptor for running VIA as a Leonardo custom app (community Terra, GKE).
+#
+# Not used by the Verily Workbench deployment, which is driven by ../.devcontainer.json.
+# Schema: https://github.com/DataBiosphere/terra-app#app-schema (Leonardo's parser is
+# HttpAppDescriptorDAO.scala). Leonardo fetches this file over plain HTTP when an app is created, so
+# `descriptorPath` must be a stable raw URL, e.g.
+#   https://raw.githubusercontent.com/<org>/via/<ref>/deploy/terra/via-app.yaml
+# That exact URL must also be on the deployment's `customApplicationAllowList` (reference.conf)
+# if the Google project carries a `security-group` label; see docs in deploy/terra/README.md.
+name: via
+author: Broad Institute
+description: VIA (Variant Interpretation Application) -- compares candidate variants against a BigQuery cohort.
+version: "0.1.0"
+
+# Leonardo reads only the FIRST service. Its key becomes the last segment of the proxy URL:
+#   /proxy/google/v1/apps/{project}/{app-name}/via/
+services:
+  via:
+    # Same image Workbench runs (see ../docker-compose.yaml). The GKE node service account must be
+    # able to pull it: make the repository public, or grant it roles/artifactregistry.reader.
+    # Prefer a pinned tag (via:<sha>) over :latest so an app's behaviour doesn't change on restart.
+    image: us-central1-docker.pkg.dev/dsp-artifact-registry/via/via:latest
+    port: 8080
+
+    # Leave baseUrl unset ("/"): Leonardo then rewrites the proxy prefix away, so Spring Boot sees
+    # plain `/` and `/api/...`. The UI works out the prefix itself (ui/src/utils/basePath.ts).
+    # A non-"/" baseUrl switches that rewrite off and would break routing.
+
+    # VIA keeps no state, but Leonardo mounts a persistent disk here regardless.
+    pdMountPath: /data
+
+    # NOTE: Leonardo parses an `environment:` map here but does not apply it to the pod
+    # (BuildHelmChartValues.scala only forwards `customEnvironmentVariables` from the create-app
+    # request). So nothing goes here; set the variables in the request instead, see README.md.
