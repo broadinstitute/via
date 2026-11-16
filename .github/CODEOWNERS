@@ -1,0 +1,5 @@
+# Every PR requests a review from the VIA engineering team. The team's code review
+# assignment setting will pick one engineer round-robin. See team review settings here:
+# https://github.com/orgs/broadinstitute/teams/via-eng/edit/review_assignment
+
+*    @broadinstitute/via-eng
