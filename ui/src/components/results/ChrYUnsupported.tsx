@@ -1,31 +1,25 @@
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import { useHover } from "../../libs/hooks";
-import InfoLabel from "../common/InfoLabel";
 
 const KNOWN_ISSUE_URL = "https://support.researchallofus.org/hc/en-us/article_attachments/55135196701076";
 
-// The tooltip can't hold the link: it isn't interactive (it vanishes when the pointer leaves the
-// icon), so the link sits beside the label instead.
-const CHRY_TOOLTIP =
-  "Phenotype-matched cohorts aren't available for chromosome Y variants due to a known issue in the All of Us " +
-  "dataset. See Known Issue #5 in the CDRv9 Genomic & Multi-omic Research Data Quality Report.";
-
 const styles = {
-  wrap: { display: "inline-flex", alignItems: "center", flexWrap: "wrap", columnGap: 8 },
+  wrap: { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 },
+  wrapCentered: { alignItems: "center", textAlign: "center" },
   link: { color: colors.textAccent, fontSize: 11, fontWeight: 600, textDecoration: "none" },
   linkHover: { textDecoration: "underline" },
 } as const satisfies Record<string, CSSProperties>;
 
 /**
  * Stands in for every phenotype-matched figure of a chromosome Y variant, in the table and in
- * Review, with the reason on hover and a link to the All of Us report that documents it.
+ * Review (`centered` for the table's merged cell): the message, then a link to the All of Us report that documents the reason.
  */
-export default function ChrYUnsupported() {
+export default function ChrYUnsupported({ centered = false }: { centered?: boolean }) {
   const { hovered, hoverProps } = useHover();
   return (
-    <span style={styles.wrap}>
-      <InfoLabel tooltip={CHRY_TOOLTIP}>chrY is not supported for phenotype-matched cohorts</InfoLabel>
+    <span style={{ ...styles.wrap, ...(centered ? styles.wrapCentered : undefined) }}>
+      <span>chrY is not supported for phenotype-matched cohorts</span>
       <a
         style={{ ...styles.link, ...(hovered ? styles.linkHover : undefined) }}
         href={KNOWN_ISSUE_URL}
@@ -34,7 +28,7 @@ export default function ChrYUnsupported() {
         onClick={(event) => event.stopPropagation()}
         {...hoverProps}
       >
-        Known Issue #5 ↗
+        See Known Issue #5 in the CDRv9 Quality Report ↗
       </a>
     </span>
   );

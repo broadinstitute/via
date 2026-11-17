@@ -455,7 +455,7 @@ const MATCHED_MISSING_GROUP: MissingGroup = { columnIds: TINT_COLUMN_IDS.matched
 /** chrY has no phenotype-matched statistics, so the matched columns say why instead of showing any. */
 const CHRY_MATCHED_MISSING_GROUP: MissingGroup = {
   columnIds: TINT_COLUMN_IDS.matched,
-  message: <ChrYUnsupported />,
+  message: <ChrYUnsupported centered />,
 };
 
 // Everything after the Variant column. A variant that isn't in All of Us has no VAT row, so it
