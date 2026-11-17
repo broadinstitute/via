@@ -193,7 +193,7 @@ describe("VariantsPanel", () => {
 
     const yRow = screen.getByText("Y-2787412-C-T").closest("tr")!;
     expect(yRow).toHaveTextContent("chrY is not supported for phenotype-matched cohorts");
-    expect(within(yRow).getByRole("link", { name: "See Known Issue #5 in the CDRv9 Quality Report ↗" })).toHaveAttribute(
+    expect(within(yRow).getByRole("link", { name: "See Known Issue #5 in the CDRv9 Quality Report" })).toHaveAttribute(
       "href",
       "https://support.researchallofus.org/hc/en-us/article_attachments/55135196701076",
     );

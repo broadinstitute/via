@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
 import { useHover } from "../../libs/hooks";
+import { ExternalLinkIcon } from "../icons";
 
 const KNOWN_ISSUE_URL = "https://support.researchallofus.org/hc/en-us/article_attachments/55135196701076";
 
@@ -9,6 +10,8 @@ const styles = {
   wrapCentered: { alignItems: "center", textAlign: "center" },
   link: { color: colors.textAccent, fontSize: 11, fontWeight: 600, textDecoration: "none" },
   linkHover: { textDecoration: "underline" },
+  // A margin rather than a space, so the hover underline stops at the text.
+  linkIcon: { marginLeft: 4, verticalAlign: "-1px" },
 } as const satisfies Record<string, CSSProperties>;
 
 /**
@@ -28,7 +31,8 @@ export default function ChrYUnsupported({ centered = false }: { centered?: boole
         onClick={(event) => event.stopPropagation()}
         {...hoverProps}
       >
-        See Known Issue #5 in the CDRv9 Quality Report ↗
+        See Known Issue #5 in the CDRv9 Quality Report
+        <ExternalLinkIcon size={11} style={styles.linkIcon} aria-hidden="true" />
       </a>
     </span>
   );

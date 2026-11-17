@@ -47,8 +47,7 @@ interface RawFilteredVariant {
   gene: string | null;
   consequence: string | null;
   hasStats: boolean;
-  // Optional: absent from an API that predates it.
-  unsupportedReason?: "CHR_Y" | null;
+  unsupportedReason: "CHR_Y" | null;
   cohortAc: number | null;
   cohortAn: number | null;
   cohortAf: number | null;
