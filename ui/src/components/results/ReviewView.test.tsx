@@ -63,6 +63,7 @@ const MATCHED: FilteredVariantRow[] = [
     heterozygotes: 6,
     clinvarPlpInTrans: 1,
     afRatio: 25,
+    unsupportedReason: null,
   },
   {
     variant: "1-100-A-T",
@@ -76,8 +77,9 @@ const MATCHED: FilteredVariantRow[] = [
     heterozygotes: 3,
     clinvarPlpInTrans: 0,
     afRatio: 1,
+    unsupportedReason: null,
   },
-  { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false },
+  { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false, unsupportedReason: null },
 ];
 
 const ANCESTRY = [

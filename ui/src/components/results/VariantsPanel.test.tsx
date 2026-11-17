@@ -53,6 +53,7 @@ const MATCHED: FilteredVariantRow = {
   heterozygotes: 2,
   clinvarPlpInTrans: 0,
   afRatio: 1.5,
+  unsupportedReason: null,
 };
 
 const UNSUPPORTED_CHR_Y: FilteredVariantRow = {
@@ -63,7 +64,7 @@ const UNSUPPORTED_CHR_Y: FilteredVariantRow = {
   unsupportedReason: "CHR_Y",
 };
 
-const NOT_MATCHED: FilteredVariantRow = { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false };
+const NOT_MATCHED: FilteredVariantRow = { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false, unsupportedReason: null };
 
 function renderPanel(
   cohortVariants: CohortVariantRow[],

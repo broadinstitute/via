@@ -55,6 +55,7 @@ const MATCHED: FilteredVariantRow = {
   heterozygotes: 6,
   clinvarPlpInTrans: 1,
   afRatio: 25,
+  unsupportedReason: null,
 };
 
 describe("ancestryAdjustedExpectation", () => {
@@ -74,7 +75,7 @@ describe("ancestryAdjustedExpectation", () => {
 describe("mergeVariantRows", () => {
   it("joins matched statistics onto each cohort row by variant, keeping the candidate order", () => {
     const unseen = { annotated: false as const, variant: "7-55181378-G-A" };
-    const noStats: FilteredVariantRow = { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false };
+    const noStats: FilteredVariantRow = { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false, unsupportedReason: null };
     const rows = mergeVariantRows([unseen, ANNOTATED], [MATCHED, noStats]);
 
     expect(rows.map((row) => row.variant)).toEqual(["7-55181378-G-A", "2-122517541-C-G"]);
@@ -112,7 +113,7 @@ describe("buildComparisonRows / sortByEnrichment", () => {
     const flatMatched: FilteredVariantRow = { ...MATCHED, variant: "1-100-A-T", cohortAc: 3, cohortAn: 200, cohortAf: 0.015, afRatio: 1 };
     const rows = buildComparisonRows(
       [flat, ANNOTATED, { annotated: false, variant: "7-1-G-A" }],
-      [MATCHED, flatMatched, { variant: "7-1-G-A", gene: null, consequence: null, hasStats: false }],
+      [MATCHED, flatMatched, { variant: "7-1-G-A", gene: null, consequence: null, hasStats: false, unsupportedReason: null }],
       [{ label: "AFR", count: 100, percent: 100, color: "#000" }],
     );
 

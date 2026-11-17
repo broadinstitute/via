@@ -47,7 +47,7 @@ interface RawFilteredVariant {
   gene: string | null;
   consequence: string | null;
   hasStats: boolean;
-  unsupportedReason: "CHR_Y" | null;
+  unsupportedReason?: "CHR_Y" | null;
   cohortAc: number | null;
   cohortAn: number | null;
   cohortAf: number | null;
@@ -138,6 +138,7 @@ function toFilteredVariantRow(raw: RawFilteredVariant): FilteredVariantRow {
     heterozygotes: raw.heterozygotes!,
     clinvarPlpInTrans: raw.clinvarPlpInTrans!,
     afRatio: raw.afRatio!,
+    unsupportedReason: null,
   };
 }
 

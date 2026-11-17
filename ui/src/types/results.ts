@@ -67,7 +67,7 @@ interface FilteredVariantBase {
    * Set when phenotype-matched cohorts can't be computed for this variant at all, rather than its
    * stats merely being unavailable. Only ever on a row without stats.
    */
-  unsupportedReason?: "CHR_Y" | null;
+  unsupportedReason: "CHR_Y" | null;
 }
 
 export interface FilteredVariantWithStats extends FilteredVariantBase {
