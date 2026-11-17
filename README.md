@@ -41,7 +41,7 @@ gcloud auth application-default login   # if you haven't already
 ./scripts/dev-setup.sh
 ```
 
-`dev-setup.sh` checks your local environment for JDK 21, Node 20+ and gcloud, writes
+`dev-setup.sh` checks your local environment for JDK 21, Node, jq and gcloud, writes
 `.env.local`, and uses your Application Default Credentials to confirm you can
 actually read the configured BigQuery tables. If needed, delete `.env.local` to
 regenerate it from scratch.
