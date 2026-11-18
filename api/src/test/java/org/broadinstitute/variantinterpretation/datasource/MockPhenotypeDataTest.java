@@ -114,6 +114,8 @@ class MockPhenotypeDataTest {
     // Everything else is untouched.
     assertThat(filtered.get(0).getUnsupportedReason().orElse(null)).isNull();
     assertThat(filtered.get(2).getUnsupportedReason().orElse(null)).isNull();
+    // Null but present, so it's in the JSON like the other nullable fields (undefined is omitted).
+    assertThat(filtered).allSatisfy(row -> assertThat(row.getUnsupportedReason().isPresent()).isTrue());
   }
 
   /** A cohort larger than the whole table's allele number can't exist, so it gets no statistics. */

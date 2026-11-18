@@ -269,7 +269,8 @@ public final class MockPhenotypeData {
         .homozygotes(homozygotes)
         .heterozygotes(cohortAc - 2 * homozygotes)
         .clinvarPlpInTrans(plpInTrans)
-        .afRatio(BigDecimal.valueOf(cohortAf / aouAllAf).setScale(2, RoundingMode.HALF_UP));
+        .afRatio(BigDecimal.valueOf(cohortAf / aouAllAf).setScale(2, RoundingMode.HALF_UP))
+        .unsupportedReason(null);
   }
 
   private static FilteredVariant unsupportedChrY(CohortVariant cohortVariant) {
@@ -292,7 +293,8 @@ public final class MockPhenotypeData {
         .homozygotes(null)
         .heterozygotes(null)
         .clinvarPlpInTrans(null)
-        .afRatio(null);
+        .afRatio(null)
+        .unsupportedReason(null);
   }
 
   // Seeded off the vid so a variant's stats are stable across requests (and across restarts) --
