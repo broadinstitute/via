@@ -81,6 +81,68 @@ because that is the service's name in `via-app.yaml`.
   settings > Change visibility. (An org owner may need to allow public packages first.)
   To test a branch, run the workflow by hand on that branch and use the `branch-<name>` tag in
   `via-app.yaml`.
-- The user's pet service account can run BigQuery jobs in `GOOGLE_PROJECT` and read the CDR and VAT
-  datasets. The CDR is All of Us data, which community Terra doesn't have, so these tables must be
-  supplied (`data/synthetic/` can produce a demo set).
+- The user's pet service account / proxy group has these BigQuery roles:
+  - **BigQuery Job User** (`roles/bigquery.jobUser`) on `GOOGLE_PROJECT`, the project query jobs are
+    billed to.
+  - **BigQuery Data Viewer** (`roles/bigquery.dataViewer`) on the CDR and VAT datasets (or the
+    projects that hold them).
+
+  Without these, `/api/status` fails its BigQuery access checks.
+
+  The CDR is All of Us data, which community Terra doesn't have, so these tables must be supplied
+  (`data/synthetic/` can produce a demo set).
+
+## Testing a deployment
+
+Opening the proxy URL in a plain browser tab returns `401 Your account is not authenticated` from
+Leonardo, before the request reaches VIA. Leonardo's app proxy needs both of these
+(`ProxyRoutes.scala` in Leonardo):
+
+1. **A user token**: an `Authorization: Bearer <Google access token>` header, or the `LeoToken`
+   cookie that `GET /proxy/setCookie` sets when called with that header.
+2. **A passing referer check**, where it is enabled (it is in BEEs and production). The request
+   needs a `Referer` (or `Origin`) whose host is in the deployment's `VALID_HOSTS`, or
+   `Sec-Fetch-Site: same-origin`. A direct page load sends none of these, so it fails. BEEs list
+   `*`, so any `Referer` value passes there; production lists only Terra's own hosts.
+
+Terra UI normally provides both when it opens an app. Without it, supply them yourself.
+
+### Backend, with curl
+
+```bash
+curl "<proxyUrl>api/profile" \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Sec-Fetch-Site: same-origin"
+```
+
+`<proxyUrl>` is the `via` entry of `proxyUrls` (see above), ending in `/`. Put the options after the
+URL; with them first, this failed for us. `/api/profile` should return the email you passed as
+`WORKBENCH_USER_EMAIL`, which also confirms the environment variables arrived. `/api/status` runs
+the BigQuery access checks, so a successful response there confirms the pet service account and the
+datasets are set up.
+
+A `401` with `AuthenticationError` and a null `traceId` means one of the two requirements above is
+missing. Leonardo logs the reason (`Referer header is missing and no valid Origin or Sec-Fetch-Site`
+for the referer check). Check the token with a normal Leonardo call:
+`GET /api/google/v1/apps/{googleProject}/{appName}` with the same header.
+
+### UI, in a browser
+
+Use a header-modifying extension such as ModHeader, restricted to the Leonardo host so the token
+isn't sent anywhere else (URL pattern filter, e.g.
+`https://leonardo\.<env>\.bee\.envs-terra\.bio/.*`). Add two request headers:
+
+- `Authorization: Bearer <output of gcloud auth print-access-token>`
+- `Referer: https://bvdp-saturn-dev.appspot.com/` (any host works in a BEE; elsewhere it must be
+  one of that deployment's `VALID_HOSTS`)
+
+Then open `<proxyUrl>`. Tokens expire after about an hour; refresh the header when requests start
+returning 401. In devtools, assets should load from `.../via/assets/...` and API calls go to
+`.../via/api/...` (see `ui/src/utils/basePath.ts`).
+
+### Real users
+
+Whoever opens the app needs the cookie and a valid referer without any extension. Terra UI does both
+for the apps it launches; whether the community Terra UI launches custom apps is unconfirmed. If it
+doesn't, users need a helper page on a valid-referer host that calls `/proxy/setCookie` and then
+links to the app.
