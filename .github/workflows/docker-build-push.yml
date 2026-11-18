@@ -30,6 +30,11 @@ env:
   PROJECT_ID: dsp-artifact-registry
   REPOSITORY: via
   IMAGE: via
+  # Also published to GHCR for community Terra: Leonardo only accepts gcr.io, ghcr.io and Docker Hub
+  # images in a custom app descriptor, not Artifact Registry (see deploy/terra/README.md). Must be
+  # lowercase. The package has to be made public once (repo > Packages > via > Package settings) so
+  # GKE nodes can pull it without credentials.
+  GHCR_IMAGE_REF: ghcr.io/broadinstitute/via
 
 jobs:
   build:
@@ -37,6 +42,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      packages: write
     env:
       # Pushes to main publish `:latest` and `:<sha>`; a manual run publishes `:branch-<name>`
       # and `:<sha>`. Pull requests only validate that the image builds.
@@ -68,24 +74,35 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
 
+      - name: Log in to GitHub Container Registry
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Determine image tags
         id: meta
         if: env.PUBLISH == 'true'
         env:
-          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}
+          AR_IMAGE_REF: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}
         run: |
           sha="$(git rev-parse HEAD)"
+          # Docker tags allow only [A-Za-z0-9_.-], so anything else (e.g. "/") becomes "-".
+          # The prefix keeps a branch named "latest" (or any future reserved tag) in its own
+          # namespace: only a push to main ever writes `:latest`.
+          if [[ -z "${BRANCH}" ]]; then
+            moving_tag="latest"
+          else
+            moving_tag="branch-${BRANCH//[^A-Za-z0-9_.-]/-}"
+          fi
           {
             echo "tags<<EOF"
-            echo "${IMAGE_REF}:${sha}"
-            if [[ -z "${BRANCH}" ]]; then
-              echo "${IMAGE_REF}:latest"
-            else
-              # Docker tags allow only [A-Za-z0-9_.-], so anything else (e.g. "/") becomes "-".
-              # The prefix keeps a branch named "latest" (or any future reserved tag) in its own
-              # namespace: only a push to main ever writes `:latest`.
-              echo "${IMAGE_REF}:branch-${BRANCH//[^A-Za-z0-9_.-]/-}"
-            fi
+            for ref in "${AR_IMAGE_REF}" "${GHCR_IMAGE_REF}"; do
+              echo "${ref}:${sha}"
+              echo "${ref}:${moving_tag}"
+            done
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 

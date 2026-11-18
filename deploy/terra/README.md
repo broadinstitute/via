@@ -48,13 +48,37 @@ POST /api/google/v1/apps/{googleProject}/{appName}
 }
 ```
 
-The app is then served at `/proxy/google/v1/apps/{googleProject}/{appName}/via/`.
+## Finding the app's URL
+
+The app is served from Leonardo's proxy, at a path of the form
+`/proxy/google/v1/apps/{googleProject}/{appName}/via/`. The host in front of that path depends on
+which Terra environment's Leonardo you created the app in, so don't build the URL by hand. Once the
+app's status is `RUNNING`, call the get-app endpoint and use the `via` entry of `proxyUrls`:
+
+```
+GET /api/google/v1/apps/{googleProject}/{appName}
+```
+
+```json
+{
+  "status": "RUNNING",
+  "proxyUrls": { "via": "<full URL to open in a browser>" }
+}
+```
+
+`proxyUrls` maps each service name from the descriptor to its full proxy URL. The key is `via`
+because that is the service's name in `via-app.yaml`.
 
 ## Prerequisites outside this repo
 
 - The user is in the Sam group `custom_app_users`, and the descriptor URL is on the Leonardo
   deployment's `customApplicationAllowList` (needed when the project has a `security-group` label).
-- The image is pullable by the cluster's nodes.
+- The image is on GHCR and pullable by the cluster's nodes. Leonardo only accepts `gcr.io`,
+  `ghcr.io` and Docker Hub images in a descriptor, so the Artifact Registry image Workbench uses
+  won't do. `docker-build-push.yml` pushes to both. After its first run, make the `via` package
+  public (GitHub > Packages > via > Package settings > Change visibility), or GKE can't pull it.
+  To test a branch, run the workflow by hand on that branch and use the `branch-<name>` tag in
+  `via-app.yaml`.
 - The user's pet service account can run BigQuery jobs in `GOOGLE_PROJECT` and read the CDR and VAT
   datasets. The CDR is All of Us data, which community Terra doesn't have, so these tables must be
   supplied (`data/synthetic/` can produce a demo set).

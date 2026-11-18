@@ -16,10 +16,15 @@ version: "0.1.0"
 #   /proxy/google/v1/apps/{project}/{app-name}/via/
 services:
   via:
-    # Same image Workbench runs (see ../docker-compose.yaml). The GKE node service account must be
-    # able to pull it: make the repository public, or grant it roles/artifactregistry.reader.
-    # Prefer a pinned tag (via:<sha>) over :latest so an app's behaviour doesn't change on restart.
-    image: us-central1-docker.pkg.dev/dsp-artifact-registry/via/via:latest
+    # The same build Workbench runs (see ../docker-compose.yaml), published to GHCR as well as
+    # Artifact Registry by .github/workflows/docker-build-push.yml. It has to be GHCR: Leonardo
+    # rejects any image outside gcr.io, ghcr.io and Docker Hub ("invalid container image").
+    # The package must be public so GKE nodes can pull it without credentials.
+    #
+    # While testing on a branch, run that workflow by hand on the branch and use its
+    # `branch-<name>` tag, as here. Before merging, switch to `:latest`, or better a pinned
+    # `:<sha>` so an app's behaviour doesn't change on restart.
+    image: ghcr.io/broadinstitute/via:branch-mma-deploy-in-terra
     port: 8080
 
     # Leave baseUrl unset ("/"): Leonardo then rewrites the proxy prefix away, so Spring Boot sees
