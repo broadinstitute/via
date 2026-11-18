@@ -114,5 +114,8 @@ jobs:
           file: deploy/Dockerfile
           push: ${{ env.PUBLISH == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
+          # Links the GHCR package to this repo, so it shows under the repo's Packages and inherits
+          # its access settings.
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -76,7 +76,9 @@ because that is the service's name in `via-app.yaml`.
 - The image is on GHCR and pullable by the cluster's nodes. Leonardo only accepts `gcr.io`,
   `ghcr.io` and Docker Hub images in a descriptor, so the Artifact Registry image Workbench uses
   won't do. `docker-build-push.yml` pushes to both. After its first run, make the `via` package
-  public (GitHub > Packages > via > Package settings > Change visibility), or GKE can't pull it.
+  public, or GKE can't pull it. The package only exists after that first push; find it under the
+  repo's Packages sidebar, or at `https://github.com/orgs/broadinstitute/packages`, then Package
+  settings > Change visibility. (An org owner may need to allow public packages first.)
   To test a branch, run the workflow by hand on that branch and use the `branch-<name>` tag in
   `via-app.yaml`.
 - The user's pet service account can run BigQuery jobs in `GOOGLE_PROJECT` and read the CDR and VAT
