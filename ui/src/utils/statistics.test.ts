@@ -138,9 +138,45 @@ describe("computeOddsRatio", () => {
     // loose (uniroot's default tolerance on 1/ψ); solving ψ⁴ / (1 + 16ψ + 36ψ² + 16ψ³ + ψ⁴) = 0.975
     // directly gives 626.2435.
     const tea = computeOddsRatio(3, 1, 1, 3);
-    expect(tea.oddsRatio).toBe(9);
+    // The estimate is the conditional MLE, not the sample ratio 9; fisher.test prints 6.408309,
+    // again a touch loose from uniroot's tolerance.
+    expect(tea.oddsRatio).toBeCloseTo(6.4083, 3);
     expect(tea.ci![0]).toBeCloseTo(0.2117329, 5);
     expect(tea.ci![1]).toBeCloseTo(626.2435, 2);
+  });
+
+  it("matches python's scipy odds_ratio calculation and interval", () => {
+    // >>> from scipy.stats.contingency import odds_ratio
+    // >>> table = [[20, 80], [10, 90]]  ## [ac_an_cohort], [ac_an_aou]
+    // >>> res = odds_ratio(table, kind='conditional')
+    // >>> print(res.statistic)
+    // 2.2410216714696216
+    // >>> print(res.confidence_interval(confidence_level=0.95))
+    // ConfidenceInterval(low=0.9352824082589951, high=5.699528414562649)
+    const example1 = computeOddsRatio(20, 80, 10, 90);
+    expect(example1.oddsRatio).toBeCloseTo(2.2410, 3);
+    expect(example1.ci![0]).toBeCloseTo(0.9352, 3);
+    expect(example1.ci![1]).toBeCloseTo(5.6995, 3);
+
+    // >>> table = [[5, 242], [10, 1080000]]
+    // >>> res = odds_ratio(table, kind='conditional')
+    // >>> print(res.statistic)
+    // 2228.3758972445526
+    // >>> print(res.confidence_interval(confidence_level=0.95))
+    // ConfidenceInterval(low=593.1346499725772, high=7219.171238886456)
+    const example2 = computeOddsRatio(5, 242, 10, 1080000);
+    expect(example2.oddsRatio).toBeCloseTo(2228.3758, 3);
+    expect(example2.ci![0]).toBeCloseTo(593.1346, 3);
+    expect(example2.ci![1]).toBeCloseTo(7219.1712, 3);
+  });
+
+  it("returns exactly 1 for equal frequencies, so nothing leans", () => {
+    // [[1, 1], [1, 1]]: observed and expected counts are identical.
+    expect(computeOddsRatio(1, 1, 1, 1).oddsRatio).toBe(1);
+    expect(computeOddsRatio(20, 80, 40, 160).oddsRatio).toBe(1);
+    const enrichment = computeEnrichment(1, 2, 2, 4)!;
+    expect(enrichment.oddsRatio).toBe(1);
+    expect(enrichment.lean).toBeNull();
   });
 
   it("is wider than Woolf's interval at small counts", () => {
