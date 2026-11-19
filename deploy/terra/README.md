@@ -135,6 +135,14 @@ Limits:
     billed to. This is what lets VIA submit query jobs.
   - **BigQuery Data Viewer** (`roles/bigquery.dataViewer`) on the CDR and VAT datasets (or the
     projects that hold them). This is what lets VIA read table metadata and data.
+- On the runtime, VIA checks this at startup (`BigQueryStartupCheck`, enabled by `app-start.sh`
+  through `VIA_REQUIRE_BIGQUERY_ACCESS`). It reads metadata for the VAT and CDR tables and runs a
+  dry-run query in `GOOGLE_PROJECT` (which needs Job User but reads and bills nothing). If either
+  fails, VIA exits and the runtime's health check never passes, so the runtime ends in `Error`
+  instead of serving a UI that fails on every search. The reason is in the container log: look for
+  `VIA cannot access BigQuery, so it will not start`, followed by each missing role. Set
+  `VIA_REQUIRE_BIGQUERY_ACCESS=false` in `customEnvironmentVariables` to skip it. The check is off
+  by default elsewhere (local development, Workbench).
 - The CDR is All of Us data, which community Terra doesn't have, so these tables must be supplied
   (`data/synthetic/` can produce a demo set).
 
