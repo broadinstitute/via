@@ -143,6 +143,17 @@ describe("computeOddsRatio", () => {
     expect(tea.ci![1]).toBeCloseTo(626.2435, 2);
   });
 
+  it("matches python's scipy calculation and interval", () => {
+    // table = [[20, 80], [10, 90]]  ## [ac_an_cohort], [ac_an_aou]
+    // res = odds_ratio(table, kind='sample')
+    // print(res.statistic)                          # 2.25
+    // print(res.confidence_interval(confidence_level=0.95)) # ConfidenceInterval(low=np.float64(0.9942948922815064), high=np.float64(5.091547828817265))
+    const example = computeOddsRatio(20, 80, 10, 90);
+    expect(example.oddsRatio).toBe(2.25);
+    expect(example.ci![0]).toBeCloseTo(0.9942948, 6);
+    expect(example.ci![1]).toBeCloseTo(5.09154782, 6);
+  });
+
   it("is wider than Woolf's interval at small counts", () => {
     // Woolf gives 0.96 to 4.67 here; the exact interval reaches further on both sides.
     const { oddsRatio, ci } = computeOddsRatio(10, 90, 20, 380);
