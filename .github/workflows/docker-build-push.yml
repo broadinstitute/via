@@ -117,14 +117,16 @@ jobs:
           # Build context is the repo root -- see the comment atop deploy/Dockerfile.
           context: .
           file: deploy/Dockerfile
-          push: ${{ env.PUBLISH == 'true' }}
+          # `push:` can't be combined with `outputs:`, so the push is the registry output below.
+          outputs: ${{ env.PUBLISH == 'true' && 'type=registry,oci-mediatypes=false' || '' }}
           tags: ${{ steps.meta.outputs.tags }}
           # Links the GHCR package to this repo, so it shows under the repo's Packages and inherits
           # its access settings.
           labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          # Leonardo's image auto-detection (HttpDockerDAO) only accepts a plain Docker v2 manifest.
-          # buildx otherwise pushes an OCI index (it attaches provenance attestations), which
-          # the registry won't serve to it ("OCI index found, but Accept header does not support").
+          # Leonardo's image auto-detection (HttpDockerDAO) only accepts a Docker v2 manifest. By
+          # default buildx pushes an OCI index (provenance attestations) or OCI manifest, which the
+          # registry won't serve to it ("OCI index/manifest found, but Accept header does not
+          # support ..."). Hence no attestations and oci-mediatypes=false on the output.
           provenance: false
           sbom: false
           cache-from: type=gha
@@ -138,15 +140,16 @@ jobs:
         with:
           context: .
           file: deploy/terra/Dockerfile
-          push: true
+          outputs: type=registry,oci-mediatypes=false
           build-args: |
             VIA_IMAGE=${{ env.GHCR_IMAGE_REF }}:${{ steps.meta.outputs.sha }}
           tags: |
             ${{ env.GHCR_TERRA_IMAGE_REF }}:${{ steps.meta.outputs.sha }}
             ${{ env.GHCR_TERRA_IMAGE_REF }}:${{ steps.meta.outputs.moving_tag }}
           labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          # Leonardo's image auto-detection (HttpDockerDAO) only accepts a plain Docker v2 manifest.
-          # buildx otherwise pushes an OCI index (it attaches provenance attestations), which
-          # the registry won't serve to it ("OCI index found, but Accept header does not support").
+          # Leonardo's image auto-detection (HttpDockerDAO) only accepts a Docker v2 manifest. By
+          # default buildx pushes an OCI index (provenance attestations) or OCI manifest, which the
+          # registry won't serve to it ("OCI index/manifest found, but Accept header does not
+          # support ..."). Hence no attestations and oci-mediatypes=false on the output.
           provenance: false
           sbom: false
