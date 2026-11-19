@@ -30,6 +30,14 @@ env:
   PROJECT_ID: dsp-artifact-registry
   REPOSITORY: via
   IMAGE: via
+  # Also published to GHCR for community Terra: Leonardo only accepts gcr.io, ghcr.io and Docker Hub
+  # images in a custom app descriptor, not Artifact Registry (see deploy/terra/README.md). Must be
+  # lowercase. The package has to be made public once (repo > Packages > via > Package settings) so
+  # GKE nodes can pull it without credentials.
+  GHCR_IMAGE_REF: ghcr.io/broadinstitute/via
+  # The Terra GCE-runtime variant (deploy/terra/Dockerfile), built on top of the image above. Also
+  # needs to be made public once.
+  GHCR_TERRA_IMAGE_REF: ghcr.io/broadinstitute/via-terra
 
 jobs:
   build:
@@ -37,6 +45,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      packages: write
     env:
       # Pushes to main publish `:latest` and `:<sha>`; a manual run publishes `:branch-<name>`
       # and `:<sha>`. Pull requests only validate that the image builds.
@@ -68,24 +77,37 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
 
+      - name: Log in to GitHub Container Registry
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Determine image tags
         id: meta
         if: env.PUBLISH == 'true'
         env:
-          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}
+          AR_IMAGE_REF: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}
         run: |
           sha="$(git rev-parse HEAD)"
+          # Docker tags allow only [A-Za-z0-9_.-], so anything else (e.g. "/") becomes "-".
+          # The prefix keeps a branch named "latest" (or any future reserved tag) in its own
+          # namespace: only a push to main ever writes `:latest`.
+          if [[ -z "${BRANCH}" ]]; then
+            moving_tag="latest"
+          else
+            moving_tag="branch-${BRANCH//[^A-Za-z0-9_.-]/-}"
+          fi
           {
+            echo "sha=${sha}"
+            echo "moving_tag=${moving_tag}"
             echo "tags<<EOF"
-            echo "${IMAGE_REF}:${sha}"
-            if [[ -z "${BRANCH}" ]]; then
-              echo "${IMAGE_REF}:latest"
-            else
-              # Docker tags allow only [A-Za-z0-9_.-], so anything else (e.g. "/") becomes "-".
-              # The prefix keeps a branch named "latest" (or any future reserved tag) in its own
-              # namespace: only a push to main ever writes `:latest`.
-              echo "${IMAGE_REF}:branch-${BRANCH//[^A-Za-z0-9_.-]/-}"
-            fi
+            for ref in "${AR_IMAGE_REF}" "${GHCR_IMAGE_REF}"; do
+              echo "${ref}:${sha}"
+              echo "${ref}:${moving_tag}"
+            done
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -95,7 +117,39 @@ jobs:
           # Build context is the repo root -- see the comment atop deploy/Dockerfile.
           context: .
           file: deploy/Dockerfile
-          push: ${{ env.PUBLISH == 'true' }}
+          # `push:` can't be combined with `outputs:`, so the push is the registry output below.
+          outputs: ${{ env.PUBLISH == 'true' && 'type=registry,oci-mediatypes=false' || '' }}
           tags: ${{ steps.meta.outputs.tags }}
+          # Links the GHCR package to this repo, so it shows under the repo's Packages and inherits
+          # its access settings.
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          # Leonardo's image auto-detection (HttpDockerDAO) only accepts a Docker v2 manifest. By
+          # default buildx pushes an OCI index (provenance attestations) or OCI manifest, which the
+          # registry won't serve to it ("OCI index/manifest found, but Accept header does not
+          # support ..."). Hence no attestations and oci-mediatypes=false on the output.
+          provenance: false
+          sbom: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Terra GCE-runtime variant, built FROM the image just pushed (so it carries the same jar).
+      # Only on publish: a pull request has no pushed image to build on.
+      - name: Build and push Terra runtime image
+        if: env.PUBLISH == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/terra/Dockerfile
+          outputs: type=registry,oci-mediatypes=false
+          build-args: |
+            VIA_IMAGE=${{ env.GHCR_IMAGE_REF }}:${{ steps.meta.outputs.sha }}
+          tags: |
+            ${{ env.GHCR_TERRA_IMAGE_REF }}:${{ steps.meta.outputs.sha }}
+            ${{ env.GHCR_TERRA_IMAGE_REF }}:${{ steps.meta.outputs.moving_tag }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          # Leonardo's image auto-detection (HttpDockerDAO) only accepts a Docker v2 manifest. By
+          # default buildx pushes an OCI index (provenance attestations) or OCI manifest, which the
+          # registry won't serve to it ("OCI index/manifest found, but Accept header does not
+          # support ..."). Hence no attestations and oci-mediatypes=false on the output.
+          provenance: false
+          sbom: false

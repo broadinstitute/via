@@ -2,6 +2,8 @@
 // apiFetch, so URL assembly, the ok-check and the shape of a failure are decided once.
 // Nothing else here: no retries, no interceptors. If a request needs more, it composes this.
 
+import { basePath } from "../utils/basePath";
+
 /**
  * A response the backend answered with an error status. Carries what the response said, so an
  * error page can show the status (and the body, when the backend sends one) instead of parsing a
@@ -28,7 +30,8 @@ export class ApiError extends Error {
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   // Called exactly as the modules used to call it, so a test that asserts the fetch arguments
   // sees the same call with or without options.
-  const response = init === undefined ? await fetch(`/api${path}`) : await fetch(`/api${path}`, init);
+  const url = `${basePath()}/api${path}`;
+  const response = init === undefined ? await fetch(url) : await fetch(url, init);
   if (!response.ok) {
     throw new ApiError(response.status, response.statusText ?? "", await bodyOf(response));
   }

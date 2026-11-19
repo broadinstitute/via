@@ -4,6 +4,7 @@ import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.Job;
 import com.google.cloud.bigquery.JobId;
+import com.google.cloud.bigquery.JobInfo;
 import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.TableId;
@@ -114,6 +115,26 @@ public class BigQueryService {
     } catch (RuntimeException e) {
       log.warn("BigQuery access check failed for table {}", status.getTable(), e);
       return status.accessible(false).detail(e.getMessage());
+    }
+  }
+
+  /**
+   * Whether the current credentials can submit a query job in the billing project. A dry run is
+   * enough: it needs the same {@code bigquery.jobs.create} permission as a real query but reads
+   * nothing and bills nothing, so it can run at startup. {@link #checkAccess} can't tell, since
+   * reading table metadata needs no job permission.
+   *
+   * @return null when jobs can be submitted, otherwise the reason they can't
+   */
+  public String checkJobAccess() {
+    try {
+      bigQuery.create(
+          JobInfo.of(
+              QueryJobConfiguration.newBuilder("SELECT 1").setDryRun(true).setLabels(JOB_LABELS).build()));
+      return null;
+    } catch (RuntimeException e) {
+      log.warn("BigQuery job permission check failed", e);
+      return e.getMessage();
     }
   }
 }

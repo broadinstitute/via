@@ -1,0 +1,4 @@
+#!/bin/bash
+# Leonardo runs this at runtime create and at every start. Runs the app as the rstudio user.
+set -euo pipefail
+exec setpriv --reuid=rstudio --regid=users --init-groups /etc/terra/app-start.sh

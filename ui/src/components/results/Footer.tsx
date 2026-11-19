@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import colors from "../../libs/colors";
+import { publicUrl } from "../../utils/basePath";
 import AppVersion from "../elements/AppVersion";
 
 export const FOOTER_HEIGHT = 60;
@@ -30,7 +31,7 @@ export default function Footer({ style }: FooterProps) {
   return (
     <footer style={{ ...styles.footer, ...style }}>
       <AppVersion />
-      <img style={styles.logo} src="/broad-logo.svg" alt="Broad Institute" />
+      <img style={styles.logo} src={publicUrl("broad-logo.svg")} alt="Broad Institute" />
     </footer>
   );
 }

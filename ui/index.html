@@ -3,6 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Must come before any element with a URL. Under Leonardo's proxy the app lives at
+      /proxy/google/v1/apps/{project}/{app}/{service}/, so point <base> there; anywhere else it's "/".
+      Same pattern as ui/src/utils/basePath.ts; keep the two in sync.
+    -->
+    <script>
+      (function () {
+        var m = /^(.*\/proxy\/(?:google\/v1\/apps\/[^/]+\/[^/]+\/[^/]+|[^/]+\/[^/]+\/rstudio))(?:\/|$)/.exec(location.pathname);
+        document.write('<base href="' + (m ? m[1] : "") + '/" />');
+      })();
+    </script>
     <title>VIA | Variant Interpretation</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

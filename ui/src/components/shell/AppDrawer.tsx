@@ -11,6 +11,7 @@ import Clickable from "../common/Clickable";
 import AppVersion from "../elements/AppVersion";
 import { ActivityIcon, ClockIcon, CloseIcon, DatabaseIcon, GaugeIcon, GearIcon, SearchIcon } from "../icons";
 import type { IconProps } from "../icons";
+import { publicUrl } from "../../utils/basePath";
 import { FOOTER_HEIGHT } from "../results/Footer";
 import { TOP_BAR_HEIGHT } from "../results/TopBar";
 
@@ -221,7 +222,7 @@ export default function AppDrawer({ open, onClose }: AppDrawerProps) {
             <CloseIcon size={18} aria-hidden="true" />
           </Clickable>
           <Link to="/" style={styles.brand} onClick={onClose} aria-label="VIA home, new search">
-            <img src="/favicon.svg" alt="" width={22} height={22} style={{ display: "block" }} />
+            <img src={publicUrl("favicon.svg")} alt="" width={22} height={22} style={{ display: "block" }} />
             VIA
           </Link>
         </div>
