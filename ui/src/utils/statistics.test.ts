@@ -170,6 +170,15 @@ describe("computeOddsRatio", () => {
     expect(example2.ci![1]).toBeCloseTo(7219.1712, 3);
   });
 
+  it("returns exactly 1 for equal frequencies, so nothing leans", () => {
+    // [[1, 1], [1, 1]]: observed and expected counts are identical.
+    expect(computeOddsRatio(1, 1, 1, 1).oddsRatio).toBe(1);
+    expect(computeOddsRatio(20, 80, 40, 160).oddsRatio).toBe(1);
+    const enrichment = computeEnrichment(1, 2, 2, 4)!;
+    expect(enrichment.oddsRatio).toBe(1);
+    expect(enrichment.lean).toBeNull();
+  });
+
   it("is wider than Woolf's interval at small counts", () => {
     // Woolf gives 0.96 to 4.67 here; the exact interval reaches further on both sides.
     const { oddsRatio, ci } = computeOddsRatio(10, 90, 20, 380);

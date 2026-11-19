@@ -219,7 +219,9 @@ export function computeOddsRatio(
 
   // The conditional MLE: the ψ whose expected count is the observed one. At the edge of the
   // support no finite ψ does that, so the estimate is 0 or infinite.
-  const oddsRatio = a === lo ? 0 : a === hi ? Infinity : solve(mean, a);
+  // Equal frequencies put the observed count exactly at its expectation under ψ = 1, so the
+  // estimate is exactly 1; bisection alone would land a rounding error to one side of it.
+  const oddsRatio = a * d === b * c ? 1 : a === lo ? 0 : a === hi ? Infinity : solve(mean, a);
 
   return {
     oddsRatio,
