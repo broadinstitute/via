@@ -144,14 +144,28 @@ describe("computeOddsRatio", () => {
   });
 
   it("matches python's scipy calculation and interval", () => {
-    // table = [[20, 80], [10, 90]]  ## [ac_an_cohort], [ac_an_aou]
-    // res = odds_ratio(table, kind='sample')
-    // print(res.statistic)                          # 2.25
-    // print(res.confidence_interval(confidence_level=0.95)) # ConfidenceInterval(low=np.float64(0.9942948922815064), high=np.float64(5.091547828817265))
-    const example = computeOddsRatio(20, 80, 10, 90);
-    expect(example.oddsRatio).toBe(2.25);
-    expect(example.ci![0]).toBeCloseTo(0.9942948, 6);
-    expect(example.ci![1]).toBeCloseTo(5.09154782, 6);
+    // >>> from scipy.stats.contingency import odds_ratio
+    // >>> table = [[20, 80], [10, 90]]  ## [ac_an_cohort], [ac_an_aou]
+    // >>> res = odds_ratio(table, kind='sample')
+    // >>> print(res.statistic)
+    // 2.25
+    // >>> print(res.confidence_interval(confidence_level=0.95))
+    // ConfidenceInterval(low=np.float64(0.9942948922815064), high=np.float64(5.091547828817265))
+    const example1 = computeOddsRatio(20, 80, 10, 90);
+    expect(example1.oddsRatio).toBe(2.25);
+    expect(example1.ci![0]).toBeCloseTo(0.9942948, 6);
+    expect(example1.ci![1]).toBeCloseTo(5.09154782, 6);
+
+    // >>> table = [[5, 242], [10, 1080000]]
+    // >>> res = odds_ratio(table, kind='sample')
+    // >>> print(res.statistic)
+    // 2231.404958677686
+    // >>> print(res.confidence_interval(confidence_level=0.95))
+    // ConfidenceInterval(low=np.float64(757.1038891161741), high=np.float64(6576.598220125287))
+    const example2 = computeOddsRatio(5, 242, 10, 1080000);
+    expect(example2.oddsRatio).toBeCloseTo(2231.4049, 3);
+    expect(example2.ci![0]).toBeCloseTo(757.1038, 3);
+    expect(example2.ci![1]).toBeCloseTo(6576.5982, 3);
   });
 
   it("is wider than Woolf's interval at small counts", () => {
