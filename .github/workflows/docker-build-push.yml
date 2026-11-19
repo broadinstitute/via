@@ -122,6 +122,11 @@ jobs:
           # Links the GHCR package to this repo, so it shows under the repo's Packages and inherits
           # its access settings.
           labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          # Leonardo's image auto-detection (HttpDockerDAO) only accepts a plain Docker v2 manifest.
+          # buildx otherwise pushes an OCI index (it attaches provenance attestations), which
+          # the registry won't serve to it ("OCI index found, but Accept header does not support").
+          provenance: false
+          sbom: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -140,3 +145,8 @@ jobs:
             ${{ env.GHCR_TERRA_IMAGE_REF }}:${{ steps.meta.outputs.sha }}
             ${{ env.GHCR_TERRA_IMAGE_REF }}:${{ steps.meta.outputs.moving_tag }}
           labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          # Leonardo's image auto-detection (HttpDockerDAO) only accepts a plain Docker v2 manifest.
+          # buildx otherwise pushes an OCI index (it attaches provenance attestations), which
+          # the registry won't serve to it ("OCI index found, but Accept header does not support").
+          provenance: false
+          sbom: false
