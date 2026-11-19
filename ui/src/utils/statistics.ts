@@ -124,17 +124,19 @@ export function computeEnrichment(
  * where Woolf's log interval runs too narrow, and it needs no special case for an empty cell: a
  * count at the edge of what the margins allow just leaves that side open (0 or infinite).
  *
- * The point estimate is the conditional maximum likelihood estimate (what R's fisher.test and
- * scipy's odds_ratio(kind="conditional") report): the ψ whose expected count is the observed a. It
- * differs slightly from the sample odds ratio ad / bc, and unlike it always sits inside the
- * interval. With no carriers on either side, or
- * every allele a carrier on both, the margins allow only the observed table and the interval is
- * null.
+ * Reports the conditional MLE of the odds ratio (same as R's fisher.test and scipy's
+ * odds_ratio(kind="conditional")): the OR at which the expected count in cell a equals the
+ * observed a, with row and column totals held fixed. It's slightly different from ad/bc but
+ * always falls inside the CI.
  *
- * Each tail probability (and the mean) is summed from the distribution's mode outward, by the ratio of one
- * term to the next, stopping once terms are negligible. The mass sits within a few hundred
- * values of the mode however wide the support, so a common variant in a large matched cohort
- * (a support of 100,000 values) costs the same few milliseconds as a rare one.
+ * Degenerate case: if there are no carriers in either group (ie, AC = 0 in both the subcohort
+ * and AoU), or every allele is a carrier in both, the margins allow only one possible table, so
+ * the OR is undetermined and the interval is null.
+ *
+ * Speed: tail probabilities and the mean are summed outward from the mode, one term at a time,
+ * and stop once the terms are negligible. Nearly all the probability mass lies within a few
+ * hundred values of the mode, so cost stays low (a few ms) even when the support is huge
+ * (e.g., 100,000 values for a common variant in a large cohort).
  */
 export function computeOddsRatio(
   a: number,
