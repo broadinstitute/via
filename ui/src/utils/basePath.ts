@@ -1,12 +1,14 @@
 // Where the app is mounted. At the root of its own host (Workbench, local dev) that's "". In
-// community Terra, Leonardo serves a custom app under
-// /proxy/google/v1/apps/{project}/{app}/{service}/ and strips that prefix before the request reaches
-// the container, so the browser sees the prefix but the backend never does.
+// community Terra, Leonardo serves the app under either
+//   /proxy/{project}/{runtime}/rstudio/                      (GCE runtime, the supported path)
+//   /proxy/google/v1/apps/{project}/{app}/{service}/         (GKE custom app, being removed)
+// and strips that prefix before the request reaches the container, so the browser sees the prefix
+// but the backend never does.
 //
 // Everything that builds an absolute URL (API calls, public assets, the router's basename) goes
 // through here. The same pattern is in index.html, which sets <base href> from it so Vite's relative
 // asset URLs resolve; keep the two in sync.
-const LEONARDO_APP_PREFIX = /^(.*\/proxy\/google\/v1\/apps\/[^/]+\/[^/]+\/[^/]+)(?:\/|$)/;
+const LEONARDO_APP_PREFIX = /^(.*\/proxy\/(?:google\/v1\/apps\/[^/]+\/[^/]+\/[^/]+|[^/]+\/[^/]+\/rstudio))(?:\/|$)/;
 
 /** The mount path with no trailing slash: "" at the host root. */
 export function basePath(pathname: string = window.location.pathname): string {

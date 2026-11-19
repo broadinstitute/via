@@ -10,7 +10,7 @@
     -->
     <script>
       (function () {
-        var m = /^(.*\/proxy\/google\/v1\/apps\/[^/]+\/[^/]+\/[^/]+)(?:\/|$)/.exec(location.pathname);
+        var m = /^(.*\/proxy\/(?:google\/v1\/apps\/[^/]+\/[^/]+\/[^/]+|[^/]+\/[^/]+\/rstudio))(?:\/|$)/.exec(location.pathname);
         document.write('<base href="' + (m ? m[1] : "") + '/" />');
       })();
     </script>

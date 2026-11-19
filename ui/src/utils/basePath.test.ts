@@ -15,6 +15,17 @@ describe("basePath", () => {
     expect(basePath(`${PREFIX}/results`)).toBe(PREFIX);
   });
 
+  it("returns the GCE runtime proxy prefix", () => {
+    const runtime = "/proxy/my-project/via-runtime/rstudio";
+    expect(basePath(runtime)).toBe(runtime);
+    expect(basePath(`${runtime}/`)).toBe(runtime);
+    expect(basePath(`${runtime}/results`)).toBe(runtime);
+  });
+
+  it("does not match a runtime path for another tool", () => {
+    expect(basePath("/proxy/my-project/via-runtime/jupyter")).toBe("");
+  });
+
   it("keeps anything in front of the proxy prefix", () => {
     expect(basePath(`/terra${PREFIX}/usage`)).toBe(`/terra${PREFIX}`);
   });
