@@ -36,7 +36,8 @@ export interface Enrichment {
   pValue: number;
   /**
    * Odds ratio from the same 2×2 table (matched vs the rest of the cohort) and its 95% interval:
-   * the exact conditional interval, from the same model as pValue. Null when the margins allow only
+   * the conditional maximum likelihood estimate and exact conditional interval, from the same
+   * model as pValue. Null when the margins allow only
    * the observed table (nobody anywhere carries the allele, or everyone does).
    */
   oddsRatio: number;
@@ -123,11 +124,14 @@ export function computeEnrichment(
  * where Woolf's log interval runs too narrow, and it needs no special case for an empty cell: a
  * count at the edge of what the margins allow just leaves that side open (0 or infinite).
  *
- * The point estimate is the sample odds ratio, ad / bc. With no carriers on either side, or
+ * The point estimate is the conditional maximum likelihood estimate (what R's fisher.test and
+ * scipy's odds_ratio(kind="conditional") report): the ψ whose expected count is the observed a. It
+ * differs slightly from the sample odds ratio ad / bc, and unlike it always sits inside the
+ * interval. With no carriers on either side, or
  * every allele a carrier on both, the margins allow only the observed table and the interval is
  * null.
  *
- * Each tail probability is summed from the distribution's mode outward, by the ratio of one
+ * Each tail probability (and the mean) is summed from the distribution's mode outward, by the ratio of one
  * term to the next, stopping once terms are negligible. The mass sits within a few hundred
  * values of the mode however wide the support, so a common variant in a large matched cohort
  * (a support of 100,000 values) costs the same few milliseconds as a rare one.
@@ -143,11 +147,13 @@ export function computeOddsRatio(
   const rest = c + d;
   const lo = Math.max(0, carriers - rest);
   const hi = Math.min(matched, carriers);
-  const oddsRatio = b * c === 0 ? (a * d === 0 ? 1 : Infinity) : (a * d) / (b * c);
   if (lo === hi) return { oddsRatio: 1, ci: null };
 
-  /** P(X ≥ a) under ψ when `upper`, else P(X ≤ a). */
-  const tail = (logPsi: number, upper: boolean) => {
+  /**
+   * Walks the terms of the distribution under ψ outward from its mode, relative to the mode's
+   * term (which is 1), calling `visit(x, term)` for each; returns the sum of the terms.
+   */
+  const walk = (logPsi: number, visit: (x: number, term: number) => void) => {
     const psi = Math.exp(logPsi);
     // P(X = x + 1) / P(X = x): ψ times the hypergeometric ratio. It falls as x rises, so the
     // terms are unimodal.
@@ -161,44 +167,66 @@ export function computeOddsRatio(
       else low = mid + 1;
     }
     const mode = low;
-    const counts = (x: number) => (upper ? x >= a : x <= a);
 
-    // Terms relative to the mode's, which is 1; each direction stops once they stop mattering.
     let total = 1;
-    let inTail = counts(mode) ? 1 : 0;
+    visit(mode, 1);
     let term = 1;
     for (let x = mode; x < hi; x++) {
       term *= ratio(x);
       if (term < NEGLIGIBLE_TERM) break;
       total += term;
-      if (counts(x + 1)) inTail += term;
+      visit(x + 1, term);
     }
     term = 1;
     for (let x = mode; x > lo; x--) {
       term /= ratio(x - 1);
       if (term < NEGLIGIBLE_TERM) break;
       total += term;
-      if (counts(x - 1)) inTail += term;
+      visit(x - 1, term);
     }
+    return total;
+  };
+
+  /** P(X ≥ a) under ψ when `upper`, else P(X ≤ a). */
+  const tail = (logPsi: number, upper: boolean) => {
+    let inTail = 0;
+    const total = walk(logPsi, (x, term) => {
+      if (upper ? x >= a : x <= a) inTail += term;
+    });
     return inTail / total;
   };
 
-  /** The log ψ at which the tail is exactly 2.5%, by bisection; P(X ≥ a) rises with ψ, P(X ≤ a) falls. */
-  const solve = (upper: boolean) => {
+  /** E[X] under ψ; it rises from lo to hi as ψ does. */
+  const mean = (logPsi: number) => {
+    let weighted = 0;
+    const total = walk(logPsi, (x, term) => {
+      weighted += x * term;
+    });
+    return weighted / total;
+  };
+
+  /** The log ψ at which `rising`, an increasing function of ψ, reaches `target`, by bisection. */
+  const solve = (rising: (logPsi: number) => number, target: number) => {
     let low = -60;
     let high = 60;
     for (let i = 0; i < BISECTION_STEPS; i++) {
       const mid = (low + high) / 2;
-      const rising = upper ? tail(mid, true) : 1 - tail(mid, false);
-      if (rising < (upper ? ODDS_RATIO_TAIL : 1 - ODDS_RATIO_TAIL)) low = mid;
+      if (rising(mid) < target) low = mid;
       else high = mid;
     }
     return Math.exp((low + high) / 2);
   };
 
+  // The conditional MLE: the ψ whose expected count is the observed one. At the edge of the
+  // support no finite ψ does that, so the estimate is 0 or infinite.
+  const oddsRatio = a === lo ? 0 : a === hi ? Infinity : solve(mean, a);
+
   return {
     oddsRatio,
-    ci: [a === lo ? 0 : solve(true), a === hi ? Infinity : solve(false)],
+    ci: [
+      a === lo ? 0 : solve((m) => tail(m, true), ODDS_RATIO_TAIL),
+      a === hi ? Infinity : solve((m) => 1 - tail(m, false), 1 - ODDS_RATIO_TAIL),
+    ],
   };
 }
 
