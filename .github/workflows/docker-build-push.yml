@@ -35,6 +35,9 @@ env:
   # lowercase. The package has to be made public once (repo > Packages > via > Package settings) so
   # GKE nodes can pull it without credentials.
   GHCR_IMAGE_REF: ghcr.io/broadinstitute/via
+  # The Terra GCE-runtime variant (deploy/terra/Dockerfile), built on top of the image above. Also
+  # needs to be made public once.
+  GHCR_TERRA_IMAGE_REF: ghcr.io/broadinstitute/via-terra
 
 jobs:
   build:
@@ -98,6 +101,8 @@ jobs:
             moving_tag="branch-${BRANCH//[^A-Za-z0-9_.-]/-}"
           fi
           {
+            echo "sha=${sha}"
+            echo "moving_tag=${moving_tag}"
             echo "tags<<EOF"
             for ref in "${AR_IMAGE_REF}" "${GHCR_IMAGE_REF}"; do
               echo "${ref}:${sha}"
@@ -119,3 +124,19 @@ jobs:
           labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Terra GCE-runtime variant, built FROM the image just pushed (so it carries the same jar).
+      # Only on publish: a pull request has no pushed image to build on.
+      - name: Build and push Terra runtime image
+        if: env.PUBLISH == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/terra/Dockerfile
+          push: true
+          build-args: |
+            VIA_IMAGE=${{ env.GHCR_IMAGE_REF }}:${{ steps.meta.outputs.sha }}
+          tags: |
+            ${{ env.GHCR_TERRA_IMAGE_REF }}:${{ steps.meta.outputs.sha }}
+            ${{ env.GHCR_TERRA_IMAGE_REF }}:${{ steps.meta.outputs.moving_tag }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
