@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { overLimitMessage, parseVariantsText, resultsPath, variantEntryStatus } from "./variants";
+import { isParseableVariant, overLimitMessage, parseVariantsText, resultsPath, variantEntryStatus } from "./variants";
 
 describe("parseVariantsText", () => {
   it("returns an empty list for empty input", () => {
@@ -66,4 +66,17 @@ describe("overLimitMessage", () => {
   it("says how many to remove", () => {
     expect(overLimitMessage(53, 50)).toBe("53 variants entered. Remove 3 to search (limit 50).");
   });
+});
+
+describe("isParseableVariant", () => {
+  it.each(["8-11708582-C-T", "X-12345-A-G", "MT-100-A-T", "11-47342867-CA-C"])("accepts %s", (variant) => {
+    expect(isParseableVariant(variant)).toBe(true);
+  });
+
+  it.each(['"5-173232894-C-T",', "5-173232894-C-T,", "chr5-173232894-C-T", "rs12345", "5-173232894", "5-173232894-C-"])(
+    "rejects %s",
+    (variant) => {
+      expect(isParseableVariant(variant)).toBe(false);
+    },
+  );
 });

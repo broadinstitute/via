@@ -63,6 +63,7 @@ const MATCHED: FilteredVariantRow[] = [
     heterozygotes: 6,
     clinvarPlpInTrans: 1,
     afRatio: 25,
+    unsupportedReason: null,
   },
   {
     variant: "1-100-A-T",
@@ -76,8 +77,9 @@ const MATCHED: FilteredVariantRow[] = [
     heterozygotes: 3,
     clinvarPlpInTrans: 0,
     afRatio: 1,
+    unsupportedReason: null,
   },
-  { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false },
+  { variant: "7-55181378-G-A", gene: null, consequence: null, hasStats: false, unsupportedReason: null },
 ];
 
 const ANCESTRY = [
@@ -227,6 +229,27 @@ describe("ReviewView", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       /among participants with Familial hypercholesterolemia or Hypertrophic cardiomyopathy/,
     );
+  });
+
+  it("compares nothing for a variant the API marks unsupported, and says why", () => {
+    const chrY = { ...ENRICHED, variant: "Y-2787412-C-T" };
+    render(
+      <ReviewView
+        cohortVariants={[chrY]}
+        filteredVariants={[{ variant: "Y-2787412-C-T", gene: null, consequence: null, hasStats: false, unsupportedReason: "CHR_Y" }]}
+        phenotypes={["Familial hypercholesterolemia"]}
+        participantCount={100}
+        ancestryBreakdown={ANCESTRY}
+      />,
+    );
+
+    const verdict = screen.getByRole("status");
+    expect(verdict).toHaveTextContent("No comparison");
+    expect(verdict).toHaveTextContent("chrY is not supported for phenotype-matched cohorts");
+    // No evidence section, and none of the matched figures or ancestry shares.
+    expect(screen.queryByText("Fisher's exact p")).not.toBeInTheDocument();
+    expect(screen.queryByText(/% \(\d+\)/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/% of matched/)).not.toBeInTheDocument();
   });
 
   it("explains a row whose matched counts exceed the cohort-wide ones instead of comparing them", () => {

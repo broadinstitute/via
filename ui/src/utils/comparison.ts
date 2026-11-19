@@ -26,6 +26,8 @@ export interface MergedVariantRow {
   cohort: CohortVariantRow;
   /** Null when the search had no phenotype, or the matched participants have no statistics for it. */
   matched: FilteredVariantWithStats | null;
+  /** True when the API says phenotype-matched cohorts can't exist for this variant (e.g. chrY). */
+  matchedUnsupported: boolean;
 }
 
 /** Joins the cohort-wide and matched rows by variant, keeping the candidate list's order. */
@@ -36,7 +38,12 @@ export function mergeVariantRows(
   const matchedByVariant = new Map(filteredVariants.map((row) => [row.variant, row]));
   return cohortVariants.map((cohort) => {
     const filtered = matchedByVariant.get(cohort.variant);
-    return { variant: cohort.variant, cohort, matched: filtered?.hasStats ? filtered : null };
+    return {
+      variant: cohort.variant,
+      cohort,
+      matched: filtered?.hasStats ? filtered : null,
+      matchedUnsupported: !!filtered?.unsupportedReason,
+    };
   });
 }
 
@@ -45,6 +52,8 @@ export interface ComparisonRow {
   variant: string;
   cohort: AnnotatedCohortVariant | null;
   matched: FilteredVariantWithStats | null;
+  /** As MergedVariantRow: nothing is compared, whatever else the row holds. */
+  matchedUnsupported: boolean;
   /** Null when either side lacks counts. */
   enrichment: Enrichment | null;
 }
@@ -55,7 +64,7 @@ export function buildComparisonRows(
   filteredVariants: FilteredVariantRow[],
   ancestryBreakdown: BreakdownSegment[] = [],
 ): ComparisonRow[] {
-  return mergeVariantRows(cohortVariants, filteredVariants).map(({ variant, cohort: row, matched }) => {
+  return mergeVariantRows(cohortVariants, filteredVariants).map(({ variant, cohort: row, matched, matchedUnsupported }) => {
     const cohort = row.annotated ? row : null;
     const enrichment =
       cohort && matched && cohort.aouAllAc !== null && cohort.aouAllAn !== null
@@ -63,7 +72,7 @@ export function buildComparisonRows(
             expectedAdjustedAc: ancestryAdjustedExpectation(cohort, ancestryBreakdown),
           })
         : null;
-    return { variant, cohort, matched, enrichment };
+    return { variant, cohort, matched, matchedUnsupported, enrichment };
   });
 }
 

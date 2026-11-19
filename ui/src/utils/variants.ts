@@ -7,6 +7,16 @@ export function parseVariantsText(text: string): string[] {
 }
 
 /**
+ * Whether an entry looks like a variant ID: chrom-pos-ref-alt, e.g. "8-11708582-C-T". Anything
+ * else (say, a pasted JSON line with its quotes and trailing comma) can never match a row in the
+ * variant annotation table, so the results say it couldn't be parsed rather than that it wasn't
+ * observed.
+ */
+export function isParseableVariant(variant: string): boolean {
+  return /^(?:[1-9]|1\d|2[0-2]|X|Y|M|MT)-\d+-[ACGT]+-[ACGT]+$/.test(variant);
+}
+
+/**
  * Matches the backend's VARIANTS_LIMIT. Search is disabled above it, since the backend would
  * otherwise quietly drop the extras. The results page uses the limit the backend returns instead.
  */

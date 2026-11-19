@@ -12,6 +12,7 @@ import java.util.stream.IntStream;
 import org.broadinstitute.variantinterpretation.model.BreakdownSegment;
 import org.broadinstitute.variantinterpretation.model.CohortVariant;
 import org.broadinstitute.variantinterpretation.model.FilteredVariant;
+import org.broadinstitute.variantinterpretation.util.VariantIds;
 
 /**
  * Stand-in phenotype/participant data for the phenotype-matched half of the search results.
@@ -179,9 +180,15 @@ public final class MockPhenotypeData {
     if (participants <= 0) {
       throw new IllegalArgumentException("participants must be positive, got " + participants);
     }
+    // Unsupported variants get their placeholder here, before any stats are generated, and take no
+    // part in the rest. A real genotype-level lookup should do the same: leave these vids out of
+    // the query's parameters and merge the placeholders back in at their original positions.
     List<FilteredVariant> filtered = new ArrayList<>();
     for (CohortVariant cohortVariant : cohortVariants) {
-      filtered.add(filteredVariant(cohortVariant, participants, curated.get(cohortVariant.getVariant())));
+      filtered.add(
+          VariantIds.isChrY(cohortVariant.getVariant())
+              ? unsupportedChrY(cohortVariant)
+              : filteredVariant(cohortVariant, participants, curated.get(cohortVariant.getVariant())));
     }
     return filtered;
   }
@@ -262,7 +269,16 @@ public final class MockPhenotypeData {
         .homozygotes(homozygotes)
         .heterozygotes(cohortAc - 2 * homozygotes)
         .clinvarPlpInTrans(plpInTrans)
-        .afRatio(BigDecimal.valueOf(cohortAf / aouAllAf).setScale(2, RoundingMode.HALF_UP));
+        .afRatio(BigDecimal.valueOf(cohortAf / aouAllAf).setScale(2, RoundingMode.HALF_UP))
+        .unsupportedReason(null);
+  }
+
+  private static FilteredVariant unsupportedChrY(CohortVariant cohortVariant) {
+    return withoutStats(
+            cohortVariant.getVariant(),
+            cohortVariant.getGene().orElse(null),
+            cohortVariant.getConsequence().orElse(null))
+        .unsupportedReason(FilteredVariant.UnsupportedReasonEnum.CHR_Y);
   }
 
   private static FilteredVariant withoutStats(String variant, String gene, String consequence) {
@@ -277,7 +293,8 @@ public final class MockPhenotypeData {
         .homozygotes(null)
         .heterozygotes(null)
         .clinvarPlpInTrans(null)
-        .afRatio(null);
+        .afRatio(null)
+        .unsupportedReason(null);
   }
 
   // Seeded off the vid so a variant's stats are stable across requests (and across restarts) --
