@@ -40,19 +40,22 @@ fi
 
 # ui/package.json's volta pin is the single source for the Node version; keep it
 # within the UI dependencies' engines ranges (e.g. jsdom needs
-# ^22.22.2 || ^24.15.0 || >=26.0.0, see ui/package-lock.json). Anything at or
-# above the pin is accepted.
+# ^22.22.2 || ^24.15.0 || >=26.0.0, see ui/package-lock.json). Only the pinned
+# major (the one CI and the Docker image use) at or above the pin is accepted:
+# a newer major could fall in a gap of those ranges (e.g. Node 23, 25).
 node_required=""
 if command -v jq >/dev/null; then
   node_required="$(jq -r '.volta.node // empty' ui/package.json)"
 fi
+node_have="$(node -v 2>/dev/null | sed 's/^v//' || true)"
 if [[ -z "${node_required}" ]]; then
   bad "could not read the required Node version (volta.node in ui/package.json)"
-elif command -v node >/dev/null \
-  && [[ "$(printf '%s\n%s\n' "${node_required}" "$(node -v | sed 's/^v//')" | sort -V | head -n1)" == "${node_required}" ]]; then
-  ok "Node $(node -v) (>= ${node_required})"
+elif [[ -n "${node_have}" ]] \
+  && [[ "${node_have%%.*}" == "${node_required%%.*}" ]] \
+  && [[ "$(printf '%s\n%s\n' "${node_required}" "${node_have}" | sort -V | head -n1)" == "${node_required}" ]]; then
+  ok "Node v${node_have} (${node_required%%.*}.x, >= ${node_required})"
 else
-  bad "Node ${node_required}+ required for the UI (found: $(node -v 2>/dev/null || echo none))"
+  bad "Node ${node_required%%.*}.x >= ${node_required} required for the UI (found: ${node_have:+v}${node_have:-none})"
   note "e.g. nvm install ${node_required} && nvm use ${node_required}"
 fi
 
@@ -76,9 +79,10 @@ if [[ -f "${ENV_FILE}" ]]; then
   . "${ENV_FILE}"
   ok "using your existing .env.local (delete it to regenerate)"
 else
-  # Read the account from the application default credentials file (not the
-  # active gcloud account, which may differ).
-  adc_file="${GOOGLE_APPLICATION_CREDENTIALS:-${HOME}/.config/gcloud/application_default_credentials.json}"
+  # Read the account from the application default credentials (not the active
+  # gcloud account, which may differ). gcloud keeps the file under
+  # CLOUDSDK_CONFIG when that is set.
+  adc_file="${GOOGLE_APPLICATION_CREDENTIALS:-${CLOUDSDK_CONFIG:-${HOME}/.config/gcloud}/application_default_credentials.json}"
   WORKBENCH_USER_EMAIL=""
   if [[ -f "${adc_file}" ]] && command -v jq >/dev/null; then
     WORKBENCH_USER_EMAIL="$(jq -r '.account // .client_email // empty' "${adc_file}" 2>/dev/null || true)"
