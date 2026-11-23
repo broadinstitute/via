@@ -47,7 +47,9 @@ node_required=""
 if command -v jq >/dev/null; then
   node_required="$(jq -r '.volta.node // empty' ui/package.json)"
 fi
-node_have="$(node -v 2>/dev/null | sed 's/^v//' || true)"
+# Probe from ui/: Volta resolves the pinned Node per directory, and that is the
+# Node `npm run dev` will actually use.
+node_have="$(cd ui && node -v 2>/dev/null | sed 's/^v//' || true)"
 if [[ -z "${node_required}" ]]; then
   bad "could not read the required Node version (volta.node in ui/package.json)"
 elif [[ -n "${node_have}" ]] \
