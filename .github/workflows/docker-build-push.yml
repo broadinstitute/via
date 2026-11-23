@@ -31,9 +31,9 @@ env:
   REPOSITORY: via
   IMAGE: via
   # Also published to GHCR for community Terra: Leonardo only accepts gcr.io, ghcr.io and Docker Hub
-  # images in a custom app descriptor, not Artifact Registry (see deploy/terra/README.md). Must be
-  # lowercase. The package has to be made public once (repo > Packages > via > Package settings) so
-  # GKE nodes can pull it without credentials.
+  # runtime images, not Artifact Registry (see deploy/terra/README.md). Must be lowercase. The
+  # package has to be made public once (repo > Packages > via > Package settings) so the runtime VM
+  # can pull it without credentials.
   GHCR_IMAGE_REF: ghcr.io/broadinstitute/via
   # The Terra GCE-runtime variant (deploy/terra/Dockerfile), built on top of the image above. Also
   # needs to be made public once.
