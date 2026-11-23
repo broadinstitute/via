@@ -8,6 +8,7 @@ import * as Style from "../../libs/style";
 import Clickable from "../common/Clickable";
 import { GaugeIcon, PencilIcon, SearchIcon, UserIcon } from "../icons";
 import AppMenu from "../shell/AppMenu";
+import { publicUrl } from "../../utils/basePath";
 import { formatBytes, formatUsd } from "../../utils/format";
 import { describeAlternatives } from "../../utils/phenotypes";
 import { usePreference } from "../../utils/preferences";
@@ -321,7 +322,7 @@ export default function TopBar({
           aria-label="VIA home, new search"
           {...brandHoverProps}
         >
-          <img src="/favicon.svg" alt="" width={22} height={22} style={styles.brandMark} />
+          <img src={publicUrl("favicon.svg")} alt="" width={22} height={22} style={styles.brandMark} />
           VIA
         </Link>
         {onModifySearch && <span style={styles.brandDivider} aria-hidden="true" />}
