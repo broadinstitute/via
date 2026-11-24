@@ -1,0 +1,10 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- VIA's mark for dark backgrounds: the app tile inverted, white with the lens in navy and the
+       variant rung in a deeper green that holds up on white. -->
+  <rect width="64" height="64" rx="15" fill="#FFFFFF"/>
+  <line x1="20" y1="21" x2="34" y2="21" stroke="#074770" stroke-width="2.4" stroke-linecap="round" opacity="0.55"/>
+  <line x1="18" y1="27" x2="36" y2="27" stroke="#2E9E66" stroke-width="3.8" stroke-linecap="round"/>
+  <line x1="20" y1="33" x2="34" y2="33" stroke="#074770" stroke-width="2.4" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="27" cy="27" r="14" stroke="#074770" stroke-width="4"/>
+  <line x1="37.5" y1="37.5" x2="50" y2="50" stroke="#074770" stroke-width="5.5" stroke-linecap="round"/>
+</svg>
