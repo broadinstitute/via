@@ -21,6 +21,13 @@ cd "${REPO_ROOT}"
 # ---------------------------------------------------------------------------
 step "Prerequisites"
 
+if command -v jq >/dev/null; then
+  ok "jq installed"
+else
+  bad "jq not found -- needed to read your application default credentials"
+  note "e.g. brew install jq"
+fi
+
 # Gradle's toolchain (api/build.gradle) needs a JDK 21. Shims like jenv often
 # leave JAVA_HOME pointing at a different version, so prefer asking macOS.
 java_home="$(/usr/libexec/java_home -v 21 2>/dev/null || echo "${JAVA_HOME:-}")"
@@ -28,13 +35,30 @@ if [[ -n "${java_home}" ]] && "${java_home}/bin/java" -version 2>&1 | grep -q '"
   ok "Java 21 (${java_home})"
 else
   bad "no Java 21 JDK found -- api/build.gradle's toolchain needs one"
-  note "e.g. brew install --cask corretto@21"
+  note "e.g. brew install --cask corretto@21  # may require sudo"
 fi
 
-if command -v node >/dev/null && [[ "$(node -v | sed 's/v\([0-9]*\).*/\1/')" -ge 20 ]]; then
-  ok "Node $(node -v)"
+# ui/package.json's volta pin is the single source for the Node version; keep it
+# within the UI dependencies' engines ranges (e.g. jsdom needs
+# ^22.22.2 || ^24.15.0 || >=26.0.0, see ui/package-lock.json). Only the pinned
+# major (the one CI and the Docker image use) at or above the pin is accepted:
+# a newer major could fall in a gap of those ranges (e.g. Node 23, 25).
+node_required=""
+if command -v jq >/dev/null; then
+  node_required="$(jq -r '.volta.node // empty' ui/package.json)"
+fi
+# Probe from ui/: Volta resolves the pinned Node per directory, and that is the
+# Node `npm run dev` will actually use.
+node_have="$(cd ui && node -v 2>/dev/null | sed 's/^v//' || true)"
+if [[ -z "${node_required}" ]]; then
+  bad "could not read the required Node version (volta.node in ui/package.json)"
+elif [[ -n "${node_have}" ]] \
+  && [[ "${node_have%%.*}" == "${node_required%%.*}" ]] \
+  && [[ "$(printf '%s\n%s\n' "${node_required}" "${node_have}" | sort -V | head -n1)" == "${node_required}" ]]; then
+  ok "Node v${node_have} (${node_required%%.*}.x, >= ${node_required})"
 else
-  bad "Node 20+ required (ui/package.json pins a version for volta users)"
+  bad "Node ${node_required%%.*}.x >= ${node_required} required for the UI (found: ${node_have:+v}${node_have:-none})"
+  note "e.g. nvm install ${node_required} && nvm use ${node_required}"
 fi
 
 if command -v gcloud >/dev/null; then
@@ -57,17 +81,31 @@ if [[ -f "${ENV_FILE}" ]]; then
   . "${ENV_FILE}"
   ok "using your existing .env.local (delete it to regenerate)"
 else
-  WORKBENCH_USER_EMAIL="$(gcloud config get-value account 2>/dev/null || true)"
-  {
-    printf 'export JAVA_HOME=%q\n' "${java_home}"
-    printf 'export WORKBENCH_USER_EMAIL=%q\n' "${WORKBENCH_USER_EMAIL}"
-    printf 'export VAT_PROJECT_ID=%q\n' "${VAT_PROJECT_ID}"
-    printf 'export VAT_DATASET_ID=%q\n' "${VAT_DATASET_ID}"
-    printf 'export VAT_TABLE_ID=%q\n' "${VAT_TABLE_ID}"
-    printf 'export GOOGLE_PROJECT=%q\n' "${GOOGLE_PROJECT}"
-    printf 'export WORKSPACE_CDR=%q\n' "${WORKSPACE_CDR}"
-  } > "${ENV_FILE}"
-  ok "wrote ${ENV_FILE}"
+  # Read the account from the application default credentials (not the active
+  # gcloud account, which may differ). gcloud keeps the file under
+  # CLOUDSDK_CONFIG when that is set.
+  adc_file="${GOOGLE_APPLICATION_CREDENTIALS:-${CLOUDSDK_CONFIG:-${HOME}/.config/gcloud}/application_default_credentials.json}"
+  WORKBENCH_USER_EMAIL=""
+  if [[ -f "${adc_file}" ]] && command -v jq >/dev/null; then
+    WORKBENCH_USER_EMAIL="$(jq -r '.account // .client_email // empty' "${adc_file}" 2>/dev/null || true)"
+  fi
+  if [[ -z "${WORKBENCH_USER_EMAIL}" ]]; then
+    # Don't write .env.local without an email: later runs would source it and
+    # never notice, so the problem would stick around.
+    bad "could not find an account in ${adc_file}; not writing .env.local"
+    note "run: gcloud auth application-default login (and make sure jq is installed), then re-run"
+  else
+    {
+      printf 'export JAVA_HOME=%q\n' "${java_home}"
+      printf 'export WORKBENCH_USER_EMAIL=%q\n' "${WORKBENCH_USER_EMAIL}"
+      printf 'export VAT_PROJECT_ID=%q\n' "${VAT_PROJECT_ID}"
+      printf 'export VAT_DATASET_ID=%q\n' "${VAT_DATASET_ID}"
+      printf 'export VAT_TABLE_ID=%q\n' "${VAT_TABLE_ID}"
+      printf 'export GOOGLE_PROJECT=%q\n' "${GOOGLE_PROJECT}"
+      printf 'export WORKSPACE_CDR=%q\n' "${WORKSPACE_CDR}"
+    } > "${ENV_FILE}"
+    ok "wrote ${ENV_FILE}"
+  fi
 fi
 note "table: ${VAT_PROJECT_ID}.${VAT_DATASET_ID}.${VAT_TABLE_ID}"
 note "billing project (GOOGLE_PROJECT): ${GOOGLE_PROJECT}"
